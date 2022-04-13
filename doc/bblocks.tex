@@ -6,6 +6,8 @@
 \newcommand{\sidpoly}{s_{\text{id}}}
 \newcommand{\spermpoly}{s_{\perm}}
 \newcommand{\decode}[1]{[#1]}
+\newcommand{\nxt}[1]{\mathtt{nxt}_{#1}}
+\newcommand{\sps}[1]{k_{#1}} % sparseness index for the next polynomial
 
 % Indexed relations
 \newcommand{\idxR}{\mathbbm{i}} % relation index
@@ -58,7 +60,7 @@ in each variable is at most $d$. We define the following important relations.
 
 \begin{definition}[Lookup relation]
     The indexed relation $\RLOOKUP$ is the set of triples $(\idxR, \instR, \witR)=
-    ((n, d, t), \bot, (f, \addr))$, where $t, f \in \bdp{n}{d}$,
+    ((n, d_t, d_f, t), \bot, (f, \addr))$, where $t \in \bdp{n}{d_t}$, $f \in \bdp{n}{d_f}$,
     and $\addr: \bcube{n} \rightarrow \bcube{n}$ is an address map such that 
     $f(\xv) = t(\addr(\xv))$ for all $\xv \in \bcube{n}$.
 \end{definition}
@@ -163,10 +165,12 @@ takes as input the instance $\instR = (n, d, s)$.
 
 \subsubsection*{PIOP for $\RPERM$.}
 We construct a PIOP for the indexed relation $\RPERM$.
+The construction makes use of the technique in~\cite{GWC19} that 
+transforms a permutation relation to a product relation.
 The indexer $\indexer$ takes as input an index $\idxR = (n, d, \perm)$;
 the prover $\prover$ takes as input the index $\idxR = (n, d, \perm)$,
 a witness $\witR = (f, g)$, and the ouput oracles from $\indexer$;
-the verifier $\verifier$ takes as input the index $\idxR$ and 
+the verifier $\verifier$ takes as input the instance $\instR = \bot$ and 
 the indexer oracles.
 
 \textbf{Offline phase.}
@@ -209,4 +213,67 @@ The verifier $\verifier$ runs (in parallel) the query phase of the two $\RPROD$ 
 executions specified above.
 
 \subsubsection*{PIOP for $\RLOOKUP$.} 
+We construct a PIOP for the indexed relation $\RLOOKUP$.
+The construction draws inspiration from the technique in~\cite{GW20} that 
+transforms a lookup relation to a (special) product relation.
+The indexer $\indexer$ takes as input an index $\idxR = (n, d_f, d_t, t)$;
+the prover $\prover$ takes as input the index $\idxR$, instance $\instR = \bot$,
+witness $\witR = (f, \addr)$, and the ouput oracles from $\indexer$;
+the verifier $\verifier$ takes as input the instance $\instR = \bot$ and 
+the indexer oracles.
+
+\begin{lemma}
+    A lemma for $\nxt{n}(\xv)$ with degree $\sps{n}$.
+\end{lemma}
+
+\textbf{Offline phase.}
+The indexer outputs the oracles $t \in \bdp{n}{d_t}$, $\nxt{n} \in \bdp{n,n}{\sps{n}}$,
+and $\nxt{n+1} \in \bdp{n+1,n+1}{\sps{n+1}}$.\footnote{We can also let the verifier 
+compute $\nxt{n}$ and $\nxt{n+1}$ herself as the polynomials can be evaluated in $O(n)$ time.}
+
+\textbf{Interactive phase.} 
+\begin{itemize}
+    \item The prover $\prover$ computes a polynomial $h \in \bdp{n+1}{1}$ ``sorted'' from $f$ and $t$.
+        More precisely, let $N \deq 2^n$, define vectors
+        \[
+            \vec{f} \deq (f(0^n), \dots, f(\nxt{n}^{N-1}(0^n)))\,, \qquad 
+            \vec{t} \deq (t(0^n), \dots, t(\nxt{n}^{N-1}(0^n))) 
+        \]
+        and let $\vec{h} \in \FF^{2N}$ denote the sorted version of $(\vec{f}, \vec{t})$.
+        The polynomial $h$ interpolates the vector $\vec{h}$ so that for all $i \in [2N]$,
+        it holds that
+        \[
+            \vec{h}_i = h(\nxt{n+1}^{i-1}(0^{n+1})) \,.
+        \]
+        
+    \item The prover $\prover$ sends the oracles $f \in \bdp{n}{d_f}$ and $h \in \bdp{n+1}{1}$ to $\verifier$.
+    \item The verifier $\verifier$ sends random challenges $\beta, \gamma \in \FF$.
+    
+    \item The prover $\prover$ and the verifier $\verifier$ run (in parallel) the interactive phase 
+    of two $\RPROD$'s PIOP executions:
+        \begin{itemize}
+            \item the $1$st execution is with instance $\instR = (n+1, \sps{n+1}, s)$ and
+                witness $\witR = \hat{h} \in \bdp{n+1}{\sps{n+1}}$, where 
+                \[
+                    \hat{h}(\xv) \deq \gamma(1+\beta) + h(\xv) + \beta \cdot h(\nxt{n+1}(\xv)) \,,
+                \] and $s = \prod_{\xv\in\bcube{n+1}} \hat{h}(\xv)$;
+                
+            \item let $d \deq \max(d_f, d_t \sps{n+1})$, the $2$nd execution is with instance 
+                $\instR = (n+1, d, s)$ and 
+                witness $\witR = g \in \bdp{n+1}{d}$, where $g$ is defined to be 
+                \[
+                    g(X_1, \xv) \deq (1-X_1) \cdot \left[(1+\beta)(\gamma + f(\xv))\right]
+                                    + X_1 \cdot \left[\gamma(1+\beta) + t(\xv) + \beta \cdot t(\nxt{n}(\xv))\right]\,.
+                \]
+                We note that for all $\xv \in \bcube{n}$, it holds that
+                \[
+                    g(0, \xv) \deq (1+\beta)(\gamma + f(\xv)), \qquad 
+                    g(1, \xv) \deq \gamma(1+\beta) + t(\xv) + \beta \cdot t(\nxt{n}(\xv)) \,.
+                \]
+        \end{itemize}
+\end{itemize}
+
+\textbf{Query phase.}
+The verifier $\verifier$ runs (in parallel) the query phase of the two $\RPROD$ PIOP 
+executions specified above.
 
