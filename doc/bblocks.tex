@@ -81,8 +81,8 @@ instance $\instR = (n, d, s)$.
 
 \textbf{Interactive phase.} 
 In the first round, the prover sends the (multi-variate) oracle $f$ to the verifier.
-Let $(\chal{1}, \dots, \chal{n}) \in \FF^{n}$ denote the public coin challenges
-of the verifier.
+Let $\chal{i} \in \FF$ $(1 \le i \le n)$ denote the public coin challenge
+of the verifier in round $i$.
 For each round $i \in [n]$, the prover $\prover$ computes a 
 degree-$d$ univariate polynomial
 \[
@@ -90,7 +90,7 @@ degree-$d$ univariate polynomial
       \sum_{ (x_{i+1}, \dots, x_{n}) \in \zo^{n-i} } 
       f(\chal{1}, \dots, \chal{i-1}, X_i, x_{i+1}, \dots, x_n) \,.
 \]
-and sends the oracle $s_i$ to the verifier.
+and sends the (univariate) oracle $s_i$ to the verifier.
 
 \textbf{Query phase.}
 Define $s_0(\chal{0}) = s$. For each $i \in [n]$, the verifier makes oracle queries to $s_i(X_i)$ on points
@@ -118,6 +118,7 @@ and observe that $(\instR, \witR) = ((n,d), f) \in \RZERO$ if and only if
 is identically zero. Hence it is sufficient to check that $g(\rv) = 0$
 for a random vector $\rv \in \FF^n$. The PIOP is as follows:
 \begin{itemize}
+    \item The prover $\prover$ sends the oracle $f$ to $\verifier$.
     \item The verifier $\verifier$ sends $\prover$ a random vector $\rv \in \FF^{n}$.
     \item The prover $\prover$ and the verifier $\verifier$ run one PIOP execution
     for $\RSUM$ with $\instR = (n, d+1, 0)$ and $\witR = \hat{f}$, where
@@ -204,7 +205,7 @@ the indexer oracles.
 \end{itemize}
 
 \textbf{Query phase.}
-The prover and the verifier run (in parallel) the query phase of the two $\RPROD$ PIOP 
+The verifier $\verifier$ runs (in parallel) the query phase of the two $\RPROD$ PIOP 
 executions specified above.
 
 \subsubsection*{PIOP for $\RLOOKUP$.} 
