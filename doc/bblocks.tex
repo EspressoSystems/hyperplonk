@@ -1,0 +1,211 @@
+\newcommand{\bcube}[1]{B_{#1}}
+\newcommand{\bdp}[2]{{\mathcal{F}}_{#1}^{(\le{#2})}}   % bounded degree polynomials
+\newcommand{\perm}{\pi} % permutation
+\newcommand{\addr}{\mathsf{addr}} % lookup addresses
+\newcommand{\eqpoly}{eq}
+\newcommand{\sidpoly}{s_{\text{id}}}
+\newcommand{\spermpoly}{s_{\perm}}
+\newcommand{\decode}[1]{[#1]}
+
+% Indexed relations
+\newcommand{\idxR}{\mathbbm{i}} % relation index
+\newcommand{\instR}{\mathbbm{x}} % relation instance
+\newcommand{\witR}{\mathbbm{w}} % relation witness
+
+% Building block relations
+\newcommand{\RPERM}{{\mathcal{R}}_{\text{PERM}}}
+\newcommand{\RZERO}{{\mathcal{R}}_{\text{ZERO}}}
+\newcommand{\RSUM}{{\mathcal{R}}_{\text{SUM}}}
+\newcommand{\RPROD}{{\mathcal{R}}_{\text{PROD}}}
+\newcommand{\RPLONK}{{\mathcal{R}}_{\text{PLONK}}}
+\newcommand{\RLOOKUP}{{\mathcal{R}}_{\text{LOOKUP}}}
+\newcommand{\RPUB}{{\mathcal{R}}_{\text{PUB}}}
+
+% Poly IOPs
+\newcommand{\prover}{\mathcal{P}} 
+\newcommand{\verifier}{\mathcal{V}}
+\newcommand{\indexer}{\mathcal{I}}
+
+% Sumchecks
+\newcommand{\chal}[1]{\rho_{#1}} % random challenges
+
+
+\subsection{Relations}
+Let $\bcube{n} \deq \zo^{n} \subseteq \FF^n$ be the boolean hypercube. Let $\bdp{n}{d}$
+be the set of multivariate polynomials in $\FF[X_1, \dots, X_n]$ where the degree 
+in each variable is at most $d$. We define the following important relations.
+
+\begin{definition}[Sumcheck relation]
+    The relation $\RSUM$ is the set of all tuples $(\instR, \witR) = 
+    ((n, d, s), f)$ where $f \in \bdp{n}{d}$ and $\sum_{\xv \in \bcube{n}} f(\xv) = s$.
+\end{definition}
+
+\begin{definition}[Zerocheck relation]
+    The relation $\RZERO$ is the set of all tuples $(\instR, \witR) =
+    ((n, d), f)$ where $f \in \bdp{n}{d}$ and $f(\xv) = 0$ for all $\xv \in \bcube{n}$.
+\end{definition}
+
+\begin{definition}[Product-check relation]
+    The relation $\RPROD$ is the set of all tuples $(\instR, \witR) =
+    ((n, d, s), f)$ where $f \in \bdp{n}{d}$ and $\prod_{\xv \in \bcube{n}} f(\xv) = s$.
+\end{definition}
+
+\begin{definition}[Permutation relation]
+    The indexed relation $\RPERM$ is the set of triples $(\idxR, \instR, \witR)=
+    ((n, d, \perm), \bot, (f, g))$ where $f, g \in \bdp{n}{d}$, $\perm : \bcube{n} \rightarrow \bcube{n}$
+    is a permutation, and $g(\xv) = f(\perm(\xv))$ for all $\xv \in \bcube{n}$.
+\end{definition}
+
+\begin{definition}[Lookup relation]
+    The indexed relation $\RLOOKUP$ is the set of triples $(\idxR, \instR, \witR)=
+    ((n, m, d, g), \bot, (f, \addr))$, where $g \in \bdp{m}{d}$, $f \in \bdp{n}{d}$,
+    and $\addr$ is an address map from $\bcube{n}$ to $\bcube{m}$, such that 
+    $f(\xv) = g(\addr(\xv))$ for all $\xv \in \bcube{n}$.
+\end{definition}
+
+\begin{remark}
+    We can extend the lookup relation $\RLOOKUP$ to an \emph{online lookup relation}
+    where the polynomial $g(\xv)$ is part of the witness $\witR$ 
+    instead of part of the index $\idxR$.
+\end{remark}
+
+\subsection{Constructions}
+We specify the Polynomial Interactive Oracle Proofs (PIOPs) protocols for the above relations.
+
+\subsubsection*{PIOP for $\RSUM$.} We construct a PIOP for 
+the relation $\RSUM$. It is basically a reformulation to the sumcheck protocol
+of~\cite{LFKN92}.
+The prover $\prover$ takes as input an instance $\instR = (n, d, s)$,
+and witness $\witR = f$; the verifier $\verifier$ takes as input the 
+instance $\instR = (n, d, s)$.
+
+\textbf{Interactive phase.} 
+In the first round, the prover sends the (multi-variate) oracle $f$ to the verifier.
+Let $(\chal{1}, \dots, \chal{n}) \in \FF^{n}$ denote the public coin challenges
+of the verifier.
+For each round $i \in [n]$, the prover $\prover$ computes a 
+degree-$d$ univariate polynomial
+\[
+      s_i(X_i) \deq 
+      \sum_{ (x_{i+1}, \dots, x_{n}) \in \zo^{n-i} } 
+      f(\chal{1}, \dots, \chal{i-1}, X_i, x_{i+1}, \dots, x_n) \,.
+\]
+and sends the oracle $s_i$ to the verifier.
+
+\textbf{Query phase.}
+Define $s_0(\chal{0}) = s$. For each $i \in [n]$, the verifier makes oracle queries to $s_i(X_i)$ on points
+$\{0, 1, \chal{i} \}$ and checks that
+\[
+  s_{i-1}(\chal{i-1}) = s_{i}(0) + s_{i}(1) \,.  
+\]
+The verifier further queries $f$ on point $(\chal{1}, \dots, \chal{n})$ and checks that
+\[
+  s_n(\chal{n}) = f(\chal{1}, \dots, \chal{n}).  
+\]
+
+\subsubsection*{PIOP for $\RZERO$.} 
+We construct a PIOP for the relation $\RZERO$.
+The prover $\prover$ takes as input an instance $\instR = (n, d)$,
+and witness $\witR = f$; the verifier $\verifier$ takes as input the 
+instance $\instR = (n, d)$. We define equality checking polynomial
+\[
+  \eqpoly(\xv, \yv) \deq \prod_{i=1}^{n} (x_iy_i + (1-x_i)(1-y_i)) \,,
+\]
+and observe that $(\instR, \witR) = ((n,d), f) \in \RZERO$ if and only if
+\[
+  g(\yv) \deq \sum_{\xv \in \bcube{n}} f(\xv) \cdot \eqpoly(\xv, \yv)  
+\]
+is identically zero. Hence it is sufficient to check that $g(\rv) = 0$
+for a random vector $\rv \in \FF^n$. The PIOP is as follows:
+\begin{itemize}
+    \item The verifier $\verifier$ sends $\prover$ a random vector $\rv \in \FF^{n}$.
+    \item The prover $\prover$ and the verifier $\verifier$ run one PIOP execution
+    for $\RSUM$ with $\instR = (n, d+1, 0)$ and $\witR = \hat{f}$, where
+    \[
+      \hat{f}(\xv) \deq f(\xv) \cdot \eqpoly(\xv, \rv) 
+    \]
+    is a polynomial in $\bdp{n}{d+1}$.
+\end{itemize}
+
+\subsubsection*{PIOP for $\RPROD$.}
+We construct a PIOP for the relation $\RPROD$.
+It is basically a reformulation to the protocol in Section 5
+of~\cite{SL20}.
+The prover $\prover$ takes as input an instance $\instR = (n, d, s)$
+and a witness $\witR = f \in \bdp{n}{d}$; the verifier $\verifier$
+takes as input the instance $\instR = (n, d, s)$.
+
+\textbf{Interactive phase.} 
+\begin{itemize}
+    \item The prover $\prover$ computes a polynomial $\hat{f} \in \bdp{n+1}{d}$ such that 
+    for all $\xv \in \bcube{n}$, it holds that
+    \[
+      \hat{f}(0, \xv) = f(\xv), \qquad \qquad \hat{f}(1, \xv) = \hat{f}(\xv, 0) \cdot \hat{f}(\xv, 1)\,.
+    \]
+    \item The prover $\prover$ sends the oracles $\hat{f}$, $f$ to $\verifier$.
+    \item The prover $\prover$ and the verifier $\verifier$ runs the interactive phase of 
+        the PIOP for $\RZERO$ with $\instR = (n, 2d)$ and $\witR = g \in \bdp{n}{2d}$ where
+        \[
+            g(\xv) \deq \hat{f}(1, \xv) - \hat{f}(\xv, 0) \cdot \hat{f}(\xv, 1) \,.
+        \]
+\end{itemize}
+
+\textbf{Query phase.}
+\begin{itemize}
+    \item The verifier $\verifier$ queries $\hat{f}$ on point $(1, \dots, 1, 0)$ and checks that
+        $\hat{f}(1,\dots, 1, 0) = s$.
+    \item The verifier $\verifier$ queries $\hat{f}$ and $f$ on a random vector $\rv \in \FF^n$,
+        and checks that $\hat{f}(0, \rv) = f(\rv)$.
+    \item The verifier $\verifier$ runs the query phase of the PIOP 
+    for $\RZERO$ with $\instR = (n, 2d)$ and $\witR = g$ (specified in the interactive phase).
+\end{itemize}
+
+\subsubsection*{PIOP for $\RPERM$.}
+We construct a PIOP for the indexed relation $\RPERM$.
+The indexer $\indexer$ takes as input an index $\idxR = (n, d, \perm)$;
+the prover $\prover$ takes as input the index $\idxR = (n, d, \perm)$,
+a witness $\witR = (f, g)$, and the ouput oracles from $\indexer$;
+the verifier $\verifier$ takes as input the index $\idxR$ and 
+the indexer oracles.
+
+\textbf{Offline phase.}
+\begin{itemize}
+    \item The indexer computes two polynomials $\sidpoly, \spermpoly \in \bdp{n}{1}$ such that
+    for all $\xv \in \bcube{n}$, it holds that 
+    \[
+        \sidpoly(\xv) = \decode{\xv}, \qquad\qquad \spermpoly(\xv) = \decode{\perm(\xv)}\,,
+    \]
+    where $\decode{\xv}$ denotes the decoding from a binary vector $\xv \in \bcube{n}$
+    to a field element $y \in \FF$, that is, $\decode{\xv} = \sum_{i=1}^{n} \xv_i \cdot 2^{i-1}$.
+    \item The indexer outputs the oracles $\sidpoly, \spermpoly$.
+\end{itemize}
+
+\textbf{Interactive phase.} 
+\begin{itemize}
+    \item The prover $\prover$ sends oracles $f, g$ to $\verifier$.
+    \item The verifier $\verifier$ sends random challenges $\beta, \gamma \in \FF$.
+    \item The prover $\prover$ and the verifier $\verifier$ run (in parallel) the interactive phase 
+    of two $\RPROD$'s PIOP executions:
+        \begin{itemize}
+            \item the $1$st execution is with instance $\instR = (n, d, s)$ and
+                witness $\witR = v_{f} \in \bdp{n}{d}$, where 
+                $
+                    s = \prod_{\xv\in\bcube{n}} (f(\xv) + \beta \sidpoly(\xv) + \gamma)
+                $ and
+                \[
+                    v_{f}(\xv) \deq f(\xv) + \beta \sidpoly(\xv) + \gamma \,;
+                \]
+            \item the $2$nd execution is with instance $\instR = (n, d, s)$ and 
+                witness $\witR = v_{g} \in \bdp{n}{d}$, where 
+                \[
+                    v_{g}(\xv) \deq g(\xv) + \beta \spermpoly(\xv) + \gamma \,.
+                \]
+        \end{itemize}
+\end{itemize}
+
+\textbf{Query phase.}
+The prover and the verifier run (in parallel) the query phase of the two $\RPROD$ PIOP 
+executions specified above.
+
+\subsubsection*{PIOP for $\RLOOKUP$.} 
+dsfdsf

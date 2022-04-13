@@ -1,0 +1,84 @@
+% Maths
+\newcommand{\unisample}{\xleftarrow{\$}\xspace}
+\newcommand{\assign}{\ensuremath{\leftarrow}\xspace}
+\newcommand{\relation}{\mathcal{R}}
+\newcommand{\isnegl}{\leq \mu(\secpar)}
+\newcommand{\zo}{\set{0,1}}
+\newcommand{\universe}{\mathcal{U}}
+\newcommand{\condpr}[2]{
+	\Pr \left[\:{#1}\, \middle|\, {#2}\:\right]
+} %conditional probability
+\newcommand{\iseq}{\stackrel{?}{=}}
+
+\newcommand{\calA}{\mathcal{A}}
+\newcommand{\calB}{\mathcal{B}}
+\newcommand{\calC}{\mathcal{C}}
+\newcommand{\calE}{\mathcal{E}}
+\newcommand{\calG}{\mathcal{G}}
+\newcommand{\calH}{\mathcal{H}}
+\newcommand{\calI}{\mathcal{I}}
+\newcommand{\calK}{\mathcal{K}}
+\newcommand{\calL}{\mathcal{L}}
+\newcommand{\calM}{\mathcal{M}}
+\newcommand{\calO}{\mathcal{O}}
+\newcommand{\calP}{\mathcal{P}}
+\newcommand{\calR}{\mathcal{R}}
+\newcommand{\calS}{\mathcal{S}}
+\newcommand{\calT}{\mathcal{T}}
+\newcommand{\calU}{\mathcal{U}}
+\newcommand{\calV}{\mathcal{V}}
+\newcommand{\calX}{\mathcal{X}}
+\newcommand{\calY}{\mathcal{Y}}
+\mathchardef\mhyphen="2D
+
+% general crypto
+\newcommand{\deq}{\mathrel{\triangleq}}
+\newcommand{\qeq}{\ensuremath{\stackrel{?}{=}}}
+\newcommand{\ASp}{\mathbb{A}\!^1}
+\newcommand{\C}{\mathcal{C}}
+\newcommand{\gHH}{g_\mathbb{H}}
+\newcommand{\range}[1]{[{#1}]}
+\newcommand{\prot}[1]{\mathcal{{#1}}}
+\newcommand{\PK}{\mathit{pk}}
+\newcommand{\VK}{\mathit{vk}}
+\newcommand{\SK}{\mathit{sk}}
+\newcommand{\uid}{\mathit{uid}}
+\newcommand{\ext}{\ensuremath{\mathcal{E}}\xspacemm}
+\newcommand{\Rel}{\ensuremath{\mathfrak{R}}\xspacemm}
+\newcommand{\RelI}{\ensuremath{\mathfrak{R}_I}\xspacemm}
+\newcommand{\TT}{\mathcal{T}}
+
+\newcommand{\Adversary}{\ensuremath{\mathcal{A}}}
+\newcommand{\oracle}{\mathcal{O}}
+\renewcommand{\pp}{\ensuremath{\mathsf{pp}}} % macro already defined in the `crypto` package
+\renewcommand{\secpar}{\lambda} % macro already defined in the `crypto` package
+\renewcommand{\FF}{\ensuremath{\mathbb{F}}}
+\renewcommand{\NN}{\ensuremath{\mathbb{N}}}
+\renewcommand{\GG}{\ensuremath{\mathbb{G}}}
+\newcommand{\accept}{\ensuremath{\mathsf{accept}}\xspace}
+\newcommand{\reject}{\ensuremath{\mathsf{reject}}\xspace}
+\newcommand{\InputSpace}{\ensuremath{\mathcal{X}}}
+\newcommand{\OutputSpace}{\ensuremath{\mathcal{Y}}}
+\newcommand{\state}{\ensuremath{\mathsf{st}}}
+\newcommand{\simulator}{\ensuremath{\mathcal{S}}}
+\newcommand{\st}{\ensuremath{\mathsf{st}}\xspace}
+
+%% Elliptic curves
+\newcommand{\pbw}{\ensuremath{q}}
+\newcommand{\pbls}{\ensuremath{p}}
+\newcommand{\rbls}{\ensuremath{r}}
+\newcommand{\rjub}{\ensuremath{\mathbb{J}}}
+\newcommand{\pairing}[2]{\ensuremath{e(#1, #2)}}
+\newcommand{\base}{\ensuremath{\mathtt{G}}}
+\newcommand{\GH}{\ensuremath{\mathtt{GH}}} % Hash to Group
+% encode/represent field element in #1 to a field element in #2
+\newcommand{\encode}[2]{\ensuremath{\mathsf{encode}_{#1}^{#2}}}
+
+% Vectors
+\newcommand{\myvec}[1]{\ensuremath{\vec{#1}}\xspace}
+\newcommand{\xv}{\myvec{x}}
+\newcommand{\yv}{\myvec{y}}
+\newcommand{\rv}{\myvec{r}}
+
+% Typography
+\newcommand{\boxedeq}[1]{\begin{empheq}[box={\fboxsep=6pt\fbox}]{align}#1 \nonumber \end{empheq}}

@@ -1,0 +1,233 @@
+\documentclass[a4paper,10pt]{llncs}
+
+% Set margin
+\usepackage[hmargin=1in,vmargin=1in]{geometry}
+
+% To support table of contents in llncs.
+\setcounter{tocdepth}{3}
+\setcounter{secnumdepth}{4}
+
+\makeatletter
+\renewcommand*\l@author[2]{}
+\renewcommand*\l@title[2]{}
+\makeatother
+
+\pagestyle{plain}
+
+%% CONFIG
+
+\def\isanonymous{0}
+\def\buildexternal{1}
+
+%% There is a package that warns you about
+%% obsolete commands and package. https://daniel-j-h.github.io/post/latex-a-modern-approach/
+\usepackage[l2tabu,orthodox]{nag}
+
+%% MISC PACKAGES
+
+\usepackage{microtype}
+\usepackage[bookmarksdepth=2, backref=page]{hyperref}
+\usepackage{booktabs}  %% tables\part{title}
+\usepackage{comment}
+\usepackage{enumitem}
+\usepackage{multicol}
+\usepackage{amsmath,amssymb}
+\usepackage{bbm}
+\usepackage{ragged2e}
+\usepackage{adjustbox}
+\usepackage{empheq}
+
+\usepackage{etoolbox}
+\usepackage{graphicx}
+\graphicspath{ {./images/} }
+
+%% TODO NOTES
+
+\usepackage[dvipsnames]{xcolor}
+\definecolor{oxygenorange}{HTML}{FFDD00}
+\usepackage{todonotes}
+\usepackage{xargs}
+\newcommandx{\unsure}[2][1=]{\todo[linecolor=red,backgroundcolor=red!25,bordercolor=red,#1]{#2}}
+\newcommandx{\change}[2][1=]{\todo[linecolor=blue,backgroundcolor=blue!25,bordercolor=blue,#1]{#2}}
+\newcommandx{\info}[2][1=]{\todo[linecolor=OliveGreen,backgroundcolor=OliveGreen!25,bordercolor=OliveGreen,#1]{#2}}
+\newcommandx{\improvement}[2][1=]{\todo[linecolor=Plum,backgroundcolor=Plum!25,bordercolor=Plum,#1]{#2}}
+\newcommandx{\thiswillnotshow}[2][1=]{\todo[disable,#1]{#2}}
+
+\newcommand{\binyi}[2][inline,color=oxygenorange]{\todo[#1]{\textbf{binyi:} #2}\xspace}
+\newcommand{\philippe}[2][inline,color=oxygenorange]{\todo[#1]{\textbf{philippe:} #2}\xspace}
+\newcommand{\alex}[2][inline,color=oxygenorange]{\todo[#1]{\textbf{alex:} #2}\xspace}
+\newcommand{\fernando}[2][inline,color=oxygenorange]{\todo[#1]{\textbf{Fernando:} #2}\xspace}
+
+%% ANONYMOUS SUBMISSIONS
+
+\usepackage{ifthen}
+\newcommand{\anonymous}[2]{%
+\ifthenelse{\equal{\isanonymous}{1}}%
+{{#1}}%
+{{#2}}%
+}%
+
+%% SYMBOLS & NOTATION
+
+\usepackage{amsmath,amsfonts,amssymb}
+\usepackage{xspace}
+% \usepackage[advantage,adversary,lambda,landau,operators,probability,sets,logic,complexity,asymptotics]{cryptocode}
+\usepackage{seqsplit}
+
+\renewcommand{\vec}[1]{\ensuremath{\boldsymbol{#1}}\xspace}
+\newcommand{\mat}[1]{\ensuremath{\boldsymbol{#1}}\xspace}
+
+%% PLOTS
+
+\usepackage{tikz,pgfplots}
+\pgfplotsset{compat=newest}
+\usetikzlibrary{calc}
+\usetikzlibrary{arrows}
+
+\usetikzlibrary{external}
+\tikzexternalize[prefix=plots/]
+\tikzset{external/optimize=false}
+\tikzset{external/export=false}
+
+\newcommand{\tikzexternalizemaybe}{%
+  \ifthenelse{\equal{\buildexternal}{1}}%
+  {\tikzset{external/export=true}}%
+  {\tikzset{external/export=false}%
+}}%
+
+% from pgfplotsthemetol.sty
+\definecolor{DarkPurple}{HTML}{332288}
+\definecolor{DarkBlue}{HTML}{6699CC}
+\definecolor{LightBlue}{HTML}{88CCEE}
+\definecolor{DarkGreen}{HTML}{117733}
+\definecolor{DarkRed}{HTML}{661100}
+\definecolor{LightRed}{HTML}{CC6677}
+\definecolor{LightPink}{HTML}{AA4466}
+\definecolor{DarkPink}{HTML}{882255}
+\definecolor{LightPurple}{HTML}{AA4499}
+\definecolor{DarkBrown}{HTML}{604c38}
+\definecolor{DarkTeal}{HTML}{23373b}
+\definecolor{LightBrown}{HTML}{EB811B}
+\definecolor{LightGreen}{HTML}{14B03D}
+\definecolor{NewMidnightBlue}{HTML}{000099}
+
+\pgfplotsset{width=1.0\textwidth,
+  height=0.45\textwidth,
+  cycle list={%
+    solid,\\%
+    dotted,DarkBlue,very thick\\%
+    dashed,DarkGreen,thick\\%
+    loosely dotted,very thick,DarkRed\\%
+    loosely dashed,black,very thick,DarkBrown\\%
+    loosely dashdotted,darkgray,very thick,DarkTeal\\%
+    \\%
+  },
+  legend pos=north west,
+  legend style={fill=none},
+  legend cell align={left}}
+
+%% LISTINGS
+
+\usepackage{listings}
+\lstdefinelanguage{Sage}[]{Python}{morekeywords={True,False,sage,cdef,cpdef,ctypedef,self},sensitive=true}
+\lstset{frame=none,
+          showtabs=False,
+          showspaces=False,
+          showstringspaces=False,
+          commentstyle=\color{gray!80!black},
+          keywordstyle={\color{gray!80!black}\textbf},
+          stringstyle ={\color{gray!80!black}},
+          basicstyle=\tt\small\relax,,
+        }
+
+\usepackage{navigator}
+
+% HANDLING OF CODE
+\usepackage{algorithm}
+\usepackage[advantage,adversary,lambda,landau,operators,probability,sets,logic,complexity,asymptotics]{cryptocode}
+
+
+%% PDF SETUP
+
+\hypersetup{colorlinks=true,citecolor=NewMidnightBlue,linkcolor=NewMidnightBlue}
+
+%% Enumitem SETUP
+
+\setitemize[1]{label=$\bullet$}
+\setitemize[2]{label=$\circ$}
+\setitemize[3]{label=$\star$}
+
+%%%% these patches ensure that the backrefs point to the actual occurrences of the citations in the text, not just the page or section in which they appeared
+%%%% https://tex.stackexchange.com/questions/54541/precise-back-reference-target-with-hyperref-and-backref
+%%%% BEGIN BACKREF DIRECT PATCH, apply these AFTER loading hyperref package with appropriate backref option
+% The following options are provided for the patch, currently with a poor interface!
+% * If there are multiple cites on the same (page|section) (depending on backref mode),
+%   should we show only the first one or should we show them all?
+\newif\ifbackrefshowonlyfirst
+\backrefshowonlyfirstfalse
+%\backrefshowonlyfirsttrue
+%%%% end of options
+%
+% hyperref is essential for this patch to make any sense, so it is not unreasonable to request it be loaded before applying the patch
+\makeatletter
+% 1. insert a phantomsection before every cite, so hyperref has something to target
+%    * in case natbib is loaded. hyperref provides an appropriate hook so this should be safe, and we don't even need to check if natbib is loaded!
+\let\BR@direct@old@hyper@natlinkstart\hyper@natlinkstart
+\renewcommand*{\hyper@natlinkstart}{\phantomsection\BR@direct@old@hyper@natlinkstart}% note that the anchor will appear after any brackets at the start of the citation, but that's not really a big issue?
+%    * if natbib isn't used, backref lets \@citex to \BR@citex during \AtBeginDocument
+%      so just patch \BR@citex
+\let\BR@direct@oldBR@citex\BR@citex
+\renewcommand*{\BR@citex}{\phantomsection\BR@direct@oldBR@citex}%
+
+% 2. if using page numbers, show the page number but still hyperlink to the phantomsection instead of just the page!
+\long\def\hyper@page@BR@direct@ref#1#2#3{\hyperlink{#3}{#1}}
+
+% check which package option the user loaded (pages (hyperpageref) or sections (hyperref)?)
+\ifx\backrefxxx\hyper@page@backref
+    % they wanted pages! make sure they get our re-definition
+    \let\backrefxxx\hyper@page@BR@direct@ref
+    \ifbackrefshowonlyfirst
+        %\let\backrefxxxdupe\hyper@page@backref% test only the page number
+        \newcommand*{\backrefxxxdupe}[3]{#1}% test only the page number
+    \fi
+\else
+    \ifbackrefshowonlyfirst
+        \newcommand*{\backrefxxxdupe}[3]{#2}% test only the section name
+    \fi
+\fi
+
+% 3. now make sure that even if there is no numbered section, the hyperref's still work instead of going to the start of the document!
+\RequirePackage{etoolbox}
+\patchcmd{\Hy@backout}{Doc-Start}{\@currentHref}{}{\errmessage{I can't seem to patch backref}}
+\makeatother
+%%%% END BACKREF PATCHES
+
+\raggedbottom
+
+%% OPENING
+
+\title{Hyperplonk}
+\author{}
+\institute{}
+
+\begin{document}
+
+\setlength{\parskip}{0pt}
+
+\maketitle
+\input{macros}
+
+\section{Preliminaries}
+TODO
+
+\section{Building block protocols}
+\input{bblocks}
+
+\section{Hyperplonk}
+\input{hyperplonk} 
+
+\clearpage
+\bibliographystyle{alpha}
+\bibliography{refs}
+
+\end{document}
