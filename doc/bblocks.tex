@@ -58,14 +58,14 @@ in each variable is at most $d$. We define the following important relations.
 
 \begin{definition}[Lookup relation]
     The indexed relation $\RLOOKUP$ is the set of triples $(\idxR, \instR, \witR)=
-    ((n, m, d, g), \bot, (f, \addr))$, where $g \in \bdp{m}{d}$, $f \in \bdp{n}{d}$,
-    and $\addr$ is an address map from $\bcube{n}$ to $\bcube{m}$, such that 
-    $f(\xv) = g(\addr(\xv))$ for all $\xv \in \bcube{n}$.
+    ((n, d, t), \bot, (f, \addr))$, where $t, f \in \bdp{n}{d}$,
+    and $\addr: \bcube{n} \rightarrow \bcube{n}$ is an address map such that 
+    $f(\xv) = t(\addr(\xv))$ for all $\xv \in \bcube{n}$.
 \end{definition}
 
 \begin{remark}
     We can extend the lookup relation $\RLOOKUP$ to an \emph{online lookup relation}
-    where the polynomial $g(\xv)$ is part of the witness $\witR$ 
+    where the table polynomial $t(\xv)$ is part of the witness $\witR$ 
     instead of part of the index $\idxR$.
 \end{remark}
 
@@ -209,4 +209,4 @@ The verifier $\verifier$ runs (in parallel) the query phase of the two $\RPROD$ 
 executions specified above.
 
 \subsubsection*{PIOP for $\RLOOKUP$.} 
-dsfdsf
+
