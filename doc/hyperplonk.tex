@@ -47,6 +47,13 @@ it to support a wider class of Plonk constraint systems (with lookup gates).
     \end{itemize}
 \end{definition}
 
+\begin{remark}
+    The preprocessed polynomial $\sel$ works as selectors: $\sel(0, \xv)$ is used 
+    to determine whether the algebraic gate at point $\xv$ is for an addition or a multiplication;
+    $\sel(1, \xv)$ is used to determine whether to enforce that the witness $\witp(0, \xv)$ is in
+    the lookup table $\tabp$.
+\end{remark}
+
 \begin{remark}[Arithmetization]
     The preprocessed selectors/lookup tables and online public inputs/witnesses are vector
     of field elements in its original form in the Plonk constraint systems specified in~\cite{GWC19}.
@@ -110,9 +117,12 @@ of three PIOP executions:
 \end{itemize}
 
 \begin{remark}
-    TODO: batching multiple $\RZERO$ instances and multiple $\RPROD$ instances.
+    We can reduce the multiple $\RZERO$ instances in Hyperplonk PIOPs into a 
+    single $\RZERO$ instance using the technique specified in Section~\ref{sec:batchrzero}.
+    As a result, only a single zero-check PIOP needs to be executed.
 \end{remark}
 
+\subsubsection*{Generalized Hyperplonk.}
 It is straightforward to generalize the above PIOP for a wider class of Hyperplonk constraint systems 
 where one can set more selectors, lookup tables, witness wires; and the algebraic/lookup gates can have higher degrees.
 
@@ -133,9 +143,12 @@ where one can set more selectors, lookup tables, witness wires; and the algebrai
     multilinear polynomials, $\pubinp \in \bdp{\ell}{1}$ is an 
     online polynomial for public input, $\witp \in \bdp{n+\lwit}{1}$
     is an online polynomial for secret witnesses. 
-    $\gatep$ and $\lgatep$ are $(\lsel+\lwit)$-variate polynomial where the degree of each monomial
-    is at most $\dgate$ and $\dlk$, respectively.
-    $\ltabp$ is an $\ltab$-variate polynomial where the degree of each monomial is at most $\dtab$.
+    $\gatep$ is an $(\lsel+\lwit)$-variate polynomial where the degree of each monomial
+    is at most $\dgate$;
+    $\lgatep$ is an $(\lsel+\lwit+1)$-variate polynomial where the degree of each monomial
+    is at most $\dlk$;
+    $\ltabp$ is an $(\ltab+\lwit+1)$-variate polynomial where the degree of each monomial 
+    is at most $\dtab$.
     
     Each triple in $\RGPLONK$ should satisfy that:
     \begin{itemize}
@@ -148,14 +161,19 @@ where one can set more selectors, lookup tables, witness wires; and the algebrai
             are identical polynomials.
         \item \textbf{Permutation constraint:} The triple $(\idxR, \instR, \witR)=((n+\lwit, 1, \perm), \bot, (\witp, \witp))$ 
             is in $\RPERM$ (c.f. Definition~\ref{def:rperm}), that is, $\witp(\bcube{n+\lwit}) = \witp(\perm(\bcube{n+\lwit}))$.
-        \item \textbf{Lookup gates:} The triple $(\idxR, \instR, \witR)=((n, \dtab, \dlk, h), \bot, (g, \addr))$
-            is in $\RLOOKUP$ (c.f. Definition), where the ``merged'' lookup polynomial $g \in \bdp{n}{\dlk}$ is defined as 
+        \item \textbf{Lookup gates:} 
+            With overwhelming probability over the choice of a random $\gamma \in \FF$,
+            the triple 
             \[
-              g(\xv) \deq \lgatep(\sel(0^{\lsel}, \xv), \dots, \sel(1^{\lsel}, \xv), \witp(0^{\lwit}, \xv), \dots, \witp(1^{\lwit}, \xv)) \,,
+                (\idxR, \instR, \witR)=((n, \dtab, \dlk, h_{\gamma}), \bot, (g_{\gamma}, \addr))
             \]
-            and ``merged'' table polynomial $h \in \bdp{n}{\dtab}$ is defined as 
+            is in $\RLOOKUP$ (c.f. Definition), where the ``merged'' lookup polynomial $g_{\gamma} \in \bdp{n}{\dlk}$ is defined as 
             \[
-              h(\xv) \deq \ltabp(\tabp(0^{\ltab}, \xv), \dots, \tabp(1^{\ltab}, \xv)) \,,
+              g_{\gamma}(\xv) \deq \lgatep(\gamma, \sel(0^{\lsel}, \xv), \dots, \sel(1^{\lsel}, \xv), \witp(0^{\lwit}, \xv), \dots, \witp(1^{\lwit}, \xv)) \,,
+            \]
+            and ``merged'' table polynomial $h_{\gamma} \in \bdp{n}{\dtab}$ is defined as 
+            \[
+              h_{\gamma}(\xv) \deq \ltabp(\gamma, \tabp(0^{\ltab}, \xv), \dots, \tabp(1^{\ltab}, \xv), \witp(0^{\lwit}, \xv), \dots, \witp(1^{\lwit}, \xv)) \,,
             \]
     \end{itemize}
 \end{definition}

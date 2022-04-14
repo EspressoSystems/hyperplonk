@@ -135,37 +135,53 @@ for a random vector $\rv \in \FF^n$. The PIOP is as follows:
 
 \subsubsection*{PIOP for $\RPROD$.}
 We construct a PIOP for the relation $\RPROD$.
-It is basically a reformulation to the protocol in Section 5
-of~\cite{SL20}.
+The PIOP extends the protocol in Section 5
+of~\cite{SL20} to further support product checks on polynomials that are not multilinear.
 The prover $\prover$ takes as input an instance $\instR = (n, d, s)$
 and a witness $\witR = f \in \bdp{n}{d}$; the verifier $\verifier$
 takes as input the instance $\instR = (n, d, s)$.
 
 \textbf{Interactive phase.} 
 \begin{itemize}
-    \item The prover $\prover$ computes and sends a polynomial oracle $\hat{f} \in \bdp{n+1}{d}$ such that 
-    for all $\xv \in \bcube{n}$, it holds that
+    \item The prover $\prover$ computes and sends a \emph{multilinear} polynomial oracle 
+    $\hat{f} \in \bdp{n+1}{1}$ such that for all $\xv \in \bcube{n}$, it holds that
     \[
       \hat{f}(0, \xv) = f(\xv), \qquad \qquad \hat{f}(1, \xv) = \hat{f}(\xv, 0) \cdot \hat{f}(\xv, 1)\,.
     \]
-    \item The prover $\prover$ and the verifier $\verifier$ runs the interactive phase of 
-        the PIOP for $\RZERO$ with $\instR = (n, 2d)$ and $\witR = g \in \bdp{n}{2d}$ where
-        \[
-            g(\xv) \deq \hat{f}(1, \xv) - \hat{f}(\xv, 0) \cdot \hat{f}(\xv, 1) \,.
-        \]
-        We emphasize that $g$ was \emph{``virtually sent''} before the interactive phase of the sub-PIOP starts,
-        as $\verifier$ already has the oracle access to $\hat{f}$.
+    \item The prover $\prover$ and the verifier $\verifier$ run (in parallel) the interactive phase 
+    of two $\RZERO$'s PIOP executions:
+    \begin{itemize}
+        \item The $1$st execution is with $\instR = (n, 2)$ and $\witR = g \in \bdp{n}{2}$ where
+            \[
+                g(\xv) \deq \hat{f}(1, \xv) - \hat{f}(\xv, 0) \cdot \hat{f}(\xv, 1) \,.
+            \]
+            
+        \item The $2$nd execution is with $\instR = (n, d)$ and $\witR = h \in \bdp{n}{d}$ where
+            \[
+                h(\xv) \deq  \hat{f}(0, \xv) - f(\xv) \,.
+            \]
+    \end{itemize}
+    We emphasize that $g$ and $h$ were \emph{``virtually sent''} before the interactive phase of the sub-PIOPs start,
+    as $\verifier$ already has oracle accesses to $\hat{f}$ and $f$.
 \end{itemize}
 
 \textbf{Query phase.}
 \begin{itemize}
     \item The verifier $\verifier$ queries $\hat{f}$ on point $(1, \dots, 1, 0)$ and checks that
         $\hat{f}(1,\dots, 1, 0) = s$.
-    \item The verifier $\verifier$ queries $\hat{f}$ and $f$ on a random vector $\rv \in \FF^n$,
-        and checks that $\hat{f}(0, \rv) = f(\rv)$.
-    \item The verifier $\verifier$ runs the query phase of the PIOP 
-    for $\RZERO$ with $\instR = (n, 2d)$ and $\witR = g$ (specified in the interactive phase).
+    % \item The verifier $\verifier$ queries $\hat{f}$ and $f$ on a random vector $\rv \in \FF^n$,
+    %     and checks that $\hat{f}(0, \rv) = f(\rv)$.
+    \item The verifier $\verifier$ runs (in parallel) the query phase of the two sub-PIOPs 
+    for relation $\RZERO$ (specified in the interactive phase).
 \end{itemize}
+
+\begin{remark}
+    For the special case where $f$ is multilinear, as noted by~\cite{SL20},
+    one can save the zero-check sub-PIOP for polynomial $h(\xv) \deq \hat{f}(0, \xv) - f(\xv)$. 
+    This is because $\hat{f}(0, \xv)$ and $f(\xv)$ are identical polynomials, 
+    thus by Schwartz-Zippel lemma, it suffices to check that $f$ and $\hat{f}(0, \xv)$
+    have the same evaluation outputs on a random vector $\rv \in \FF^n$.
+\end{remark}
 
 \subsubsection*{PIOP for $\RPERM$.}
 We construct a PIOP for the indexed relation $\RPERM$.
@@ -268,20 +284,40 @@ compute $\nxt{n}$ and $\nxt{n+1}$ herself as the polynomials can be evaluated in
                 $\instR = (n+1, d, s)$ and 
                 witness $\witR = g \in \bdp{n+1}{d}$, where $g$ is defined to be 
                 \[
-                    g(X_1, \xv) \deq (1-X_1) \cdot \left[(1+\beta)(\gamma + f(\xv))\right]
-                                    + X_1 \cdot \left[\gamma(1+\beta) + t(\xv) + \beta \cdot t(\nxt{n}(\xv))\right]\,.
+                    g(x_1, \yv) \deq (1-x_1) \cdot \left[(1+\beta)(\gamma + f(\yv))\right]
+                                    + x_1 \cdot \left[\gamma(1+\beta) + t(\yv) + \beta \cdot t(\nxt{n}(\yv))\right]\,.
                 \]
-                We note that for all $\xv \in \bcube{n}$, it holds that
+                We note that for all $\yv \in \bcube{n}$, it holds that
                 \[
-                    g(0, \xv) \deq (1+\beta)(\gamma + f(\xv)), \qquad 
-                    g(1, \xv) \deq \gamma(1+\beta) + t(\xv) + \beta \cdot t(\nxt{n}(\xv)) \,.
+                    g(0, \yv) \deq (1+\beta)(\gamma + f(\yv)), \qquad 
+                    g(1, \yv) \deq \gamma(1+\beta) + t(\yv) + \beta \cdot t(\nxt{n}(\yv)) \,.
                 \]
         \end{itemize}
         We emphasize that $\hat{h}$ and $g$ were \emph{``virtually sent''} before the interactive phases of the sub-PIOPs start,
-        as $\verifier$ already has the oracle accesses to $h$, $\nxt{n+1}$, $f$, $t$, $\nxt{n}$.
+        as $\verifier$ already has oracle accesses to $h$, $\nxt{n+1}$, $f$, $t$, $\nxt{n}$.
 \end{itemize}
 
 \textbf{Query phase.}
 The verifier $\verifier$ runs (in parallel) the query phase of the two $\RPROD$ PIOP 
 executions specified above.
 
+\subsection{Batching multiple zero-checks}\label{sec:batchrzero}
+We construct a PIOP that proves multiple instances of relation $\RZERO$.
+The prover $\prover$ takes as input an extended instance $\instR = (n, d_1, \dots, d_m)$,
+and an extended witness $\witR = (f_1, \dots, f_m)$ where $f_i \in \bdp{n}{d_i}$ $(1 \le i \le m)$; 
+the verifier $\verifier$ takes as input the instance $\instR = (n, d_1, \dots, d_m)$.
+The goal is to prove that for all $i \in [m]$, it holds that $((n, d_i), f_i) \in \RZERO$.
+
+Define $d \deq \max(d_1, \dots, d_m)$, the PIOP is as follows: 
+(Recall that we assume without loss of generality that the witness polynomials 
+are always sent as oracles to the verifier before the online interactive phase begins.)
+\begin{itemize}
+    \item The verifier $\verifier$ sends $\prover$ a random challenge $\alpha \in \FF$.
+    \item The prover $\prover$ and the verifier $\verifier$ run one PIOP execution
+    for $\RZERO$ with $\instR = (n, d)$ and $\witR = \hat{f} \in \bdp{n}{d}$, where
+    \[
+      \hat{f}(\xv) \deq f_1(\xv) + \alpha f_2(\xv) + \dots + \alpha^{m-1} f_m(\xv)
+    \]
+    We emphasize that $\hat{f}$ was implicitly sent before the interactive phase of the sub-PIOP starts,
+    as $\verifier$ already has oracle accesses to $f_1, \dots, f_m$.
+\end{itemize}
