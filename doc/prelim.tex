@@ -1,0 +1,21 @@
+\subsection{Polynomial IOPs}
+We use the the general notion of polynomial IOP~\cite{BFS20,CHMMVW20} where each oracle
+can be either univariate or multivariate polynomials.
+The definition of PolyIOPs essentially follows that in Section 2.1 of~\cite{CHMMVW20}, except
+that an oracle is not restricted to be a univariate polynomial.
+
+\subsection{Multilinear polynomial commitments}
+Hyperplonk is highly modular and can plug in any multilinear polynomial commitment schemes.
+One efficient candidates is the KZG-based multilinear polynomial commitments proposed by Zhang et al.~\cite{ZGK+18},
+which extends the scheme proposed by Papamanthou, Shi, and Tamassia~\cite{PST13}.
+The committer runtime and the opening runtime are both strictly linear, the commitment contains only 
+two group elements, the opening proof size is $O(\log N)$ and the verification involves $O(\log N)$
+pairings.
+More details are refered to Construction 1 (and Appendix G) in~\cite{ZGK+18}.
+\binyi{TODO: add other PCS candidates.}
+
+\subsubsection*{Batch polynomial evaluations.}
+In Section 4.5.2 of~\cite{thaler20}, Thaler introduced an algorithm to reduce $m$ evaluations on a single 
+\emph{multilinear} polynomial to a single evaluation on the polynomial. 
+We extend the techniques to support \emph{multiple} evaluations on \emph{multiple multilinear polynomials}.
+\binyi{TODO: more construction details.}

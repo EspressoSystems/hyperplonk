@@ -244,8 +244,27 @@ the verifier $\verifier$ takes as input the instance $\instR = \bot$ and
 the indexer oracles.
 
 \begin{lemma}
-    TODO: A lemma for $\nxt{n}(\xv)$ with sparseness degree $\sps{n}$.
+    For all $n \in \NN$, there exists an algebraic map
+    \[
+      \nxt{n}(\xv) \deq (f_{1}(\xv), \dots, f_{n}(\xv))  
+    \] such that 
+    \begin{itemize}
+        \item let $N \deq 2^n$, the list of $n$-dimensional points
+            \[
+              (0^n, \nxt{n}(0^n), \nxt{n}^{1}(0^n), \dots, \nxt{n}^{N-1}(0^n))
+            \]
+            travels through all of the $N$ points in the boolean hypercube $\bcube{n}$.
+            Here $\nxt{n}^{i}(0^n)$ denote composing the map $\nxt{n}(\cdot)$ for $i$ times
+            on input vector $0^n$;
+        \item $\nxt{n}(\xv)$ can be evaluated in $O(n)$ time;
+        \item the product polynomial
+            \[
+                g_n(\xv) \deq \prod_{i=1}^{n} f_{i}(\xv)
+            \] is an $n$-variate polynomial where the degree in each variable is at most $\sps{n}$.
+            Here $\sps{n} = 2 \text{ or } 4$.
+    \end{itemize}
 \end{lemma}
+\binyi{TODO: double-check if $\sps{n} = 2 \text{ or } 4$ or $\sps{n} = 3 \text{ or } 5$.}
 
 \textbf{Offline phase.}
 The indexer outputs the oracles $t \in \bdp{n}{d_t}$, $\nxt{n} \in \bdp{n,n}{\sps{n}}$,
