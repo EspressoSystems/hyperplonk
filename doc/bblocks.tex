@@ -193,7 +193,7 @@ a witness $\witR = (f, g)$, and the ouput oracles from $\indexer$;
 the verifier $\verifier$ takes as input the instance $\instR = \bot$ and 
 the indexer oracles.
 
-\textbf{Offline phase.}
+\textbf{Preprocessing phase.}
 \begin{itemize}
     \item The indexer computes two polynomials $\sidpoly, \spermpoly \in \bdp{n}{1}$ such that
     for all $\xv \in \bcube{n}$, it holds that 
@@ -266,7 +266,7 @@ the indexer oracles.
 \end{lemma}
 \binyi{TODO: double-check if $\sps{n} = 2 \text{ or } 4$ or $\sps{n} = 3 \text{ or } 5$.}
 
-\textbf{Offline phase.}
+\textbf{Preprocessing phase.}
 The indexer outputs the oracles $t \in \bdp{n}{d_t}$, $\nxt{n} \in \bdp{n,n}{\sps{n}}$,
 and $\nxt{n+1} \in \bdp{n+1,n+1}{\sps{n+1}}$.\footnote{We can also let the verifier 
 compute $\nxt{n}$ and $\nxt{n+1}$ herself as the polynomials can be evaluated in $O(n)$ time.}
