@@ -1,3 +1,161 @@
+\newcommand{\sel}{q} % selector/preprocessed polynomials
+\newcommand{\tabp}{t} % preprocessed table polynomial
+\newcommand{\pubinp}{\mathtt{pi}} % public input polynomial
+\newcommand{\RPLONK}{{\mathcal{R}}_{\text{PLONK}}}
+\newcommand{\RGPLONK}{{\mathcal{R}}_{\text{GPLONK}}} % Generalized Plonk CS
+\newcommand{\witp}{w} % online witness polynomials
+\newcommand{\lsel}{\ell_q} % log of number of selectors
+\newcommand{\ltab}{\ell_t} % log of number of tables
+\newcommand{\lwit}{\ell_w} % log of witness wires
+\newcommand{\gatep}{\mathtt{gate}} % custom gate polynomial
+\newcommand{\lgatep}{\mathtt{lkgate}} % custom lookup gate polynomial
+\newcommand{\ltabp}{\mathtt{tab}} % custom table polynomial
+\newcommand{\dgate}{d_{gt}} % custom gate polynomial degree
+\newcommand{\dlk}{d_{lk}} % custom lookup gate polynomial degree
+\newcommand{\dtab}{d_t} % custom table polynomial degree
+
+
+We start with a vanilla Plonk constraint system (with lookup) 
+that already showcases all of our techniques. Later we generalize 
+it to support a wider class of Plonk constraint systems (with lookup gates).
+
+\begin{definition}[Hyperplonk relation]
+    The indexed relation $\RPLONK$ is the set of triples 
+    \[
+        (\idxR, \instR, \witR) = ((n, \ell, \perm, \sel, \tabp), \pubinp, \witp)
+    \]
+    where $n, \ell < n$ are integers, $\perm : \bcube{n+1} \rightarrow \bcube{n+1}$
+    is a permutation, $\sel \in \bdp{n+1}{1}$, $\tabp \in \bdp{n}{1}$ are preprocessed 
+    multilinear polynomials, $\pubinp \in \bdp{\ell}{1}$ is an 
+    online polynomial for public input, $\witp \in \bdp{n+1}{1}$
+    is an online polynomial for secret witnesses. Each triple in $\RPLONK$ should satisfy that:
+    \begin{itemize}
+        \item \textbf{Algebraic gates:} The tuple $(\instR, \witR) = ((n,3), f)$ is in $\RZERO$ (c.f. Definition~\ref{def:rzero}),
+            where $f \in \bdp{n}{3}$ is
+            \[
+              f(\xv) \deq (1-\sel(0, \xv))\cdot (\witp(0, \xv) + \witp(1, \xv)) + \sel(0, \xv) \cdot \witp(0, \xv) \cdot \witp(1, \xv)\,.
+            \] 
+        \item \textbf{Public input gates:} $\pubinp(X_1, \dots, X_{\ell})$ and $\witp(0^{n-\ell+1}, X_1, \dots, X_{\ell})$
+            are identical polynomials.
+        \item \textbf{Permutation constraint:} The triple $(\idxR, \instR, \witR)=((n+1, 1, \perm), \bot, (\witp, \witp))$ 
+            is in $\RPERM$ (c.f. Definition~\ref{def:rperm}), that is, $\witp(\bcube{n+1}) = \witp(\perm(\bcube{n+1}))$.
+        \item \textbf{Lookup gates:} The triple $(\idxR, \instR, \witR)=((n, 1, 2, \tabp), \bot, (g, \addr))$
+            is in $\RLOOKUP$ (c.f. Definition), where $g \in \bdp{n}{2}$ is defined as 
+            \[
+              g(\xv) \deq \sel(1, \xv) \cdot \witp(0, \xv) \,.
+            \]
+    \end{itemize}
+\end{definition}
+
+\begin{remark}[Arithmetization]
+    The preprocessed selectors/lookup tables and online public inputs/witnesses are vector
+    of field elements in its original form in the Plonk constraint systems specified in~\cite{GWC19}.
+    It is straightforward to transform the vectors into multilinear polynomials by mapping the 
+    vectors to the evaluations of the polynomials on the boolean hypercube. 
+\end{remark}
+
+\subsubsection*{PIOP for $\RPLONK$.}
+We construct a PIOP for the indexed relation $\RPLONK$.
+The indexer $\indexer$ takes as input the index $\idxR = (n, \ell, \perm, \sel, \tabp)$;
+the prover $\prover$ takes as input the index $\idxR$, instance $\instR = \pubinp$,
+witness $\witR = \witp$, and the ouput oracles from $\indexer$;
+the verifier $\verifier$ takes as input the instance $\instR = \pubinp$ and 
+the indexer oracles.
+
+
+\textbf{Offline phase.}
+\begin{itemize}
+    \item The indexer runs the offline phase of the PIOP for relation $\RPERM$ with 
+        the index being $\idxR = (n+1, 1, \perm)$.
+    \item The indexer runs the offline phase of the PIOP for relation $\RLOOKUP$ with
+        the index being $\idxR = (n, 1, 2, \tabp)$.
+    \item The indexer further outputs the selector oracle $\sel$.
+\end{itemize}
+
+
+\textbf{Interactive phase.} 
+% \begin{itemize}
+    % \item The prover $\prover$ sends the witness oracle $\witp$ to $\verifier$.
+The prover $\prover$ and the verifier $\verifier$ run (in parallel) the interactive phase 
+of three PIOP executions:
+        \begin{itemize}
+            \item The $1$st execution is for relation $\RZERO$ (c.f. Definition~\ref{def:rzero}) 
+                with instance $\instR = (n, 3)$ and witness $f \in \bdp{n}{3}$ where
+                \[
+                    f(\xv) \deq (1-\sel(0, \xv))\cdot (\witp(0, \xv) + \witp(1, \xv)) 
+                               + \sel(0, \xv) \cdot \witp(0, \xv) \cdot \witp(1, \xv)\,.
+                \]
+            \item The $2$nd execution is for relation $\RPERM$ (c.f. Definition~\ref{def:rsum})
+                with index $\idxR = (n+1, 1, \perm)$ and witness $\witR = (\witp, \witp)$.
+            \item The $3$rd execution is for relation $\RLOOKUP$ (c.f. Definition~\ref{def:rlookup})
+                with index $\idxR = (n, 1, 2, \tabp)$ and witness $\witR = g \in \bdp{n}{2}$ where 
+                \[
+                    g(\xv) \deq \sel(1, \xv) \cdot \witp(0, \xv) \,,
+                \]
+        \end{itemize}
+        We emphasize that $f$, $\witp$, and $g$ were \emph{``virtually sent''} before the interactive
+        phase of the sub-PIOPs, as $\verifier$ already has oracle accesses to $\witp$ and $\sel$.
+%\end{itemize}
+
+\textbf{Query phase.}
+\begin{itemize}
+    \item The verifier $\verifier$ runs (in parallel) the query phase of the three PIOP 
+    executions specified above for relations $\RZERO$, $\RPERM$, and $\RLOOKUP$ respectively.
+    \item The verifier samples a random vector $\rv \in \FF^{\ell}$ and checks that
+        \[
+            \pubinp(\rv) = \witp(0^{n-\ell+1}, \rv).
+        \]
+        We note that instead of re-sampling a fresh $\rv$, the verifier can also reuse the randomness
+        in the query phases of the PIOP executions.
+\end{itemize}
+
 \begin{remark}
     TODO: batching multiple $\RZERO$ instances and multiple $\RPROD$ instances.
 \end{remark}
+
+It is straightforward to generalize the above PIOP for a wider class of Hyperplonk constraint systems 
+where one can set more selectors, lookup tables, witness wires; and the algebraic/lookup gates can have higher degrees.
+
+
+\begin{definition}[Generalized Hyperplonk relation]
+    The indexed relation $\RGPLONK$ is the set of triples 
+    \[
+        (\idxR, \instR, \witR) = 
+            ((n, \dgate, \dlk, \dtab, 
+              \ell, \lsel, \ltab, \lwit, 
+              \perm, \sel, \tabp, 
+              \gatep, \lgatep, \ltabp), 
+            \pubinp, 
+            \witp)
+    \]
+    where $\perm : \bcube{n+\lwit} \rightarrow \bcube{n+\lwit}$
+    is a permutation, $\sel \in \bdp{n+\lsel}{1}$, $\tabp \in \bdp{n+\ltab}{1}$ are preprocessed 
+    multilinear polynomials, $\pubinp \in \bdp{\ell}{1}$ is an 
+    online polynomial for public input, $\witp \in \bdp{n+\lwit}{1}$
+    is an online polynomial for secret witnesses. 
+    $\gatep$ and $\lgatep$ are $(\lsel+\lwit)$-variate polynomial where the degree of each monomial
+    is at most $\dgate$ and $\dlk$, respectively.
+    $\ltabp$ is an $\ltab$-variate polynomial where the degree of each monomial is at most $\dtab$.
+    
+    Each triple in $\RGPLONK$ should satisfy that:
+    \begin{itemize}
+        \item \textbf{Algebraic gates:} The tuple $(\instR, \witR) = ((n,\dgate), f)$ is in $\RZERO$ (c.f. Definition~\ref{def:rzero}),
+            where $f \in \bdp{n}{\dgate}$ is
+            \[
+              f(\xv) \deq \gatep(\sel(0^{\lsel}, \xv), \dots, \sel(1^{\lsel}, \xv), \witp(0^{\lwit}, \xv), \dots, \witp(1^{\lwit}, \xv)) \,.
+            \] 
+        \item \textbf{Public input gates:} $\pubinp(X_1, \dots, X_{\ell})$ and $\witp(0^{n-\ell+\lwit}, X_1, \dots, X_{\ell})$
+            are identical polynomials.
+        \item \textbf{Permutation constraint:} The triple $(\idxR, \instR, \witR)=((n+\lwit, 1, \perm), \bot, (\witp, \witp))$ 
+            is in $\RPERM$ (c.f. Definition~\ref{def:rperm}), that is, $\witp(\bcube{n+\lwit}) = \witp(\perm(\bcube{n+\lwit}))$.
+        \item \textbf{Lookup gates:} The triple $(\idxR, \instR, \witR)=((n, \dtab, \dlk, h), \bot, (g, \addr))$
+            is in $\RLOOKUP$ (c.f. Definition), where the ``merged'' lookup polynomial $g \in \bdp{n}{\dlk}$ is defined as 
+            \[
+              g(\xv) \deq \lgatep(\sel(0^{\lsel}, \xv), \dots, \sel(1^{\lsel}, \xv), \witp(0^{\lwit}, \xv), \dots, \witp(1^{\lwit}, \xv)) \,,
+            \]
+            and ``merged'' table polynomial $h \in \bdp{n}{\dtab}$ is defined as 
+            \[
+              h(\xv) \deq \ltabp(\tabp(0^{\ltab}, \xv), \dots, \tabp(1^{\ltab}, \xv)) \,,
+            \]
+    \end{itemize}
+\end{definition}

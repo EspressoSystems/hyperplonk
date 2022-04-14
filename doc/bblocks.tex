@@ -19,7 +19,6 @@
 \newcommand{\RZERO}{{\mathcal{R}}_{\text{ZERO}}}
 \newcommand{\RSUM}{{\mathcal{R}}_{\text{SUM}}}
 \newcommand{\RPROD}{{\mathcal{R}}_{\text{PROD}}}
-\newcommand{\RPLONK}{{\mathcal{R}}_{\text{PLONK}}}
 \newcommand{\RLOOKUP}{{\mathcal{R}}_{\text{LOOKUP}}}
 \newcommand{\RPUB}{{\mathcal{R}}_{\text{PUB}}}
 
@@ -37,12 +36,12 @@ Let $\bcube{n} \deq \zo^{n} \subseteq \FF^n$ be the boolean hypercube. Let $\bdp
 be the set of multivariate polynomials in $\FF[X_1, \dots, X_n]$ where the degree 
 in each variable is at most $d$. We define the following important relations.
 
-\begin{definition}[Sumcheck relation]
+\begin{definition}[Sumcheck relation]\label{def:rsum}
     The relation $\RSUM$ is the set of all tuples $(\instR, \witR) = 
     ((n, d, s), f)$ where $f \in \bdp{n}{d}$ and $\sum_{\xv \in \bcube{n}} f(\xv) = s$.
 \end{definition}
 
-\begin{definition}[Zerocheck relation]
+\begin{definition}[Zerocheck relation]\label{def:rzero}
     The relation $\RZERO$ is the set of all tuples $(\instR, \witR) =
     ((n, d), f)$ where $f \in \bdp{n}{d}$ and $f(\xv) = 0$ for all $\xv \in \bcube{n}$.
 \end{definition}
@@ -52,13 +51,13 @@ in each variable is at most $d$. We define the following important relations.
     ((n, d, s), f)$ where $f \in \bdp{n}{d}$ and $\prod_{\xv \in \bcube{n}} f(\xv) = s$.
 \end{definition}
 
-\begin{definition}[Permutation relation]
+\begin{definition}[Permutation relation]\label{def:rperm}
     The indexed relation $\RPERM$ is the set of triples $(\idxR, \instR, \witR)=
     ((n, d, \perm), \bot, (f, g))$ where $f, g \in \bdp{n}{d}$, $\perm : \bcube{n} \rightarrow \bcube{n}$
     is a permutation, and $g(\xv) = f(\perm(\xv))$ for all $\xv \in \bcube{n}$.
 \end{definition}
 
-\begin{definition}[Lookup relation]
+\begin{definition}[Lookup relation]\label{def:rlookup}
     The indexed relation $\RLOOKUP$ is the set of triples $(\idxR, \instR, \witR)=
     ((n, d_t, d_f, t), \bot, (f, \addr))$, where $t \in \bdp{n}{d_t}$, $f \in \bdp{n}{d_f}$,
     and $\addr: \bcube{n} \rightarrow \bcube{n}$ is an address map such that 
@@ -74,6 +73,10 @@ in each variable is at most $d$. We define the following important relations.
 \subsection{Constructions}
 We specify the Polynomial Interactive Oracle Proofs (PIOPs) protocols for the above relations.
 
+\paragraph*{Sending witness by default.}
+In the following context, we assume without loss of generality that the witness polynomials 
+are always sent as oracles to the verifier before the online interactive phase begins.
+
 \subsubsection*{PIOP for $\RSUM$.} We construct a PIOP for 
 the relation $\RSUM$. It is basically a reformulation to the sumcheck protocol
 of~\cite{LFKN92}.
@@ -82,7 +85,6 @@ and witness $\witR = f$; the verifier $\verifier$ takes as input the
 instance $\instR = (n, d, s)$.
 
 \textbf{Interactive phase.} 
-In the first round, the prover sends the (multi-variate) oracle $f$ to the verifier.
 Let $\chal{i} \in \FF$ $(1 \le i \le n)$ denote the public coin challenge
 of the verifier in round $i$.
 For each round $i \in [n]$, the prover $\prover$ computes a 
@@ -120,7 +122,6 @@ and observe that $(\instR, \witR) = ((n,d), f) \in \RZERO$ if and only if
 is identically zero. Hence it is sufficient to check that $g(\rv) = 0$
 for a random vector $\rv \in \FF^n$. The PIOP is as follows:
 \begin{itemize}
-    \item The prover $\prover$ sends the oracle $f$ to $\verifier$.
     \item The verifier $\verifier$ sends $\prover$ a random vector $\rv \in \FF^{n}$.
     \item The prover $\prover$ and the verifier $\verifier$ run one PIOP execution
     for $\RSUM$ with $\instR = (n, d+1, 0)$ and $\witR = \hat{f}$, where
@@ -128,6 +129,8 @@ for a random vector $\rv \in \FF^n$. The PIOP is as follows:
       \hat{f}(\xv) \deq f(\xv) \cdot \eqpoly(\xv, \rv) 
     \]
     is a polynomial in $\bdp{n}{d+1}$.
+    We emphasize that $\hat{f}$ was implicitly sent before the interactive phase of the sub-PIOP starts,
+    as $\verifier$ already has the oracle access to $f$ and $\eqpoly$ in the beginning.
 \end{itemize}
 
 \subsubsection*{PIOP for $\RPROD$.}
@@ -140,17 +143,18 @@ takes as input the instance $\instR = (n, d, s)$.
 
 \textbf{Interactive phase.} 
 \begin{itemize}
-    \item The prover $\prover$ computes a polynomial $\hat{f} \in \bdp{n+1}{d}$ such that 
+    \item The prover $\prover$ computes and sends a polynomial oracle $\hat{f} \in \bdp{n+1}{d}$ such that 
     for all $\xv \in \bcube{n}$, it holds that
     \[
       \hat{f}(0, \xv) = f(\xv), \qquad \qquad \hat{f}(1, \xv) = \hat{f}(\xv, 0) \cdot \hat{f}(\xv, 1)\,.
     \]
-    \item The prover $\prover$ sends the oracles $\hat{f}$, $f$ to $\verifier$.
     \item The prover $\prover$ and the verifier $\verifier$ runs the interactive phase of 
         the PIOP for $\RZERO$ with $\instR = (n, 2d)$ and $\witR = g \in \bdp{n}{2d}$ where
         \[
             g(\xv) \deq \hat{f}(1, \xv) - \hat{f}(\xv, 0) \cdot \hat{f}(\xv, 1) \,.
         \]
+        We emphasize that $g$ was \emph{``virtually sent''} before the interactive phase of the sub-PIOP starts,
+        as $\verifier$ already has the oracle access to $\hat{f}$.
 \end{itemize}
 
 \textbf{Query phase.}
@@ -187,7 +191,6 @@ the indexer oracles.
 
 \textbf{Interactive phase.} 
 \begin{itemize}
-    \item The prover $\prover$ sends oracles $f, g$ to $\verifier$.
     \item The verifier $\verifier$ sends random challenges $\beta, \gamma \in \FF$.
     \item The prover $\prover$ and the verifier $\verifier$ run (in parallel) the interactive phase 
     of two $\RPROD$'s PIOP executions:
@@ -206,6 +209,8 @@ the indexer oracles.
                     v_{g}(\xv) \deq g(\xv) + \beta \spermpoly(\xv) + \gamma \,.
                 \]
         \end{itemize}
+        We emphasize that $v_{f}, v_{g}$ were \emph{``virtually sent''} before the interactive phases of the sub-PIOPs start,
+        as $\verifier$ already has the oracle accesses to $f, g, \sidpoly, \spermpoly$.
 \end{itemize}
 
 \textbf{Query phase.}
@@ -223,7 +228,7 @@ the verifier $\verifier$ takes as input the instance $\instR = \bot$ and
 the indexer oracles.
 
 \begin{lemma}
-    A lemma for $\nxt{n}(\xv)$ with degree $\sps{n}$.
+    TODO: A lemma for $\nxt{n}(\xv)$ with sparseness degree $\sps{n}$.
 \end{lemma}
 
 \textbf{Offline phase.}
@@ -233,20 +238,21 @@ compute $\nxt{n}$ and $\nxt{n+1}$ herself as the polynomials can be evaluated in
 
 \textbf{Interactive phase.} 
 \begin{itemize}
-    \item The prover $\prover$ computes a polynomial $h \in \bdp{n+1}{1}$ ``sorted'' from $f$ and $t$.
+    \item The prover $\prover$ computes and sends a polynomial oracle $h \in \bdp{n+1}{1}$ ``sorted'' from $f$ and $t$.
         More precisely, let $N \deq 2^n$, define vectors
         \[
-            \vec{f} \deq (f(0^n), \dots, f(\nxt{n}^{N-1}(0^n)))\,, \qquad 
-            \vec{t} \deq (t(0^n), \dots, t(\nxt{n}^{N-1}(0^n))) 
+            \vec{f} \deq (f(0^n), f(0^{n-1}, 1), \dots, f(1^n) )\,, \qquad 
+            \vec{t} \deq (t(0^n), t(\nxt{n}(0^n)), \dots, t(\nxt{n}^{N-1}(0^n))) 
         \]
-        and let $\vec{h} \in \FF^{2N}$ denote the sorted version of $(\vec{f}, \vec{t})$.
+        and let $\vec{h} \in \FF^{2N}$ denote the sorted version of $(\vec{f}, \vec{t})$ according to $\vec{t}$.
+        (More precisely, we initialize $\vec{h}$ to $\vec{t}$, and 
+        insert each element in $\vec{f}$ to the right of an element in $\vec{h}$ that has identical values.)
         The polynomial $h$ interpolates the vector $\vec{h}$ so that for all $i \in [2N]$,
         it holds that
         \[
             \vec{h}_i = h(\nxt{n+1}^{i-1}(0^{n+1})) \,.
         \]
         
-    \item The prover $\prover$ sends the oracles $f \in \bdp{n}{d_f}$ and $h \in \bdp{n+1}{1}$ to $\verifier$.
     \item The verifier $\verifier$ sends random challenges $\beta, \gamma \in \FF$.
     
     \item The prover $\prover$ and the verifier $\verifier$ run (in parallel) the interactive phase 
@@ -258,7 +264,7 @@ compute $\nxt{n}$ and $\nxt{n+1}$ herself as the polynomials can be evaluated in
                     \hat{h}(\xv) \deq \gamma(1+\beta) + h(\xv) + \beta \cdot h(\nxt{n+1}(\xv)) \,,
                 \] and $s = \prod_{\xv\in\bcube{n+1}} \hat{h}(\xv)$;
                 
-            \item let $d \deq \max(d_f, d_t \sps{n+1})$, the $2$nd execution is with instance 
+            \item let $d \deq \max(d_f, d_t \sps{n})$, the $2$nd execution is with instance 
                 $\instR = (n+1, d, s)$ and 
                 witness $\witR = g \in \bdp{n+1}{d}$, where $g$ is defined to be 
                 \[
@@ -271,6 +277,8 @@ compute $\nxt{n}$ and $\nxt{n+1}$ herself as the polynomials can be evaluated in
                     g(1, \xv) \deq \gamma(1+\beta) + t(\xv) + \beta \cdot t(\nxt{n}(\xv)) \,.
                 \]
         \end{itemize}
+        We emphasize that $\hat{h}$ and $g$ were \emph{``virtually sent''} before the interactive phases of the sub-PIOPs start,
+        as $\verifier$ already has the oracle accesses to $h$, $\nxt{n+1}$, $f$, $t$, $\nxt{n}$.
 \end{itemize}
 
 \textbf{Query phase.}
