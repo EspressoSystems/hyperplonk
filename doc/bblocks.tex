@@ -233,6 +233,9 @@ the indexer oracles.
 The verifier $\verifier$ runs (in parallel) the query phase of the two $\RPROD$ PIOP 
 executions specified above.
 
+\binyi{Remark: An alternative is to reduce $\RPERM$ to a \emph{single} $\RPROD$ instance plus a single $\RZERO$
+instance. Same reduction holds for $\RLOOKUP$. Need to check which way is more efficient.}
+
 \subsubsection*{PIOP for $\RLOOKUP$.} 
 We construct a PIOP for the indexed relation $\RLOOKUP$.
 The construction draws inspiration from the technique in~\cite{GW20} that 
