@@ -146,9 +146,9 @@ incorporate randomness and have higher degrees.
     $\gatep$ is an $(\lsel+\lwit)$-variate polynomial where the degree of each monomial
     is at most $\dgate$;
     $\lgatep$ is an $(\lsel+\lwit+1)$-variate polynomial where the degree of each monomial
-    is at most $\dlk$;
-    $\ltabp$ is an $(\ltab+\lwit+1)$-variate polynomial where the degree of each monomial 
-    is at most $\dtab$.
+    is at most $\dlk$ (after fixing the $1$st variable);
+    $\ltabp$ is an $(\ltab+\lsel+\lwit+1)$-variate polynomial where the degree of each monomial 
+    is at most $\dtab$ (after fixing the $1$st variable).
     
     Each triple in $\RGPLONK$ should satisfy that:
     \begin{itemize}
@@ -173,7 +173,7 @@ incorporate randomness and have higher degrees.
             \]
             and ``merged'' table polynomial $h_{\gamma} \in \bdp{n}{\dtab}$ is defined as 
             \[
-              h_{\gamma}(\xv) \deq \ltabp(\gamma, \tabp(0^{\ltab}, \xv), \dots, \tabp(1^{\ltab}, \xv), \witp(0^{\lwit}, \xv), \dots, \witp(1^{\lwit}, \xv)) \,,
+              h_{\gamma}(\xv) \deq \ltabp(\gamma, \tabp(0^{\ltab}, \xv), \dots, \tabp(1^{\ltab}, \xv), \sel(0^{\lsel}, \xv), \dots, \sel(1^{\lsel}, \xv), \witp(0^{\lwit}, \xv), \dots, \witp(1^{\lwit}, \xv)) \,,
             \]
     \end{itemize}
 \end{definition}
