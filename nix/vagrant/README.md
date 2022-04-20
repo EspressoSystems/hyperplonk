@@ -6,7 +6,7 @@ Set up a vagrant guest VM, and test the dev environment inside the guest.
 - Assumes that the host has an SSH agent. The agent is used for SSH auth inside
   the guest.
 - Upon creation (`vagrant up`) a copy of this local repo is rsynced to the
-  `/jellyfish` directory in the guest. The tests are run against these files. To
+  `/hyperplonk` directory in the guest. The tests are run against these files. To
   see changes made to the code on the host run `vagrant reload` to re-sync the
   source code from host to guest.
 

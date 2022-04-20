@@ -26,7 +26,7 @@ Vagrant.configure("2") do |config|
 
   config.ssh.forward_agent = true
   config.vm.synced_folder  ".", "/vagrant", disabled: false
-  config.vm.synced_folder  "../..", "/jellyfish", disabled: false, rsync__exclude: [".git/", "target"]
+  config.vm.synced_folder  "../..", "/hyperplonk", disabled: false, rsync__exclude: [".git/", "target"]
 
 
   config.vm.provider "libvirt" do |v|

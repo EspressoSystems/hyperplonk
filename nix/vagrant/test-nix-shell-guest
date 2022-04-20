@@ -10,7 +10,7 @@ fi
 ssh-keyscan gitlab.com >> ~/.ssh/known_hosts
 ssh -T git@gitlab.com
 
-cd /jellyfish
+cd /hyperplonk
 
 nix-shell --run "cargo-clippy"
 nix-shell --run "cargo fmt -- --check"
