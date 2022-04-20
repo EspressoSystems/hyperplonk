@@ -66,9 +66,6 @@ jobs:
 
       - name: Test
         run: bash ./scripts/run_tests.sh      
-      
-      - name: Example
-        run: cargo run --release --example proof_of_exp
 
       - name: Generate Documentation
         run: |
