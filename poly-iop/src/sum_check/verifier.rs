@@ -115,10 +115,10 @@ impl<F: PrimeField> SumCheckVerifier<F> for PolyIOP<F> {
                 interpolate_uni_poly::<F>(evaluations.as_ref(), verifier_state.randomness[i]);
         }
 
-        return Ok(SubClaim {
+        Ok(SubClaim {
             point: verifier_state.randomness.clone(),
             expected_evaluation: expected,
-        });
+        })
     }
 }
 
