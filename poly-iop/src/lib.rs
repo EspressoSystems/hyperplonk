@@ -1,8 +1,17 @@
-#[cfg(test)]
-mod tests {
-    #[test]
-    fn it_works() {
-        let result = 2 + 2;
-        assert_eq!(result, 4);
-    }
+#![allow(dead_code)]
+
+use std::marker::PhantomData;
+
+use ark_ff::PrimeField;
+
+mod errors;
+mod poly_list;
+mod structs;
+mod sum_check;
+mod transcript;
+mod utils;
+
+/// Struct for PolyIOP.
+pub struct PolyIOP<F: PrimeField> {
+    phantom: PhantomData<F>,
 }
