@@ -4,9 +4,9 @@
 
 use crate::{
     errors::PolyIOPErrors,
-    poly_list::PolynomialList,
     structs::{DomainInfo, IOPProof, SubClaim},
     transcript::IOPTranscript,
+    vertual_poly::VirtualPolynomial,
     PolyIOP,
 };
 use ark_ff::PrimeField;
@@ -85,7 +85,7 @@ pub trait SumCheckProver<F: PrimeField> {
     /// The resulting polynomial is
     ///
     /// $$\sum_{i=0}^{n}C_i\cdot\prod_{j=0}^{m_i}P_{ij}$$
-    fn prover_init(polynomial: &Self::PolyList) -> Self::ProverState;
+    fn prover_init(polynomial: &Self::PolyList) -> Result<Self::ProverState, PolyIOPErrors>;
 
     /// receive message from verifier, generate prover message, and proceed to
     /// next round
@@ -94,7 +94,7 @@ pub trait SumCheckProver<F: PrimeField> {
     fn prove_round_and_update_state(
         prover_state: &mut Self::ProverState,
         challenge: &Option<F>,
-    ) -> Self::ProverMessage;
+    ) -> Result<Self::ProverMessage, PolyIOPErrors>;
 }
 
 pub trait SumCheckVerifier<F: PrimeField> {
@@ -135,7 +135,7 @@ pub trait SumCheckVerifier<F: PrimeField> {
 impl<F: PrimeField> SumCheck<F> for PolyIOP<F> {
     type Proof = IOPProof<F>;
 
-    type PolyList = PolynomialList<F>;
+    type PolyList = VirtualPolynomial<F>;
 
     type DomainInfo = DomainInfo<F>;
 
@@ -178,11 +178,11 @@ impl<F: PrimeField> SumCheck<F> for PolyIOP<F> {
     ) -> Result<Self::Proof, PolyIOPErrors> {
         transcript.append_domain_info(&poly.domain_info)?;
 
-        let mut prover_state = Self::prover_init(&poly);
+        let mut prover_state = Self::prover_init(poly)?;
         let mut challenge = None;
         let mut prover_msgs = Vec::with_capacity(poly.domain_info.num_variables);
         for _ in 0..poly.domain_info.num_variables {
-            let prover_msg = Self::prove_round_and_update_state(&mut prover_state, &challenge);
+            let prover_msg = Self::prove_round_and_update_state(&mut prover_state, &challenge)?;
             transcript.append_prover_message(&prover_msg)?;
             prover_msgs.push(prover_msg);
             challenge = Some(transcript.get_and_append_challenge(b"Internal round")?);
@@ -200,18 +200,15 @@ impl<F: PrimeField> SumCheck<F> for PolyIOP<F> {
         domain_info: &Self::DomainInfo,
         transcript: &mut Self::Transcript,
     ) -> Result<Self::SubClaim, PolyIOPErrors> {
-        transcript.append_domain_info(&domain_info)?;
+        transcript.append_domain_info(domain_info)?;
         let mut verifier_state = Self::verifier_init(domain_info);
         for i in 0..domain_info.num_variables {
             let prover_msg = proof.proofs.get(i).expect("proof is incomplete");
-            transcript.append_prover_message(&prover_msg)?;
+            transcript.append_prover_message(prover_msg)?;
             Self::verify_round_and_update_state(&mut verifier_state, prover_msg, transcript)?;
         }
 
-        Ok(Self::check_and_generate_subclaim(
-            &verifier_state,
-            &claimed_sum,
-        )?)
+        Self::check_and_generate_subclaim(&verifier_state, &claimed_sum)
     }
 }
 
@@ -219,7 +216,7 @@ impl<F: PrimeField> SumCheck<F> for PolyIOP<F> {
 mod test {
 
     use super::*;
-    use crate::poly_list::test::random_list_of_products;
+    use crate::vertual_poly::test::random_list_of_products;
     use ark_bls12_381::Fr;
     use ark_ff::UniformRand;
     use ark_poly::{DenseMultilinearExtension, MultilinearExtension};
@@ -248,13 +245,13 @@ mod test {
         let (poly, asserted_sum) =
             random_list_of_products::<Fr, _>(nv, num_multiplicands_range, num_products, &mut rng);
         let poly_info = poly.domain_info.clone();
-        let mut prover_state = PolyIOP::prover_init(&poly);
+        let mut prover_state = PolyIOP::prover_init(&poly).unwrap();
         let mut verifier_state = PolyIOP::verifier_init(&poly_info);
         let mut challenge = None;
         let mut transcript = IOPTranscript::new(b"a test transcript");
         for _ in 0..poly.domain_info.num_variables {
             let prover_message =
-                PolyIOP::prove_round_and_update_state(&mut prover_state, &challenge);
+                PolyIOP::prove_round_and_update_state(&mut prover_state, &challenge).unwrap();
 
             challenge = Some(
                 PolyIOP::verify_round_and_update_state(
@@ -320,7 +317,7 @@ mod test {
         let ml_extensions: Vec<_> = (0..5)
             .map(|_| Rc::new(DenseMultilinearExtension::<Fr>::rand(8, &mut rng)))
             .collect();
-        let mut poly = PolynomialList::new(8);
+        let mut poly = VirtualPolynomial::new(8);
         poly.add_product(
             vec![
                 ml_extensions[2].clone(),
@@ -354,7 +351,7 @@ mod test {
         assert_eq!(poly.flattened_ml_extensions.len(), 5);
 
         // test memory usage for prover
-        let prover = PolyIOP::prover_init(&poly);
+        let prover = PolyIOP::prover_init(&poly).unwrap();
         assert_eq!(prover.flattened_ml_extensions.len(), 5);
         drop(prover);
 

@@ -12,6 +12,6 @@ pub struct ProverState<F: PrimeField> {
     /// points to
     pub flattened_ml_extensions: Vec<DenseMultilinearExtension<F>>,
     pub(crate) num_vars: usize,
-    pub(crate) max_multiplicands: usize,
+    pub(crate) max_degree: usize,
     pub(crate) round: usize,
 }

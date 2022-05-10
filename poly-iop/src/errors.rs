@@ -3,9 +3,13 @@
 use ark_std::string::String;
 use displaydoc::Display;
 
-/// A `enum` specifying the possible failure modes of the HyperPlonk.
+/// A `enum` specifying the possible failure modes of the PolyIOP.
 #[derive(Display, Debug)]
 pub enum PolyIOPErrors {
+    /// Invalid Prover
+    InvalidProver(String),
+    /// Invalid Verifier
+    InvalidVerifier(String),
     /// Invalid Proof
     InvalidProof(String),
     /// Invalid parameters

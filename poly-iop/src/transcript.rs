@@ -41,7 +41,7 @@ impl<F: PrimeField> IOPTranscript<F> {
     ) -> Result<(), PolyIOPErrors> {
         let message = format!(
             "max_mul {} num_var {}",
-            domain_info.max_multiplicands, domain_info.num_variables
+            domain_info.max_degree, domain_info.num_variables
         );
         self.append_message(b"aux info", message.as_bytes())?;
 

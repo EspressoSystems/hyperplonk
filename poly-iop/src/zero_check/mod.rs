@@ -9,10 +9,10 @@ pub use verifier::VerifierState;
 
 use crate::{
     errors::PolyIOPErrors,
-    poly_list::PolynomialList,
     structs::{DomainInfo, IOPProof, SubClaim},
     sum_check::SumCheck,
     transcript::IOPTranscript,
+    vertual_poly::VirtualPolynomial,
     PolyIOP,
 };
 
@@ -46,7 +46,7 @@ pub trait ZeroCheck<F: PrimeField> {
 
 impl<F: PrimeField> ZeroCheck<F> for PolyIOP<F> {
     type Proof = IOPProof<F>;
-    type PolyList = PolynomialList<F>;
+    type PolyList = VirtualPolynomial<F>;
     type DomainInfo = DomainInfo<F>;
     type SubClaim = SubClaim<F>;
     type Transcript = IOPTranscript<F>;
@@ -68,7 +68,7 @@ impl<F: PrimeField> ZeroCheck<F> for PolyIOP<F> {
         let length = poly.domain_info.num_variables;
         let r = transcript.get_and_append_challenge_vectors(b"vector r", length)?;
 
-        let f_hat = build_f_hat(&poly, r.as_ref());
+        let f_hat = build_f_hat(poly, r.as_ref());
 
         <Self as SumCheck<F>>::prove(&f_hat, transcript)
     }
@@ -87,7 +87,7 @@ impl<F: PrimeField> ZeroCheck<F> for PolyIOP<F> {
 //      \hat f(x) = \sum_{x_i \in eval_x} f(x_i) eq(x, r)
 // where
 //      eq(x,y) = \prod_i=1^num_var (x_i * y_i + (1-x_i)*(1-y_i))
-fn build_f_hat<F: PrimeField>(poly: &PolynomialList<F>, r: &[F]) -> PolynomialList<F> {
+fn build_f_hat<F: PrimeField>(poly: &VirtualPolynomial<F>, r: &[F]) -> VirtualPolynomial<F> {
     assert_eq!(poly.domain_info.num_variables, r.len());
     let mut res = poly.clone();
     let eq_x_r = build_eq_x_r(r);
@@ -104,7 +104,7 @@ fn build_eq_x_r<F: PrimeField>(r: &[F]) -> Vec<Rc<DenseMultilinearExtension<F>>>
     let num_var = r.len();
 
     let mut res = vec![];
-    for i in 0..num_var {
+    for (i, &ri) in r.iter().enumerate() {
         // we want to build a polynomial for (x_i * r_i + (1-x_i)*(1-r_i)).
         // we compute the i-th evaluation, i.e., x = (0,...0, 1, 0..,0) where x[i] = 1
         // as:
@@ -116,11 +116,11 @@ fn build_eq_x_r<F: PrimeField>(r: &[F]) -> Vec<Rc<DenseMultilinearExtension<F>>>
         //  1 - r_{i+1}
         //  ...
         //  r_{num_var}
-        let one_minus_ri = F::one() - r[i];
+        let one_minus_ri = F::one() - ri;
         let mut current_eval = vec![];
         for j in 0..num_var {
             if i == j {
-                current_eval.push(r[i]);
+                current_eval.push(ri);
             } else {
                 current_eval.push(one_minus_ri);
             }
@@ -138,7 +138,7 @@ fn build_eq_x_r<F: PrimeField>(r: &[F]) -> Vec<Rc<DenseMultilinearExtension<F>>>
 mod test {
 
     use super::ZeroCheck;
-    use crate::{poly_list::test::random_list_of_products, PolyIOP, PolynomialList};
+    use crate::{vertual_poly::test::random_list_of_products, PolyIOP, VirtualPolynomial};
     use ark_bls12_381::Fr;
     use ark_ff::UniformRand;
     use ark_poly::{DenseMultilinearExtension, MultilinearExtension};
@@ -196,7 +196,7 @@ mod test {
         let ml_extensions: Vec<_> = (0..5)
             .map(|_| Rc::new(DenseMultilinearExtension::<Fr>::rand(8, &mut rng)))
             .collect();
-        let mut poly = PolynomialList::new(8);
+        let mut poly = VirtualPolynomial::new(8);
         poly.add_product(
             vec![
                 ml_extensions[2].clone(),

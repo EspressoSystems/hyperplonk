@@ -4,7 +4,7 @@ use ark_ff::PrimeField;
 pub struct VerifierState<F: PrimeField> {
     round: usize,
     nv: usize,
-    max_multiplicands: usize,
+    max_degree: usize,
     finished: bool,
     /// a list storing the univariate polynomial in evaluation form sent by the
     /// prover at each round

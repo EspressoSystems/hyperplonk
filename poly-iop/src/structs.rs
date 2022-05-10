@@ -4,10 +4,10 @@ use ark_ff::PrimeField;
 use std::marker::PhantomData;
 
 #[derive(Clone, Debug, Default, PartialEq)]
-/// Auxiliary information about the multilinear system
+/// Auxiliary information about the multilinear polynomial
 pub struct DomainInfo<F: PrimeField> {
     /// max number of multiplicands in each product
-    pub max_multiplicands: usize,
+    pub max_degree: usize,
     /// number of variables of the polynomial
     pub num_variables: usize,
     /// Associated field

@@ -14,7 +14,7 @@ use ark_ff::PrimeField;
 pub struct VerifierState<F: PrimeField> {
     round: usize,
     num_vars: usize,
-    max_multiplicands: usize,
+    max_degree: usize,
     finished: bool,
     /// a list storing the univariate polynomial in evaluation form sent by the
     /// prover at each round
@@ -36,7 +36,7 @@ impl<F: PrimeField> SumCheckVerifier<F> for PolyIOP<F> {
         VerifierState {
             round: 1,
             num_vars: index_info.num_variables,
-            max_multiplicands: index_info.max_multiplicands,
+            max_degree: index_info.max_degree,
             finished: false,
             polynomials_received: Vec::with_capacity(index_info.num_variables),
             challenges: Vec::with_capacity(index_info.num_variables),
@@ -54,8 +54,10 @@ impl<F: PrimeField> SumCheckVerifier<F> for PolyIOP<F> {
         prover_msg: &Self::ProverMessage,
         transcript: &mut Self::Transcript,
     ) -> Result<Self::Challenge, PolyIOPErrors> {
-        if verifier_state.finished {
-            panic!("Incorrect verifier state: Verifier is already finished.");
+        if !verifier_state.finished {
+            return Err(PolyIOPErrors::InvalidVerifier(
+                "Incorrect verifier state: Verifier is already finished.".to_string(),
+            ));
         }
 
         // Now, verifier should check if the received P(0) + P(1) = expected. The check
@@ -92,23 +94,29 @@ impl<F: PrimeField> SumCheckVerifier<F> for PolyIOP<F> {
         asserted_sum: &F,
     ) -> Result<Self::SubClaim, PolyIOPErrors> {
         if !verifier_state.finished {
-            panic!("Verifier has not finished.");
+            return Err(PolyIOPErrors::InvalidVerifier(
+                "Incorrect verifier state: Verifier has not finished.".to_string(),
+            ));
         }
 
         let mut expected = *asserted_sum;
         if verifier_state.polynomials_received.len() != verifier_state.num_vars {
-            panic!("insufficient rounds");
+            return Err(PolyIOPErrors::InvalidVerifier(
+                "insufficient rounds".to_string(),
+            ));
         }
         for i in 0..verifier_state.num_vars {
             let evaluations = verifier_state.polynomials_received[i].clone();
-            if evaluations.len() != verifier_state.max_multiplicands + 1 {
-                panic!("incorrect number of evaluations");
+            if evaluations.len() != verifier_state.max_degree + 1 {
+                return Err(PolyIOPErrors::InvalidVerifier(
+                    "incorrect number of evaluations".to_string(),
+                ));
             }
             let p0 = evaluations[0];
             let p1 = evaluations[1];
             if p0 + p1 != expected {
                 return Err(PolyIOPErrors::InvalidProof(
-                    "Prover message is not consistent with the claim.".into(),
+                    "Prover message is not consistent with the claim.".to_string(),
                 ));
             }
             expected =

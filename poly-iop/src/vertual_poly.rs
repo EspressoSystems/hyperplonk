@@ -3,9 +3,10 @@ use ark_ff::PrimeField;
 use ark_poly::{DenseMultilinearExtension, MultilinearExtension};
 use std::{cmp::max, collections::HashMap, marker::PhantomData, rc::Rc};
 
+/// A virtual polynomial is a list of multilinear polynomials
 #[derive(Clone, Debug, Default, PartialEq)]
-pub struct PolynomialList<F: PrimeField> {
-    /// Aux information about the multilinear system
+pub struct VirtualPolynomial<F: PrimeField> {
+    /// Aux information about the multilinear polynomial
     pub domain_info: DomainInfo<F>,
     /// list of reference to products (as usize) of multilinear extension
     pub products: Vec<(F, Vec<usize>)>,
@@ -16,12 +17,12 @@ pub struct PolynomialList<F: PrimeField> {
     raw_pointers_lookup_table: HashMap<*const DenseMultilinearExtension<F>, usize>,
 }
 
-impl<F: PrimeField> PolynomialList<F> {
+impl<F: PrimeField> VirtualPolynomial<F> {
     /// Returns an empty polynomial
     pub fn new(num_variables: usize) -> Self {
-        PolynomialList {
+        VirtualPolynomial {
             domain_info: DomainInfo {
-                max_multiplicands: 0,
+                max_degree: 0,
                 num_variables,
                 phantom: PhantomData::default(),
             },
@@ -42,7 +43,7 @@ impl<F: PrimeField> PolynomialList<F> {
         let product: Vec<Rc<DenseMultilinearExtension<F>>> = product.into_iter().collect();
         let mut indexed_product = Vec::with_capacity(product.len());
         assert!(!product.is_empty());
-        self.domain_info.max_multiplicands = max(self.domain_info.max_multiplicands, product.len());
+        self.domain_info.max_degree = max(self.domain_info.max_degree, product.len());
         for m in product {
             assert_eq!(
                 m.num_vars, self.domain_info.num_variables,
@@ -115,9 +116,9 @@ pub(crate) mod test {
         num_multiplicands_range: (usize, usize),
         num_products: usize,
         rng: &mut R,
-    ) -> (PolynomialList<F>, F) {
+    ) -> (VirtualPolynomial<F>, F) {
         let mut sum = F::zero();
-        let mut poly = PolynomialList::new(nv);
+        let mut poly = VirtualPolynomial::new(nv);
         for _ in 0..num_products {
             let num_multiplicands =
                 rng.gen_range(num_multiplicands_range.0..num_multiplicands_range.1);
