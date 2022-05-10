@@ -67,9 +67,7 @@ impl<F: PrimeField> ZeroCheck<F> for PolyIOP<F> {
     ) -> Result<Self::Proof, PolyIOPErrors> {
         let length = poly.domain_info.num_variables;
         let r = transcript.get_and_append_challenge_vectors(b"vector r", length)?;
-
         let f_hat = build_f_hat(poly, r.as_ref());
-
         <Self as SumCheck<F>>::prove(&f_hat, transcript)
     }
 
@@ -79,6 +77,11 @@ impl<F: PrimeField> ZeroCheck<F> for PolyIOP<F> {
         domain_info: &Self::DomainInfo,
         transcript: &mut Self::Transcript,
     ) -> Result<Self::SubClaim, PolyIOPErrors> {
+        println!(
+            "sum: {}",
+            proof.proofs[0].evaluations[0] + proof.proofs[0].evaluations[1]
+        );
+
         <Self as SumCheck<F>>::verify(F::zero(), proof, domain_info, transcript)
     }
 }
@@ -91,7 +94,16 @@ fn build_f_hat<F: PrimeField>(poly: &VirtualPolynomial<F>, r: &[F]) -> VirtualPo
     assert_eq!(poly.domain_info.num_variables, r.len());
     let mut res = poly.clone();
     let eq_x_r = build_eq_x_r(r);
-    res.add_product(eq_x_r, F::one());
+
+    res.add_product([eq_x_r; 1], F::one());
+    // let num_var = r.len();
+    // for i in 0..1 << 2 {
+    //     let bit_sequence: Vec<F> = bit_decompose(i, num_var)
+    //         .iter()
+    //         .map(|&x| F::from(x as u64))
+    //         .collect();
+    //     println!("i {}, eval {}", i, res.evaluate(&bit_sequence))
+    // }
 
     res
 }
@@ -100,37 +112,55 @@ fn build_f_hat<F: PrimeField>(poly: &VirtualPolynomial<F>, r: &[F]) -> VirtualPo
 //      eq(x,y) = \prod_i=1^num_var (x_i * y_i + (1-x_i)*(1-y_i))
 // over r, which is
 //      eq(x,y) = \prod_i=1^num_var (x_i * r_i + (1-x_i)*(1-r_i))
-fn build_eq_x_r<F: PrimeField>(r: &[F]) -> Vec<Rc<DenseMultilinearExtension<F>>> {
-    let num_var = r.len();
+fn build_eq_x_r<F: PrimeField>(r: &[F]) -> Rc<DenseMultilinearExtension<F>> {
+    // we build eq(x,r) from its evaluations
+    // we want to evaluate eq(x,r) over x \in {0, 1}^num_vars
+    // for example, with num_vars = 4, x is a binary vector of 4, then
+    //  0 0 0 0 -> (1-r0)   * (1-r1)    * (1-r2)    * (1-r3)
+    //  1 0 0 0 -> r0       * (1-r1)    * (1-r2)    * (1-r3)
+    //  0 1 0 0 -> (1-r0)   * r1        * (1-r2)    * (1-r3)
+    //  1 1 0 0 -> r0       * r1        * (1-r2)    * (1-r3)
+    //  ....
+    //  1 1 1 1 -> r0       * r1        * r2        * r3
+    // we will need 2^num_var evaluations
 
-    let mut res = vec![];
-    for (i, &ri) in r.iter().enumerate() {
-        // we want to build a polynomial for (x_i * r_i + (1-x_i)*(1-r_i)).
-        // we compute the i-th evaluation, i.e., x = (0,...0, 1, 0..,0) where x[i] = 1
-        // as:
-        //  1 - r_1,
-        //  1 - r_2,
-        //  ...
-        //  1 - r_{i-1}
-        //  r_i
-        //  1 - r_{i+1}
-        //  ...
-        //  r_{num_var}
-        let one_minus_ri = F::one() - ri;
-        let mut current_eval = vec![];
-        for j in 0..num_var {
-            if i == j {
-                current_eval.push(ri);
+    // First, we build array for {1 - r_i}
+    let one_minus_r: Vec<F> = r.iter().map(|ri| F::one() - ri).collect();
+
+    let num_var = r.len();
+    let mut eval = vec![];
+
+    // TODO: optimize the following code
+    // currently, a naive implementation requires num_var * 2^num_var
+    // field multiplications.
+    for i in 0..1 << num_var {
+        let mut current_eval = F::one();
+        let bit_sequence = bit_decompose(i, num_var);
+
+        for (&bit, (ri, one_minus_ri)) in bit_sequence.iter().zip(r.iter().zip(one_minus_r.iter()))
+        {
+            if bit {
+                current_eval *= *ri;
             } else {
-                current_eval.push(one_minus_ri);
+                current_eval *= *one_minus_ri;
             }
         }
-        res.push(Rc::new(DenseMultilinearExtension::from_evaluations_vec(
-            num_var,
-            current_eval,
-        )))
+        eval.push(current_eval);
     }
+    let res = Rc::new(DenseMultilinearExtension::from_evaluations_vec(
+        num_var, eval,
+    ));
 
+    res
+}
+
+fn bit_decompose(input: u64, num_var: usize) -> Vec<bool> {
+    let mut res = Vec::with_capacity(num_var);
+    let mut i = input;
+    for _ in 0..num_var {
+        res.push(i & 1 == 1);
+        i >>= 1;
+    }
     res
 }
 
@@ -138,7 +168,7 @@ fn build_eq_x_r<F: PrimeField>(r: &[F]) -> Vec<Rc<DenseMultilinearExtension<F>>>
 mod test {
 
     use super::ZeroCheck;
-    use crate::{virtual_poly::test::random_list_of_products, PolyIOP, VirtualPolynomial};
+    use crate::{virtual_poly::test::random_zero_list_of_products, PolyIOP, VirtualPolynomial};
     use ark_bls12_381::Fr;
     use ark_ff::UniformRand;
     use ark_poly::{DenseMultilinearExtension, MultilinearExtension};
@@ -149,9 +179,20 @@ mod test {
         let mut rng = test_rng();
         let mut transcript = PolyIOP::init_transcript();
 
-        let (poly, _asserted_sum) =
-            random_list_of_products::<Fr, _>(nv, num_multiplicands_range, num_products, &mut rng);
+        let poly = random_zero_list_of_products::<Fr, _>(
+            nv,
+            num_multiplicands_range,
+            num_products,
+            &mut rng,
+        );
+        println!("{:?}", poly);
+
         let proof = PolyIOP::prove(&poly, &mut transcript).expect("fail to prove");
+        println!(
+            "{:?}",
+            proof.proofs[0].evaluations[0] + proof.proofs[0].evaluations[1]
+        );
+
         let poly_info = poly.domain_info.clone();
         let mut transcript = PolyIOP::init_transcript();
         let subclaim =
@@ -172,7 +213,7 @@ mod test {
     }
     #[test]
     fn test_normal_polynomial() {
-        let nv = 12;
+        let nv = 16;
         let num_multiplicands_range = (4, 9);
         let num_products = 5;
 
