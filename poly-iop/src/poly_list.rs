@@ -74,3 +74,59 @@ impl<F: PrimeField> PolynomialList<F> {
             .sum()
     }
 }
+
+#[cfg(test)]
+pub(crate) mod test {
+    use super::*;
+    use ark_std::rand::{Rng, RngCore};
+
+    pub(crate) fn random_product<F: PrimeField, R: RngCore>(
+        nv: usize,
+        num_multiplicands: usize,
+        rng: &mut R,
+    ) -> (Vec<Rc<DenseMultilinearExtension<F>>>, F) {
+        let mut multiplicands = Vec::with_capacity(num_multiplicands);
+        for _ in 0..num_multiplicands {
+            multiplicands.push(Vec::with_capacity(1 << nv))
+        }
+        let mut sum = F::zero();
+
+        for _ in 0..(1 << nv) {
+            let mut product = F::one();
+            for i in 0..num_multiplicands {
+                let val = F::rand(rng);
+                multiplicands[i].push(val);
+                product *= val;
+            }
+            sum += product;
+        }
+
+        return (
+            multiplicands
+                .into_iter()
+                .map(|x| Rc::new(DenseMultilinearExtension::from_evaluations_vec(nv, x)))
+                .collect(),
+            sum,
+        );
+    }
+
+    pub(crate) fn random_list_of_products<F: PrimeField, R: RngCore>(
+        nv: usize,
+        num_multiplicands_range: (usize, usize),
+        num_products: usize,
+        rng: &mut R,
+    ) -> (PolynomialList<F>, F) {
+        let mut sum = F::zero();
+        let mut poly = PolynomialList::new(nv);
+        for _ in 0..num_products {
+            let num_multiplicands =
+                rng.gen_range(num_multiplicands_range.0..num_multiplicands_range.1);
+            let (product, product_sum) = random_product(nv, num_multiplicands, rng);
+            let coefficient = F::rand(rng);
+            poly.add_product(product.into_iter(), coefficient);
+            sum += product_sum * coefficient;
+        }
+
+        (poly, sum)
+    }
+}

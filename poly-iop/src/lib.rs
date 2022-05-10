@@ -12,6 +12,8 @@ mod transcript;
 mod utils;
 mod zero_check;
 
+pub use poly_list::PolynomialList;
+
 /// Struct for PolyIOP.
 pub struct PolyIOP<F: PrimeField> {
     phantom: PhantomData<F>,

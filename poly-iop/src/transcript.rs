@@ -80,4 +80,18 @@ impl<F: PrimeField> IOPTranscript<F> {
             .append_message(label, &to_bytes!(&challenge)?);
         Ok(challenge)
     }
+
+    // generate a list of challenges for the current transcript
+    // and append it to the transcript
+    pub(crate) fn get_and_append_challenge_vectors(
+        &mut self,
+        label: &'static [u8],
+        len: usize,
+    ) -> Result<Vec<F>, PolyIOPErrors> {
+        let mut res = vec![];
+        for _ in 0..len {
+            res.push(self.get_and_append_challenge(label)?)
+        }
+        Ok(res)
+    }
 }

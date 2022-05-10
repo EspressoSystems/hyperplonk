@@ -154,7 +154,7 @@ impl<F: PrimeField> SumCheck<F> for PolyIOP<F> {
     /// may be initialized by this complex protocol, and passed to the
     /// SumCheck prover/verifier.
     fn init_transcript() -> Self::Transcript {
-        IOPTranscript::<F>::new(b"Initializing transcript")
+        IOPTranscript::<F>::new(b"Initializing SumCheck transcript")
     }
 
     /// generate proof of the sum of polynomial over {0,1}^`num_vars`
@@ -219,64 +219,12 @@ impl<F: PrimeField> SumCheck<F> for PolyIOP<F> {
 mod test {
 
     use super::*;
+    use crate::poly_list::test::random_list_of_products;
     use ark_bls12_381::Fr;
     use ark_ff::UniformRand;
     use ark_poly::{DenseMultilinearExtension, MultilinearExtension};
-    use ark_std::{
-        rand::{Rng, RngCore},
-        test_rng,
-    };
+    use ark_std::test_rng;
     use std::rc::Rc;
-
-    fn random_product<F: PrimeField, R: RngCore>(
-        nv: usize,
-        num_multiplicands: usize,
-        rng: &mut R,
-    ) -> (Vec<Rc<DenseMultilinearExtension<F>>>, F) {
-        let mut multiplicands = Vec::with_capacity(num_multiplicands);
-        for _ in 0..num_multiplicands {
-            multiplicands.push(Vec::with_capacity(1 << nv))
-        }
-        let mut sum = F::zero();
-
-        for _ in 0..(1 << nv) {
-            let mut product = F::one();
-            for i in 0..num_multiplicands {
-                let val = F::rand(rng);
-                multiplicands[i].push(val);
-                product *= val;
-            }
-            sum += product;
-        }
-
-        return (
-            multiplicands
-                .into_iter()
-                .map(|x| Rc::new(DenseMultilinearExtension::from_evaluations_vec(nv, x)))
-                .collect(),
-            sum,
-        );
-    }
-
-    fn random_list_of_products<F: PrimeField, R: RngCore>(
-        nv: usize,
-        num_multiplicands_range: (usize, usize),
-        num_products: usize,
-        rng: &mut R,
-    ) -> (PolynomialList<F>, F) {
-        let mut sum = F::zero();
-        let mut poly = PolynomialList::new(nv);
-        for _ in 0..num_products {
-            let num_multiplicands =
-                rng.gen_range(num_multiplicands_range.0..num_multiplicands_range.1);
-            let (product, product_sum) = random_product(nv, num_multiplicands, rng);
-            let coefficient = F::rand(rng);
-            poly.add_product(product.into_iter(), coefficient);
-            sum += product_sum * coefficient;
-        }
-
-        (poly, sum)
-    }
 
     fn test_polynomial(nv: usize, num_multiplicands_range: (usize, usize), num_products: usize) {
         let mut rng = test_rng();
