@@ -3,7 +3,7 @@
 // If so move them to src/structs.rs
 use super::SumCheckProver;
 use crate::{
-    errors::PolyIOPErrors, structs::IOPProverMessage, vertual_poly::VirtualPolynomial, PolyIOP,
+    errors::PolyIOPErrors, structs::IOPProverMessage, virtual_poly::VirtualPolynomial, PolyIOP,
 };
 use ark_ff::PrimeField;
 use ark_poly::{DenseMultilinearExtension, MultilinearExtension};

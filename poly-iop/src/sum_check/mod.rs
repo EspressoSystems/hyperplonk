@@ -6,7 +6,7 @@ use crate::{
     errors::PolyIOPErrors,
     structs::{DomainInfo, IOPProof, SubClaim},
     transcript::IOPTranscript,
-    vertual_poly::VirtualPolynomial,
+    virtual_poly::VirtualPolynomial,
     PolyIOP,
 };
 use ark_ff::PrimeField;
@@ -216,7 +216,7 @@ impl<F: PrimeField> SumCheck<F> for PolyIOP<F> {
 mod test {
 
     use super::*;
-    use crate::vertual_poly::test::random_list_of_products;
+    use crate::virtual_poly::test::random_list_of_products;
     use ark_bls12_381::Fr;
     use ark_ff::UniformRand;
     use ark_poly::{DenseMultilinearExtension, MultilinearExtension};

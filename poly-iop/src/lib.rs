@@ -9,10 +9,10 @@ mod structs;
 mod sum_check;
 mod transcript;
 mod utils;
-mod vertual_poly;
+mod virtual_poly;
 mod zero_check;
 
-pub use vertual_poly::VirtualPolynomial;
+pub use virtual_poly::VirtualPolynomial;
 
 /// Struct for PolyIOP.
 pub struct PolyIOP<F: PrimeField> {

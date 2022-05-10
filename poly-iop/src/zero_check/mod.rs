@@ -12,7 +12,7 @@ use crate::{
     structs::{DomainInfo, IOPProof, SubClaim},
     sum_check::SumCheck,
     transcript::IOPTranscript,
-    vertual_poly::VirtualPolynomial,
+    virtual_poly::VirtualPolynomial,
     PolyIOP,
 };
 
@@ -138,7 +138,7 @@ fn build_eq_x_r<F: PrimeField>(r: &[F]) -> Vec<Rc<DenseMultilinearExtension<F>>>
 mod test {
 
     use super::ZeroCheck;
-    use crate::{vertual_poly::test::random_list_of_products, PolyIOP, VirtualPolynomial};
+    use crate::{virtual_poly::test::random_list_of_products, PolyIOP, VirtualPolynomial};
     use ark_bls12_381::Fr;
     use ark_ff::UniformRand;
     use ark_poly::{DenseMultilinearExtension, MultilinearExtension};
