@@ -11,6 +11,7 @@ use crate::{
 
 pub struct IOPTranscript<F: PrimeField> {
     transcript: Transcript,
+    is_empty: bool,
     #[doc(hidden)]
     phantom: PhantomData<F>,
 }
@@ -20,6 +21,7 @@ impl<F: PrimeField> IOPTranscript<F> {
     pub(crate) fn new(label: &'static [u8]) -> Self {
         Self {
             transcript: Transcript::new(label),
+            is_empty: true,
             phantom: PhantomData::default(),
         }
     }
@@ -31,7 +33,7 @@ impl<F: PrimeField> IOPTranscript<F> {
         msg: &[u8],
     ) -> Result<(), PolyIOPErrors> {
         self.transcript.append_message(label, msg);
-
+        self.is_empty = false;
         Ok(())
     }
 
@@ -73,6 +75,12 @@ impl<F: PrimeField> IOPTranscript<F> {
         &mut self,
         label: &'static [u8],
     ) -> Result<F, PolyIOPErrors> {
+        if self.is_empty {
+            return Err(PolyIOPErrors::InvalidTranscript(
+                "transcript is empty".to_string(),
+            ));
+        }
+
         let mut buf = [0u8; 64];
         self.transcript.challenge_bytes(label, &mut buf);
         let challenge = F::from_le_bytes_mod_order(&buf);
@@ -88,6 +96,7 @@ impl<F: PrimeField> IOPTranscript<F> {
         label: &'static [u8],
         len: usize,
     ) -> Result<Vec<F>, PolyIOPErrors> {
+        //  we need to reject when transcript is empty
         let mut res = vec![];
         for _ in 0..len {
             res.push(self.get_and_append_challenge(label)?)

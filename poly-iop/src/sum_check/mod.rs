@@ -249,6 +249,9 @@ mod test {
         let mut verifier_state = PolyIOP::verifier_init(&poly_info);
         let mut challenge = None;
         let mut transcript = IOPTranscript::new(b"a test transcript");
+        transcript
+            .append_message(b"testing", b"initializing transcript for testing")
+            .unwrap();
         for _ in 0..poly.domain_info.num_variables {
             let prover_message =
                 PolyIOP::prove_round_and_update_state(&mut prover_state, &challenge).unwrap();

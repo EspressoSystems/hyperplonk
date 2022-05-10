@@ -71,7 +71,8 @@ impl<F: PrimeField> ZeroCheck<F> for PolyIOP<F> {
         <Self as SumCheck<F>>::prove(&f_hat, transcript)
     }
 
-    /// verify the claimed sum using the proof
+    /// Verify the claimed sum using the proof.
+    /// Caller needs to makes sure that `\hat f = f * eq(x, r)`
     fn verify(
         proof: &Self::Proof,
         domain_info: &Self::DomainInfo,
@@ -92,19 +93,34 @@ impl<F: PrimeField> ZeroCheck<F> for PolyIOP<F> {
 //      eq(x,y) = \prod_i=1^num_var (x_i * y_i + (1-x_i)*(1-y_i))
 fn build_f_hat<F: PrimeField>(poly: &VirtualPolynomial<F>, r: &[F]) -> VirtualPolynomial<F> {
     assert_eq!(poly.domain_info.num_variables, r.len());
-    let mut res = poly.clone();
-    let eq_x_r = build_eq_x_r(r);
 
-    res.add_product([eq_x_r; 1], F::one());
-    // let num_var = r.len();
-    // for i in 0..1 << 2 {
-    //     let bit_sequence: Vec<F> = bit_decompose(i, num_var)
-    //         .iter()
-    //         .map(|&x| F::from(x as u64))
-    //         .collect();
-    //     println!("i {}, eval {}", i, res.evaluate(&bit_sequence))
-    // }
+    // First, we build array for {1 - r_i}
+    let one_minus_r: Vec<F> = r.iter().map(|ri| F::one() - ri).collect();
 
+    let mut eval = vec![];
+    // let eq_x_r = build_eq_x_r(r);
+    let num_var = r.len();
+    let mut res = VirtualPolynomial::new(num_var);
+    // res.add_product([eq_x_r; 1], F::one());
+
+    for i in 0..1 << num_var {
+        let bit_sequence = bit_decompose(i, num_var);
+        let bit_points: Vec<F> = bit_sequence.iter().map(|&x| F::from(x as u64)).collect();
+        let mut eq_eval = F::one();
+        for (&bit, (ri, one_minus_ri)) in bit_sequence.iter().zip(r.iter().zip(one_minus_r.iter()))
+        {
+            if bit {
+                eq_eval *= ri;
+            } else {
+                eq_eval *= one_minus_ri;
+            }
+        }
+        eval.push(eq_eval * poly.evaluate(&bit_points))
+    }
+    let hat_f = Rc::new(DenseMultilinearExtension::from_evaluations_vec(
+        num_var, eval,
+    ));
+    res.add_product([hat_f; 1], F::one());
     res
 }
 
@@ -178,23 +194,28 @@ mod test {
     fn test_polynomial(nv: usize, num_multiplicands_range: (usize, usize), num_products: usize) {
         let mut rng = test_rng();
         let mut transcript = PolyIOP::init_transcript();
-
+        transcript
+            .append_message(b"testing", b"initializing transcript for testing")
+            .unwrap();
         let poly = random_zero_list_of_products::<Fr, _>(
             nv,
             num_multiplicands_range,
             num_products,
             &mut rng,
         );
-        println!("{:?}", poly);
+        // println!("{:?}", poly);
 
         let proof = PolyIOP::prove(&poly, &mut transcript).expect("fail to prove");
         println!(
-            "{:?}",
+            "{}",
             proof.proofs[0].evaluations[0] + proof.proofs[0].evaluations[1]
         );
 
         let poly_info = poly.domain_info.clone();
         let mut transcript = PolyIOP::init_transcript();
+        transcript
+            .append_message(b"testing", b"initializing transcript for testing")
+            .unwrap();
         let subclaim =
             PolyIOP::verify(&proof, &poly_info, &mut transcript).expect("fail to verify");
         assert!(
@@ -271,10 +292,18 @@ mod test {
         assert_eq!(poly.flattened_ml_extensions.len(), 5);
 
         let mut transcript = PolyIOP::init_transcript();
+
+        transcript
+            .append_message(b"testing", b"initializing transcript for testing")
+            .unwrap();
         let poly_info = poly.domain_info.clone();
         let proof = PolyIOP::prove(&poly, &mut transcript).expect("fail to prove");
 
         let mut transcript = PolyIOP::init_transcript();
+
+        transcript
+            .append_message(b"testing", b"initializing transcript for testing")
+            .unwrap();
         let subclaim =
             PolyIOP::verify(&proof, &poly_info, &mut transcript).expect("fail to verify");
         assert!(

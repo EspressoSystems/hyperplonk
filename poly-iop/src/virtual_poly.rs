@@ -142,21 +142,21 @@ pub(crate) mod test {
         }
         let mut sum = F::zero();
 
-        for _ in 0..((1 << nv) - 1) {
+        for _ in 0..(1 << nv) {
             let mut product = F::one();
             for i in 0..num_multiplicands {
-                let val = F::rand(rng);
+                let val = F::zero(); // F::rand(rng);
                 multiplicands[i].push(val);
                 product *= val;
             }
             sum += product;
         }
 
-        // last nv offsets the poly to 0
-        for i in 0..num_multiplicands - 1 {
-            multiplicands[i].push(F::one());
-        }
-        multiplicands[num_multiplicands - 1].push(-sum);
+        // // last nv offsets the poly to 0
+        // for i in 0..num_multiplicands - 1 {
+        //     multiplicands[i].push(F::one());
+        // }
+        // multiplicands[num_multiplicands - 1].push(-sum);
 
         multiplicands
             .into_iter()
