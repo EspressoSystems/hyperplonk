@@ -10,6 +10,7 @@ mod structs;
 mod sum_check;
 mod transcript;
 mod utils;
+mod zero_check;
 
 /// Struct for PolyIOP.
 pub struct PolyIOP<F: PrimeField> {

@@ -1,4 +1,4 @@
-use crate::structs::AuxInfo;
+use crate::structs::DomainInfo;
 use ark_ff::PrimeField;
 use ark_poly::{DenseMultilinearExtension, MultilinearExtension};
 use std::{cmp::max, collections::HashMap, marker::PhantomData, rc::Rc};
@@ -6,7 +6,7 @@ use std::{cmp::max, collections::HashMap, marker::PhantomData, rc::Rc};
 #[derive(Clone, Debug, Default, PartialEq)]
 pub struct PolynomialList<F: PrimeField> {
     /// Aux information about the multilinear system
-    pub aux_info: AuxInfo<F>,
+    pub domain_info: DomainInfo<F>,
     /// list of reference to products (as usize) of multilinear extension
     pub products: Vec<(F, Vec<usize>)>,
     /// Stores multilinear extensions in which product multiplicand can refer
@@ -20,7 +20,7 @@ impl<F: PrimeField> PolynomialList<F> {
     /// Returns an empty polynomial
     pub fn new(num_variables: usize) -> Self {
         PolynomialList {
-            aux_info: AuxInfo {
+            domain_info: DomainInfo {
                 max_multiplicands: 0,
                 num_variables,
                 phantom: PhantomData::default(),
@@ -41,11 +41,11 @@ impl<F: PrimeField> PolynomialList<F> {
     ) {
         let product: Vec<Rc<DenseMultilinearExtension<F>>> = product.into_iter().collect();
         let mut indexed_product = Vec::with_capacity(product.len());
-        assert!(product.len() > 0);
-        self.aux_info.max_multiplicands = max(self.aux_info.max_multiplicands, product.len());
+        assert!(!product.is_empty());
+        self.domain_info.max_multiplicands = max(self.domain_info.max_multiplicands, product.len());
         for m in product {
             assert_eq!(
-                m.num_vars, self.aux_info.num_variables,
+                m.num_vars, self.domain_info.num_variables,
                 "product has a multiplicand with wrong number of variables"
             );
             let m_ptr: *const DenseMultilinearExtension<F> = Rc::as_ptr(&m);

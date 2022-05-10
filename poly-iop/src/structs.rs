@@ -5,7 +5,7 @@ use std::marker::PhantomData;
 
 #[derive(Clone, Debug, Default, PartialEq)]
 /// Auxiliary information about the multilinear system
-pub struct AuxInfo<F: PrimeField> {
+pub struct DomainInfo<F: PrimeField> {
     /// max number of multiplicands in each product
     pub max_multiplicands: usize,
     /// number of variables of the polynomial

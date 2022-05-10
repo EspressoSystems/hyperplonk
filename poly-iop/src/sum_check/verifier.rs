@@ -4,7 +4,7 @@
 use super::SumCheckVerifier;
 use crate::{
     errors::PolyIOPErrors,
-    structs::{AuxInfo, IOPProverMessage, SubClaim},
+    structs::{DomainInfo, IOPProverMessage, SubClaim},
     transcript::IOPTranscript,
     PolyIOP,
 };
@@ -13,7 +13,7 @@ use ark_ff::PrimeField;
 /// Verifier State
 pub struct VerifierState<F: PrimeField> {
     round: usize,
-    nv: usize,
+    num_vars: usize,
     max_multiplicands: usize,
     finished: bool,
     /// a list storing the univariate polynomial in evaluation form sent by the
@@ -24,7 +24,7 @@ pub struct VerifierState<F: PrimeField> {
 }
 
 impl<F: PrimeField> SumCheckVerifier<F> for PolyIOP<F> {
-    type AuxInfo = AuxInfo<F>;
+    type DomainInfo = DomainInfo<F>;
     type VerifierState = VerifierState<F>;
     type ProverMessage = IOPProverMessage<F>;
     type Challenge = F;
@@ -32,10 +32,10 @@ impl<F: PrimeField> SumCheckVerifier<F> for PolyIOP<F> {
     type SubClaim = SubClaim<F>;
 
     /// initialize the verifier
-    fn verifier_init(index_info: &Self::AuxInfo) -> Self::VerifierState {
+    fn verifier_init(index_info: &Self::DomainInfo) -> Self::VerifierState {
         VerifierState {
             round: 1,
-            nv: index_info.num_variables,
+            num_vars: index_info.num_variables,
             max_multiplicands: index_info.max_multiplicands,
             finished: false,
             polynomials_received: Vec::with_capacity(index_info.num_variables),
@@ -72,7 +72,7 @@ impl<F: PrimeField> SumCheckVerifier<F> for PolyIOP<F> {
         // This operation is also moved to `check_and_generate_subclaim`,
         // and will be done after the last round.
 
-        if verifier_state.round == verifier_state.nv {
+        if verifier_state.round == verifier_state.num_vars {
             // accept and close
             verifier_state.finished = true;
         } else {
@@ -96,10 +96,10 @@ impl<F: PrimeField> SumCheckVerifier<F> for PolyIOP<F> {
         }
 
         let mut expected = *asserted_sum;
-        if verifier_state.polynomials_received.len() != verifier_state.nv {
+        if verifier_state.polynomials_received.len() != verifier_state.num_vars {
             panic!("insufficient rounds");
         }
-        for i in 0..verifier_state.nv {
+        for i in 0..verifier_state.num_vars {
             let evaluations = verifier_state.polynomials_received[i].clone();
             if evaluations.len() != verifier_state.max_multiplicands + 1 {
                 panic!("incorrect number of evaluations");

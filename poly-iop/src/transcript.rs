@@ -5,7 +5,7 @@ use merlin::Transcript;
 
 use crate::{
     errors::PolyIOPErrors,
-    structs::{AuxInfo, IOPProverMessage},
+    structs::{DomainInfo, IOPProverMessage},
     to_bytes,
 };
 
@@ -35,10 +35,13 @@ impl<F: PrimeField> IOPTranscript<F> {
         Ok(())
     }
 
-    pub(crate) fn append_aux_info(&mut self, aux_info: &AuxInfo<F>) -> Result<(), PolyIOPErrors> {
+    pub(crate) fn append_domain_info(
+        &mut self,
+        domain_info: &DomainInfo<F>,
+    ) -> Result<(), PolyIOPErrors> {
         let message = format!(
             "max_mul {} num_var {}",
-            aux_info.max_multiplicands, aux_info.num_variables
+            domain_info.max_multiplicands, domain_info.num_variables
         );
         self.append_message(b"aux info", message.as_bytes())?;
 

@@ -44,7 +44,7 @@ impl<F: PrimeField> SumCheckProver<F> for PolyIOP<F> {
     ///
     /// $$\sum_{i=0}^{n}C_i\cdot\prod_{j=0}^{m_i}P_{ij}$$
     fn prover_init(polynomial: &Self::PolyList) -> Self::ProverState {
-        if polynomial.aux_info.num_variables == 0 {
+        if polynomial.domain_info.num_variables == 0 {
             panic!("Attempt to prove a constant.")
         }
 
@@ -56,11 +56,11 @@ impl<F: PrimeField> SumCheckProver<F> for PolyIOP<F> {
             .collect();
 
         ProverState {
-            challenges: Vec::with_capacity(polynomial.aux_info.num_variables),
+            challenges: Vec::with_capacity(polynomial.domain_info.num_variables),
             list_of_products: polynomial.products.clone(),
             flattened_ml_extensions,
-            num_vars: polynomial.aux_info.num_variables,
-            max_multiplicands: polynomial.aux_info.max_multiplicands,
+            num_vars: polynomial.domain_info.num_variables,
+            max_multiplicands: polynomial.domain_info.max_multiplicands,
             round: 0,
         }
     }
