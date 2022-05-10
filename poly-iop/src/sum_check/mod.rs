@@ -22,9 +22,18 @@ pub trait SumCheck<F: PrimeField> {
     type PolyList;
     type DomainInfo;
     type SubClaim;
+    type Transcript;
 
     /// extract sum from the proof
     fn extract_sum(proof: &Self::Proof) -> F;
+
+    /// Initialize the system with a transcript
+    ///
+    /// This function is optional -- in the case where a SumCheck is
+    /// an building block for a more complex protocol, the transcript
+    /// may be initialized by this complex protocol, and passed to the
+    /// SumCheck prover/verifier.
+    fn init_transcript() -> Self::Transcript;
 
     /// generate proof of the sum of polynomial over {0,1}^`num_vars`
     ///
@@ -41,13 +50,17 @@ pub trait SumCheck<F: PrimeField> {
     /// The resulting polynomial is
     ///
     /// $$\sum_{i=0}^{n}C_i\cdot\prod_{j=0}^{m_i}P_{ij}$$
-    fn prove(poly: &Self::PolyList) -> Result<Self::Proof, PolyIOPErrors>;
+    fn prove(
+        poly: &Self::PolyList,
+        transcript: &mut Self::Transcript,
+    ) -> Result<Self::Proof, PolyIOPErrors>;
 
     /// verify the claimed sum using the proof
     fn verify(
         sum: F,
         proof: &Self::Proof,
         domain_info: &Self::DomainInfo,
+        transcript: &mut Self::Transcript,
     ) -> Result<Self::SubClaim, PolyIOPErrors>;
 }
 
@@ -128,8 +141,20 @@ impl<F: PrimeField> SumCheck<F> for PolyIOP<F> {
 
     type SubClaim = SubClaim<F>;
 
+    type Transcript = IOPTranscript<F>;
+
     fn extract_sum(proof: &Self::Proof) -> F {
         proof.proofs[0].evaluations[0] + proof.proofs[0].evaluations[1]
+    }
+
+    /// Initialize the system with a transcript
+    ///
+    /// This function is optional -- in the case where a SumCheck is
+    /// an building block for a more complex protocol, the transcript
+    /// may be initialized by this complex protocol, and passed to the
+    /// SumCheck prover/verifier.
+    fn init_transcript() -> Self::Transcript {
+        IOPTranscript::<F>::new(b"Initializing transcript")
     }
 
     /// generate proof of the sum of polynomial over {0,1}^`num_vars`
@@ -147,18 +172,20 @@ impl<F: PrimeField> SumCheck<F> for PolyIOP<F> {
     /// The resulting polynomial is
     ///
     /// $$\sum_{i=0}^{n}C_i\cdot\prod_{j=0}^{m_i}P_{ij}$$
-    fn prove(poly: &Self::PolyList) -> Result<Self::Proof, PolyIOPErrors> {
-        let mut fs_rng = IOPTranscript::<F>::new(b"Initializing transcript");
-        fs_rng.append_domain_info(&poly.domain_info)?;
+    fn prove(
+        poly: &Self::PolyList,
+        transcript: &mut Self::Transcript,
+    ) -> Result<Self::Proof, PolyIOPErrors> {
+        transcript.append_domain_info(&poly.domain_info)?;
 
         let mut prover_state = Self::prover_init(&poly);
         let mut challenge = None;
         let mut prover_msgs = Vec::with_capacity(poly.domain_info.num_variables);
         for _ in 0..poly.domain_info.num_variables {
             let prover_msg = Self::prove_round_and_update_state(&mut prover_state, &challenge);
-            fs_rng.append_prover_message(&prover_msg)?;
+            transcript.append_prover_message(&prover_msg)?;
             prover_msgs.push(prover_msg);
-            challenge = Some(fs_rng.get_and_append_challenge(b"Internal round")?);
+            challenge = Some(transcript.get_and_append_challenge(b"Internal round")?);
         }
 
         Ok(IOPProof {
@@ -171,15 +198,14 @@ impl<F: PrimeField> SumCheck<F> for PolyIOP<F> {
         claimed_sum: F,
         proof: &Self::Proof,
         domain_info: &Self::DomainInfo,
+        transcript: &mut Self::Transcript,
     ) -> Result<Self::SubClaim, PolyIOPErrors> {
-        let mut fs_rng = IOPTranscript::<F>::new(b"Initializing transcript");
-        fs_rng.append_domain_info(&domain_info)?;
+        transcript.append_domain_info(&domain_info)?;
         let mut verifier_state = Self::verifier_init(domain_info);
         for i in 0..domain_info.num_variables {
             let prover_msg = proof.proofs.get(i).expect("proof is incomplete");
-            fs_rng.append_prover_message(&prover_msg)?;
-
-            Self::verify_round_and_update_state(&mut verifier_state, prover_msg, &mut fs_rng)?;
+            transcript.append_prover_message(&prover_msg)?;
+            Self::verify_round_and_update_state(&mut verifier_state, prover_msg, transcript)?;
         }
 
         Ok(Self::check_and_generate_subclaim(
@@ -254,11 +280,15 @@ mod test {
 
     fn test_polynomial(nv: usize, num_multiplicands_range: (usize, usize), num_products: usize) {
         let mut rng = test_rng();
+        let mut transcript = PolyIOP::init_transcript();
+
         let (poly, asserted_sum) =
             random_list_of_products::<Fr, _>(nv, num_multiplicands_range, num_products, &mut rng);
-        let proof = PolyIOP::prove(&poly).expect("fail to prove");
+        let proof = PolyIOP::prove(&poly, &mut transcript).expect("fail to prove");
         let poly_info = poly.domain_info.clone();
-        let subclaim = PolyIOP::verify(asserted_sum, &proof, &poly_info).expect("fail to verify");
+        let mut transcript = PolyIOP::init_transcript();
+        let subclaim = PolyIOP::verify(asserted_sum, &proof, &poly_info, &mut transcript)
+            .expect("fail to verify");
         assert!(
             poly.evaluate(&subclaim.point) == subclaim.expected_evaluation,
             "wrong subclaim"
@@ -327,9 +357,10 @@ mod test {
     #[test]
     fn test_extract_sum() {
         let mut rng = test_rng();
+        let mut transcript = PolyIOP::init_transcript();
         let (poly, asserted_sum) = random_list_of_products::<Fr, _>(8, (3, 4), 3, &mut rng);
 
-        let proof = PolyIOP::prove(&poly).expect("fail to prove");
+        let proof = PolyIOP::prove(&poly, &mut transcript).expect("fail to prove");
         assert_eq!(PolyIOP::extract_sum(&proof), asserted_sum);
     }
 
@@ -379,10 +410,14 @@ mod test {
         assert_eq!(prover.flattened_ml_extensions.len(), 5);
         drop(prover);
 
+        let mut transcript = PolyIOP::init_transcript();
         let poly_info = poly.domain_info.clone();
-        let proof = PolyIOP::prove(&poly).expect("fail to prove");
+        let proof = PolyIOP::prove(&poly, &mut transcript).expect("fail to prove");
         let asserted_sum = PolyIOP::extract_sum(&proof);
-        let subclaim = PolyIOP::verify(asserted_sum, &proof, &poly_info).expect("fail to verify");
+
+        let mut transcript = PolyIOP::init_transcript();
+        let subclaim = PolyIOP::verify(asserted_sum, &proof, &poly_info, &mut transcript)
+            .expect("fail to verify");
         assert!(
             poly.evaluate(&subclaim.point) == subclaim.expected_evaluation,
             "wrong subclaim"

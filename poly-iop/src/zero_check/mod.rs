@@ -11,6 +11,7 @@ use crate::{
     poly_list::PolynomialList,
     structs::{DomainInfo, IOPProof, SubClaim},
     sum_check::SumCheck,
+    transcript::IOPTranscript,
     PolyIOP,
 };
 
@@ -19,27 +20,33 @@ pub trait ZeroCheck<F: PrimeField> {
     type PolyList;
     type DomainInfo;
     type SubClaim;
+    type Transcript;
 
-    fn prove(poly: &Self::PolyList) -> Result<Self::Proof, PolyIOPErrors>;
+    fn prove(
+        poly: &Self::PolyList,
+        transcript: &mut Self::Transcript,
+    ) -> Result<Self::Proof, PolyIOPErrors>;
 
     /// verify the claimed sum using the proof
     fn verify(
         hat_f: F,
         proof: &Self::Proof,
         domain_info: &Self::DomainInfo,
+        transcript: &mut Self::Transcript,
     ) -> Result<Self::SubClaim, PolyIOPErrors>;
 }
 
 impl<F: PrimeField> ZeroCheck<F> for PolyIOP<F> {
     type Proof = IOPProof<F>;
-
     type PolyList = PolynomialList<F>;
-
     type DomainInfo = DomainInfo<F>;
-
     type SubClaim = SubClaim<F>;
+    type Transcript = IOPTranscript<F>;
 
-    fn prove(poly: &Self::PolyList) -> Result<Self::Proof, PolyIOPErrors> {
+    fn prove(
+        poly: &Self::PolyList,
+        transcript: &mut Self::Transcript,
+    ) -> Result<Self::Proof, PolyIOPErrors> {
         // TODO: sample eval_x from Transcript
         let mut rng = test_rng();
         let length = poly.domain_info.num_variables;
@@ -47,7 +54,7 @@ impl<F: PrimeField> ZeroCheck<F> for PolyIOP<F> {
 
         let g_r = build_g_r(&poly, r.as_ref());
 
-        <Self as SumCheck<F>>::prove(&g_r)
+        <Self as SumCheck<F>>::prove(&g_r, transcript)
     }
 
     /// verify the claimed sum using the proof
@@ -55,8 +62,9 @@ impl<F: PrimeField> ZeroCheck<F> for PolyIOP<F> {
         hat_f: F,
         proof: &Self::Proof,
         domain_info: &Self::DomainInfo,
+        transcript: &mut Self::Transcript,
     ) -> Result<Self::SubClaim, PolyIOPErrors> {
-        <Self as SumCheck<F>>::verify(hat_f, proof, domain_info)
+        <Self as SumCheck<F>>::verify(hat_f, proof, domain_info, transcript)
     }
 }
 
