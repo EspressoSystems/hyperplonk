@@ -10,7 +10,7 @@ use ark_std::vec::Vec;
 /// Prover State
 pub struct ProverState<F: PrimeField> {
     /// sampled randomness given by the verifier
-    pub randomness: Vec<F>,
+    pub challenges: Vec<F>,
     /// Stores the list of products that is meant to be added together. Each
     /// multiplicand is represented by the index in flattened_ml_extensions
     pub list_of_products: Vec<(F, Vec<usize>)>,
@@ -56,7 +56,7 @@ impl<F: PrimeField> SumCheckProver<F> for PolyIOP<F> {
             .collect();
 
         ProverState {
-            randomness: Vec::with_capacity(polynomial.aux_info.num_variables),
+            challenges: Vec::with_capacity(polynomial.aux_info.num_variables),
             list_of_products: polynomial.products.clone(),
             flattened_ml_extensions,
             num_vars: polynomial.aux_info.num_variables,
@@ -77,11 +77,11 @@ impl<F: PrimeField> SumCheckProver<F> for PolyIOP<F> {
             if prover_state.round == 0 {
                 panic!("first round should be prover first.");
             }
-            prover_state.randomness.push(*chal);
+            prover_state.challenges.push(*chal);
 
             // fix argument
             let i = prover_state.round;
-            let r = prover_state.randomness[i - 1];
+            let r = prover_state.challenges[i - 1];
             for multiplicand in prover_state.flattened_ml_extensions.iter_mut() {
                 *multiplicand = multiplicand.fix_variables(&[r]);
             }

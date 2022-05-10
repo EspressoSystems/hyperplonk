@@ -20,7 +20,7 @@ pub struct VerifierState<F: PrimeField> {
     /// prover at each round
     polynomials_received: Vec<Vec<F>>,
     /// a list storing the randomness sampled by the verifier at each round
-    randomness: Vec<F>,
+    challenges: Vec<F>,
 }
 
 impl<F: PrimeField> SumCheckVerifier<F> for PolyIOP<F> {
@@ -39,7 +39,7 @@ impl<F: PrimeField> SumCheckVerifier<F> for PolyIOP<F> {
             max_multiplicands: index_info.max_multiplicands,
             finished: false,
             polynomials_received: Vec::with_capacity(index_info.num_variables),
-            randomness: Vec::with_capacity(index_info.num_variables),
+            challenges: Vec::with_capacity(index_info.num_variables),
         }
     }
 
@@ -63,7 +63,7 @@ impl<F: PrimeField> SumCheckVerifier<F> for PolyIOP<F> {
         // last round.
 
         let challenge = transcript.get_and_append_challenge(b"Internal round")?;
-        verifier_state.randomness.push(challenge);
+        verifier_state.challenges.push(challenge);
         verifier_state
             .polynomials_received
             .push(prover_msg.evaluations.to_vec());
@@ -112,11 +112,11 @@ impl<F: PrimeField> SumCheckVerifier<F> for PolyIOP<F> {
                 ));
             }
             expected =
-                interpolate_uni_poly::<F>(evaluations.as_ref(), verifier_state.randomness[i]);
+                interpolate_uni_poly::<F>(evaluations.as_ref(), verifier_state.challenges[i]);
         }
 
         Ok(SubClaim {
-            point: verifier_state.randomness.clone(),
+            point: verifier_state.challenges.clone(),
             expected_evaluation: expected,
         })
     }
