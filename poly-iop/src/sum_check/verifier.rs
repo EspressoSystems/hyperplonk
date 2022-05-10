@@ -54,7 +54,7 @@ impl<F: PrimeField> SumCheckVerifier<F> for PolyIOP<F> {
         prover_msg: &Self::ProverMessage,
         transcript: &mut Self::Transcript,
     ) -> Result<Self::Challenge, PolyIOPErrors> {
-        if !verifier_state.finished {
+        if verifier_state.finished {
             return Err(PolyIOPErrors::InvalidVerifier(
                 "Incorrect verifier state: Verifier is already finished.".to_string(),
             ));
