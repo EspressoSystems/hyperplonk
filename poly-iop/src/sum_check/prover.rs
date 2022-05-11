@@ -8,6 +8,7 @@ use crate::{
 use ark_ff::PrimeField;
 use ark_poly::{DenseMultilinearExtension, MultilinearExtension};
 use ark_std::vec::Vec;
+use rayon::iter::{IndexedParallelIterator, IntoParallelRefMutIterator, ParallelIterator};
 
 /// Prover State
 pub struct ProverState<F: PrimeField> {
@@ -88,9 +89,10 @@ impl<F: PrimeField> SumCheckProver<F> for PolyIOP<F> {
             // fix argument
             let i = prover_state.round;
             let r = prover_state.challenges[i - 1];
-            for multiplicand in prover_state.flattened_ml_extensions.iter_mut() {
-                *multiplicand = multiplicand.fix_variables(&[r]);
-            }
+            prover_state
+                .flattened_ml_extensions
+                .par_iter_mut()
+                .for_each(|multiplicand| *multiplicand = multiplicand.fix_variables(&[r]));
         } else if prover_state.round > 0 {
             return Err(PolyIOPErrors::InvalidProver(
                 "verifier message is empty".to_string(),
@@ -114,21 +116,23 @@ impl<F: PrimeField> SumCheckProver<F> for PolyIOP<F> {
 
         // generate sum
         for b in 0..1 << (nv - i) {
-            let mut t_as_field = F::zero();
-            for e in products_sum.iter_mut().take(degree + 1) {
-                // evaluate P_round(t)
-                for (coefficient, products) in &prover_state.list_of_products {
-                    let num_multiplicands = products.len();
-                    let mut product = *coefficient;
-                    for &f in products.iter().take(num_multiplicands) {
-                        let table = &prover_state.flattened_ml_extensions[f]; // j's range is checked in init
-                        product *= table[b << 1] * (F::one() - t_as_field)
-                            + table[(b << 1) + 1] * t_as_field;
+            products_sum
+                .par_iter_mut()
+                .take(degree + 1)
+                .enumerate()
+                .for_each(|(i, e)| {
+                    // evaluate P_round(t)
+                    for (coefficient, products) in &prover_state.list_of_products {
+                        let num_multiplicands = products.len();
+                        let mut product = *coefficient;
+                        for &f in products.iter().take(num_multiplicands) {
+                            let table = &prover_state.flattened_ml_extensions[f]; // j's range is checked in init
+                            product *= table[b << 1] * (F::one() - F::from(i as u64))
+                                + table[(b << 1) + 1] * F::from(i as u64);
+                        }
+                        *e += product;
                     }
-                    *e += product;
-                }
-                t_as_field += F::one();
-            }
+                });
         }
 
         Ok(IOPProverMessage {
