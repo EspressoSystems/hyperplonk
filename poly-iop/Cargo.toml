@@ -17,4 +17,6 @@ rand_chacha = { version = "0.3.0", default-features = false }
 merlin = { version = "3.0.0", default-features = false }
 displaydoc = { version = "0.2.3", default-features = false }
 
+rayon = "1.5.2"
+
 [features]

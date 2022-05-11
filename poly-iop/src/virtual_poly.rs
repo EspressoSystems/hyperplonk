@@ -1,4 +1,4 @@
-use crate::structs::DomainInfo;
+use crate::{errors::PolyIOPErrors, structs::DomainInfo};
 use ark_ff::PrimeField;
 use ark_poly::{DenseMultilinearExtension, MultilinearExtension};
 use std::{cmp::max, collections::HashMap, marker::PhantomData, rc::Rc};
@@ -39,16 +39,19 @@ impl<F: PrimeField> VirtualPolynomial<F> {
         &mut self,
         product: impl IntoIterator<Item = Rc<DenseMultilinearExtension<F>>>,
         coefficient: F,
-    ) {
+    ) -> Result<(), PolyIOPErrors> {
         let product: Vec<Rc<DenseMultilinearExtension<F>>> = product.into_iter().collect();
         let mut indexed_product = Vec::with_capacity(product.len());
         assert!(!product.is_empty());
         self.domain_info.max_degree = max(self.domain_info.max_degree, product.len());
         for m in product {
-            assert_eq!(
-                m.num_vars, self.domain_info.num_variables,
-                "product has a multiplicand with wrong number of variables"
-            );
+            if m.num_vars != self.domain_info.num_variables {
+                return Err(PolyIOPErrors::InvalidParameters(format!(
+                    "product has a multiplicand with wrong number of variables {} vs {}",
+                    m.num_vars, self.domain_info.num_variables
+                )));
+            }
+
             let m_ptr: *const DenseMultilinearExtension<F> = Rc::as_ptr(&m);
             if let Some(index) = self.raw_pointers_lookup_table.get(&m_ptr) {
                 indexed_product.push(*index)
@@ -60,19 +63,33 @@ impl<F: PrimeField> VirtualPolynomial<F> {
             }
         }
         self.products.push((coefficient, indexed_product));
+        Ok(())
     }
 
     /// Evaluate the polynomial at point `point`
-    pub fn evaluate(&self, point: &[F]) -> F {
-        self.products
+    pub fn evaluate(&self, point: &[F]) -> Result<F, PolyIOPErrors> {
+        if self.domain_info.num_variables != point.len() {
+            return Err(PolyIOPErrors::InvalidParameters(format!(
+                "wrong number of variables {} vs {}",
+                self.domain_info.num_variables,
+                point.len()
+            )));
+        }
+
+        Ok(self
+            .products
             .iter()
             .map(|(c, p)| {
                 *c * p
                     .iter()
-                    .map(|&i| self.flattened_ml_extensions[i].evaluate(point).unwrap())
+                    .map(|&i| {
+                        self.flattened_ml_extensions[i].evaluate(point)
+                    // safe unwrap here since we have already checked that num_var matches
+                    .unwrap()
+                    })
                     .product::<F>()
             })
-            .sum()
+            .sum())
     }
 }
 
@@ -124,7 +141,7 @@ pub(crate) mod test {
                 rng.gen_range(num_multiplicands_range.0..num_multiplicands_range.1);
             let (product, product_sum) = random_product(nv, num_multiplicands, rng);
             let coefficient = F::rand(rng);
-            poly.add_product(product.into_iter(), coefficient);
+            poly.add_product(product.into_iter(), coefficient).unwrap();
             sum += product_sum * coefficient;
         }
 

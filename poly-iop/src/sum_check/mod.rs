@@ -235,7 +235,7 @@ mod test {
         let subclaim = PolyIOP::verify(asserted_sum, &proof, &poly_info, &mut transcript)
             .expect("fail to verify");
         assert!(
-            poly.evaluate(&subclaim.point) == subclaim.expected_evaluation,
+            poly.evaluate(&subclaim.point).unwrap() == subclaim.expected_evaluation,
             "wrong subclaim"
         );
     }
@@ -268,7 +268,7 @@ mod test {
         let subclaim = PolyIOP::check_and_generate_subclaim(&verifier_state, &asserted_sum)
             .expect("fail to generate subclaim");
         assert!(
-            poly.evaluate(&subclaim.point) == subclaim.expected_evaluation,
+            poly.evaluate(&subclaim.point).unwrap() == subclaim.expected_evaluation,
             "wrong subclaim"
         );
     }
@@ -328,7 +328,8 @@ mod test {
                 ml_extensions[0].clone(),
             ],
             Fr::rand(&mut rng),
-        );
+        )
+        .unwrap();
         poly.add_product(
             vec![
                 ml_extensions[1].clone(),
@@ -336,7 +337,8 @@ mod test {
                 ml_extensions[4].clone(),
             ],
             Fr::rand(&mut rng),
-        );
+        )
+        .unwrap();
         poly.add_product(
             vec![
                 ml_extensions[3].clone(),
@@ -344,12 +346,15 @@ mod test {
                 ml_extensions[1].clone(),
             ],
             Fr::rand(&mut rng),
-        );
+        )
+        .unwrap();
         poly.add_product(
             vec![ml_extensions[0].clone(), ml_extensions[0].clone()],
             Fr::rand(&mut rng),
-        );
-        poly.add_product(vec![ml_extensions[4].clone()], Fr::rand(&mut rng));
+        )
+        .unwrap();
+        poly.add_product(vec![ml_extensions[4].clone()], Fr::rand(&mut rng))
+            .unwrap();
 
         assert_eq!(poly.flattened_ml_extensions.len(), 5);
 
@@ -367,7 +372,7 @@ mod test {
         let subclaim = PolyIOP::verify(asserted_sum, &proof, &poly_info, &mut transcript)
             .expect("fail to verify");
         assert!(
-            poly.evaluate(&subclaim.point) == subclaim.expected_evaluation,
+            poly.evaluate(&subclaim.point).unwrap() == subclaim.expected_evaluation,
             "wrong subclaim"
         );
     }

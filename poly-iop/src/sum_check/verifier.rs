@@ -9,6 +9,7 @@ use crate::{
     PolyIOP,
 };
 use ark_ff::PrimeField;
+use rayon::iter::{IndexedParallelIterator, IntoParallelIterator, ParallelIterator};
 
 /// Verifier State
 pub struct VerifierState<F: PrimeField> {
@@ -99,35 +100,47 @@ impl<F: PrimeField> SumCheckVerifier<F> for PolyIOP<F> {
             ));
         }
 
-        let mut expected = *asserted_sum;
         if verifier_state.polynomials_received.len() != verifier_state.num_vars {
             return Err(PolyIOPErrors::InvalidVerifier(
                 "insufficient rounds".to_string(),
             ));
         }
-        for i in 0..verifier_state.num_vars {
-            let evaluations = verifier_state.polynomials_received[i].clone();
-            if evaluations.len() != verifier_state.max_degree + 1 {
-                return Err(PolyIOPErrors::InvalidVerifier(format!(
-                    "incorrect number of evaluations: {} vs {}",
-                    evaluations.len(),
-                    verifier_state.max_degree + 1
-                )));
-            }
-            let p0 = evaluations[0];
-            let p1 = evaluations[1];
-            if p0 + p1 != expected {
+        let mut expected_vec = verifier_state
+            .polynomials_received
+            .clone()
+            .into_par_iter()
+            .zip(verifier_state.challenges.clone().into_par_iter())
+            .map(|(evaluations, challenge)| {
+                if evaluations.len() != verifier_state.max_degree + 1 {
+                    return Err(PolyIOPErrors::InvalidVerifier(format!(
+                        "incorrect number of evaluations: {} vs {}",
+                        evaluations.len(),
+                        verifier_state.max_degree + 1
+                    )));
+                }
+                Ok(interpolate_uni_poly::<F>(&evaluations, challenge))
+            })
+            .collect::<Result<Vec<_>, PolyIOPErrors>>()?;
+        // insert the asserted_sum to the first position of the expected vector
+        expected_vec.insert(0, *asserted_sum);
+
+        for (evaluations, &expected) in verifier_state
+            .polynomials_received
+            .iter()
+            .zip(expected_vec.iter())
+            .take(verifier_state.num_vars)
+        {
+            if evaluations[0] + evaluations[1] != expected {
                 return Err(PolyIOPErrors::InvalidProof(
                     "Prover message is not consistent with the claim.".to_string(),
                 ));
             }
-            expected =
-                interpolate_uni_poly::<F>(evaluations.as_ref(), verifier_state.challenges[i]);
         }
 
         Ok(SubClaim {
-            point: verifier_state.challenges.clone(),
-            expected_evaluation: expected,
+            point: verifier_state.challenges.to_vec(),
+            // the last expected value (unchecked) will be included in the subclaim
+            expected_evaluation: expected_vec[verifier_state.num_vars],
         })
     }
 }
