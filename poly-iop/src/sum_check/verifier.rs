@@ -108,9 +108,11 @@ impl<F: PrimeField> SumCheckVerifier<F> for PolyIOP<F> {
         for i in 0..verifier_state.num_vars {
             let evaluations = verifier_state.polynomials_received[i].clone();
             if evaluations.len() != verifier_state.max_degree + 1 {
-                return Err(PolyIOPErrors::InvalidVerifier(
-                    "incorrect number of evaluations".to_string(),
-                ));
+                return Err(PolyIOPErrors::InvalidVerifier(format!(
+                    "incorrect number of evaluations: {} vs {}",
+                    evaluations.len(),
+                    verifier_state.max_degree + 1
+                )));
             }
             let p0 = evaluations[0];
             let p1 = evaluations[1];

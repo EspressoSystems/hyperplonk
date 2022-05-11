@@ -93,34 +93,36 @@ impl<F: PrimeField> ZeroCheck<F> for PolyIOP<F> {
 //      eq(x,y) = \prod_i=1^num_var (x_i * y_i + (1-x_i)*(1-y_i))
 fn build_f_hat<F: PrimeField>(poly: &VirtualPolynomial<F>, r: &[F]) -> VirtualPolynomial<F> {
     assert_eq!(poly.domain_info.num_variables, r.len());
+    let mut res = poly.clone();
+    let eq_x_r = build_eq_x_r(r);
+    res.add_product([eq_x_r; 1], F::one());
+    // // First, we build array for {1 - r_i}
+    // let one_minus_r: Vec<F> = r.iter().map(|ri| F::one() - ri).collect();
 
-    // First, we build array for {1 - r_i}
-    let one_minus_r: Vec<F> = r.iter().map(|ri| F::one() - ri).collect();
+    // let mut eval = vec![];
+    // // let eq_x_r = build_eq_x_r(r);
+    // let num_var = r.len();
+    // let mut res = VirtualPolynomial::new(num_var);
+    // // res.add_product([eq_x_r; 1], F::one());
 
-    let mut eval = vec![];
-    // let eq_x_r = build_eq_x_r(r);
-    let num_var = r.len();
-    let mut res = VirtualPolynomial::new(num_var);
-    // res.add_product([eq_x_r; 1], F::one());
-
-    for i in 0..1 << num_var {
-        let bit_sequence = bit_decompose(i, num_var);
-        let bit_points: Vec<F> = bit_sequence.iter().map(|&x| F::from(x as u64)).collect();
-        let mut eq_eval = F::one();
-        for (&bit, (ri, one_minus_ri)) in bit_sequence.iter().zip(r.iter().zip(one_minus_r.iter()))
-        {
-            if bit {
-                eq_eval *= ri;
-            } else {
-                eq_eval *= one_minus_ri;
-            }
-        }
-        eval.push(eq_eval * poly.evaluate(&bit_points))
-    }
-    let hat_f = Rc::new(DenseMultilinearExtension::from_evaluations_vec(
-        num_var, eval,
-    ));
-    res.add_product([hat_f; 1], F::one());
+    // for i in 0..1 << num_var {
+    //     let bit_sequence = bit_decompose(i, num_var);
+    //     let bit_points: Vec<F> = bit_sequence.iter().map(|&x| F::from(x as
+    // u64)).collect();     let mut eq_eval = F::one();
+    //     for (&bit, (ri, one_minus_ri)) in
+    // bit_sequence.iter().zip(r.iter().zip(one_minus_r.iter()))     {
+    //         if bit {
+    //             eq_eval *= ri;
+    //         } else {
+    //             eq_eval *= one_minus_ri;
+    //         }
+    //     }
+    //     eval.push(eq_eval * poly.evaluate(&bit_points))
+    // }
+    // let hat_f = Rc::new(DenseMultilinearExtension::from_evaluations_vec(
+    //     num_var, eval,
+    // ));
+    // res.add_product([hat_f; 1], F::one());
     res
 }
 
@@ -227,8 +229,8 @@ mod test {
     #[test]
     fn test_trivial_polynomial() {
         let nv = 1;
-        let num_multiplicands_range = (4, 13);
-        let num_products = 5;
+        let num_multiplicands_range = (4, 5);
+        let num_products = 1;
 
         test_polynomial(nv, num_multiplicands_range, num_products);
     }

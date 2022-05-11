@@ -10,7 +10,7 @@ mod sum_check;
 mod transcript;
 mod utils;
 mod virtual_poly;
-mod zero_check;
+// mod zero_check;
 
 pub use virtual_poly::VirtualPolynomial;
 
