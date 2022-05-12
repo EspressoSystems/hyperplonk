@@ -59,8 +59,7 @@ impl<F: PrimeField> SumCheckVerifier<F> for VerifierState<F> {
         prover_msg: &Self::ProverMessage,
         transcript: &mut Self::Transcript,
     ) -> Result<Self::Challenge, PolyIOPErrors> {
-        let start =
-            start_timer!(|| format!("verify {}-th round and update state", verifier_state.round));
+        let start = start_timer!(|| format!("verify {}-th round and update state", self.round));
 
         if self.finished {
             return Err(PolyIOPErrors::InvalidVerifier(
