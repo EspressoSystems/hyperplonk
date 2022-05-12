@@ -24,8 +24,9 @@ pub struct SubClaim<F: PrimeField> {
     pub expected_evaluation: F,
 }
 
-/// A SumCheck proof is a list of messages from prover to verifier
+/// An IOP proof is a list of messages from prover to verifier
 /// through the interactive protocol.
+/// It is a shared struct for both sumcheck and zerocheck protocols.
 #[derive(Clone, Debug, Default, PartialEq)]
 pub struct IOPProof<F: PrimeField> {
     pub proofs: Vec<IOPProverMessage<F>>,

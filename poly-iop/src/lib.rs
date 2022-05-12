@@ -14,7 +14,10 @@ mod virtual_poly;
 
 pub use virtual_poly::VirtualPolynomial;
 
-/// Struct for PolyIOP.
+/// Struct for PolyIOP protocol.
+/// It is instantiated with
+/// - SumCheck protocol.
+/// - ZeroCheck protocol. (WIP)
 pub struct PolyIOP<F: PrimeField> {
     phantom: PhantomData<F>,
 }
