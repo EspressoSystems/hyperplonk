@@ -1,4 +1,6 @@
 [workspace]
 members = [
-  "hyperplonk"
+  "hyperplonk",
+  "pcs",
+  "poly-iop"
 ]
