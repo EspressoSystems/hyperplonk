@@ -79,7 +79,7 @@ impl<F: PrimeField> VirtualPolynomial<F> {
             )));
         }
 
-        let eval: Vec<F> = self
+        let evals: Vec<F> = self
             .flattened_ml_extensions
             .iter()
             .map(|x| {
@@ -92,7 +92,7 @@ impl<F: PrimeField> VirtualPolynomial<F> {
         let res = self
             .products
             .iter()
-            .map(|(c, p)| *c * p.iter().map(|&i| eval[i]).product::<F>())
+            .map(|(c, p)| *c * p.iter().map(|&i| evals[i]).product::<F>())
             .sum();
 
         end_timer!(start);
