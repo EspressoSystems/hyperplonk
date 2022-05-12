@@ -7,7 +7,9 @@ use crate::{
 };
 use ark_ff::PrimeField;
 use ark_poly::{DenseMultilinearExtension, MultilinearExtension};
-use ark_std::vec::Vec;
+use ark_std::{end_timer, start_timer, vec::Vec};
+
+#[cfg(feature = "parallel")]
 use rayon::iter::{IndexedParallelIterator, IntoParallelRefMutIterator, ParallelIterator};
 
 /// Prover State
@@ -47,6 +49,7 @@ impl<F: PrimeField> SumCheckProver<F> for PolyIOP<F> {
     ///
     /// $$\sum_{i=0}^{n}C_i\cdot\prod_{j=0}^{m_i}P_{ij}$$
     fn prover_init(polynomial: &Self::PolyList) -> Result<Self::ProverState, PolyIOPErrors> {
+        let start = start_timer!(|| "prover init");
         if polynomial.domain_info.num_variables == 0 {
             return Err(PolyIOPErrors::InvalidParameters(
                 "Attempt to prove a constant.".to_string(),
@@ -59,6 +62,8 @@ impl<F: PrimeField> SumCheckProver<F> for PolyIOP<F> {
             .iter()
             .map(|x| x.as_ref().clone())
             .collect();
+
+        end_timer!(start);
 
         Ok(ProverState {
             challenges: Vec::with_capacity(polynomial.domain_info.num_variables),
@@ -78,6 +83,10 @@ impl<F: PrimeField> SumCheckProver<F> for PolyIOP<F> {
         prover_state: &mut Self::ProverState,
         challenge: &Option<F>,
     ) -> Result<Self::ProverMessage, PolyIOPErrors> {
+        let start =
+            start_timer!(|| format!("prove {}-th round and update state", prover_state.round));
+
+        let fix_argument = start_timer!(|| "fix argument");
         if let Some(chal) = challenge {
             if prover_state.round == 0 {
                 return Err(PolyIOPErrors::InvalidProver(
@@ -89,15 +98,23 @@ impl<F: PrimeField> SumCheckProver<F> for PolyIOP<F> {
             // fix argument
             let i = prover_state.round;
             let r = prover_state.challenges[i - 1];
+            #[cfg(feature = "parallel")]
             prover_state
                 .flattened_ml_extensions
                 .par_iter_mut()
+                .for_each(|multiplicand| *multiplicand = multiplicand.fix_variables(&[r]));
+
+            #[cfg(not(feature = "parallel"))]
+            prover_state
+                .flattened_ml_extensions
+                .iter_mut()
                 .for_each(|multiplicand| *multiplicand = multiplicand.fix_variables(&[r]));
         } else if prover_state.round > 0 {
             return Err(PolyIOPErrors::InvalidProver(
                 "verifier message is empty".to_string(),
             ));
         }
+        end_timer!(fix_argument);
 
         prover_state.round += 1;
 
@@ -114,8 +131,10 @@ impl<F: PrimeField> SumCheckProver<F> for PolyIOP<F> {
         let mut products_sum = Vec::with_capacity(degree + 1);
         products_sum.resize(degree + 1, F::zero());
 
+        let compute_sum = start_timer!(|| "compute sum");
         // generate sum
         for b in 0..1 << (nv - i) {
+            #[cfg(feature = "parallel")]
             products_sum
                 .par_iter_mut()
                 .take(degree + 1)
@@ -133,8 +152,27 @@ impl<F: PrimeField> SumCheckProver<F> for PolyIOP<F> {
                         *e += product;
                     }
                 });
+            #[cfg(not(feature = "parallel"))]
+            products_sum
+                .iter_mut()
+                .take(degree + 1)
+                .enumerate()
+                .for_each(|(i, e)| {
+                    // evaluate P_round(t)
+                    for (coefficient, products) in &prover_state.list_of_products {
+                        let num_multiplicands = products.len();
+                        let mut product = *coefficient;
+                        for &f in products.iter().take(num_multiplicands) {
+                            let table = &prover_state.flattened_ml_extensions[f]; // j's range is checked in init
+                            product *= table[b << 1] * (F::one() - F::from(i as u64))
+                                + table[(b << 1) + 1] * F::from(i as u64);
+                        }
+                        *e += product;
+                    }
+                });
         }
-
+        end_timer!(compute_sum);
+        end_timer!(start);
         Ok(IOPProverMessage {
             evaluations: products_sum,
         })

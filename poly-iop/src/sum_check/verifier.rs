@@ -9,6 +9,9 @@ use crate::{
     PolyIOP,
 };
 use ark_ff::PrimeField;
+
+use ark_std::{end_timer, start_timer};
+#[cfg(feature = "parallel")]
 use rayon::iter::{IndexedParallelIterator, IntoParallelIterator, ParallelIterator};
 
 /// Verifier State
@@ -34,14 +37,17 @@ impl<F: PrimeField> SumCheckVerifier<F> for PolyIOP<F> {
 
     /// initialize the verifier
     fn verifier_init(index_info: &Self::DomainInfo) -> Self::VerifierState {
-        VerifierState {
+        let start = start_timer!(|| "verifier init");
+        let res = VerifierState {
             round: 1,
             num_vars: index_info.num_variables,
             max_degree: index_info.max_degree,
             finished: false,
             polynomials_received: Vec::with_capacity(index_info.num_variables),
             challenges: Vec::with_capacity(index_info.num_variables),
-        }
+        };
+        end_timer!(start);
+        res
     }
 
     /// Run verifier at current round, given prover message
@@ -55,6 +61,9 @@ impl<F: PrimeField> SumCheckVerifier<F> for PolyIOP<F> {
         prover_msg: &Self::ProverMessage,
         transcript: &mut Self::Transcript,
     ) -> Result<Self::Challenge, PolyIOPErrors> {
+        let start =
+            start_timer!(|| format!("verify {}-th round and update state", verifier_state.round));
+
         if verifier_state.finished {
             return Err(PolyIOPErrors::InvalidVerifier(
                 "Incorrect verifier state: Verifier is already finished.".to_string(),
@@ -81,6 +90,8 @@ impl<F: PrimeField> SumCheckVerifier<F> for PolyIOP<F> {
         } else {
             verifier_state.round += 1;
         }
+
+        end_timer!(start);
         Ok(challenge)
     }
 
@@ -94,6 +105,7 @@ impl<F: PrimeField> SumCheckVerifier<F> for PolyIOP<F> {
         verifier_state: &Self::VerifierState,
         asserted_sum: &F,
     ) -> Result<Self::SubClaim, PolyIOPErrors> {
+        let start = start_timer!(|| "check_and_generate_subclaim");
         if !verifier_state.finished {
             return Err(PolyIOPErrors::InvalidVerifier(
                 "Incorrect verifier state: Verifier has not finished.".to_string(),
@@ -105,11 +117,31 @@ impl<F: PrimeField> SumCheckVerifier<F> for PolyIOP<F> {
                 "insufficient rounds".to_string(),
             ));
         }
+
+        #[cfg(feature = "parallel")]
         let mut expected_vec = verifier_state
             .polynomials_received
             .clone()
             .into_par_iter()
             .zip(verifier_state.challenges.clone().into_par_iter())
+            .map(|(evaluations, challenge)| {
+                if evaluations.len() != verifier_state.max_degree + 1 {
+                    return Err(PolyIOPErrors::InvalidVerifier(format!(
+                        "incorrect number of evaluations: {} vs {}",
+                        evaluations.len(),
+                        verifier_state.max_degree + 1
+                    )));
+                }
+                Ok(interpolate_uni_poly::<F>(&evaluations, challenge))
+            })
+            .collect::<Result<Vec<_>, PolyIOPErrors>>()?;
+
+        #[cfg(not(feature = "parallel"))]
+        let mut expected_vec = verifier_state
+            .polynomials_received
+            .clone()
+            .into_iter()
+            .zip(verifier_state.challenges.clone().into_iter())
             .map(|(evaluations, challenge)| {
                 if evaluations.len() != verifier_state.max_degree + 1 {
                     return Err(PolyIOPErrors::InvalidVerifier(format!(
@@ -136,7 +168,7 @@ impl<F: PrimeField> SumCheckVerifier<F> for PolyIOP<F> {
                 ));
             }
         }
-
+        end_timer!(start);
         Ok(SubClaim {
             point: verifier_state.challenges.to_vec(),
             // the last expected value (unchecked) will be included in the subclaim
@@ -148,6 +180,7 @@ impl<F: PrimeField> SumCheckVerifier<F> for PolyIOP<F> {
 /// interpolate a uni-variate degree-`p_i.len()-1` polynomial and evaluate this
 /// polynomial at `eval_at`.
 pub(crate) fn interpolate_uni_poly<F: PrimeField>(p_i: &[F], eval_at: F) -> F {
+    let start = start_timer!(|| "interpolate_uni_poly");
     let mut result = F::zero();
     let mut i = F::zero();
     for term in p_i.iter() {
@@ -162,6 +195,6 @@ pub(crate) fn interpolate_uni_poly<F: PrimeField>(p_i: &[F], eval_at: F) -> F {
         i += F::one();
         result += term;
     }
-
+    end_timer!(start);
     result
 }

@@ -14,6 +14,7 @@ use ark_ff::PrimeField;
 mod prover;
 mod verifier;
 
+use ark_std::{end_timer, start_timer};
 pub use prover::ProverState;
 pub use verifier::VerifierState;
 
@@ -144,7 +145,10 @@ impl<F: PrimeField> SumCheck<F> for PolyIOP<F> {
     type Transcript = IOPTranscript<F>;
 
     fn extract_sum(proof: &Self::Proof) -> F {
-        proof.proofs[0].evaluations[0] + proof.proofs[0].evaluations[1]
+        let start = start_timer!(|| "extract sum");
+        let res = proof.proofs[0].evaluations[0] + proof.proofs[0].evaluations[1];
+        end_timer!(start);
+        res
     }
 
     /// Initialize the system with a transcript
@@ -154,7 +158,10 @@ impl<F: PrimeField> SumCheck<F> for PolyIOP<F> {
     /// may be initialized by this complex protocol, and passed to the
     /// SumCheck prover/verifier.
     fn init_transcript() -> Self::Transcript {
-        IOPTranscript::<F>::new(b"Initializing SumCheck transcript")
+        let start = start_timer!(|| "init transcript");
+        let res = IOPTranscript::<F>::new(b"Initializing SumCheck transcript");
+        end_timer!(start);
+        res
     }
 
     /// generate proof of the sum of polynomial over {0,1}^`num_vars`
@@ -176,6 +183,8 @@ impl<F: PrimeField> SumCheck<F> for PolyIOP<F> {
         poly: &Self::PolyList,
         transcript: &mut Self::Transcript,
     ) -> Result<Self::Proof, PolyIOPErrors> {
+        let start = start_timer!(|| "sum check prove");
+
         transcript.append_domain_info(&poly.domain_info)?;
 
         let mut prover_state = Self::prover_init(poly)?;
@@ -188,6 +197,7 @@ impl<F: PrimeField> SumCheck<F> for PolyIOP<F> {
             challenge = Some(transcript.get_and_append_challenge(b"Internal round")?);
         }
 
+        end_timer!(start);
         Ok(IOPProof {
             proofs: prover_msgs,
         })
@@ -200,6 +210,8 @@ impl<F: PrimeField> SumCheck<F> for PolyIOP<F> {
         domain_info: &Self::DomainInfo,
         transcript: &mut Self::Transcript,
     ) -> Result<Self::SubClaim, PolyIOPErrors> {
+        let start = start_timer!(|| "sum check prove");
+
         transcript.append_domain_info(domain_info)?;
         let mut verifier_state = Self::verifier_init(domain_info);
         for i in 0..domain_info.num_variables {
@@ -208,7 +220,10 @@ impl<F: PrimeField> SumCheck<F> for PolyIOP<F> {
             Self::verify_round_and_update_state(&mut verifier_state, prover_msg, transcript)?;
         }
 
-        Self::check_and_generate_subclaim(&verifier_state, &claimed_sum)
+        let res = Self::check_and_generate_subclaim(&verifier_state, &claimed_sum);
+
+        end_timer!(start);
+        res
     }
 }
 
