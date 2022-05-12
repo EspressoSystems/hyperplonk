@@ -212,7 +212,7 @@ impl<F: PrimeField> SumCheck<F> for PolyIOP<F> {
         domain_info: &Self::DomainInfo,
         transcript: &mut Self::Transcript,
     ) -> Result<Self::SubClaim, PolyIOPErrors> {
-        let start = start_timer!(|| "sum check prove");
+        let start = start_timer!(|| "sum check verify");
 
         transcript.append_domain_info(domain_info)?;
         let mut verifier_state = VerifierState::verifier_init(domain_info);
