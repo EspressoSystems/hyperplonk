@@ -10,11 +10,11 @@ use crate::{
     PolyIOP,
 };
 use ark_ff::PrimeField;
+use ark_std::{end_timer, start_timer};
 
 mod prover;
 mod verifier;
 
-use ark_std::{end_timer, start_timer};
 pub use prover::ProverState;
 pub use verifier::VerifierState;
 
@@ -65,9 +65,11 @@ pub trait SumCheck<F: PrimeField> {
     ) -> Result<Self::SubClaim, PolyIOPErrors>;
 }
 
-pub trait SumCheckProver<F: PrimeField> {
+pub trait SumCheckProver<F: PrimeField>
+where
+    Self: Sized,
+{
     type PolyList;
-    type ProverState;
     type ProverMessage;
 
     /// initialize the prover to argue for the sum of polynomial over
@@ -86,28 +88,27 @@ pub trait SumCheckProver<F: PrimeField> {
     /// The resulting polynomial is
     ///
     /// $$\sum_{i=0}^{n}C_i\cdot\prod_{j=0}^{m_i}P_{ij}$$
-    fn prover_init(polynomial: &Self::PolyList) -> Result<Self::ProverState, PolyIOPErrors>;
+    fn prover_init(polynomial: &Self::PolyList) -> Result<Self, PolyIOPErrors>;
 
     /// receive message from verifier, generate prover message, and proceed to
     /// next round
     ///
     /// Main algorithm used is from section 3.2 of [XZZPS19](https://eprint.iacr.org/2019/317.pdf#subsection.3.2).
     fn prove_round_and_update_state(
-        prover_state: &mut Self::ProverState,
+        &mut self,
         challenge: &Option<F>,
     ) -> Result<Self::ProverMessage, PolyIOPErrors>;
 }
 
 pub trait SumCheckVerifier<F: PrimeField> {
     type DomainInfo;
-    type VerifierState;
     type ProverMessage;
     type Challenge;
     type Transcript;
     type SubClaim;
 
     /// initialize the verifier
-    fn verifier_init(index_info: &Self::DomainInfo) -> Self::VerifierState;
+    fn verifier_init(index_info: &Self::DomainInfo) -> Self;
 
     /// Run verifier at current round, given prover message
     ///
@@ -116,7 +117,7 @@ pub trait SumCheckVerifier<F: PrimeField> {
     /// verifications altogether in `check_and_generate_subclaim` at
     /// the last step.
     fn verify_round_and_update_state(
-        verifier_state: &mut VerifierState<F>,
+        &mut self,
         prover_msg: &Self::ProverMessage,
         transcript: &mut Self::Transcript,
     ) -> Result<Self::Challenge, PolyIOPErrors>;
@@ -128,7 +129,7 @@ pub trait SumCheckVerifier<F: PrimeField> {
     /// Otherwise, it is highly unlikely that those two will be equal.
     /// Larger field size guarantees smaller soundness error.
     fn check_and_generate_subclaim(
-        verifier_state: &Self::VerifierState,
+        &self,
         asserted_sum: &F,
     ) -> Result<Self::SubClaim, PolyIOPErrors>;
 }
@@ -187,11 +188,12 @@ impl<F: PrimeField> SumCheck<F> for PolyIOP<F> {
 
         transcript.append_domain_info(&poly.domain_info)?;
 
-        let mut prover_state = Self::prover_init(poly)?;
+        let mut prover_state = ProverState::prover_init(poly)?;
         let mut challenge = None;
         let mut prover_msgs = Vec::with_capacity(poly.domain_info.num_variables);
         for _ in 0..poly.domain_info.num_variables {
-            let prover_msg = Self::prove_round_and_update_state(&mut prover_state, &challenge)?;
+            let prover_msg =
+                ProverState::prove_round_and_update_state(&mut prover_state, &challenge)?;
             transcript.append_prover_message(&prover_msg)?;
             prover_msgs.push(prover_msg);
             challenge = Some(transcript.get_and_append_challenge(b"Internal round")?);
@@ -213,14 +215,18 @@ impl<F: PrimeField> SumCheck<F> for PolyIOP<F> {
         let start = start_timer!(|| "sum check prove");
 
         transcript.append_domain_info(domain_info)?;
-        let mut verifier_state = Self::verifier_init(domain_info);
+        let mut verifier_state = VerifierState::verifier_init(domain_info);
         for i in 0..domain_info.num_variables {
             let prover_msg = proof.proofs.get(i).expect("proof is incomplete");
             transcript.append_prover_message(prover_msg)?;
-            Self::verify_round_and_update_state(&mut verifier_state, prover_msg, transcript)?;
+            VerifierState::verify_round_and_update_state(
+                &mut verifier_state,
+                prover_msg,
+                transcript,
+            )?;
         }
 
-        let res = Self::check_and_generate_subclaim(&verifier_state, &claimed_sum);
+        let res = VerifierState::check_and_generate_subclaim(&verifier_state, &claimed_sum);
 
         end_timer!(start);
         res
@@ -238,7 +244,7 @@ mod test {
     use ark_std::test_rng;
     use std::rc::Rc;
 
-    fn test_polynomial(nv: usize, num_multiplicands_range: (usize, usize), num_products: usize) {
+    fn test_sumcheck(nv: usize, num_multiplicands_range: (usize, usize), num_products: usize) {
         let mut rng = test_rng();
         let mut transcript = PolyIOP::init_transcript();
 
@@ -255,13 +261,17 @@ mod test {
         );
     }
 
-    fn test_protocol(nv: usize, num_multiplicands_range: (usize, usize), num_products: usize) {
+    fn test_sumcheck_internal(
+        nv: usize,
+        num_multiplicands_range: (usize, usize),
+        num_products: usize,
+    ) {
         let mut rng = test_rng();
         let (poly, asserted_sum) =
             random_list_of_products::<Fr, _>(nv, num_multiplicands_range, num_products, &mut rng);
         let poly_info = poly.domain_info.clone();
-        let mut prover_state = PolyIOP::prover_init(&poly).unwrap();
-        let mut verifier_state = PolyIOP::verifier_init(&poly_info);
+        let mut prover_state = ProverState::prover_init(&poly).unwrap();
+        let mut verifier_state = VerifierState::verifier_init(&poly_info);
         let mut challenge = None;
         let mut transcript = IOPTranscript::new(b"a test transcript");
         transcript
@@ -269,10 +279,10 @@ mod test {
             .unwrap();
         for _ in 0..poly.domain_info.num_variables {
             let prover_message =
-                PolyIOP::prove_round_and_update_state(&mut prover_state, &challenge).unwrap();
+                ProverState::prove_round_and_update_state(&mut prover_state, &challenge).unwrap();
 
             challenge = Some(
-                PolyIOP::verify_round_and_update_state(
+                VerifierState::verify_round_and_update_state(
                     &mut verifier_state,
                     &prover_message,
                     &mut transcript,
@@ -280,7 +290,7 @@ mod test {
                 .unwrap(),
             );
         }
-        let subclaim = PolyIOP::check_and_generate_subclaim(&verifier_state, &asserted_sum)
+        let subclaim = VerifierState::check_and_generate_subclaim(&verifier_state, &asserted_sum)
             .expect("fail to generate subclaim");
         assert!(
             poly.evaluate(&subclaim.point).unwrap() == subclaim.expected_evaluation,
@@ -294,8 +304,8 @@ mod test {
         let num_multiplicands_range = (4, 13);
         let num_products = 5;
 
-        test_polynomial(nv, num_multiplicands_range, num_products);
-        test_protocol(nv, num_multiplicands_range, num_products);
+        test_sumcheck(nv, num_multiplicands_range, num_products);
+        test_sumcheck_internal(nv, num_multiplicands_range, num_products);
     }
     #[test]
     fn test_normal_polynomial() {
@@ -303,8 +313,8 @@ mod test {
         let num_multiplicands_range = (4, 9);
         let num_products = 5;
 
-        test_polynomial(nv, num_multiplicands_range, num_products);
-        test_protocol(nv, num_multiplicands_range, num_products);
+        test_sumcheck(nv, num_multiplicands_range, num_products);
+        test_sumcheck_internal(nv, num_multiplicands_range, num_products);
     }
     #[test]
     #[should_panic]
@@ -313,8 +323,8 @@ mod test {
         let num_multiplicands_range = (4, 13);
         let num_products = 5;
 
-        test_polynomial(nv, num_multiplicands_range, num_products);
-        test_protocol(nv, num_multiplicands_range, num_products);
+        test_sumcheck(nv, num_multiplicands_range, num_products);
+        test_sumcheck_internal(nv, num_multiplicands_range, num_products);
     }
 
     #[test]
@@ -374,8 +384,8 @@ mod test {
         assert_eq!(poly.flattened_ml_extensions.len(), 5);
 
         // test memory usage for prover
-        let prover = PolyIOP::prover_init(&poly).unwrap();
-        assert_eq!(prover.flattened_ml_extensions.len(), 5);
+        let prover = ProverState::prover_init(&poly).unwrap();
+        assert_eq!(prover.poly.flattened_ml_extensions.len(), 5);
         drop(prover);
 
         let mut transcript = PolyIOP::init_transcript();

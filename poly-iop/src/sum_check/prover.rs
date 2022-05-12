@@ -1,10 +1,10 @@
 //! Prover
+use std::rc::Rc;
+
 // TODO: some of the struct is generic for Sum Checks and Zero Checks.
 // If so move them to src/structs.rs
 use super::SumCheckProver;
-use crate::{
-    errors::PolyIOPErrors, structs::IOPProverMessage, virtual_poly::VirtualPolynomial, PolyIOP,
-};
+use crate::{errors::PolyIOPErrors, structs::IOPProverMessage, virtual_poly::VirtualPolynomial};
 use ark_ff::PrimeField;
 use ark_poly::{DenseMultilinearExtension, MultilinearExtension};
 use ark_std::{end_timer, start_timer, vec::Vec};
@@ -16,20 +16,14 @@ use rayon::iter::{IndexedParallelIterator, IntoParallelRefMutIterator, ParallelI
 pub struct ProverState<F: PrimeField> {
     /// sampled randomness given by the verifier
     pub challenges: Vec<F>,
-    /// Stores the list of products that is meant to be added together. Each
-    /// multiplicand is represented by the index in flattened_ml_extensions
-    pub list_of_products: Vec<(F, Vec<usize>)>,
-    /// Stores a list of multilinear extensions in which `self.list_of_products`
-    /// points to
-    pub flattened_ml_extensions: Vec<DenseMultilinearExtension<F>>,
-    pub(crate) num_vars: usize,
-    pub(crate) max_degree: usize,
+    /// the current round number
     pub(crate) round: usize,
+    /// pointer to the virtual polynomial
+    pub(crate) poly: VirtualPolynomial<F>,
 }
 
-impl<F: PrimeField> SumCheckProver<F> for PolyIOP<F> {
+impl<F: PrimeField> SumCheckProver<F> for ProverState<F> {
     type PolyList = VirtualPolynomial<F>;
-    type ProverState = ProverState<F>;
     type ProverMessage = IOPProverMessage<F>;
 
     /// initialize the prover to argue for the sum of polynomial over
@@ -48,30 +42,19 @@ impl<F: PrimeField> SumCheckProver<F> for PolyIOP<F> {
     /// The resulting polynomial is
     ///
     /// $$\sum_{i=0}^{n}C_i\cdot\prod_{j=0}^{m_i}P_{ij}$$
-    fn prover_init(polynomial: &Self::PolyList) -> Result<Self::ProverState, PolyIOPErrors> {
+    fn prover_init(polynomial: &Self::PolyList) -> Result<Self, PolyIOPErrors> {
         let start = start_timer!(|| "prover init");
         if polynomial.domain_info.num_variables == 0 {
             return Err(PolyIOPErrors::InvalidParameters(
                 "Attempt to prove a constant.".to_string(),
             ));
         }
-
-        // create a deep copy of all unique MLExtensions
-        let flattened_ml_extensions = polynomial
-            .flattened_ml_extensions
-            .iter()
-            .map(|x| x.as_ref().clone())
-            .collect();
-
         end_timer!(start);
 
         Ok(ProverState {
             challenges: Vec::with_capacity(polynomial.domain_info.num_variables),
-            list_of_products: polynomial.products.clone(),
-            flattened_ml_extensions,
-            num_vars: polynomial.domain_info.num_variables,
-            max_degree: polynomial.domain_info.max_degree,
             round: 0,
+            poly: polynomial.clone(),
         })
     }
 
@@ -80,53 +63,59 @@ impl<F: PrimeField> SumCheckProver<F> for PolyIOP<F> {
     ///
     /// Main algorithm used is from section 3.2 of [XZZPS19](https://eprint.iacr.org/2019/317.pdf#subsection.3.2).
     fn prove_round_and_update_state(
-        prover_state: &mut Self::ProverState,
+        &mut self,
         challenge: &Option<F>,
     ) -> Result<Self::ProverMessage, PolyIOPErrors> {
-        let start =
-            start_timer!(|| format!("prove {}-th round and update state", prover_state.round));
+        let start = start_timer!(|| format!("prove {}-th round and update state", self.round));
 
         let fix_argument = start_timer!(|| "fix argument");
+
+        let mut flattened_ml_extensions: Vec<DenseMultilinearExtension<F>> = self
+            .poly
+            .flattened_ml_extensions
+            .iter()
+            .map(|x| x.as_ref().clone())
+            .collect();
+        let products = self.poly.products.clone();
+
         if let Some(chal) = challenge {
-            if prover_state.round == 0 {
+            if self.round == 0 {
                 return Err(PolyIOPErrors::InvalidProver(
                     "first round should be prover first.".to_string(),
                 ));
             }
-            prover_state.challenges.push(*chal);
+            self.challenges.push(*chal);
 
             // fix argument
-            let i = prover_state.round;
-            let r = prover_state.challenges[i - 1];
+            let i = self.round;
+            let r = self.challenges[i - 1];
             #[cfg(feature = "parallel")]
-            prover_state
-                .flattened_ml_extensions
+            flattened_ml_extensions
                 .par_iter_mut()
                 .for_each(|multiplicand| *multiplicand = multiplicand.fix_variables(&[r]));
 
             #[cfg(not(feature = "parallel"))]
-            prover_state
-                .flattened_ml_extensions
+            flattened_ml_extensions
                 .iter_mut()
                 .for_each(|multiplicand| *multiplicand = multiplicand.fix_variables(&[r]));
-        } else if prover_state.round > 0 {
+        } else if self.round > 0 {
             return Err(PolyIOPErrors::InvalidProver(
                 "verifier message is empty".to_string(),
             ));
         }
         end_timer!(fix_argument);
 
-        prover_state.round += 1;
+        self.round += 1;
 
-        if prover_state.round > prover_state.num_vars {
+        if self.round > self.poly.domain_info.num_variables {
             return Err(PolyIOPErrors::InvalidProver(
                 "Prover is not active".to_string(),
             ));
         }
 
-        let i = prover_state.round;
-        let nv = prover_state.num_vars;
-        let degree = prover_state.max_degree; // the degree of univariate polynomial sent by prover at this round
+        let i = self.round;
+        let nv = self.poly.domain_info.num_variables;
+        let degree = self.poly.domain_info.max_degree; // the degree of univariate polynomial sent by prover at this round
 
         let mut products_sum = Vec::with_capacity(degree + 1);
         products_sum.resize(degree + 1, F::zero());
@@ -141,11 +130,11 @@ impl<F: PrimeField> SumCheckProver<F> for PolyIOP<F> {
                 .enumerate()
                 .for_each(|(i, e)| {
                     // evaluate P_round(t)
-                    for (coefficient, products) in &prover_state.list_of_products {
+                    for (coefficient, products) in products.iter() {
                         let num_multiplicands = products.len();
                         let mut product = *coefficient;
                         for &f in products.iter().take(num_multiplicands) {
-                            let table = &prover_state.flattened_ml_extensions[f]; // j's range is checked in init
+                            let table = &flattened_ml_extensions[f]; // f's range is checked in init
                             product *= table[b << 1] * (F::one() - F::from(i as u64))
                                 + table[(b << 1) + 1] * F::from(i as u64);
                         }
@@ -159,11 +148,11 @@ impl<F: PrimeField> SumCheckProver<F> for PolyIOP<F> {
                 .enumerate()
                 .for_each(|(i, e)| {
                     // evaluate P_round(t)
-                    for (coefficient, products) in &prover_state.list_of_products {
+                    for (coefficient, products) in products.iter() {
                         let num_multiplicands = products.len();
                         let mut product = *coefficient;
                         for &f in products.iter().take(num_multiplicands) {
-                            let table = &prover_state.flattened_ml_extensions[f]; // j's range is checked in init
+                            let table = &flattened_ml_extensions[f]; // f's range is checked in init
                             product *= table[b << 1] * (F::one() - F::from(i as u64))
                                 + table[(b << 1) + 1] * F::from(i as u64);
                         }
@@ -171,6 +160,12 @@ impl<F: PrimeField> SumCheckProver<F> for PolyIOP<F> {
                     }
                 });
         }
+
+        self.poly.flattened_ml_extensions = flattened_ml_extensions
+            .iter()
+            .map(|x| Rc::new(x.clone()))
+            .collect();
+
         end_timer!(compute_sum);
         end_timer!(start);
         Ok(IOPProverMessage {

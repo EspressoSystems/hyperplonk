@@ -1,6 +1,7 @@
 use crate::{errors::PolyIOPErrors, structs::DomainInfo};
 use ark_ff::PrimeField;
 use ark_poly::{DenseMultilinearExtension, MultilinearExtension};
+use ark_std::{end_timer, start_timer};
 use std::{cmp::max, collections::HashMap, marker::PhantomData, rc::Rc};
 
 /// A virtual polynomial is a list of multilinear polynomials
@@ -68,6 +69,8 @@ impl<F: PrimeField> VirtualPolynomial<F> {
 
     /// Evaluate the polynomial at point `point`
     pub fn evaluate(&self, point: &[F]) -> Result<F, PolyIOPErrors> {
+        let start = start_timer!(|| "begin evaluation");
+
         if self.domain_info.num_variables != point.len() {
             return Err(PolyIOPErrors::InvalidParameters(format!(
                 "wrong number of variables {} vs {}",
@@ -76,20 +79,24 @@ impl<F: PrimeField> VirtualPolynomial<F> {
             )));
         }
 
-        Ok(self
+        let eval: Vec<F> = self
+            .flattened_ml_extensions
+            .iter()
+            .map(|x| {
+                x.evaluate(point).unwrap() // safe unwrap here since we have
+                                           // already checked that num_var
+                                           // matches
+            })
+            .collect();
+
+        let res = self
             .products
             .iter()
-            .map(|(c, p)| {
-                *c * p
-                    .iter()
-                    .map(|&i| {
-                        self.flattened_ml_extensions[i].evaluate(point)
-                    // safe unwrap here since we have already checked that num_var matches
-                    .unwrap()
-                    })
-                    .product::<F>()
-            })
-            .sum())
+            .map(|(c, p)| *c * p.iter().map(|&i| eval[i]).product::<F>())
+            .sum();
+
+        end_timer!(start);
+        Ok(res)
     }
 }
 

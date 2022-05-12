@@ -6,11 +6,10 @@ use crate::{
     errors::PolyIOPErrors,
     structs::{DomainInfo, IOPProverMessage, SubClaim},
     transcript::IOPTranscript,
-    PolyIOP,
 };
 use ark_ff::PrimeField;
-
 use ark_std::{end_timer, start_timer};
+
 #[cfg(feature = "parallel")]
 use rayon::iter::{IndexedParallelIterator, IntoParallelIterator, ParallelIterator};
 
@@ -27,16 +26,15 @@ pub struct VerifierState<F: PrimeField> {
     challenges: Vec<F>,
 }
 
-impl<F: PrimeField> SumCheckVerifier<F> for PolyIOP<F> {
+impl<F: PrimeField> SumCheckVerifier<F> for VerifierState<F> {
     type DomainInfo = DomainInfo<F>;
-    type VerifierState = VerifierState<F>;
     type ProverMessage = IOPProverMessage<F>;
     type Challenge = F;
     type Transcript = IOPTranscript<F>;
     type SubClaim = SubClaim<F>;
 
     /// initialize the verifier
-    fn verifier_init(index_info: &Self::DomainInfo) -> Self::VerifierState {
+    fn verifier_init(index_info: &Self::DomainInfo) -> Self {
         let start = start_timer!(|| "verifier init");
         let res = VerifierState {
             round: 1,
@@ -57,14 +55,14 @@ impl<F: PrimeField> SumCheckVerifier<F> for PolyIOP<F> {
     /// verifications altogether in `check_and_generate_subclaim` at
     /// the last step.
     fn verify_round_and_update_state(
-        verifier_state: &mut VerifierState<F>,
+        &mut self,
         prover_msg: &Self::ProverMessage,
         transcript: &mut Self::Transcript,
     ) -> Result<Self::Challenge, PolyIOPErrors> {
         let start =
             start_timer!(|| format!("verify {}-th round and update state", verifier_state.round));
 
-        if verifier_state.finished {
+        if self.finished {
             return Err(PolyIOPErrors::InvalidVerifier(
                 "Incorrect verifier state: Verifier is already finished.".to_string(),
             ));
@@ -75,20 +73,19 @@ impl<F: PrimeField> SumCheckVerifier<F> for PolyIOP<F> {
         // last round.
 
         let challenge = transcript.get_and_append_challenge(b"Internal round")?;
-        verifier_state.challenges.push(challenge);
-        verifier_state
-            .polynomials_received
+        self.challenges.push(challenge);
+        self.polynomials_received
             .push(prover_msg.evaluations.to_vec());
 
         // Now, verifier should set `expected` to P(r).
         // This operation is also moved to `check_and_generate_subclaim`,
         // and will be done after the last round.
 
-        if verifier_state.round == verifier_state.num_vars {
+        if self.round == self.num_vars {
             // accept and close
-            verifier_state.finished = true;
+            self.finished = true;
         } else {
-            verifier_state.round += 1;
+            self.round += 1;
         }
 
         end_timer!(start);
@@ -102,34 +99,34 @@ impl<F: PrimeField> SumCheckVerifier<F> for PolyIOP<F> {
     /// Otherwise, it is highly unlikely that those two will be equal.
     /// Larger field size guarantees smaller soundness error.
     fn check_and_generate_subclaim(
-        verifier_state: &Self::VerifierState,
+        &self,
         asserted_sum: &F,
     ) -> Result<Self::SubClaim, PolyIOPErrors> {
         let start = start_timer!(|| "check_and_generate_subclaim");
-        if !verifier_state.finished {
+        if !self.finished {
             return Err(PolyIOPErrors::InvalidVerifier(
                 "Incorrect verifier state: Verifier has not finished.".to_string(),
             ));
         }
 
-        if verifier_state.polynomials_received.len() != verifier_state.num_vars {
+        if self.polynomials_received.len() != self.num_vars {
             return Err(PolyIOPErrors::InvalidVerifier(
                 "insufficient rounds".to_string(),
             ));
         }
 
         #[cfg(feature = "parallel")]
-        let mut expected_vec = verifier_state
+        let mut expected_vec = self
             .polynomials_received
             .clone()
             .into_par_iter()
-            .zip(verifier_state.challenges.clone().into_par_iter())
+            .zip(self.challenges.clone().into_par_iter())
             .map(|(evaluations, challenge)| {
-                if evaluations.len() != verifier_state.max_degree + 1 {
+                if evaluations.len() != self.max_degree + 1 {
                     return Err(PolyIOPErrors::InvalidVerifier(format!(
                         "incorrect number of evaluations: {} vs {}",
                         evaluations.len(),
-                        verifier_state.max_degree + 1
+                        self.max_degree + 1
                     )));
                 }
                 Ok(interpolate_uni_poly::<F>(&evaluations, challenge))
@@ -137,17 +134,17 @@ impl<F: PrimeField> SumCheckVerifier<F> for PolyIOP<F> {
             .collect::<Result<Vec<_>, PolyIOPErrors>>()?;
 
         #[cfg(not(feature = "parallel"))]
-        let mut expected_vec = verifier_state
+        let mut expected_vec = self
             .polynomials_received
             .clone()
             .into_iter()
-            .zip(verifier_state.challenges.clone().into_iter())
+            .zip(self.challenges.clone().into_iter())
             .map(|(evaluations, challenge)| {
-                if evaluations.len() != verifier_state.max_degree + 1 {
+                if evaluations.len() != self.max_degree + 1 {
                     return Err(PolyIOPErrors::InvalidVerifier(format!(
                         "incorrect number of evaluations: {} vs {}",
                         evaluations.len(),
-                        verifier_state.max_degree + 1
+                        self.max_degree + 1
                     )));
                 }
                 Ok(interpolate_uni_poly::<F>(&evaluations, challenge))
@@ -156,11 +153,11 @@ impl<F: PrimeField> SumCheckVerifier<F> for PolyIOP<F> {
         // insert the asserted_sum to the first position of the expected vector
         expected_vec.insert(0, *asserted_sum);
 
-        for (evaluations, &expected) in verifier_state
+        for (evaluations, &expected) in self
             .polynomials_received
             .iter()
             .zip(expected_vec.iter())
-            .take(verifier_state.num_vars)
+            .take(self.num_vars)
         {
             if evaluations[0] + evaluations[1] != expected {
                 return Err(PolyIOPErrors::InvalidProof(
@@ -170,9 +167,9 @@ impl<F: PrimeField> SumCheckVerifier<F> for PolyIOP<F> {
         }
         end_timer!(start);
         Ok(SubClaim {
-            point: verifier_state.challenges.to_vec(),
+            point: self.challenges.to_vec(),
             // the last expected value (unchecked) will be included in the subclaim
-            expected_evaluation: expected_vec[verifier_state.num_vars],
+            expected_evaluation: expected_vec[self.num_vars],
         })
     }
 }
