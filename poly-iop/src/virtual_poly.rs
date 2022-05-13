@@ -25,31 +25,16 @@ pub struct VirtualPolynomial<F: PrimeField> {
 impl<F: PrimeField> Add for &VirtualPolynomial<F> {
     type Output = VirtualPolynomial<F>;
     fn add(self, other: &VirtualPolynomial<F>) -> Self::Output {
-        // only check domain info
-        if self.domain_info != other.domain_info {
-            panic!("addition between VP requires domain matching");
-        }
         let mut res = self.clone();
-
-        // todo: handle the case where MLE is duplicated in two
-        // res.products.extend_from_slice(&other.products);
-        for product in other.products.iter() {
-            let index_ref: Vec<usize> = product
+        for products in other.products.iter() {
+            let cur: Vec<Rc<DenseMultilinearExtension<F>>> = products
                 .1
                 .iter()
-                .map(|x| x + self.flattened_ml_extensions.len())
+                .map(|&x| other.flattened_ml_extensions[x].clone())
                 .collect();
-            res.products.push((product.0, index_ref))
-        }
 
-        let mut ctr = res.flattened_ml_extensions.len();
-        for &e in other.raw_pointers_lookup_table.keys() {
-            if !res.raw_pointers_lookup_table.contains_key(&e) {
-                res.raw_pointers_lookup_table.insert(e, ctr);
-                ctr += 1;
-                res.flattened_ml_extensions
-                    .push(Rc::new(unsafe { (*e).clone() }))
-            }
+            res.add_product(cur, products.0)
+                .expect("add product failed");
         }
         res
     }
@@ -194,7 +179,7 @@ fn random_product<F: PrimeField, R: RngCore>(
 pub(crate) mod test {
     use super::*;
     use ark_bls12_381::Fr;
-    use ark_ff::{One, UniformRand, Zero};
+    use ark_ff::UniformRand;
     use ark_std::{
         rand::{Rng, RngCore},
         test_rng,
@@ -255,38 +240,22 @@ pub(crate) mod test {
     #[test]
     fn test_virtual_polynomial_additions() -> Result<(), PolyIOPErrors> {
         let mut rng = test_rng();
-        let nv = 4;
-        let base: Vec<Fr> = (0..nv).map(|_| Fr::rand(&mut rng)).collect();
+        for nv in 2..5 {
+            for num_products in 2..5 {
+                let base: Vec<Fr> = (0..nv).map(|_| Fr::rand(&mut rng)).collect();
 
-        let (a, _a_sum) = VirtualPolynomial::<Fr>::rand(nv, (2, 3), 2, &mut rng)?;
-        let (b, _b_sum) = VirtualPolynomial::<Fr>::rand(nv, (2, 3), 2, &mut rng)?;
-        let c = &a + &b;
+                let (a, _a_sum) =
+                    VirtualPolynomial::<Fr>::rand(nv, (2, 3), num_products, &mut rng)?;
+                let (b, _b_sum) =
+                    VirtualPolynomial::<Fr>::rand(nv, (2, 3), num_products, &mut rng)?;
+                let c = &a + &b;
 
-        println!("a: {:?}", a);
-        println!("b: {:?}", b);
-        println!("c: {:?}", c);
-
-        println!(
-            "num var: {} {} {}",
-            a.domain_info.num_variables, b.domain_info.num_variables, c.domain_info.num_variables
-        );
-        println!(
-            "mle length: {} {} {}",
-            a.flattened_ml_extensions.len(),
-            b.flattened_ml_extensions.len(),
-            c.flattened_ml_extensions.len()
-        );
-        println!(
-            "hash map size: {} {} {}",
-            a.raw_pointers_lookup_table.len(),
-            b.raw_pointers_lookup_table.len(),
-            c.raw_pointers_lookup_table.len()
-        );
-
-        assert_eq!(
-            a.evaluate(base.as_ref())? + b.evaluate(base.as_ref())?,
-            c.evaluate(base.as_ref())?
-        );
+                assert_eq!(
+                    a.evaluate(base.as_ref())? + b.evaluate(base.as_ref())?,
+                    c.evaluate(base.as_ref())?
+                );
+            }
+        }
 
         Ok(())
     }
