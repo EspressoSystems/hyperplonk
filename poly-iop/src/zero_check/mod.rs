@@ -100,37 +100,36 @@ fn build_f_hat<F: PrimeField>(
 ) -> Result<VirtualPolynomial<F>, PolyIOPErrors> {
     let start = start_timer!(|| "zero check build hat f");
     assert_eq!(poly.domain_info.num_variables, r.len());
-    let mut res = poly.clone();
-    let eq_x_r = build_eq_x_r(r);
-    res.add_product([eq_x_r; 1], F::one())?;
-    // // First, we build array for {1 - r_i}
-    // let one_minus_r: Vec<F> = r.iter().map(|ri| F::one() - ri).collect();
+    // let mut res = poly.clone();
+    // let eq_x_r = build_eq_x_r(r);
+    // res.add_product([eq_x_r; 1], F::one())?;
+    // First, we build array for {1 - r_i}
+    let one_minus_r: Vec<F> = r.iter().map(|ri| F::one() - ri).collect();
 
-    // let mut eval = vec![];
-    // // let eq_x_r = build_eq_x_r(r);
-    // let num_var = r.len();
-    // let mut res = VirtualPolynomial::new(num_var);
-    // // res.add_product([eq_x_r; 1], F::one());
+    let mut eval = vec![];
+    // let eq_x_r = build_eq_x_r(r);
+    let num_var = r.len();
+    let mut res = VirtualPolynomial::new(num_var);
+    // res.add_product([eq_x_r; 1], F::one());
 
-    // for i in 0..1 << num_var {
-    //     let bit_sequence = bit_decompose(i, num_var);
-    //     let bit_points: Vec<F> = bit_sequence.iter().map(|&x| F::from(x as
-    // u64)).collect();     let mut eq_eval = F::one();
-    //     for (&bit, (ri, one_minus_ri)) in
-    // bit_sequence.iter().zip(r.iter().zip(one_minus_r.iter()))     {
-    //         if bit {
-    //             eq_eval *= ri;
-    //         } else {
-    //             eq_eval *= one_minus_ri;
-    //         }
-    //     }
-    //     eval.push(eq_eval * poly.evaluate(&bit_points))
-    // }
-    // let hat_f = Rc::new(DenseMultilinearExtension::from_evaluations_vec(
-    //     num_var, eval,
-    // ));
-    // res.add_product([hat_f; 1], F::one());
+    for i in 0..1 << num_var {
+        let bit_sequence = bit_decompose(i, num_var);
+        let bit_points: Vec<F> = bit_sequence.iter().map(|&x| F::from(x as u64)).collect();
+        let mut eq_eval = F::one();
+        for (&bit, (ri, one_minus_ri)) in bit_sequence.iter().zip(r.iter().zip(one_minus_r.iter()))
+        {
+            eq_eval *= if bit { *ri } else { *one_minus_ri };
+        }
+        eval.push(eq_eval * poly.evaluate(&bit_points)?)
+    }
+    println!("hat(f): {} {}", num_var, eval.len());
+    let hat_f = Rc::new(DenseMultilinearExtension::from_evaluations_vec(
+        num_var, eval,
+    ));
+    res.add_product([hat_f; 1], F::one())?;
     end_timer!(start);
+    println!("hat(f): {:?}", res);
+
     Ok(res)
 }
 
@@ -167,11 +166,7 @@ fn build_eq_x_r<F: PrimeField>(r: &[F]) -> Rc<DenseMultilinearExtension<F>> {
 
         for (&bit, (ri, one_minus_ri)) in bit_sequence.iter().zip(r.iter().zip(one_minus_r.iter()))
         {
-            if bit {
-                current_eval *= *ri;
-            } else {
-                current_eval *= *one_minus_ri;
-            }
+            current_eval *= if bit { *ri } else { *one_minus_ri };
         }
         eval.push(current_eval);
     }
@@ -179,6 +174,7 @@ fn build_eq_x_r<F: PrimeField>(r: &[F]) -> Rc<DenseMultilinearExtension<F>> {
         num_var, eval,
     ));
     end_timer!(start);
+    println!("eq(x,r): {:?}", res);
     res
 }
 
@@ -203,7 +199,7 @@ mod test {
     use ark_std::test_rng;
     use std::rc::Rc;
 
-    fn test_sumcheck(nv: usize, num_multiplicands_range: (usize, usize), num_products: usize) {
+    fn test_zerocheck(nv: usize, num_multiplicands_range: (usize, usize), num_products: usize) {
         let mut rng = test_rng();
         let mut transcript = PolyIOP::init_transcript();
         transcript
@@ -242,15 +238,15 @@ mod test {
         let num_multiplicands_range = (4, 5);
         let num_products = 1;
 
-        test_sumcheck(nv, num_multiplicands_range, num_products);
+        test_zerocheck(nv, num_multiplicands_range, num_products);
     }
     #[test]
     fn test_normal_polynomial() {
-        let nv = 16;
+        let nv = 5;
         let num_multiplicands_range = (4, 9);
         let num_products = 5;
 
-        test_sumcheck(nv, num_multiplicands_range, num_products);
+        test_zerocheck(nv, num_multiplicands_range, num_products);
     }
     #[test]
     #[should_panic]
@@ -259,7 +255,7 @@ mod test {
         let num_multiplicands_range = (4, 13);
         let num_products = 5;
 
-        test_sumcheck(nv, num_multiplicands_range, num_products);
+        test_zerocheck(nv, num_multiplicands_range, num_products);
     }
 
     #[test]
