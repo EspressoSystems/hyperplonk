@@ -237,40 +237,43 @@ impl<F: PrimeField> SumCheck<F> for PolyIOP<F> {
 mod test {
 
     use super::*;
-    use crate::virtual_poly::test::random_list_of_products;
     use ark_bls12_381::Fr;
     use ark_ff::UniformRand;
     use ark_poly::{DenseMultilinearExtension, MultilinearExtension};
     use ark_std::test_rng;
     use std::rc::Rc;
 
-    fn test_sumcheck(nv: usize, num_multiplicands_range: (usize, usize), num_products: usize) {
+    fn test_sumcheck(
+        nv: usize,
+        num_multiplicands_range: (usize, usize),
+        num_products: usize,
+    ) -> Result<(), PolyIOPErrors> {
         let mut rng = test_rng();
-        let mut transcript = PolyIOP::init_transcript();
+        let mut transcript = <PolyIOP<Fr> as SumCheck<Fr>>::init_transcript();
 
         let (poly, asserted_sum) =
-            random_list_of_products::<Fr, _>(nv, num_multiplicands_range, num_products, &mut rng);
-        let proof = PolyIOP::prove(&poly, &mut transcript).expect("fail to prove");
+            VirtualPolynomial::rand(nv, num_multiplicands_range, num_products, &mut rng)?;
+        let proof = PolyIOP::prove(&poly, &mut transcript)?;
         let poly_info = poly.domain_info.clone();
         let mut transcript = PolyIOP::init_transcript();
-        let subclaim = PolyIOP::verify(asserted_sum, &proof, &poly_info, &mut transcript)
-            .expect("fail to verify");
+        let subclaim = PolyIOP::verify(asserted_sum, &proof, &poly_info, &mut transcript)?;
         assert!(
             poly.evaluate(&subclaim.point).unwrap() == subclaim.expected_evaluation,
             "wrong subclaim"
         );
+        Ok(())
     }
 
     fn test_sumcheck_internal(
         nv: usize,
         num_multiplicands_range: (usize, usize),
         num_products: usize,
-    ) {
+    ) -> Result<(), PolyIOPErrors> {
         let mut rng = test_rng();
         let (poly, asserted_sum) =
-            random_list_of_products::<Fr, _>(nv, num_multiplicands_range, num_products, &mut rng);
+            VirtualPolynomial::<Fr>::rand(nv, num_multiplicands_range, num_products, &mut rng)?;
         let poly_info = poly.domain_info.clone();
-        let mut prover_state = IOPProverState::prover_init(&poly).unwrap();
+        let mut prover_state = IOPProverState::prover_init(&poly)?;
         let mut verifier_state = IOPVerifierState::verifier_init(&poly_info);
         let mut challenge = None;
         let mut transcript = IOPTranscript::new(b"a test transcript");
@@ -298,51 +301,52 @@ mod test {
             poly.evaluate(&subclaim.point).unwrap() == subclaim.expected_evaluation,
             "wrong subclaim"
         );
+        Ok(())
     }
 
     #[test]
-    fn test_trivial_polynomial() {
+    fn test_trivial_polynomial() -> Result<(), PolyIOPErrors> {
         let nv = 1;
         let num_multiplicands_range = (4, 13);
         let num_products = 5;
 
-        test_sumcheck(nv, num_multiplicands_range, num_products);
-        test_sumcheck_internal(nv, num_multiplicands_range, num_products);
+        test_sumcheck(nv, num_multiplicands_range, num_products)?;
+        test_sumcheck_internal(nv, num_multiplicands_range, num_products)
     }
     #[test]
-    fn test_normal_polynomial() {
+    fn test_normal_polynomial() -> Result<(), PolyIOPErrors> {
         let nv = 12;
         let num_multiplicands_range = (4, 9);
         let num_products = 5;
 
-        test_sumcheck(nv, num_multiplicands_range, num_products);
-        test_sumcheck_internal(nv, num_multiplicands_range, num_products);
+        test_sumcheck(nv, num_multiplicands_range, num_products)?;
+        test_sumcheck_internal(nv, num_multiplicands_range, num_products)
     }
     #[test]
-    #[should_panic]
     fn zero_polynomial_should_error() {
         let nv = 0;
         let num_multiplicands_range = (4, 13);
         let num_products = 5;
 
-        test_sumcheck(nv, num_multiplicands_range, num_products);
-        test_sumcheck_internal(nv, num_multiplicands_range, num_products);
+        assert!(test_sumcheck(nv, num_multiplicands_range, num_products).is_err());
+        assert!(test_sumcheck_internal(nv, num_multiplicands_range, num_products).is_err());
     }
 
     #[test]
-    fn test_extract_sum() {
+    fn test_extract_sum() -> Result<(), PolyIOPErrors> {
         let mut rng = test_rng();
-        let mut transcript = PolyIOP::init_transcript();
-        let (poly, asserted_sum) = random_list_of_products::<Fr, _>(8, (3, 4), 3, &mut rng);
+        let mut transcript = <PolyIOP<Fr> as SumCheck<Fr>>::init_transcript();
+        let (poly, asserted_sum) = VirtualPolynomial::<Fr>::rand(8, (3, 4), 3, &mut rng)?;
 
-        let proof = PolyIOP::prove(&poly, &mut transcript).expect("fail to prove");
+        let proof = PolyIOP::prove(&poly, &mut transcript)?;
         assert_eq!(PolyIOP::extract_sum(&proof), asserted_sum);
+        Ok(())
     }
 
     #[test]
     /// Test that the memory usage of shared-reference is linear to number of
     /// unique MLExtensions instead of total number of multiplicands.
-    fn test_shared_reference() {
+    fn test_shared_reference() -> Result<(), PolyIOPErrors> {
         let mut rng = test_rng();
         let ml_extensions: Vec<_> = (0..5)
             .map(|_| Rc::new(DenseMultilinearExtension::<Fr>::rand(8, &mut rng)))
@@ -355,8 +359,7 @@ mod test {
                 ml_extensions[0].clone(),
             ],
             Fr::rand(&mut rng),
-        )
-        .unwrap();
+        )?;
         poly.add_product(
             vec![
                 ml_extensions[1].clone(),
@@ -364,8 +367,7 @@ mod test {
                 ml_extensions[4].clone(),
             ],
             Fr::rand(&mut rng),
-        )
-        .unwrap();
+        )?;
         poly.add_product(
             vec![
                 ml_extensions[3].clone(),
@@ -373,15 +375,12 @@ mod test {
                 ml_extensions[1].clone(),
             ],
             Fr::rand(&mut rng),
-        )
-        .unwrap();
+        )?;
         poly.add_product(
             vec![ml_extensions[0].clone(), ml_extensions[0].clone()],
             Fr::rand(&mut rng),
-        )
-        .unwrap();
-        poly.add_product(vec![ml_extensions[4].clone()], Fr::rand(&mut rng))
-            .unwrap();
+        )?;
+        poly.add_product(vec![ml_extensions[4].clone()], Fr::rand(&mut rng))?;
 
         assert_eq!(poly.flattened_ml_extensions.len(), 5);
 
@@ -392,15 +391,15 @@ mod test {
 
         let mut transcript = PolyIOP::init_transcript();
         let poly_info = poly.domain_info.clone();
-        let proof = PolyIOP::prove(&poly, &mut transcript).expect("fail to prove");
+        let proof = PolyIOP::prove(&poly, &mut transcript)?;
         let asserted_sum = PolyIOP::extract_sum(&proof);
 
         let mut transcript = PolyIOP::init_transcript();
-        let subclaim = PolyIOP::verify(asserted_sum, &proof, &poly_info, &mut transcript)
-            .expect("fail to verify");
+        let subclaim = PolyIOP::verify(asserted_sum, &proof, &poly_info, &mut transcript)?;
         assert!(
-            poly.evaluate(&subclaim.point).unwrap() == subclaim.expected_evaluation,
+            poly.evaluate(&subclaim.point)? == subclaim.expected_evaluation,
             "wrong subclaim"
         );
+        Ok(())
     }
 }

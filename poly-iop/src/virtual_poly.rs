@@ -1,8 +1,12 @@
 use crate::{errors::PolyIOPErrors, structs::DomainInfo};
 use ark_ff::PrimeField;
 use ark_poly::{DenseMultilinearExtension, MultilinearExtension};
-use ark_std::{end_timer, start_timer};
-use std::{cmp::max, collections::HashMap, marker::PhantomData, rc::Rc};
+use ark_std::{
+    end_timer,
+    rand::{Rng, RngCore},
+    start_timer,
+};
+use std::{cmp::max, collections::HashMap, marker::PhantomData, ops::Add, rc::Rc};
 
 /// A virtual polynomial is a list of multilinear polynomials
 #[derive(Clone, Debug, Default, PartialEq)]
@@ -16,6 +20,37 @@ pub struct VirtualPolynomial<F: PrimeField> {
     pub flattened_ml_extensions: Vec<Rc<DenseMultilinearExtension<F>>>,
     /// Pointers to the above poly extensions
     raw_pointers_lookup_table: HashMap<*const DenseMultilinearExtension<F>, usize>,
+}
+
+impl<F: PrimeField> Add for &VirtualPolynomial<F> {
+    type Output = VirtualPolynomial<F>;
+    fn add(self, other: &VirtualPolynomial<F>) -> Self::Output {
+        if self.domain_info != other.domain_info {
+            panic!("addition between VP requires domain matching");
+        }
+        let mut res = self.clone();
+
+        res.products.extend_from_slice(&other.products);
+        for product in other.products.iter() {
+            let index_ref: Vec<usize> = product
+                .1
+                .iter()
+                .map(|x| x + self.domain_info.num_variables)
+                .collect();
+            res.products.push((product.0, index_ref))
+        }
+
+        let mut ctr = res.flattened_ml_extensions.len();
+        for &e in other.raw_pointers_lookup_table.keys() {
+            if !res.raw_pointers_lookup_table.contains_key(&e) {
+                res.raw_pointers_lookup_table.insert(e, ctr);
+                ctr += 1;
+                res.flattened_ml_extensions
+                    .push(Rc::new(unsafe { (*e).clone() }))
+            }
+        }
+        res
+    }
 }
 
 impl<F: PrimeField> VirtualPolynomial<F> {
@@ -98,49 +133,14 @@ impl<F: PrimeField> VirtualPolynomial<F> {
         end_timer!(start);
         Ok(res)
     }
-}
 
-#[cfg(test)]
-pub(crate) mod test {
-    use super::*;
-    use ark_std::rand::{Rng, RngCore};
-
-    pub fn random_product<F: PrimeField, R: RngCore>(
-        nv: usize,
-        num_multiplicands: usize,
-        rng: &mut R,
-    ) -> (Vec<Rc<DenseMultilinearExtension<F>>>, F) {
-        let mut multiplicands = Vec::with_capacity(num_multiplicands);
-        for _ in 0..num_multiplicands {
-            multiplicands.push(Vec::with_capacity(1 << nv))
-        }
-        let mut sum = F::zero();
-
-        for _ in 0..(1 << nv) {
-            let mut product = F::one();
-            for i in 0..num_multiplicands {
-                let val = F::rand(rng);
-                multiplicands[i].push(val);
-                product *= val;
-            }
-            sum += product;
-        }
-
-        (
-            multiplicands
-                .into_iter()
-                .map(|x| Rc::new(DenseMultilinearExtension::from_evaluations_vec(nv, x)))
-                .collect(),
-            sum,
-        )
-    }
-
-    pub(crate) fn random_list_of_products<F: PrimeField, R: RngCore>(
+    /// Sample a random virtual polynomial, return the polynomial and its sum.
+    pub(crate) fn rand<R: RngCore>(
         nv: usize,
         num_multiplicands_range: (usize, usize),
         num_products: usize,
         rng: &mut R,
-    ) -> (VirtualPolynomial<F>, F) {
+    ) -> Result<(Self, F), PolyIOPErrors> {
         let mut sum = F::zero();
         let mut poly = VirtualPolynomial::new(nv);
         for _ in 0..num_products {
@@ -148,12 +148,55 @@ pub(crate) mod test {
                 rng.gen_range(num_multiplicands_range.0..num_multiplicands_range.1);
             let (product, product_sum) = random_product(nv, num_multiplicands, rng);
             let coefficient = F::rand(rng);
-            poly.add_product(product.into_iter(), coefficient).unwrap();
+            poly.add_product(product.into_iter(), coefficient)?;
             sum += product_sum * coefficient;
         }
 
-        (poly, sum)
+        Ok((poly, sum))
     }
+}
+
+/// Sample a random product of polynomials. Returns the
+/// product and its sum.
+fn random_product<F: PrimeField, R: RngCore>(
+    nv: usize,
+    num_multiplicands: usize,
+    rng: &mut R,
+) -> (Vec<Rc<DenseMultilinearExtension<F>>>, F) {
+    let mut multiplicands = Vec::with_capacity(num_multiplicands);
+    for _ in 0..num_multiplicands {
+        multiplicands.push(Vec::with_capacity(1 << nv))
+    }
+    let mut sum = F::zero();
+
+    for _ in 0..(1 << nv) {
+        let mut product = F::one();
+        for i in 0..num_multiplicands {
+            let val = F::rand(rng);
+            multiplicands[i].push(val);
+            product *= val;
+        }
+        sum += product;
+    }
+
+    (
+        multiplicands
+            .into_iter()
+            .map(|x| Rc::new(DenseMultilinearExtension::from_evaluations_vec(nv, x)))
+            .collect(),
+        sum,
+    )
+}
+
+#[cfg(test)]
+pub(crate) mod test {
+    use super::*;
+    use ark_bls12_381::Fr;
+    use ark_ff::{One, UniformRand};
+    use ark_std::{
+        rand::{Rng, RngCore},
+        test_rng,
+    };
 
     pub fn random_zero_product<F: PrimeField, R: RngCore>(
         nv: usize,
@@ -205,5 +248,27 @@ pub(crate) mod test {
         }
 
         poly
+    }
+
+    #[test]
+    fn test_virtual_polynomial_additions() -> Result<(), PolyIOPErrors> {
+        let mut rng = test_rng();
+        let nv = 4;
+        let base: Vec<Fr> = (0..nv).map(|_| Fr::one()).collect();
+
+        let (a, _a_sum) = VirtualPolynomial::<Fr>::rand(nv, (2, 3), 4, &mut rng)?;
+        let (b, _b_sum) = VirtualPolynomial::<Fr>::rand(nv, (2, 3), 4, &mut rng)?;
+        let c = &a + &b;
+
+        println!("a: {:?}", a);
+        println!("b: {:?}", b);
+        println!("c: {:?}", c);
+
+        assert_eq!(
+            a.evaluate(base.as_ref())? + b.evaluate(base.as_ref())?,
+            c.evaluate(base.as_ref())?
+        );
+
+        Ok(())
     }
 }
