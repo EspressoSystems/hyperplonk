@@ -352,7 +352,7 @@ mod test {
             .map(|_| Rc::new(DenseMultilinearExtension::<Fr>::rand(8, &mut rng)))
             .collect();
         let mut poly = VirtualPolynomial::new(8);
-        poly.add_product(
+        poly.add_mle_list(
             vec![
                 ml_extensions[2].clone(),
                 ml_extensions[3].clone(),
@@ -360,7 +360,7 @@ mod test {
             ],
             Fr::rand(&mut rng),
         )?;
-        poly.add_product(
+        poly.add_mle_list(
             vec![
                 ml_extensions[1].clone(),
                 ml_extensions[4].clone(),
@@ -368,7 +368,7 @@ mod test {
             ],
             Fr::rand(&mut rng),
         )?;
-        poly.add_product(
+        poly.add_mle_list(
             vec![
                 ml_extensions[3].clone(),
                 ml_extensions[2].clone(),
@@ -376,11 +376,11 @@ mod test {
             ],
             Fr::rand(&mut rng),
         )?;
-        poly.add_product(
+        poly.add_mle_list(
             vec![ml_extensions[0].clone(), ml_extensions[0].clone()],
             Fr::rand(&mut rng),
         )?;
-        poly.add_product(vec![ml_extensions[4].clone()], Fr::rand(&mut rng))?;
+        poly.add_mle_list(vec![ml_extensions[4].clone()], Fr::rand(&mut rng))?;
 
         assert_eq!(poly.flattened_ml_extensions.len(), 5);
 

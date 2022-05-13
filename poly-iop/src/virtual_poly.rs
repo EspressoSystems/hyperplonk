@@ -33,7 +33,7 @@ impl<F: PrimeField> Add for &VirtualPolynomial<F> {
                 .map(|&x| other.flattened_ml_extensions[x].clone())
                 .collect();
 
-            res.add_product(cur, products.0)
+            res.add_mle_list(cur, products.0)
                 .expect("add product failed");
         }
         res
@@ -55,10 +55,28 @@ impl<F: PrimeField> VirtualPolynomial<F> {
         }
     }
 
+    /// Returns an empty polynomial
+    pub fn new_from_mle(mle: Rc<DenseMultilinearExtension<F>>, coefficient: F) -> Self {
+        let mle_ptr: *const DenseMultilinearExtension<F> = Rc::as_ptr(&mle);
+        let mut hm = HashMap::new();
+        hm.insert(mle_ptr, 0);
+
+        VirtualPolynomial {
+            domain_info: DomainInfo {
+                max_degree: 2,
+                num_variables: mle.num_vars,
+                phantom: PhantomData::default(),
+            },
+            products: vec![(coefficient, vec![0])],
+            flattened_ml_extensions: vec![mle],
+            raw_pointers_lookup_table: hm,
+        }
+    }
+
     /// Add a list of multilinear extensions that is meant to be multiplied
     /// together. The resulting polynomial will be multiplied by the scalar
     /// `coefficient`.
-    pub fn add_product(
+    pub fn add_mle_list(
         &mut self,
         product: impl IntoIterator<Item = Rc<DenseMultilinearExtension<F>>>,
         coefficient: F,
@@ -86,6 +104,34 @@ impl<F: PrimeField> VirtualPolynomial<F> {
             }
         }
         self.products.push((coefficient, indexed_product));
+        Ok(())
+    }
+
+    /// Multiple the current VirtualPolynomial by an MLE:
+    /// - add the MLE to the MLE list
+    /// - multiple each product by MLE and its coefficient
+    pub fn mul_by_mle(
+        &mut self,
+        mle: Rc<DenseMultilinearExtension<F>>,
+        coefficient: F,
+    ) -> Result<(), PolyIOPErrors> {
+        let mle_ptr: *const DenseMultilinearExtension<F> = Rc::as_ptr(&mle);
+
+        let mle_index = match self.raw_pointers_lookup_table.get(&mle_ptr) {
+            Some(&p) => p,
+            None => {
+                self.raw_pointers_lookup_table
+                    .insert(mle_ptr, self.flattened_ml_extensions.len());
+                self.flattened_ml_extensions.push(mle);
+                self.flattened_ml_extensions.len() - 1
+            },
+        };
+
+        for (prod, indices) in self.products.iter_mut() {
+            indices.push(mle_index);
+            *prod *= coefficient;
+        }
+        self.domain_info.max_degree += 2;
         Ok(())
     }
 
@@ -133,9 +179,9 @@ impl<F: PrimeField> VirtualPolynomial<F> {
         for _ in 0..num_products {
             let num_multiplicands =
                 rng.gen_range(num_multiplicands_range.0..num_multiplicands_range.1);
-            let (product, product_sum) = random_product(nv, num_multiplicands, rng);
+            let (product, product_sum) = random_mle(nv, num_multiplicands, rng);
             let coefficient = F::rand(rng);
-            poly.add_product(product.into_iter(), coefficient)?;
+            poly.add_mle_list(product.into_iter(), coefficient)?;
             sum += product_sum * coefficient;
         }
 
@@ -145,7 +191,7 @@ impl<F: PrimeField> VirtualPolynomial<F> {
 
 /// Sample a random product of polynomials. Returns the
 /// product and its sum.
-fn random_product<F: PrimeField, R: RngCore>(
+fn random_mle<F: PrimeField, R: RngCore>(
     nv: usize,
     num_multiplicands: usize,
     rng: &mut R,
@@ -231,7 +277,7 @@ pub(crate) mod test {
                 rng.gen_range(num_multiplicands_range.0..num_multiplicands_range.1);
             let product = random_zero_product(nv, num_multiplicands, rng);
             let coefficient = F::rand(rng);
-            poly.add_product(product.into_iter(), coefficient).unwrap();
+            poly.add_mle_list(product.into_iter(), coefficient).unwrap();
         }
 
         poly
@@ -252,6 +298,33 @@ pub(crate) mod test {
 
                 assert_eq!(
                     a.evaluate(base.as_ref())? + b.evaluate(base.as_ref())?,
+                    c.evaluate(base.as_ref())?
+                );
+            }
+        }
+
+        Ok(())
+    }
+
+    #[test]
+    fn test_virtual_polynomial_mul_by_mle() -> Result<(), PolyIOPErrors> {
+        let mut rng = test_rng();
+        for nv in 2..5 {
+            for num_products in 2..5 {
+                let base: Vec<Fr> = (0..nv).map(|_| Fr::rand(&mut rng)).collect();
+
+                let (a, _a_sum) =
+                    VirtualPolynomial::<Fr>::rand(nv, (2, 3), num_products, &mut rng)?;
+                let (b, b_sum) = random_mle(nv, 1, &mut rng);
+                let b_mle = b[0].clone();
+                let b_vp = VirtualPolynomial::new_from_mle(b_mle.clone(), b_sum);
+
+                let mut c = a.clone();
+
+                c.mul_by_mle(b_mle, b_sum)?;
+
+                assert_eq!(
+                    a.evaluate(base.as_ref())? * b_vp.evaluate(base.as_ref())?,
                     c.evaluate(base.as_ref())?
                 );
             }
