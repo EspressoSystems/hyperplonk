@@ -1,11 +1,7 @@
-mod prover;
-mod verifier;
-
 use ark_ff::PrimeField;
 use ark_poly::DenseMultilinearExtension;
-pub use prover::ProverState;
+use ark_std::{end_timer, start_timer};
 use std::rc::Rc;
-pub use verifier::VerifierState;
 
 use crate::{
     errors::PolyIOPErrors,
@@ -65,10 +61,13 @@ impl<F: PrimeField> ZeroCheck<F> for PolyIOP<F> {
         poly: &Self::PolyList,
         transcript: &mut Self::Transcript,
     ) -> Result<Self::Proof, PolyIOPErrors> {
+        let start = start_timer!(|| "zero check prove");
         let length = poly.domain_info.num_variables;
         let r = transcript.get_and_append_challenge_vectors(b"vector r", length)?;
-        let f_hat = build_f_hat(poly, r.as_ref());
-        <Self as SumCheck<F>>::prove(&f_hat, transcript)
+        let f_hat = build_f_hat(poly, r.as_ref())?;
+        let res = <Self as SumCheck<F>>::prove(&f_hat, transcript);
+        end_timer!(start);
+        res
     }
 
     /// Verify the claimed sum using the proof.
@@ -78,12 +77,16 @@ impl<F: PrimeField> ZeroCheck<F> for PolyIOP<F> {
         domain_info: &Self::DomainInfo,
         transcript: &mut Self::Transcript,
     ) -> Result<Self::SubClaim, PolyIOPErrors> {
+        let start = start_timer!(|| "zero check verify");
         println!(
             "sum: {}",
             proof.proofs[0].evaluations[0] + proof.proofs[0].evaluations[1]
         );
 
-        <Self as SumCheck<F>>::verify(F::zero(), proof, domain_info, transcript)
+        let res = <Self as SumCheck<F>>::verify(F::zero(), proof, domain_info, transcript);
+
+        end_timer!(start);
+        res
     }
 }
 
@@ -91,11 +94,15 @@ impl<F: PrimeField> ZeroCheck<F> for PolyIOP<F> {
 //      \hat f(x) = \sum_{x_i \in eval_x} f(x_i) eq(x, r)
 // where
 //      eq(x,y) = \prod_i=1^num_var (x_i * y_i + (1-x_i)*(1-y_i))
-fn build_f_hat<F: PrimeField>(poly: &VirtualPolynomial<F>, r: &[F]) -> VirtualPolynomial<F> {
+fn build_f_hat<F: PrimeField>(
+    poly: &VirtualPolynomial<F>,
+    r: &[F],
+) -> Result<VirtualPolynomial<F>, PolyIOPErrors> {
+    let start = start_timer!(|| "zero check build hat f");
     assert_eq!(poly.domain_info.num_variables, r.len());
     let mut res = poly.clone();
     let eq_x_r = build_eq_x_r(r);
-    res.add_product([eq_x_r; 1], F::one());
+    res.add_product([eq_x_r; 1], F::one())?;
     // // First, we build array for {1 - r_i}
     // let one_minus_r: Vec<F> = r.iter().map(|ri| F::one() - ri).collect();
 
@@ -123,7 +130,8 @@ fn build_f_hat<F: PrimeField>(poly: &VirtualPolynomial<F>, r: &[F]) -> VirtualPo
     //     num_var, eval,
     // ));
     // res.add_product([hat_f; 1], F::one());
-    res
+    end_timer!(start);
+    Ok(res)
 }
 
 // Evaluate
@@ -131,6 +139,8 @@ fn build_f_hat<F: PrimeField>(poly: &VirtualPolynomial<F>, r: &[F]) -> VirtualPo
 // over r, which is
 //      eq(x,y) = \prod_i=1^num_var (x_i * r_i + (1-x_i)*(1-r_i))
 fn build_eq_x_r<F: PrimeField>(r: &[F]) -> Rc<DenseMultilinearExtension<F>> {
+    let start = start_timer!(|| "zero check build build eq_x_r");
+
     // we build eq(x,r) from its evaluations
     // we want to evaluate eq(x,r) over x \in {0, 1}^num_vars
     // for example, with num_vars = 4, x is a binary vector of 4, then
@@ -168,7 +178,7 @@ fn build_eq_x_r<F: PrimeField>(r: &[F]) -> Rc<DenseMultilinearExtension<F>> {
     let res = Rc::new(DenseMultilinearExtension::from_evaluations_vec(
         num_var, eval,
     ));
-
+    end_timer!(start);
     res
 }
 
@@ -193,7 +203,7 @@ mod test {
     use ark_std::test_rng;
     use std::rc::Rc;
 
-    fn test_polynomial(nv: usize, num_multiplicands_range: (usize, usize), num_products: usize) {
+    fn test_sumcheck(nv: usize, num_multiplicands_range: (usize, usize), num_products: usize) {
         let mut rng = test_rng();
         let mut transcript = PolyIOP::init_transcript();
         transcript
@@ -221,7 +231,7 @@ mod test {
         let subclaim =
             PolyIOP::verify(&proof, &poly_info, &mut transcript).expect("fail to verify");
         assert!(
-            poly.evaluate(&subclaim.point) == subclaim.expected_evaluation,
+            poly.evaluate(&subclaim.point).unwrap() == subclaim.expected_evaluation,
             "wrong subclaim"
         );
     }
@@ -232,7 +242,7 @@ mod test {
         let num_multiplicands_range = (4, 5);
         let num_products = 1;
 
-        test_polynomial(nv, num_multiplicands_range, num_products);
+        test_sumcheck(nv, num_multiplicands_range, num_products);
     }
     #[test]
     fn test_normal_polynomial() {
@@ -240,7 +250,7 @@ mod test {
         let num_multiplicands_range = (4, 9);
         let num_products = 5;
 
-        test_polynomial(nv, num_multiplicands_range, num_products);
+        test_sumcheck(nv, num_multiplicands_range, num_products);
     }
     #[test]
     #[should_panic]
@@ -249,7 +259,7 @@ mod test {
         let num_multiplicands_range = (4, 13);
         let num_products = 5;
 
-        test_polynomial(nv, num_multiplicands_range, num_products);
+        test_sumcheck(nv, num_multiplicands_range, num_products);
     }
 
     #[test]
@@ -268,7 +278,8 @@ mod test {
                 ml_extensions[0].clone(),
             ],
             Fr::rand(&mut rng),
-        );
+        )
+        .unwrap();
         poly.add_product(
             vec![
                 ml_extensions[1].clone(),
@@ -276,7 +287,8 @@ mod test {
                 ml_extensions[4].clone(),
             ],
             Fr::rand(&mut rng),
-        );
+        )
+        .unwrap();
         poly.add_product(
             vec![
                 ml_extensions[3].clone(),
@@ -284,12 +296,15 @@ mod test {
                 ml_extensions[1].clone(),
             ],
             Fr::rand(&mut rng),
-        );
+        )
+        .unwrap();
         poly.add_product(
             vec![ml_extensions[0].clone(), ml_extensions[0].clone()],
             Fr::rand(&mut rng),
-        );
-        poly.add_product(vec![ml_extensions[4].clone()], Fr::rand(&mut rng));
+        )
+        .unwrap();
+        poly.add_product(vec![ml_extensions[4].clone()], Fr::rand(&mut rng))
+            .unwrap();
 
         assert_eq!(poly.flattened_ml_extensions.len(), 5);
 
@@ -309,7 +324,7 @@ mod test {
         let subclaim =
             PolyIOP::verify(&proof, &poly_info, &mut transcript).expect("fail to verify");
         assert!(
-            poly.evaluate(&subclaim.point) == subclaim.expected_evaluation,
+            poly.evaluate(&subclaim.point).unwrap() == subclaim.expected_evaluation,
             "wrong subclaim"
         );
     }

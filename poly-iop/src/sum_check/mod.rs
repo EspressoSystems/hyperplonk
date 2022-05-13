@@ -4,7 +4,7 @@
 
 use crate::{
     errors::PolyIOPErrors,
-    structs::{DomainInfo, IOPProof, SubClaim},
+    structs::{DomainInfo, IOPProof, IOPProverState, IOPVerifierState, SubClaim},
     transcript::IOPTranscript,
     virtual_poly::VirtualPolynomial,
     PolyIOP,
@@ -15,9 +15,7 @@ use ark_std::{end_timer, start_timer};
 mod prover;
 mod verifier;
 
-pub use prover::ProverState;
-pub use verifier::VerifierState;
-
+/// Trait for doing sum check protocols.
 pub trait SumCheck<F: PrimeField> {
     type Proof;
     type PolyList;
@@ -65,6 +63,7 @@ pub trait SumCheck<F: PrimeField> {
     ) -> Result<Self::SubClaim, PolyIOPErrors>;
 }
 
+/// Trait for sum check protocol prover side APIs.
 pub trait SumCheckProver<F: PrimeField>
 where
     Self: Sized,
@@ -100,6 +99,7 @@ where
     ) -> Result<Self::ProverMessage, PolyIOPErrors>;
 }
 
+/// Trait for sum check protocol verifier side APIs.
 pub trait SumCheckVerifier<F: PrimeField> {
     type DomainInfo;
     type ProverMessage;
@@ -188,12 +188,12 @@ impl<F: PrimeField> SumCheck<F> for PolyIOP<F> {
 
         transcript.append_domain_info(&poly.domain_info)?;
 
-        let mut prover_state = ProverState::prover_init(poly)?;
+        let mut prover_state = IOPProverState::prover_init(poly)?;
         let mut challenge = None;
         let mut prover_msgs = Vec::with_capacity(poly.domain_info.num_variables);
         for _ in 0..poly.domain_info.num_variables {
             let prover_msg =
-                ProverState::prove_round_and_update_state(&mut prover_state, &challenge)?;
+                IOPProverState::prove_round_and_update_state(&mut prover_state, &challenge)?;
             transcript.append_prover_message(&prover_msg)?;
             prover_msgs.push(prover_msg);
             challenge = Some(transcript.get_and_append_challenge(b"Internal round")?);
@@ -215,18 +215,18 @@ impl<F: PrimeField> SumCheck<F> for PolyIOP<F> {
         let start = start_timer!(|| "sum check verify");
 
         transcript.append_domain_info(domain_info)?;
-        let mut verifier_state = VerifierState::verifier_init(domain_info);
+        let mut verifier_state = IOPVerifierState::verifier_init(domain_info);
         for i in 0..domain_info.num_variables {
             let prover_msg = proof.proofs.get(i).expect("proof is incomplete");
             transcript.append_prover_message(prover_msg)?;
-            VerifierState::verify_round_and_update_state(
+            IOPVerifierState::verify_round_and_update_state(
                 &mut verifier_state,
                 prover_msg,
                 transcript,
             )?;
         }
 
-        let res = VerifierState::check_and_generate_subclaim(&verifier_state, &claimed_sum);
+        let res = IOPVerifierState::check_and_generate_subclaim(&verifier_state, &claimed_sum);
 
         end_timer!(start);
         res
@@ -270,8 +270,8 @@ mod test {
         let (poly, asserted_sum) =
             random_list_of_products::<Fr, _>(nv, num_multiplicands_range, num_products, &mut rng);
         let poly_info = poly.domain_info.clone();
-        let mut prover_state = ProverState::prover_init(&poly).unwrap();
-        let mut verifier_state = VerifierState::verifier_init(&poly_info);
+        let mut prover_state = IOPProverState::prover_init(&poly).unwrap();
+        let mut verifier_state = IOPVerifierState::verifier_init(&poly_info);
         let mut challenge = None;
         let mut transcript = IOPTranscript::new(b"a test transcript");
         transcript
@@ -279,10 +279,11 @@ mod test {
             .unwrap();
         for _ in 0..poly.domain_info.num_variables {
             let prover_message =
-                ProverState::prove_round_and_update_state(&mut prover_state, &challenge).unwrap();
+                IOPProverState::prove_round_and_update_state(&mut prover_state, &challenge)
+                    .unwrap();
 
             challenge = Some(
-                VerifierState::verify_round_and_update_state(
+                IOPVerifierState::verify_round_and_update_state(
                     &mut verifier_state,
                     &prover_message,
                     &mut transcript,
@@ -290,8 +291,9 @@ mod test {
                 .unwrap(),
             );
         }
-        let subclaim = VerifierState::check_and_generate_subclaim(&verifier_state, &asserted_sum)
-            .expect("fail to generate subclaim");
+        let subclaim =
+            IOPVerifierState::check_and_generate_subclaim(&verifier_state, &asserted_sum)
+                .expect("fail to generate subclaim");
         assert!(
             poly.evaluate(&subclaim.point).unwrap() == subclaim.expected_evaluation,
             "wrong subclaim"
@@ -384,7 +386,7 @@ mod test {
         assert_eq!(poly.flattened_ml_extensions.len(), 5);
 
         // test memory usage for prover
-        let prover = ProverState::prover_init(&poly).unwrap();
+        let prover = IOPProverState::prover_init(&poly).unwrap();
         assert_eq!(prover.poly.flattened_ml_extensions.len(), 5);
         drop(prover);
 

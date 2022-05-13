@@ -155,57 +155,55 @@ pub(crate) mod test {
         (poly, sum)
     }
 
-    // pub fn random_zero_product<F: PrimeField, R: RngCore>(
-    //     nv: usize,
-    //     num_multiplicands: usize,
-    //     rng: &mut R,
-    // ) -> Vec<Rc<DenseMultilinearExtension<F>>> {
-    //     let degree = 2;
-    //     let mut multiplicands = Vec::with_capacity(degree);
-    //     for _ in 0..degree {
-    //         multiplicands.push(Vec::with_capacity(1 << nv))
-    //     }
-    //     let mut sum = F::zero();
+    pub fn random_zero_product<F: PrimeField, R: RngCore>(
+        nv: usize,
+        _num_multiplicands: usize,
+        _rng: &mut R,
+    ) -> Vec<Rc<DenseMultilinearExtension<F>>> {
+        let degree = 2;
+        let mut multiplicands = Vec::with_capacity(degree);
+        for _ in 0..degree {
+            multiplicands.push(Vec::with_capacity(1 << nv))
+        }
+        let mut sum = F::zero();
 
-    //     for _ in 0..(1 << nv) {
-    //         let mut product = F::one();
-    //         for i in 0..degree {
-    //             let val = F::zero(); // F::rand(rng);
-    //             multiplicands[i].push(val);
-    //             product *= val;
-    //         }
-    //         sum += product;
-    //     }
+        for _ in 0..(1 << nv) {
+            let mut product = F::one();
+            for i in 0..degree {
+                let val = F::zero(); // F::rand(rng);
+                multiplicands[i].push(val);
+                product *= val;
+            }
+            sum += product;
+        }
 
-    //     // // last nv offsets the poly to 0
-    //     // for i in 0..num_multiplicands - 1 {
-    //     //     multiplicands[i].push(F::one());
-    //     // }
-    //     // multiplicands[num_multiplicands - 1].push(-sum);
+        // // last nv offsets the poly to 0
+        // for i in 0..num_multiplicands - 1 {
+        //     multiplicands[i].push(F::one());
+        // }
+        // multiplicands[num_multiplicands - 1].push(-sum);
 
-    //     multiplicands
-    //         .into_iter()
-    //         .map(|x|
-    // Rc::new(DenseMultilinearExtension::from_evaluations_vec(nv, x)))
-    //         .collect()
-    // }
+        multiplicands
+            .into_iter()
+            .map(|x| Rc::new(DenseMultilinearExtension::from_evaluations_vec(nv, x)))
+            .collect()
+    }
 
-    // pub(crate) fn random_zero_list_of_products<F: PrimeField, R: RngCore>(
-    //     nv: usize,
-    //     num_multiplicands_range: (usize, usize),
-    //     num_products: usize,
-    //     rng: &mut R,
-    // ) -> VirtualPolynomial<F> {
-    //     let mut poly = VirtualPolynomial::new(nv);
-    //     for _ in 0..num_products {
-    //         let num_multiplicands =
-    //
-    // rng.gen_range(num_multiplicands_range.0..num_multiplicands_range.1);
-    //         let product = random_zero_product(nv, num_multiplicands, rng);
-    //         let coefficient = F::rand(rng);
-    //         poly.add_product(product.into_iter(), coefficient);
-    //     }
+    pub(crate) fn random_zero_list_of_products<F: PrimeField, R: RngCore>(
+        nv: usize,
+        num_multiplicands_range: (usize, usize),
+        num_products: usize,
+        rng: &mut R,
+    ) -> VirtualPolynomial<F> {
+        let mut poly = VirtualPolynomial::new(nv);
+        for _ in 0..num_products {
+            let num_multiplicands =
+                rng.gen_range(num_multiplicands_range.0..num_multiplicands_range.1);
+            let product = random_zero_product(nv, num_multiplicands, rng);
+            let coefficient = F::rand(rng);
+            poly.add_product(product.into_iter(), coefficient).unwrap();
+        }
 
-    //     poly
-    // }
+        poly
+    }
 }

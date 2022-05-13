@@ -4,7 +4,7 @@
 use super::SumCheckVerifier;
 use crate::{
     errors::PolyIOPErrors,
-    structs::{DomainInfo, IOPProverMessage, SubClaim},
+    structs::{DomainInfo, IOPProverMessage, IOPVerifierState, SubClaim},
     transcript::IOPTranscript,
 };
 use ark_ff::PrimeField;
@@ -13,20 +13,7 @@ use ark_std::{end_timer, start_timer};
 #[cfg(feature = "parallel")]
 use rayon::iter::{IndexedParallelIterator, IntoParallelIterator, ParallelIterator};
 
-/// Verifier State
-pub struct VerifierState<F: PrimeField> {
-    round: usize,
-    num_vars: usize,
-    max_degree: usize,
-    finished: bool,
-    /// a list storing the univariate polynomial in evaluation form sent by the
-    /// prover at each round
-    polynomials_received: Vec<Vec<F>>,
-    /// a list storing the randomness sampled by the verifier at each round
-    challenges: Vec<F>,
-}
-
-impl<F: PrimeField> SumCheckVerifier<F> for VerifierState<F> {
+impl<F: PrimeField> SumCheckVerifier<F> for IOPVerifierState<F> {
     type DomainInfo = DomainInfo<F>;
     type ProverMessage = IOPProverMessage<F>;
     type Challenge = F;
@@ -35,8 +22,8 @@ impl<F: PrimeField> SumCheckVerifier<F> for VerifierState<F> {
 
     /// initialize the verifier
     fn verifier_init(index_info: &Self::DomainInfo) -> Self {
-        let start = start_timer!(|| "verifier init");
-        let res = VerifierState {
+        let start = start_timer!(|| "sum check verifier init");
+        let res = Self {
             round: 1,
             num_vars: index_info.num_variables,
             max_degree: index_info.max_degree,
@@ -59,7 +46,8 @@ impl<F: PrimeField> SumCheckVerifier<F> for VerifierState<F> {
         prover_msg: &Self::ProverMessage,
         transcript: &mut Self::Transcript,
     ) -> Result<Self::Challenge, PolyIOPErrors> {
-        let start = start_timer!(|| format!("verify {}-th round and update state", self.round));
+        let start =
+            start_timer!(|| format!("sum check verify {}-th round and update state", self.round));
 
         if self.finished {
             return Err(PolyIOPErrors::InvalidVerifier(
@@ -101,7 +89,7 @@ impl<F: PrimeField> SumCheckVerifier<F> for VerifierState<F> {
         &self,
         asserted_sum: &F,
     ) -> Result<Self::SubClaim, PolyIOPErrors> {
-        let start = start_timer!(|| "check_and_generate_subclaim");
+        let start = start_timer!(|| "sum check check and generate subclaim");
         if !self.finished {
             return Err(PolyIOPErrors::InvalidVerifier(
                 "Incorrect verifier state: Verifier has not finished.".to_string(),
@@ -176,7 +164,7 @@ impl<F: PrimeField> SumCheckVerifier<F> for VerifierState<F> {
 /// interpolate a uni-variate degree-`p_i.len()-1` polynomial and evaluate this
 /// polynomial at `eval_at`.
 pub(crate) fn interpolate_uni_poly<F: PrimeField>(p_i: &[F], eval_at: F) -> F {
-    let start = start_timer!(|| "interpolate_uni_poly");
+    let start = start_timer!(|| "sum check interpolate uni poly");
     let mut result = F::zero();
     let mut i = F::zero();
     for term in p_i.iter() {
