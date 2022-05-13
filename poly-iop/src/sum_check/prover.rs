@@ -76,7 +76,6 @@ impl<F: PrimeField> SumCheckProver<F> for ProverState<F> {
             .iter()
             .map(|x| x.as_ref().clone())
             .collect();
-        let products = self.poly.products.clone();
 
         if let Some(chal) = challenge {
             if self.round == 0 {
@@ -113,6 +112,7 @@ impl<F: PrimeField> SumCheckProver<F> for ProverState<F> {
             ));
         }
 
+        let products_list = self.poly.products.clone();
         let i = self.round;
         let nv = self.poly.domain_info.num_variables;
         let degree = self.poly.domain_info.max_degree; // the degree of univariate polynomial sent by prover at this round
@@ -126,7 +126,7 @@ impl<F: PrimeField> SumCheckProver<F> for ProverState<F> {
         products_sum.par_iter_mut().enumerate().for_each(|(t, e)| {
             for b in 0..1 << (nv - i) {
                 // evaluate P_round(t)
-                for (coefficient, products) in products.iter() {
+                for (coefficient, products) in products_list.iter() {
                     let num_multiplicands = products.len();
                     let mut product = *coefficient;
                     for &f in products.iter().take(num_multiplicands) {
@@ -147,7 +147,7 @@ impl<F: PrimeField> SumCheckProver<F> for ProverState<F> {
                 .enumerate()
                 .for_each(|(t, e)| {
                     // evaluate P_round(t)
-                    for (coefficient, products) in products.iter() {
+                    for (coefficient, products) in products_list.iter() {
                         let num_multiplicands = products.len();
                         let mut product = *coefficient;
                         for &f in products.iter().take(num_multiplicands) {
