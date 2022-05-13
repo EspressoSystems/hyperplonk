@@ -102,41 +102,14 @@ fn build_f_hat<F: PrimeField>(
     r: &[F],
 ) -> Result<VirtualPolynomial<F>, PolyIOPErrors> {
     let start = start_timer!(|| "zero check build hat f");
+
     assert_eq!(poly.domain_info.num_variables, r.len());
-    // // let mut res = poly.clone();
+
     let eq_x_r = build_eq_x_r(r);
-    // // res.add_product([eq_x_r; 1], F::one())?;
-    // // First, we build array for {1 - r_i}
-    // let one_minus_r: Vec<F> = r.iter().map(|ri| F::one() - ri).collect();
-
-    // let mut eval = vec![];
-    // // let eq_x_r = build_eq_x_r(r);
-    // let num_var = r.len();
-    // let mut res = VirtualPolynomial::new(num_var);
-    // // res.add_product([eq_x_r; 1], F::one());
-
-    // for i in 0..1 << num_var {
-    //     let bit_sequence = bit_decompose(i, num_var);
-    //     let bit_points: Vec<F> = bit_sequence.iter().map(|&x| F::from(x as
-    // u64)).collect();     let mut eq_eval = F::one();
-    //     for (&bit, (ri, one_minus_ri)) in
-    // bit_sequence.iter().zip(r.iter().zip(one_minus_r.iter()))     {
-    //         eq_eval *= if bit { *ri } else { *one_minus_ri };
-    //     }
-    //     eval.push(eq_eval * poly.evaluate(&bit_points)?)
-    // }
-    // println!("hat(f): {} {}", num_var, eval.len());
-    // let hat_f = Rc::new(DenseMultilinearExtension::from_evaluations_vec(
-    //     num_var, eval,
-    // ));
-    // res.add_mle_list([hat_f; 1], F::one())?;
     let mut res = poly.clone();
     res.mul_by_mle(eq_x_r, F::one(), r.len())?;
 
-    println!("res degree: {}", res.domain_info.max_degree);
     end_timer!(start);
-    // println!("hat(f): {:?}", res);
-
     Ok(res)
 }
 

@@ -25,6 +25,7 @@ pub struct VirtualPolynomial<F: PrimeField> {
 impl<F: PrimeField> Add for &VirtualPolynomial<F> {
     type Output = VirtualPolynomial<F>;
     fn add(self, other: &VirtualPolynomial<F>) -> Self::Output {
+        let start = start_timer!(|| "virtual poly mul");
         let mut res = self.clone();
         for products in other.products.iter() {
             let cur: Vec<Rc<DenseMultilinearExtension<F>>> = products
@@ -36,6 +37,7 @@ impl<F: PrimeField> Add for &VirtualPolynomial<F> {
             res.add_mle_list(cur, products.0)
                 .expect("add product failed");
         }
+        end_timer!(start);
         res
     }
 }
@@ -116,6 +118,7 @@ impl<F: PrimeField> VirtualPolynomial<F> {
         coefficient: F,
         degree: usize,
     ) -> Result<(), PolyIOPErrors> {
+        let start = start_timer!(|| "mul by mle");
         let mle_ptr: *const DenseMultilinearExtension<F> = Rc::as_ptr(&mle);
 
         let mle_index = match self.raw_pointers_lookup_table.get(&mle_ptr) {
@@ -133,12 +136,13 @@ impl<F: PrimeField> VirtualPolynomial<F> {
             *prod *= coefficient;
         }
         self.domain_info.max_degree += degree;
+        end_timer!(start);
         Ok(())
     }
 
     /// Evaluate the polynomial at point `point`
     pub fn evaluate(&self, point: &[F]) -> Result<F, PolyIOPErrors> {
-        let start = start_timer!(|| "begin evaluation");
+        let start = start_timer!(|| "evaluation");
 
         if self.domain_info.num_variables != point.len() {
             return Err(PolyIOPErrors::InvalidParameters(format!(
@@ -241,6 +245,7 @@ fn random_mle<F: PrimeField, R: RngCore>(
     )
 }
 
+// TODO: build randomized zero mle.
 pub fn random_zero_mle<F: PrimeField, R: RngCore>(
     nv: usize,
     _num_multiplicands: usize,
