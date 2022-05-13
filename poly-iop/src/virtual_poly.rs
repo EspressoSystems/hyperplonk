@@ -30,12 +30,12 @@ impl<F: PrimeField> Add for &VirtualPolynomial<F> {
         }
         let mut res = self.clone();
 
-        res.products.extend_from_slice(&other.products);
+        // res.products.extend_from_slice(&other.products);
         for product in other.products.iter() {
             let index_ref: Vec<usize> = product
                 .1
                 .iter()
-                .map(|x| x + self.domain_info.num_variables)
+                .map(|x| x + self.flattened_ml_extensions.len())
                 .collect();
             res.products.push((product.0, index_ref))
         }
@@ -192,7 +192,7 @@ fn random_product<F: PrimeField, R: RngCore>(
 pub(crate) mod test {
     use super::*;
     use ark_bls12_381::Fr;
-    use ark_ff::{One, UniformRand};
+    use ark_ff::{One, UniformRand, Zero};
     use ark_std::{
         rand::{Rng, RngCore},
         test_rng,
@@ -256,13 +256,30 @@ pub(crate) mod test {
         let nv = 4;
         let base: Vec<Fr> = (0..nv).map(|_| Fr::one()).collect();
 
-        let (a, _a_sum) = VirtualPolynomial::<Fr>::rand(nv, (2, 3), 4, &mut rng)?;
-        let (b, _b_sum) = VirtualPolynomial::<Fr>::rand(nv, (2, 3), 4, &mut rng)?;
+        let (a, _a_sum) = VirtualPolynomial::<Fr>::rand(nv, (2, 3), 3, &mut rng)?;
+        let (b, _b_sum) = VirtualPolynomial::<Fr>::rand(nv, (2, 3), 3, &mut rng)?;
         let c = &a + &b;
 
         println!("a: {:?}", a);
         println!("b: {:?}", b);
         println!("c: {:?}", c);
+
+        println!(
+            "{} {} {}",
+            a.domain_info.num_variables, b.domain_info.num_variables, c.domain_info.num_variables
+        );
+        println!(
+            "{} {} {}",
+            a.flattened_ml_extensions.len(),
+            b.flattened_ml_extensions.len(),
+            c.flattened_ml_extensions.len()
+        );
+        println!(
+            "{} {} {}",
+            a.raw_pointers_lookup_table.len(),
+            b.raw_pointers_lookup_table.len(),
+            c.raw_pointers_lookup_table.len()
+        );
 
         assert_eq!(
             a.evaluate(base.as_ref())? + b.evaluate(base.as_ref())?,
