@@ -25,11 +25,13 @@ pub struct VirtualPolynomial<F: PrimeField> {
 impl<F: PrimeField> Add for &VirtualPolynomial<F> {
     type Output = VirtualPolynomial<F>;
     fn add(self, other: &VirtualPolynomial<F>) -> Self::Output {
+        // only check domain info
         if self.domain_info != other.domain_info {
             panic!("addition between VP requires domain matching");
         }
         let mut res = self.clone();
 
+        // todo: handle the case where MLE is duplicated in two
         // res.products.extend_from_slice(&other.products);
         for product in other.products.iter() {
             let index_ref: Vec<usize> = product
@@ -254,10 +256,10 @@ pub(crate) mod test {
     fn test_virtual_polynomial_additions() -> Result<(), PolyIOPErrors> {
         let mut rng = test_rng();
         let nv = 4;
-        let base: Vec<Fr> = (0..nv).map(|_| Fr::one()).collect();
+        let base: Vec<Fr> = (0..nv).map(|_| Fr::rand(&mut rng)).collect();
 
-        let (a, _a_sum) = VirtualPolynomial::<Fr>::rand(nv, (2, 3), 3, &mut rng)?;
-        let (b, _b_sum) = VirtualPolynomial::<Fr>::rand(nv, (2, 3), 3, &mut rng)?;
+        let (a, _a_sum) = VirtualPolynomial::<Fr>::rand(nv, (2, 3), 2, &mut rng)?;
+        let (b, _b_sum) = VirtualPolynomial::<Fr>::rand(nv, (2, 3), 2, &mut rng)?;
         let c = &a + &b;
 
         println!("a: {:?}", a);
@@ -265,17 +267,17 @@ pub(crate) mod test {
         println!("c: {:?}", c);
 
         println!(
-            "{} {} {}",
+            "num var: {} {} {}",
             a.domain_info.num_variables, b.domain_info.num_variables, c.domain_info.num_variables
         );
         println!(
-            "{} {} {}",
+            "mle length: {} {} {}",
             a.flattened_ml_extensions.len(),
             b.flattened_ml_extensions.len(),
             c.flattened_ml_extensions.len()
         );
         println!(
-            "{} {} {}",
+            "hash map size: {} {} {}",
             a.raw_pointers_lookup_table.len(),
             b.raw_pointers_lookup_table.len(),
             c.raw_pointers_lookup_table.len()
