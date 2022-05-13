@@ -228,9 +228,10 @@ fn random_mle<F: PrimeField, R: RngCore>(
 
     for _ in 0..(1 << nv) {
         let mut product = F::one();
-        for i in 0..num_multiplicands {
+
+        for e in multiplicands.iter_mut() {
             let val = F::rand(rng);
-            multiplicands[i].push(val);
+            e.push(val);
             product *= val;
         }
         sum += product;
@@ -260,9 +261,9 @@ pub fn random_zero_mle<F: PrimeField, R: RngCore>(
 
     for _ in 0..(1 << nv) {
         let mut product = F::one();
-        for i in 0..degree {
+        for e in multiplicands.iter_mut() {
             let val = F::zero(); // F::rand(rng);
-            multiplicands[i].push(val);
+            e.push(val);
             product *= val;
         }
         sum += product;
