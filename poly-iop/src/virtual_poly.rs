@@ -25,7 +25,7 @@ pub struct VirtualPolynomial<F: PrimeField> {
 impl<F: PrimeField> Add for &VirtualPolynomial<F> {
     type Output = VirtualPolynomial<F>;
     fn add(self, other: &VirtualPolynomial<F>) -> Self::Output {
-        let start = start_timer!(|| "virtual poly mul");
+        let start = start_timer!(|| "virtual poly add");
         let mut res = self.clone();
         for products in other.products.iter() {
             let cur: Vec<Rc<DenseMultilinearExtension<F>>> = products
@@ -57,7 +57,7 @@ impl<F: PrimeField> VirtualPolynomial<F> {
         }
     }
 
-    /// Returns an empty polynomial
+    /// Returns an new virtual polynomial from a MLE
     pub fn new_from_mle(mle: Rc<DenseMultilinearExtension<F>>, coefficient: F) -> Self {
         let mle_ptr: *const DenseMultilinearExtension<F> = Rc::as_ptr(&mle);
         let mut hm = HashMap::new();
@@ -65,7 +65,8 @@ impl<F: PrimeField> VirtualPolynomial<F> {
 
         VirtualPolynomial {
             domain_info: DomainInfo {
-                max_degree: 2,
+                // The max degree is the max degree of any individual variable
+                max_degree: 1,
                 num_variables: mle.num_vars,
                 phantom: PhantomData::default(),
             },
@@ -131,9 +132,9 @@ impl<F: PrimeField> VirtualPolynomial<F> {
             },
         };
 
-        for (prod, indices) in self.products.iter_mut() {
+        for (prod_coef, indices) in self.products.iter_mut() {
             indices.push(mle_index);
-            *prod *= coefficient;
+            *prod_coef *= coefficient;
         }
         self.domain_info.max_degree += degree;
         end_timer!(start);
@@ -184,7 +185,7 @@ impl<F: PrimeField> VirtualPolynomial<F> {
         for _ in 0..num_products {
             let num_multiplicands =
                 rng.gen_range(num_multiplicands_range.0..num_multiplicands_range.1);
-            let (product, product_sum) = random_mle(nv, num_multiplicands, rng);
+            let (product, product_sum) = random_mle_product(nv, num_multiplicands, rng);
             let coefficient = F::rand(rng);
             poly.add_mle_list(product.into_iter(), coefficient)?;
             sum += product_sum * coefficient;
@@ -193,7 +194,8 @@ impl<F: PrimeField> VirtualPolynomial<F> {
         Ok((poly, sum))
     }
 
-    /// Sample a random virtual polynomial whose sum is 0.
+    /// Sample a random virtual polynomial that evaluates to zero everywhere on
+    /// the boolean hypercube.
     pub(crate) fn rand_zero<R: RngCore>(
         nv: usize,
         num_multiplicands_range: (usize, usize),
@@ -214,8 +216,8 @@ impl<F: PrimeField> VirtualPolynomial<F> {
 }
 
 /// Sample a random product of polynomials. Returns the
-/// product and its sum.
-fn random_mle<F: PrimeField, R: RngCore>(
+/// product and its sum over the boolean hypercube.
+fn random_mle_product<F: PrimeField, R: RngCore>(
     nv: usize,
     num_multiplicands: usize,
     rng: &mut R,
@@ -320,7 +322,7 @@ pub(crate) mod test {
 
                 let (a, _a_sum) =
                     VirtualPolynomial::<Fr>::rand(nv, (2, 3), num_products, &mut rng)?;
-                let (b, b_sum) = random_mle(nv, 1, &mut rng);
+                let (b, b_sum) = random_mle_product(nv, 1, &mut rng);
                 let b_mle = b[0].clone();
                 let b_vp = VirtualPolynomial::new_from_mle(b_mle.clone(), b_sum);
 

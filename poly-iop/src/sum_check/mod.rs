@@ -253,10 +253,15 @@ mod test {
 
         let (poly, asserted_sum) =
             VirtualPolynomial::rand(nv, num_multiplicands_range, num_products, &mut rng)?;
-        let proof = PolyIOP::prove(&poly, &mut transcript)?;
+        let proof = <PolyIOP<Fr> as SumCheck<Fr>>::prove(&poly, &mut transcript)?;
         let poly_info = poly.domain_info.clone();
-        let mut transcript = PolyIOP::init_transcript();
-        let subclaim = PolyIOP::verify(asserted_sum, &proof, &poly_info, &mut transcript)?;
+        let mut transcript = <PolyIOP<Fr> as SumCheck<Fr>>::init_transcript();
+        let subclaim = <PolyIOP<Fr> as SumCheck<Fr>>::verify(
+            asserted_sum,
+            &proof,
+            &poly_info,
+            &mut transcript,
+        )?;
         assert!(
             poly.evaluate(&subclaim.point).unwrap() == subclaim.expected_evaluation,
             "wrong subclaim"
@@ -338,8 +343,11 @@ mod test {
         let mut transcript = <PolyIOP<Fr> as SumCheck<Fr>>::init_transcript();
         let (poly, asserted_sum) = VirtualPolynomial::<Fr>::rand(8, (3, 4), 3, &mut rng)?;
 
-        let proof = PolyIOP::prove(&poly, &mut transcript)?;
-        assert_eq!(PolyIOP::extract_sum(&proof), asserted_sum);
+        let proof = <PolyIOP<Fr> as SumCheck<Fr>>::prove(&poly, &mut transcript)?;
+        assert_eq!(
+            <PolyIOP<Fr> as SumCheck<Fr>>::extract_sum(&proof),
+            asserted_sum
+        );
         Ok(())
     }
 
@@ -389,13 +397,18 @@ mod test {
         assert_eq!(prover.poly.flattened_ml_extensions.len(), 5);
         drop(prover);
 
-        let mut transcript = PolyIOP::init_transcript();
+        let mut transcript = <PolyIOP<Fr> as SumCheck<Fr>>::init_transcript();
         let poly_info = poly.domain_info.clone();
-        let proof = PolyIOP::prove(&poly, &mut transcript)?;
-        let asserted_sum = PolyIOP::extract_sum(&proof);
+        let proof = <PolyIOP<Fr> as SumCheck<Fr>>::prove(&poly, &mut transcript)?;
+        let asserted_sum = <PolyIOP<Fr> as SumCheck<Fr>>::extract_sum(&proof);
 
-        let mut transcript = PolyIOP::init_transcript();
-        let subclaim = PolyIOP::verify(asserted_sum, &proof, &poly_info, &mut transcript)?;
+        let mut transcript = <PolyIOP<Fr> as SumCheck<Fr>>::init_transcript();
+        let subclaim = <PolyIOP<Fr> as SumCheck<Fr>>::verify(
+            asserted_sum,
+            &proof,
+            &poly_info,
+            &mut transcript,
+        )?;
         assert!(
             poly.evaluate(&subclaim.point)? == subclaim.expected_evaluation,
             "wrong subclaim"

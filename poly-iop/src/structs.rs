@@ -40,7 +40,7 @@ pub struct IOPProverMessage<F: PrimeField> {
     pub(crate) evaluations: Vec<F>,
 }
 
-/// Prover State of an IOP
+/// Prover State of a PolyIOP
 pub struct IOPProverState<F: PrimeField> {
     /// sampled randomness given by the verifier
     pub challenges: Vec<F>,
@@ -50,7 +50,7 @@ pub struct IOPProverState<F: PrimeField> {
     pub(crate) poly: VirtualPolynomial<F>,
 }
 
-/// Verifier State of an IOP
+/// Prover State of a PolyIOP
 pub struct IOPVerifierState<F: PrimeField> {
     pub(crate) round: usize,
     pub(crate) num_vars: usize,

@@ -182,21 +182,21 @@ mod test {
         num_products: usize,
     ) -> Result<(), PolyIOPErrors> {
         let mut rng = test_rng();
-        let mut transcript = PolyIOP::<Fr>::init_transcript();
+        let mut transcript = <PolyIOP<Fr> as ZeroCheck<Fr>>::init_transcript();
         transcript.append_message(b"testing", b"initializing transcript for testing")?;
         let poly =
             VirtualPolynomial::rand_zero(nv, num_multiplicands_range, num_products, &mut rng)?;
 
-        let proof = PolyIOP::prove(&poly, &mut transcript)?;
+        let proof = <PolyIOP<Fr> as ZeroCheck<Fr>>::prove(&poly, &mut transcript)?;
         println!(
             "{}",
             proof.proofs[0].evaluations[0] + proof.proofs[0].evaluations[1]
         );
 
         let poly_info = poly.domain_info.clone();
-        let mut transcript = PolyIOP::init_transcript();
+        let mut transcript = <PolyIOP<Fr> as ZeroCheck<Fr>>::init_transcript();
         transcript.append_message(b"testing", b"initializing transcript for testing")?;
-        let subclaim = PolyIOP::verify(&proof, &poly_info, &mut transcript)?;
+        let subclaim = <PolyIOP<Fr> as ZeroCheck<Fr>>::verify(&proof, &poly_info, &mut transcript)?;
         assert!(
             poly.evaluate(&subclaim.point)? == subclaim.expected_evaluation,
             "wrong subclaim"
