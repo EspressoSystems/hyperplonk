@@ -19,6 +19,12 @@ displaydoc = { version = "0.2.3", default-features = false }
 
 rayon = { version = "1.5.2", default-features = false, optional = true }
 
+# Benchmarks
+[[bench]]
+name = "poly-iop-benches"
+path = "benches/bench.rs"
+harness = false
+
 [features]
 # default = [ "parallel", "print-trace" ]
 default = [ "parallel" ]
