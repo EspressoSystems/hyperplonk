@@ -23,15 +23,15 @@ use std::{cmp::max, collections::HashMap, marker::PhantomData, ops::Add, rc::Rc}
 /// $$\sum_{i=0}^{n} c_i \cdot \prod_{j=0}^{m_i} P_{ij} $$
 ///
 /// Example:
-///  f = f0 * f1 * f2 + f3 * f4
-/// where f1 ... f5 are multilinear polynomials
+///  f = c0 * f0 * f1 * f2 + c1 * f3 * f4
+/// where f0 ... f4 are multilinear polynomials
 ///
 /// - flattened_ml_extensions stores the multilinear extension representation of
 ///   f0, f1, f2, f3 and f4
 /// - products is 
 ///     \[ 
-///         (sum(f0 * f1 * f2), \[0, 1, 2\]), 
-///         (sum(f3 * f4),      \[3, 4\]) 
+///         (c0, \[0, 1, 2\]), 
+///         (c1, \[3, 4\]) 
 ///     \]
 /// - raw_pointers_lookup_table maps fi to i
 ///
@@ -246,7 +246,7 @@ impl<F: PrimeField> VirtualPolynomial<F> {
 /// Sample a random list of multilinear polynomials.
 /// Returns
 /// - the list of polynomials,
-/// - its sum of product over the boolean hypercube.
+/// - its sum of polynomial evaluations over the boolean hypercube.
 fn random_mle_list<F: PrimeField, R: RngCore>(
     nv: usize,
     degree: usize,
@@ -346,13 +346,14 @@ pub(crate) mod test {
 
                 let (a, _a_sum) =
                     VirtualPolynomial::<Fr>::rand(nv, (2, 3), num_products, &mut rng)?;
-                let (b, b_sum) = random_mle_list(nv, 1, &mut rng);
+                let (b, _b_sum) = random_mle_list(nv, 1, &mut rng);
                 let b_mle = b[0].clone();
-                let b_vp = VirtualPolynomial::new_from_mle(b_mle.clone(), b_sum);
+                let coeff = Fr::rand(&mut rng);
+                let b_vp = VirtualPolynomial::new_from_mle(b_mle.clone(), coeff);
 
                 let mut c = a.clone();
 
-                c.mul_by_mle(b_mle, b_sum)?;
+                c.mul_by_mle(b_mle, coeff)?;
 
                 assert_eq!(
                     a.evaluate(base.as_ref())? * b_vp.evaluate(base.as_ref())?,
