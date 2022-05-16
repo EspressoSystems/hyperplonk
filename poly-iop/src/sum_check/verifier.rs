@@ -162,23 +162,49 @@ impl<F: PrimeField> SumCheckVerifier<F> for IOPVerifierState<F> {
 }
 
 /// Interpolate a uni-variate degree-`p_i.len()-1` polynomial and evaluate this
-/// polynomial at `eval_at`.
+/// polynomial at `eval_at`:
+/// \sum_{i=0}^len p_i * (\prod_{j!=i} (eval_at - j)/(i-j) )
 pub(crate) fn interpolate_uni_poly<F: PrimeField>(p_i: &[F], eval_at: F) -> F {
-    let start = start_timer!(|| "sum check interpolate uni poly");
-    let mut result = F::zero();
-    let mut i = F::zero();
-    for term in p_i.iter() {
-        let mut term = *term;
-        let mut j = F::zero();
-        for _ in 0..p_i.len() {
-            if j != i {
-                term = term * (eval_at - j) / (i - j)
-            }
-            j += F::one();
-        }
-        i += F::one();
-        result += term;
+    let start = start_timer!(|| "sum check interpolate uni poly opt");
+
+    let mut res = F::zero();
+
+    // prod = \prod_{j!=i} (eval_at - j)
+    let mut evals = vec![];
+    let len = p_i.len();
+    let mut prod = eval_at;
+    evals.push(eval_at);
+
+    for e in 1..len {
+        let tmp = eval_at - F::from(e as u64);
+        evals.push(tmp);
+        prod *= tmp;
     }
+
+    for i in 0..len {
+        let divisor = get_divisor(i, len);
+        let divisor_f = {
+            if divisor < 0 {
+                -F::from((-divisor) as u64)
+            } else {
+                F::from(divisor as u64)
+            }
+        };
+        res += p_i[i] * prod / (divisor_f * evals[i]);
+    }
+
     end_timer!(start);
-    result
+    res
+}
+
+/// compute \prod_{j!=i)^len (i-j)
+#[inline]
+fn get_divisor(i: usize, len: usize) -> i64 {
+    let mut res = 1i64;
+    for j in 0..len {
+        if j != i {
+            res *= (i - j) as i64;
+        }
+    }
+    res
 }

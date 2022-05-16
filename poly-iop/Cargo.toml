@@ -20,8 +20,8 @@ displaydoc = { version = "0.2.3", default-features = false }
 rayon = { version = "1.5.2", default-features = false, optional = true }
 
 [features]
-# default = [ "parallel", "print-trace" ]
-default = [ "parallel" ]
+default = [ "parallel", "print-trace" ]
+# default = [ "parallel" ]
 parallel = [ 
     "rayon",
     "ark-std/parallel", 
