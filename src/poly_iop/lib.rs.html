@@ -23,14 +23,8 @@
 <span id="18">18</span>
 <span id="19">19</span>
 <span id="20">20</span>
-<span id="21">21</span>
-<span id="22">22</span>
-<span id="23">23</span>
-</pre><pre class="rust"><code><span class="attribute">#![<span class="ident">allow</span>(<span class="ident">dead_code</span>)]</span>
-
+</pre><pre class="rust"><code><span class="kw">use</span> <span class="ident">ark_ff::PrimeField</span>;
 <span class="kw">use</span> <span class="ident">std::marker::PhantomData</span>;
-
-<span class="kw">use</span> <span class="ident">ark_ff::PrimeField</span>;
 
 <span class="kw">mod</span> <span class="ident">errors</span>;
 <span class="kw">mod</span> <span class="ident">structs</span>;
@@ -38,14 +32,14 @@
 <span class="kw">mod</span> <span class="ident">transcript</span>;
 <span class="kw">mod</span> <span class="ident">utils</span>;
 <span class="kw">mod</span> <span class="ident">virtual_poly</span>;
-<span class="comment">// mod zero_check;</span>
+<span class="kw">mod</span> <span class="ident">zero_check</span>;
 
 <span class="kw">pub</span> <span class="kw">use</span> <span class="ident">virtual_poly::VirtualPolynomial</span>;
 
 <span class="doccomment">/// Struct for PolyIOP protocol.</span>
 <span class="doccomment">/// It is instantiated with</span>
 <span class="doccomment">/// - SumCheck protocol.</span>
-<span class="doccomment">/// - ZeroCheck protocol. (WIP)</span>
+<span class="doccomment">/// - ZeroCheck protocol.</span>
 <span class="kw">pub</span> <span class="kw">struct</span> <span class="ident">PolyIOP</span><span class="op">&lt;</span><span class="ident">F</span>: <span class="ident">PrimeField</span><span class="op">&gt;</span> {
     <span class="ident">phantom</span>: <span class="ident">PhantomData</span><span class="op">&lt;</span><span class="ident">F</span><span class="op">&gt;</span>,
 }

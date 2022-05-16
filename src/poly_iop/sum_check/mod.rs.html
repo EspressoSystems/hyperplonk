@@ -385,35 +385,13 @@
 <span id="380">380</span>
 <span id="381">381</span>
 <span id="382">382</span>
-<span id="383">383</span>
-<span id="384">384</span>
-<span id="385">385</span>
-<span id="386">386</span>
-<span id="387">387</span>
-<span id="388">388</span>
-<span id="389">389</span>
-<span id="390">390</span>
-<span id="391">391</span>
-<span id="392">392</span>
-<span id="393">393</span>
-<span id="394">394</span>
-<span id="395">395</span>
-<span id="396">396</span>
-<span id="397">397</span>
-<span id="398">398</span>
-<span id="399">399</span>
-<span id="400">400</span>
-<span id="401">401</span>
-<span id="402">402</span>
-<span id="403">403</span>
-<span id="404">404</span>
 </pre><pre class="rust"><code><span class="doccomment">//! This module implements the sum check protocol.</span>
 <span class="doccomment">//! Currently this is a simple wrapper of the sumcheck protocol</span>
 <span class="doccomment">//! from Arkworks.</span>
 
 <span class="kw">use</span> <span class="kw">crate</span>::{
     <span class="ident">errors::PolyIOPErrors</span>,
-    <span class="ident">structs</span>::{<span class="ident">DomainInfo</span>, <span class="ident">IOPProof</span>, <span class="ident">SubClaim</span>},
+    <span class="ident">structs</span>::{<span class="ident">DomainInfo</span>, <span class="ident">IOPProof</span>, <span class="ident">IOPProverState</span>, <span class="ident">IOPVerifierState</span>, <span class="ident">SubClaim</span>},
     <span class="ident">transcript::IOPTranscript</span>,
     <span class="ident">virtual_poly::VirtualPolynomial</span>,
     <span class="ident">PolyIOP</span>,
@@ -424,9 +402,7 @@
 <span class="kw">mod</span> <span class="ident">prover</span>;
 <span class="kw">mod</span> <span class="ident">verifier</span>;
 
-<span class="kw">pub</span> <span class="kw">use</span> <span class="ident">prover::ProverState</span>;
-<span class="kw">pub</span> <span class="kw">use</span> <span class="ident">verifier::VerifierState</span>;
-
+<span class="doccomment">/// Trait for doing sum check protocols.</span>
 <span class="kw">pub</span> <span class="kw">trait</span> <span class="ident">SumCheck</span><span class="op">&lt;</span><span class="ident">F</span>: <span class="ident">PrimeField</span><span class="op">&gt;</span> {
     <span class="kw">type</span> <span class="ident">Proof</span>;
     <span class="kw">type</span> <span class="ident">PolyList</span>;
@@ -445,27 +421,15 @@
     <span class="doccomment">/// SumCheck prover/verifier.</span>
     <span class="kw">fn</span> <span class="ident">init_transcript</span>() -&gt; <span class="ident"><span class="self">Self</span>::Transcript</span>;
 
-    <span class="doccomment">/// generate proof of the sum of polynomial over {0,1}^`num_vars`</span>
+    <span class="doccomment">/// Generate proof of the sum of polynomial over {0,1}^`num_vars`</span>
     <span class="doccomment">///</span>
-    <span class="doccomment">/// The polynomial is represented by a list of products of polynomials along</span>
-    <span class="doccomment">/// with its coefficient that is meant to be added together.</span>
-    <span class="doccomment">///</span>
-    <span class="doccomment">/// This data structure of the polynomial is a list of list of</span>
-    <span class="doccomment">/// `(coefficient, DenseMultilinearExtension)`.</span>
-    <span class="doccomment">/// * Number of products n = `polynomial.products.len()`,</span>
-    <span class="doccomment">/// * Number of multiplicands of ith product m_i =</span>
-    <span class="doccomment">///   `polynomial.products[i].1.len()`,</span>
-    <span class="doccomment">/// * Coefficient of ith product c_i = `polynomial.products[i].0`</span>
-    <span class="doccomment">///</span>
-    <span class="doccomment">/// The resulting polynomial is</span>
-    <span class="doccomment">///</span>
-    <span class="doccomment">/// $$\sum_{i=0}^{n}C_i\cdot\prod_{j=0}^{m_i}P_{ij}$$</span>
+    <span class="doccomment">/// The polynomial is represented in the form of a VirtualPolynomial.</span>
     <span class="kw">fn</span> <span class="ident">prove</span>(
         <span class="ident">poly</span>: <span class="kw-2">&amp;</span><span class="ident"><span class="self">Self</span>::PolyList</span>,
         <span class="ident">transcript</span>: <span class="kw-2">&amp;mut</span> <span class="ident"><span class="self">Self</span>::Transcript</span>,
     ) -&gt; <span class="prelude-ty">Result</span><span class="op">&lt;</span><span class="ident"><span class="self">Self</span>::Proof</span>, <span class="ident">PolyIOPErrors</span><span class="op">&gt;</span>;
 
-    <span class="doccomment">/// verify the claimed sum using the proof</span>
+    <span class="doccomment">/// Verify the claimed sum using the proof</span>
     <span class="kw">fn</span> <span class="ident">verify</span>(
         <span class="ident">sum</span>: <span class="ident">F</span>,
         <span class="ident">proof</span>: <span class="kw-2">&amp;</span><span class="ident"><span class="self">Self</span>::Proof</span>,
@@ -474,6 +438,7 @@
     ) -&gt; <span class="prelude-ty">Result</span><span class="op">&lt;</span><span class="ident"><span class="self">Self</span>::SubClaim</span>, <span class="ident">PolyIOPErrors</span><span class="op">&gt;</span>;
 }
 
+<span class="doccomment">/// Trait for sum check protocol prover side APIs.</span>
 <span class="kw">pub</span> <span class="kw">trait</span> <span class="ident">SumCheckProver</span><span class="op">&lt;</span><span class="ident">F</span>: <span class="ident">PrimeField</span><span class="op">&gt;</span>
 <span class="kw">where</span>
     <span class="self">Self</span>: <span class="ident">Sized</span>,
@@ -481,22 +446,10 @@
     <span class="kw">type</span> <span class="ident">PolyList</span>;
     <span class="kw">type</span> <span class="ident">ProverMessage</span>;
 
-    <span class="doccomment">/// initialize the prover to argue for the sum of polynomial over</span>
+    <span class="doccomment">/// Initialize the prover to argue for the sum of polynomial over</span>
     <span class="doccomment">/// {0,1}^`num_vars`</span>
     <span class="doccomment">///</span>
-    <span class="doccomment">/// The polynomial is represented by a list of products of polynomials along</span>
-    <span class="doccomment">/// with its coefficient that is meant to be added together.</span>
-    <span class="doccomment">///</span>
-    <span class="doccomment">/// This data structure of the polynomial is a list of list of</span>
-    <span class="doccomment">/// `(coefficient, DenseMultilinearExtension)`.</span>
-    <span class="doccomment">/// * Number of products n = `polynomial.products.len()`,</span>
-    <span class="doccomment">/// * Number of multiplicands of ith product m_i =</span>
-    <span class="doccomment">///   `polynomial.products[i].1.len()`,</span>
-    <span class="doccomment">/// * Coefficient of ith product c_i = `polynomial.products[i].0`</span>
-    <span class="doccomment">///</span>
-    <span class="doccomment">/// The resulting polynomial is</span>
-    <span class="doccomment">///</span>
-    <span class="doccomment">/// $$\sum_{i=0}^{n}C_i\cdot\prod_{j=0}^{m_i}P_{ij}$$</span>
+    <span class="doccomment">/// The polynomial is represented in the form of a VirtualPolynomial.</span>
     <span class="kw">fn</span> <span class="ident">prover_init</span>(<span class="ident">polynomial</span>: <span class="kw-2">&amp;</span><span class="ident"><span class="self">Self</span>::PolyList</span>) -&gt; <span class="prelude-ty">Result</span><span class="op">&lt;</span><span class="self">Self</span>, <span class="ident">PolyIOPErrors</span><span class="op">&gt;</span>;
 
     <span class="doccomment">/// receive message from verifier, generate prover message, and proceed to</span>
@@ -509,6 +462,7 @@
     ) -&gt; <span class="prelude-ty">Result</span><span class="op">&lt;</span><span class="ident"><span class="self">Self</span>::ProverMessage</span>, <span class="ident">PolyIOPErrors</span><span class="op">&gt;</span>;
 }
 
+<span class="doccomment">/// Trait for sum check protocol verifier side APIs.</span>
 <span class="kw">pub</span> <span class="kw">trait</span> <span class="ident">SumCheckVerifier</span><span class="op">&lt;</span><span class="ident">F</span>: <span class="ident">PrimeField</span><span class="op">&gt;</span> {
     <span class="kw">type</span> <span class="ident">DomainInfo</span>;
     <span class="kw">type</span> <span class="ident">ProverMessage</span>;
@@ -574,21 +528,9 @@
         <span class="ident">res</span>
     }
 
-    <span class="doccomment">/// generate proof of the sum of polynomial over {0,1}^`num_vars`</span>
+    <span class="doccomment">/// Generate proof of the sum of polynomial over {0,1}^`num_vars`</span>
     <span class="doccomment">///</span>
-    <span class="doccomment">/// The polynomial is represented by a list of products of polynomials along</span>
-    <span class="doccomment">/// with its coefficient that is meant to be added together.</span>
-    <span class="doccomment">///</span>
-    <span class="doccomment">/// This data structure of the polynomial is a list of list of</span>
-    <span class="doccomment">/// `(coefficient, DenseMultilinearExtension)`.</span>
-    <span class="doccomment">/// * Number of products n = `polynomial.products.len()`,</span>
-    <span class="doccomment">/// * Number of multiplicands of ith product m_i =</span>
-    <span class="doccomment">///   `polynomial.products[i].1.len()`,</span>
-    <span class="doccomment">/// * Coefficient of ith product c_i = `polynomial.products[i].0`</span>
-    <span class="doccomment">///</span>
-    <span class="doccomment">/// The resulting polynomial is</span>
-    <span class="doccomment">///</span>
-    <span class="doccomment">/// $$\sum_{i=0}^{n}C_i\cdot\prod_{j=0}^{m_i}P_{ij}$$</span>
+    <span class="doccomment">/// The polynomial is represented in the form of a VirtualPolynomial.</span>
     <span class="kw">fn</span> <span class="ident">prove</span>(
         <span class="ident">poly</span>: <span class="kw-2">&amp;</span><span class="ident"><span class="self">Self</span>::PolyList</span>,
         <span class="ident">transcript</span>: <span class="kw-2">&amp;mut</span> <span class="ident"><span class="self">Self</span>::Transcript</span>,
@@ -597,12 +539,12 @@
 
         <span class="ident">transcript</span>.<span class="ident">append_domain_info</span>(<span class="kw-2">&amp;</span><span class="ident">poly</span>.<span class="ident">domain_info</span>)<span class="question-mark">?</span>;
 
-        <span class="kw">let</span> <span class="kw-2">mut</span> <span class="ident">prover_state</span> <span class="op">=</span> <span class="ident">ProverState::prover_init</span>(<span class="ident">poly</span>)<span class="question-mark">?</span>;
+        <span class="kw">let</span> <span class="kw-2">mut</span> <span class="ident">prover_state</span> <span class="op">=</span> <span class="ident">IOPProverState::prover_init</span>(<span class="ident">poly</span>)<span class="question-mark">?</span>;
         <span class="kw">let</span> <span class="kw-2">mut</span> <span class="ident">challenge</span> <span class="op">=</span> <span class="prelude-val">None</span>;
         <span class="kw">let</span> <span class="kw-2">mut</span> <span class="ident">prover_msgs</span> <span class="op">=</span> <span class="ident">Vec::with_capacity</span>(<span class="ident">poly</span>.<span class="ident">domain_info</span>.<span class="ident">num_variables</span>);
         <span class="kw">for</span> <span class="kw">_</span> <span class="kw">in</span> <span class="number">0</span>..<span class="ident">poly</span>.<span class="ident">domain_info</span>.<span class="ident">num_variables</span> {
             <span class="kw">let</span> <span class="ident">prover_msg</span> <span class="op">=</span>
-                <span class="ident">ProverState::prove_round_and_update_state</span>(<span class="kw-2">&amp;mut</span> <span class="ident">prover_state</span>, <span class="kw-2">&amp;</span><span class="ident">challenge</span>)<span class="question-mark">?</span>;
+                <span class="ident">IOPProverState::prove_round_and_update_state</span>(<span class="kw-2">&amp;mut</span> <span class="ident">prover_state</span>, <span class="kw-2">&amp;</span><span class="ident">challenge</span>)<span class="question-mark">?</span>;
             <span class="ident">transcript</span>.<span class="ident">append_prover_message</span>(<span class="kw-2">&amp;</span><span class="ident">prover_msg</span>)<span class="question-mark">?</span>;
             <span class="ident">prover_msgs</span>.<span class="ident">push</span>(<span class="ident">prover_msg</span>);
             <span class="ident">challenge</span> <span class="op">=</span> <span class="prelude-val">Some</span>(<span class="ident">transcript</span>.<span class="ident">get_and_append_challenge</span>(<span class="string">b&quot;Internal round&quot;</span>)<span class="question-mark">?</span>);
@@ -624,18 +566,18 @@
         <span class="kw">let</span> <span class="ident">start</span> <span class="op">=</span> <span class="macro">start_timer!</span>(<span class="op">|</span><span class="op">|</span> <span class="string">&quot;sum check verify&quot;</span>);
 
         <span class="ident">transcript</span>.<span class="ident">append_domain_info</span>(<span class="ident">domain_info</span>)<span class="question-mark">?</span>;
-        <span class="kw">let</span> <span class="kw-2">mut</span> <span class="ident">verifier_state</span> <span class="op">=</span> <span class="ident">VerifierState::verifier_init</span>(<span class="ident">domain_info</span>);
+        <span class="kw">let</span> <span class="kw-2">mut</span> <span class="ident">verifier_state</span> <span class="op">=</span> <span class="ident">IOPVerifierState::verifier_init</span>(<span class="ident">domain_info</span>);
         <span class="kw">for</span> <span class="ident">i</span> <span class="kw">in</span> <span class="number">0</span>..<span class="ident">domain_info</span>.<span class="ident">num_variables</span> {
             <span class="kw">let</span> <span class="ident">prover_msg</span> <span class="op">=</span> <span class="ident">proof</span>.<span class="ident">proofs</span>.<span class="ident">get</span>(<span class="ident">i</span>).<span class="ident">expect</span>(<span class="string">&quot;proof is incomplete&quot;</span>);
             <span class="ident">transcript</span>.<span class="ident">append_prover_message</span>(<span class="ident">prover_msg</span>)<span class="question-mark">?</span>;
-            <span class="ident">VerifierState::verify_round_and_update_state</span>(
+            <span class="ident">IOPVerifierState::verify_round_and_update_state</span>(
                 <span class="kw-2">&amp;mut</span> <span class="ident">verifier_state</span>,
                 <span class="ident">prover_msg</span>,
                 <span class="ident">transcript</span>,
             )<span class="question-mark">?</span>;
         }
 
-        <span class="kw">let</span> <span class="ident">res</span> <span class="op">=</span> <span class="ident">VerifierState::check_and_generate_subclaim</span>(<span class="kw-2">&amp;</span><span class="ident">verifier_state</span>, <span class="kw-2">&amp;</span><span class="ident">claimed_sum</span>);
+        <span class="kw">let</span> <span class="ident">res</span> <span class="op">=</span> <span class="ident">IOPVerifierState::check_and_generate_subclaim</span>(<span class="kw-2">&amp;</span><span class="ident">verifier_state</span>, <span class="kw-2">&amp;</span><span class="ident">claimed_sum</span>);
 
         <span class="macro">end_timer!</span>(<span class="ident">start</span>);
         <span class="ident">res</span>
@@ -646,41 +588,49 @@
 <span class="kw">mod</span> <span class="ident">test</span> {
 
     <span class="kw">use</span> <span class="kw">super</span>::<span class="kw-2">*</span>;
-    <span class="kw">use</span> <span class="ident"><span class="kw">crate</span>::virtual_poly::test::random_list_of_products</span>;
     <span class="kw">use</span> <span class="ident">ark_bls12_381::Fr</span>;
     <span class="kw">use</span> <span class="ident">ark_ff::UniformRand</span>;
     <span class="kw">use</span> <span class="ident">ark_poly</span>::{<span class="ident">DenseMultilinearExtension</span>, <span class="ident">MultilinearExtension</span>};
     <span class="kw">use</span> <span class="ident">ark_std::test_rng</span>;
     <span class="kw">use</span> <span class="ident">std::rc::Rc</span>;
 
-    <span class="kw">fn</span> <span class="ident">test_sumcheck</span>(<span class="ident">nv</span>: <span class="ident">usize</span>, <span class="ident">num_multiplicands_range</span>: (<span class="ident">usize</span>, <span class="ident">usize</span>), <span class="ident">num_products</span>: <span class="ident">usize</span>) {
+    <span class="kw">fn</span> <span class="ident">test_sumcheck</span>(
+        <span class="ident">nv</span>: <span class="ident">usize</span>,
+        <span class="ident">num_multiplicands_range</span>: (<span class="ident">usize</span>, <span class="ident">usize</span>),
+        <span class="ident">num_products</span>: <span class="ident">usize</span>,
+    ) -&gt; <span class="prelude-ty">Result</span><span class="op">&lt;</span>(), <span class="ident">PolyIOPErrors</span><span class="op">&gt;</span> {
         <span class="kw">let</span> <span class="kw-2">mut</span> <span class="ident">rng</span> <span class="op">=</span> <span class="ident">test_rng</span>();
-        <span class="kw">let</span> <span class="kw-2">mut</span> <span class="ident">transcript</span> <span class="op">=</span> <span class="ident">PolyIOP::init_transcript</span>();
+        <span class="kw">let</span> <span class="kw-2">mut</span> <span class="ident">transcript</span> <span class="op">=</span> <span class="op">&lt;</span><span class="ident">PolyIOP</span><span class="op">&lt;</span><span class="ident">Fr</span><span class="op">&gt;</span> <span class="kw">as</span> <span class="ident">SumCheck</span><span class="op">&lt;</span><span class="ident">Fr</span><span class="op">&gt;</span><span class="op">&gt;</span><span class="ident">::init_transcript</span>();
 
         <span class="kw">let</span> (<span class="ident">poly</span>, <span class="ident">asserted_sum</span>) <span class="op">=</span>
-            <span class="ident">random_list_of_products</span>::<span class="op">&lt;</span><span class="ident">Fr</span>, <span class="kw">_</span><span class="op">&gt;</span>(<span class="ident">nv</span>, <span class="ident">num_multiplicands_range</span>, <span class="ident">num_products</span>, <span class="kw-2">&amp;mut</span> <span class="ident">rng</span>);
-        <span class="kw">let</span> <span class="ident">proof</span> <span class="op">=</span> <span class="ident">PolyIOP::prove</span>(<span class="kw-2">&amp;</span><span class="ident">poly</span>, <span class="kw-2">&amp;mut</span> <span class="ident">transcript</span>).<span class="ident">expect</span>(<span class="string">&quot;fail to prove&quot;</span>);
+            <span class="ident">VirtualPolynomial::rand</span>(<span class="ident">nv</span>, <span class="ident">num_multiplicands_range</span>, <span class="ident">num_products</span>, <span class="kw-2">&amp;mut</span> <span class="ident">rng</span>)<span class="question-mark">?</span>;
+        <span class="kw">let</span> <span class="ident">proof</span> <span class="op">=</span> <span class="op">&lt;</span><span class="ident">PolyIOP</span><span class="op">&lt;</span><span class="ident">Fr</span><span class="op">&gt;</span> <span class="kw">as</span> <span class="ident">SumCheck</span><span class="op">&lt;</span><span class="ident">Fr</span><span class="op">&gt;</span><span class="op">&gt;</span><span class="ident">::prove</span>(<span class="kw-2">&amp;</span><span class="ident">poly</span>, <span class="kw-2">&amp;mut</span> <span class="ident">transcript</span>)<span class="question-mark">?</span>;
         <span class="kw">let</span> <span class="ident">poly_info</span> <span class="op">=</span> <span class="ident">poly</span>.<span class="ident">domain_info</span>.<span class="ident">clone</span>();
-        <span class="kw">let</span> <span class="kw-2">mut</span> <span class="ident">transcript</span> <span class="op">=</span> <span class="ident">PolyIOP::init_transcript</span>();
-        <span class="kw">let</span> <span class="ident">subclaim</span> <span class="op">=</span> <span class="ident">PolyIOP::verify</span>(<span class="ident">asserted_sum</span>, <span class="kw-2">&amp;</span><span class="ident">proof</span>, <span class="kw-2">&amp;</span><span class="ident">poly_info</span>, <span class="kw-2">&amp;mut</span> <span class="ident">transcript</span>)
-            .<span class="ident">expect</span>(<span class="string">&quot;fail to verify&quot;</span>);
+        <span class="kw">let</span> <span class="kw-2">mut</span> <span class="ident">transcript</span> <span class="op">=</span> <span class="op">&lt;</span><span class="ident">PolyIOP</span><span class="op">&lt;</span><span class="ident">Fr</span><span class="op">&gt;</span> <span class="kw">as</span> <span class="ident">SumCheck</span><span class="op">&lt;</span><span class="ident">Fr</span><span class="op">&gt;</span><span class="op">&gt;</span><span class="ident">::init_transcript</span>();
+        <span class="kw">let</span> <span class="ident">subclaim</span> <span class="op">=</span> <span class="op">&lt;</span><span class="ident">PolyIOP</span><span class="op">&lt;</span><span class="ident">Fr</span><span class="op">&gt;</span> <span class="kw">as</span> <span class="ident">SumCheck</span><span class="op">&lt;</span><span class="ident">Fr</span><span class="op">&gt;</span><span class="op">&gt;</span><span class="ident">::verify</span>(
+            <span class="ident">asserted_sum</span>,
+            <span class="kw-2">&amp;</span><span class="ident">proof</span>,
+            <span class="kw-2">&amp;</span><span class="ident">poly_info</span>,
+            <span class="kw-2">&amp;mut</span> <span class="ident">transcript</span>,
+        )<span class="question-mark">?</span>;
         <span class="macro">assert!</span>(
             <span class="ident">poly</span>.<span class="ident">evaluate</span>(<span class="kw-2">&amp;</span><span class="ident">subclaim</span>.<span class="ident">point</span>).<span class="ident">unwrap</span>() <span class="op">==</span> <span class="ident">subclaim</span>.<span class="ident">expected_evaluation</span>,
             <span class="string">&quot;wrong subclaim&quot;</span>
         );
+        <span class="prelude-val">Ok</span>(())
     }
 
     <span class="kw">fn</span> <span class="ident">test_sumcheck_internal</span>(
         <span class="ident">nv</span>: <span class="ident">usize</span>,
         <span class="ident">num_multiplicands_range</span>: (<span class="ident">usize</span>, <span class="ident">usize</span>),
         <span class="ident">num_products</span>: <span class="ident">usize</span>,
-    ) {
+    ) -&gt; <span class="prelude-ty">Result</span><span class="op">&lt;</span>(), <span class="ident">PolyIOPErrors</span><span class="op">&gt;</span> {
         <span class="kw">let</span> <span class="kw-2">mut</span> <span class="ident">rng</span> <span class="op">=</span> <span class="ident">test_rng</span>();
         <span class="kw">let</span> (<span class="ident">poly</span>, <span class="ident">asserted_sum</span>) <span class="op">=</span>
-            <span class="ident">random_list_of_products</span>::<span class="op">&lt;</span><span class="ident">Fr</span>, <span class="kw">_</span><span class="op">&gt;</span>(<span class="ident">nv</span>, <span class="ident">num_multiplicands_range</span>, <span class="ident">num_products</span>, <span class="kw-2">&amp;mut</span> <span class="ident">rng</span>);
+            <span class="ident">VirtualPolynomial</span>::<span class="op">&lt;</span><span class="ident">Fr</span><span class="op">&gt;</span><span class="ident">::rand</span>(<span class="ident">nv</span>, <span class="ident">num_multiplicands_range</span>, <span class="ident">num_products</span>, <span class="kw-2">&amp;mut</span> <span class="ident">rng</span>)<span class="question-mark">?</span>;
         <span class="kw">let</span> <span class="ident">poly_info</span> <span class="op">=</span> <span class="ident">poly</span>.<span class="ident">domain_info</span>.<span class="ident">clone</span>();
-        <span class="kw">let</span> <span class="kw-2">mut</span> <span class="ident">prover_state</span> <span class="op">=</span> <span class="ident">ProverState::prover_init</span>(<span class="kw-2">&amp;</span><span class="ident">poly</span>).<span class="ident">unwrap</span>();
-        <span class="kw">let</span> <span class="kw-2">mut</span> <span class="ident">verifier_state</span> <span class="op">=</span> <span class="ident">VerifierState::verifier_init</span>(<span class="kw-2">&amp;</span><span class="ident">poly_info</span>);
+        <span class="kw">let</span> <span class="kw-2">mut</span> <span class="ident">prover_state</span> <span class="op">=</span> <span class="ident">IOPProverState::prover_init</span>(<span class="kw-2">&amp;</span><span class="ident">poly</span>)<span class="question-mark">?</span>;
+        <span class="kw">let</span> <span class="kw-2">mut</span> <span class="ident">verifier_state</span> <span class="op">=</span> <span class="ident">IOPVerifierState::verifier_init</span>(<span class="kw-2">&amp;</span><span class="ident">poly_info</span>);
         <span class="kw">let</span> <span class="kw-2">mut</span> <span class="ident">challenge</span> <span class="op">=</span> <span class="prelude-val">None</span>;
         <span class="kw">let</span> <span class="kw-2">mut</span> <span class="ident">transcript</span> <span class="op">=</span> <span class="ident">IOPTranscript::new</span>(<span class="string">b&quot;a test transcript&quot;</span>);
         <span class="ident">transcript</span>
@@ -688,10 +638,11 @@
             .<span class="ident">unwrap</span>();
         <span class="kw">for</span> <span class="kw">_</span> <span class="kw">in</span> <span class="number">0</span>..<span class="ident">poly</span>.<span class="ident">domain_info</span>.<span class="ident">num_variables</span> {
             <span class="kw">let</span> <span class="ident">prover_message</span> <span class="op">=</span>
-                <span class="ident">ProverState::prove_round_and_update_state</span>(<span class="kw-2">&amp;mut</span> <span class="ident">prover_state</span>, <span class="kw-2">&amp;</span><span class="ident">challenge</span>).<span class="ident">unwrap</span>();
+                <span class="ident">IOPProverState::prove_round_and_update_state</span>(<span class="kw-2">&amp;mut</span> <span class="ident">prover_state</span>, <span class="kw-2">&amp;</span><span class="ident">challenge</span>)
+                    .<span class="ident">unwrap</span>();
 
             <span class="ident">challenge</span> <span class="op">=</span> <span class="prelude-val">Some</span>(
-                <span class="ident">VerifierState::verify_round_and_update_state</span>(
+                <span class="ident">IOPVerifierState::verify_round_and_update_state</span>(
                     <span class="kw-2">&amp;mut</span> <span class="ident">verifier_state</span>,
                     <span class="kw-2">&amp;</span><span class="ident">prover_message</span>,
                     <span class="kw-2">&amp;mut</span> <span class="ident">transcript</span>,
@@ -699,116 +650,121 @@
                 .<span class="ident">unwrap</span>(),
             );
         }
-        <span class="kw">let</span> <span class="ident">subclaim</span> <span class="op">=</span> <span class="ident">VerifierState::check_and_generate_subclaim</span>(<span class="kw-2">&amp;</span><span class="ident">verifier_state</span>, <span class="kw-2">&amp;</span><span class="ident">asserted_sum</span>)
-            .<span class="ident">expect</span>(<span class="string">&quot;fail to generate subclaim&quot;</span>);
+        <span class="kw">let</span> <span class="ident">subclaim</span> <span class="op">=</span>
+            <span class="ident">IOPVerifierState::check_and_generate_subclaim</span>(<span class="kw-2">&amp;</span><span class="ident">verifier_state</span>, <span class="kw-2">&amp;</span><span class="ident">asserted_sum</span>)
+                .<span class="ident">expect</span>(<span class="string">&quot;fail to generate subclaim&quot;</span>);
         <span class="macro">assert!</span>(
             <span class="ident">poly</span>.<span class="ident">evaluate</span>(<span class="kw-2">&amp;</span><span class="ident">subclaim</span>.<span class="ident">point</span>).<span class="ident">unwrap</span>() <span class="op">==</span> <span class="ident">subclaim</span>.<span class="ident">expected_evaluation</span>,
             <span class="string">&quot;wrong subclaim&quot;</span>
         );
+        <span class="prelude-val">Ok</span>(())
     }
 
     <span class="attribute">#[<span class="ident">test</span>]</span>
-    <span class="kw">fn</span> <span class="ident">test_trivial_polynomial</span>() {
+    <span class="kw">fn</span> <span class="ident">test_trivial_polynomial</span>() -&gt; <span class="prelude-ty">Result</span><span class="op">&lt;</span>(), <span class="ident">PolyIOPErrors</span><span class="op">&gt;</span> {
         <span class="kw">let</span> <span class="ident">nv</span> <span class="op">=</span> <span class="number">1</span>;
         <span class="kw">let</span> <span class="ident">num_multiplicands_range</span> <span class="op">=</span> (<span class="number">4</span>, <span class="number">13</span>);
         <span class="kw">let</span> <span class="ident">num_products</span> <span class="op">=</span> <span class="number">5</span>;
 
-        <span class="ident">test_sumcheck</span>(<span class="ident">nv</span>, <span class="ident">num_multiplicands_range</span>, <span class="ident">num_products</span>);
-        <span class="ident">test_sumcheck_internal</span>(<span class="ident">nv</span>, <span class="ident">num_multiplicands_range</span>, <span class="ident">num_products</span>);
+        <span class="ident">test_sumcheck</span>(<span class="ident">nv</span>, <span class="ident">num_multiplicands_range</span>, <span class="ident">num_products</span>)<span class="question-mark">?</span>;
+        <span class="ident">test_sumcheck_internal</span>(<span class="ident">nv</span>, <span class="ident">num_multiplicands_range</span>, <span class="ident">num_products</span>)
     }
     <span class="attribute">#[<span class="ident">test</span>]</span>
-    <span class="kw">fn</span> <span class="ident">test_normal_polynomial</span>() {
+    <span class="kw">fn</span> <span class="ident">test_normal_polynomial</span>() -&gt; <span class="prelude-ty">Result</span><span class="op">&lt;</span>(), <span class="ident">PolyIOPErrors</span><span class="op">&gt;</span> {
         <span class="kw">let</span> <span class="ident">nv</span> <span class="op">=</span> <span class="number">12</span>;
         <span class="kw">let</span> <span class="ident">num_multiplicands_range</span> <span class="op">=</span> (<span class="number">4</span>, <span class="number">9</span>);
         <span class="kw">let</span> <span class="ident">num_products</span> <span class="op">=</span> <span class="number">5</span>;
 
-        <span class="ident">test_sumcheck</span>(<span class="ident">nv</span>, <span class="ident">num_multiplicands_range</span>, <span class="ident">num_products</span>);
-        <span class="ident">test_sumcheck_internal</span>(<span class="ident">nv</span>, <span class="ident">num_multiplicands_range</span>, <span class="ident">num_products</span>);
+        <span class="ident">test_sumcheck</span>(<span class="ident">nv</span>, <span class="ident">num_multiplicands_range</span>, <span class="ident">num_products</span>)<span class="question-mark">?</span>;
+        <span class="ident">test_sumcheck_internal</span>(<span class="ident">nv</span>, <span class="ident">num_multiplicands_range</span>, <span class="ident">num_products</span>)
     }
     <span class="attribute">#[<span class="ident">test</span>]</span>
-    <span class="attribute">#[<span class="ident">should_panic</span>]</span>
     <span class="kw">fn</span> <span class="ident">zero_polynomial_should_error</span>() {
         <span class="kw">let</span> <span class="ident">nv</span> <span class="op">=</span> <span class="number">0</span>;
         <span class="kw">let</span> <span class="ident">num_multiplicands_range</span> <span class="op">=</span> (<span class="number">4</span>, <span class="number">13</span>);
         <span class="kw">let</span> <span class="ident">num_products</span> <span class="op">=</span> <span class="number">5</span>;
 
-        <span class="ident">test_sumcheck</span>(<span class="ident">nv</span>, <span class="ident">num_multiplicands_range</span>, <span class="ident">num_products</span>);
-        <span class="ident">test_sumcheck_internal</span>(<span class="ident">nv</span>, <span class="ident">num_multiplicands_range</span>, <span class="ident">num_products</span>);
+        <span class="macro">assert!</span>(<span class="ident">test_sumcheck</span>(<span class="ident">nv</span>, <span class="ident">num_multiplicands_range</span>, <span class="ident">num_products</span>).<span class="ident">is_err</span>());
+        <span class="macro">assert!</span>(<span class="ident">test_sumcheck_internal</span>(<span class="ident">nv</span>, <span class="ident">num_multiplicands_range</span>, <span class="ident">num_products</span>).<span class="ident">is_err</span>());
     }
 
     <span class="attribute">#[<span class="ident">test</span>]</span>
-    <span class="kw">fn</span> <span class="ident">test_extract_sum</span>() {
+    <span class="kw">fn</span> <span class="ident">test_extract_sum</span>() -&gt; <span class="prelude-ty">Result</span><span class="op">&lt;</span>(), <span class="ident">PolyIOPErrors</span><span class="op">&gt;</span> {
         <span class="kw">let</span> <span class="kw-2">mut</span> <span class="ident">rng</span> <span class="op">=</span> <span class="ident">test_rng</span>();
-        <span class="kw">let</span> <span class="kw-2">mut</span> <span class="ident">transcript</span> <span class="op">=</span> <span class="ident">PolyIOP::init_transcript</span>();
-        <span class="kw">let</span> (<span class="ident">poly</span>, <span class="ident">asserted_sum</span>) <span class="op">=</span> <span class="ident">random_list_of_products</span>::<span class="op">&lt;</span><span class="ident">Fr</span>, <span class="kw">_</span><span class="op">&gt;</span>(<span class="number">8</span>, (<span class="number">3</span>, <span class="number">4</span>), <span class="number">3</span>, <span class="kw-2">&amp;mut</span> <span class="ident">rng</span>);
+        <span class="kw">let</span> <span class="kw-2">mut</span> <span class="ident">transcript</span> <span class="op">=</span> <span class="op">&lt;</span><span class="ident">PolyIOP</span><span class="op">&lt;</span><span class="ident">Fr</span><span class="op">&gt;</span> <span class="kw">as</span> <span class="ident">SumCheck</span><span class="op">&lt;</span><span class="ident">Fr</span><span class="op">&gt;</span><span class="op">&gt;</span><span class="ident">::init_transcript</span>();
+        <span class="kw">let</span> (<span class="ident">poly</span>, <span class="ident">asserted_sum</span>) <span class="op">=</span> <span class="ident">VirtualPolynomial</span>::<span class="op">&lt;</span><span class="ident">Fr</span><span class="op">&gt;</span><span class="ident">::rand</span>(<span class="number">8</span>, (<span class="number">3</span>, <span class="number">4</span>), <span class="number">3</span>, <span class="kw-2">&amp;mut</span> <span class="ident">rng</span>)<span class="question-mark">?</span>;
 
-        <span class="kw">let</span> <span class="ident">proof</span> <span class="op">=</span> <span class="ident">PolyIOP::prove</span>(<span class="kw-2">&amp;</span><span class="ident">poly</span>, <span class="kw-2">&amp;mut</span> <span class="ident">transcript</span>).<span class="ident">expect</span>(<span class="string">&quot;fail to prove&quot;</span>);
-        <span class="macro">assert_eq!</span>(<span class="ident">PolyIOP::extract_sum</span>(<span class="kw-2">&amp;</span><span class="ident">proof</span>), <span class="ident">asserted_sum</span>);
+        <span class="kw">let</span> <span class="ident">proof</span> <span class="op">=</span> <span class="op">&lt;</span><span class="ident">PolyIOP</span><span class="op">&lt;</span><span class="ident">Fr</span><span class="op">&gt;</span> <span class="kw">as</span> <span class="ident">SumCheck</span><span class="op">&lt;</span><span class="ident">Fr</span><span class="op">&gt;</span><span class="op">&gt;</span><span class="ident">::prove</span>(<span class="kw-2">&amp;</span><span class="ident">poly</span>, <span class="kw-2">&amp;mut</span> <span class="ident">transcript</span>)<span class="question-mark">?</span>;
+        <span class="macro">assert_eq!</span>(
+            <span class="op">&lt;</span><span class="ident">PolyIOP</span><span class="op">&lt;</span><span class="ident">Fr</span><span class="op">&gt;</span> <span class="kw">as</span> <span class="ident">SumCheck</span><span class="op">&lt;</span><span class="ident">Fr</span><span class="op">&gt;</span><span class="op">&gt;</span><span class="ident">::extract_sum</span>(<span class="kw-2">&amp;</span><span class="ident">proof</span>),
+            <span class="ident">asserted_sum</span>
+        );
+        <span class="prelude-val">Ok</span>(())
     }
 
     <span class="attribute">#[<span class="ident">test</span>]</span>
     <span class="doccomment">/// Test that the memory usage of shared-reference is linear to number of</span>
     <span class="doccomment">/// unique MLExtensions instead of total number of multiplicands.</span>
-    <span class="kw">fn</span> <span class="ident">test_shared_reference</span>() {
+    <span class="kw">fn</span> <span class="ident">test_shared_reference</span>() -&gt; <span class="prelude-ty">Result</span><span class="op">&lt;</span>(), <span class="ident">PolyIOPErrors</span><span class="op">&gt;</span> {
         <span class="kw">let</span> <span class="kw-2">mut</span> <span class="ident">rng</span> <span class="op">=</span> <span class="ident">test_rng</span>();
         <span class="kw">let</span> <span class="ident">ml_extensions</span>: <span class="ident">Vec</span><span class="op">&lt;</span><span class="kw">_</span><span class="op">&gt;</span> <span class="op">=</span> (<span class="number">0</span>..<span class="number">5</span>)
             .<span class="ident">map</span>(<span class="op">|</span><span class="kw">_</span><span class="op">|</span> <span class="ident">Rc::new</span>(<span class="ident">DenseMultilinearExtension</span>::<span class="op">&lt;</span><span class="ident">Fr</span><span class="op">&gt;</span><span class="ident">::rand</span>(<span class="number">8</span>, <span class="kw-2">&amp;mut</span> <span class="ident">rng</span>)))
             .<span class="ident">collect</span>();
         <span class="kw">let</span> <span class="kw-2">mut</span> <span class="ident">poly</span> <span class="op">=</span> <span class="ident">VirtualPolynomial::new</span>(<span class="number">8</span>);
-        <span class="ident">poly</span>.<span class="ident">add_product</span>(
+        <span class="ident">poly</span>.<span class="ident">add_mle_list</span>(
             <span class="macro">vec!</span>[
                 <span class="ident">ml_extensions</span>[<span class="number">2</span>].<span class="ident">clone</span>(),
                 <span class="ident">ml_extensions</span>[<span class="number">3</span>].<span class="ident">clone</span>(),
                 <span class="ident">ml_extensions</span>[<span class="number">0</span>].<span class="ident">clone</span>(),
             ],
             <span class="ident">Fr::rand</span>(<span class="kw-2">&amp;mut</span> <span class="ident">rng</span>),
-        )
-        .<span class="ident">unwrap</span>();
-        <span class="ident">poly</span>.<span class="ident">add_product</span>(
+        )<span class="question-mark">?</span>;
+        <span class="ident">poly</span>.<span class="ident">add_mle_list</span>(
             <span class="macro">vec!</span>[
                 <span class="ident">ml_extensions</span>[<span class="number">1</span>].<span class="ident">clone</span>(),
                 <span class="ident">ml_extensions</span>[<span class="number">4</span>].<span class="ident">clone</span>(),
                 <span class="ident">ml_extensions</span>[<span class="number">4</span>].<span class="ident">clone</span>(),
             ],
             <span class="ident">Fr::rand</span>(<span class="kw-2">&amp;mut</span> <span class="ident">rng</span>),
-        )
-        .<span class="ident">unwrap</span>();
-        <span class="ident">poly</span>.<span class="ident">add_product</span>(
+        )<span class="question-mark">?</span>;
+        <span class="ident">poly</span>.<span class="ident">add_mle_list</span>(
             <span class="macro">vec!</span>[
                 <span class="ident">ml_extensions</span>[<span class="number">3</span>].<span class="ident">clone</span>(),
                 <span class="ident">ml_extensions</span>[<span class="number">2</span>].<span class="ident">clone</span>(),
                 <span class="ident">ml_extensions</span>[<span class="number">1</span>].<span class="ident">clone</span>(),
             ],
             <span class="ident">Fr::rand</span>(<span class="kw-2">&amp;mut</span> <span class="ident">rng</span>),
-        )
-        .<span class="ident">unwrap</span>();
-        <span class="ident">poly</span>.<span class="ident">add_product</span>(
+        )<span class="question-mark">?</span>;
+        <span class="ident">poly</span>.<span class="ident">add_mle_list</span>(
             <span class="macro">vec!</span>[<span class="ident">ml_extensions</span>[<span class="number">0</span>].<span class="ident">clone</span>(), <span class="ident">ml_extensions</span>[<span class="number">0</span>].<span class="ident">clone</span>()],
             <span class="ident">Fr::rand</span>(<span class="kw-2">&amp;mut</span> <span class="ident">rng</span>),
-        )
-        .<span class="ident">unwrap</span>();
-        <span class="ident">poly</span>.<span class="ident">add_product</span>(<span class="macro">vec!</span>[<span class="ident">ml_extensions</span>[<span class="number">4</span>].<span class="ident">clone</span>()], <span class="ident">Fr::rand</span>(<span class="kw-2">&amp;mut</span> <span class="ident">rng</span>))
-            .<span class="ident">unwrap</span>();
+        )<span class="question-mark">?</span>;
+        <span class="ident">poly</span>.<span class="ident">add_mle_list</span>(<span class="macro">vec!</span>[<span class="ident">ml_extensions</span>[<span class="number">4</span>].<span class="ident">clone</span>()], <span class="ident">Fr::rand</span>(<span class="kw-2">&amp;mut</span> <span class="ident">rng</span>))<span class="question-mark">?</span>;
 
         <span class="macro">assert_eq!</span>(<span class="ident">poly</span>.<span class="ident">flattened_ml_extensions</span>.<span class="ident">len</span>(), <span class="number">5</span>);
 
         <span class="comment">// test memory usage for prover</span>
-        <span class="kw">let</span> <span class="ident">prover</span> <span class="op">=</span> <span class="ident">ProverState::prover_init</span>(<span class="kw-2">&amp;</span><span class="ident">poly</span>).<span class="ident">unwrap</span>();
+        <span class="kw">let</span> <span class="ident">prover</span> <span class="op">=</span> <span class="ident">IOPProverState::prover_init</span>(<span class="kw-2">&amp;</span><span class="ident">poly</span>).<span class="ident">unwrap</span>();
         <span class="macro">assert_eq!</span>(<span class="ident">prover</span>.<span class="ident">poly</span>.<span class="ident">flattened_ml_extensions</span>.<span class="ident">len</span>(), <span class="number">5</span>);
         <span class="ident">drop</span>(<span class="ident">prover</span>);
 
-        <span class="kw">let</span> <span class="kw-2">mut</span> <span class="ident">transcript</span> <span class="op">=</span> <span class="ident">PolyIOP::init_transcript</span>();
+        <span class="kw">let</span> <span class="kw-2">mut</span> <span class="ident">transcript</span> <span class="op">=</span> <span class="op">&lt;</span><span class="ident">PolyIOP</span><span class="op">&lt;</span><span class="ident">Fr</span><span class="op">&gt;</span> <span class="kw">as</span> <span class="ident">SumCheck</span><span class="op">&lt;</span><span class="ident">Fr</span><span class="op">&gt;</span><span class="op">&gt;</span><span class="ident">::init_transcript</span>();
         <span class="kw">let</span> <span class="ident">poly_info</span> <span class="op">=</span> <span class="ident">poly</span>.<span class="ident">domain_info</span>.<span class="ident">clone</span>();
-        <span class="kw">let</span> <span class="ident">proof</span> <span class="op">=</span> <span class="ident">PolyIOP::prove</span>(<span class="kw-2">&amp;</span><span class="ident">poly</span>, <span class="kw-2">&amp;mut</span> <span class="ident">transcript</span>).<span class="ident">expect</span>(<span class="string">&quot;fail to prove&quot;</span>);
-        <span class="kw">let</span> <span class="ident">asserted_sum</span> <span class="op">=</span> <span class="ident">PolyIOP::extract_sum</span>(<span class="kw-2">&amp;</span><span class="ident">proof</span>);
+        <span class="kw">let</span> <span class="ident">proof</span> <span class="op">=</span> <span class="op">&lt;</span><span class="ident">PolyIOP</span><span class="op">&lt;</span><span class="ident">Fr</span><span class="op">&gt;</span> <span class="kw">as</span> <span class="ident">SumCheck</span><span class="op">&lt;</span><span class="ident">Fr</span><span class="op">&gt;</span><span class="op">&gt;</span><span class="ident">::prove</span>(<span class="kw-2">&amp;</span><span class="ident">poly</span>, <span class="kw-2">&amp;mut</span> <span class="ident">transcript</span>)<span class="question-mark">?</span>;
+        <span class="kw">let</span> <span class="ident">asserted_sum</span> <span class="op">=</span> <span class="op">&lt;</span><span class="ident">PolyIOP</span><span class="op">&lt;</span><span class="ident">Fr</span><span class="op">&gt;</span> <span class="kw">as</span> <span class="ident">SumCheck</span><span class="op">&lt;</span><span class="ident">Fr</span><span class="op">&gt;</span><span class="op">&gt;</span><span class="ident">::extract_sum</span>(<span class="kw-2">&amp;</span><span class="ident">proof</span>);
 
-        <span class="kw">let</span> <span class="kw-2">mut</span> <span class="ident">transcript</span> <span class="op">=</span> <span class="ident">PolyIOP::init_transcript</span>();
-        <span class="kw">let</span> <span class="ident">subclaim</span> <span class="op">=</span> <span class="ident">PolyIOP::verify</span>(<span class="ident">asserted_sum</span>, <span class="kw-2">&amp;</span><span class="ident">proof</span>, <span class="kw-2">&amp;</span><span class="ident">poly_info</span>, <span class="kw-2">&amp;mut</span> <span class="ident">transcript</span>)
-            .<span class="ident">expect</span>(<span class="string">&quot;fail to verify&quot;</span>);
+        <span class="kw">let</span> <span class="kw-2">mut</span> <span class="ident">transcript</span> <span class="op">=</span> <span class="op">&lt;</span><span class="ident">PolyIOP</span><span class="op">&lt;</span><span class="ident">Fr</span><span class="op">&gt;</span> <span class="kw">as</span> <span class="ident">SumCheck</span><span class="op">&lt;</span><span class="ident">Fr</span><span class="op">&gt;</span><span class="op">&gt;</span><span class="ident">::init_transcript</span>();
+        <span class="kw">let</span> <span class="ident">subclaim</span> <span class="op">=</span> <span class="op">&lt;</span><span class="ident">PolyIOP</span><span class="op">&lt;</span><span class="ident">Fr</span><span class="op">&gt;</span> <span class="kw">as</span> <span class="ident">SumCheck</span><span class="op">&lt;</span><span class="ident">Fr</span><span class="op">&gt;</span><span class="op">&gt;</span><span class="ident">::verify</span>(
+            <span class="ident">asserted_sum</span>,
+            <span class="kw-2">&amp;</span><span class="ident">proof</span>,
+            <span class="kw-2">&amp;</span><span class="ident">poly_info</span>,
+            <span class="kw-2">&amp;mut</span> <span class="ident">transcript</span>,
+        )<span class="question-mark">?</span>;
         <span class="macro">assert!</span>(
-            <span class="ident">poly</span>.<span class="ident">evaluate</span>(<span class="kw-2">&amp;</span><span class="ident">subclaim</span>.<span class="ident">point</span>).<span class="ident">unwrap</span>() <span class="op">==</span> <span class="ident">subclaim</span>.<span class="ident">expected_evaluation</span>,
+            <span class="ident">poly</span>.<span class="ident">evaluate</span>(<span class="kw-2">&amp;</span><span class="ident">subclaim</span>.<span class="ident">point</span>)<span class="question-mark">?</span> <span class="op">==</span> <span class="ident">subclaim</span>.<span class="ident">expected_evaluation</span>,
             <span class="string">&quot;wrong subclaim&quot;</span>
         );
+        <span class="prelude-val">Ok</span>(())
     }
 }
 </code></pre></div>
