@@ -98,7 +98,7 @@ impl<F: PrimeField> ZeroCheck<F> for PolyIOP<F> {
             )));
         }
 
-        // check the correctness of r (To be completed)
+        // generate `r` and pass it to the caller for correctness check
         let length = fx_domain_info.num_variables;
         let r = transcript.get_and_append_challenge_vectors(b"vector r", length)?;
 
@@ -172,7 +172,6 @@ fn build_eq_x_r<F: PrimeField>(r: &[F]) -> Rc<DenseMultilinearExtension<F>> {
     }
     let mle = DenseMultilinearExtension::from_evaluations_vec(num_var, eval);
 
-    // println!("eq(x,r): {:?}, {}", mle, mle.evaluate(r).unwrap());
     let res = Rc::new(mle);
     end_timer!(start);
     res
@@ -224,7 +223,7 @@ mod test {
         }
 
         {
-            // bad path: random virtual poly
+            // bad path: random virtual poly whose sum is not zero
             let (poly, _sum) =
                 VirtualPolynomial::rand(nv, num_multiplicands_range, num_products, &mut rng)?;
 

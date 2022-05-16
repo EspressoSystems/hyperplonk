@@ -279,38 +279,32 @@ fn random_mle_list<F: PrimeField, R: RngCore>(
     (list, sum)
 }
 
-// TODO: build randomized zero mle.
+// Build a randomize list of mle-s whose sum is zero.
 pub fn random_zero_mle_list<F: PrimeField, R: RngCore>(
     nv: usize,
     degree: usize,
-    _rng: &mut R,
+    rng: &mut R,
 ) -> Vec<Rc<DenseMultilinearExtension<F>>> {
+    let start = start_timer!("sample random zero mle list");
+
     let mut multiplicands = Vec::with_capacity(degree);
     for _ in 0..degree {
         multiplicands.push(Vec::with_capacity(1 << nv))
     }
-    let mut sum = F::zero();
-
     for _ in 0..(1 << nv) {
-        let mut product = F::one();
-        for e in multiplicands.iter_mut() {
-            let val = F::zero(); // F::rand(rng);
-            e.push(val);
-            product *= val;
+        multiplicands[0].push(F::zero());
+        for e in multiplicands.iter_mut().skip(1) {
+            e.push(F::rand(rng));
         }
-        sum += product;
     }
 
-    // // last nv offsets the poly to 0
-    // for i in 0..num_multiplicands - 1 {
-    //     multiplicands[i].push(F::one());
-    // }
-    // multiplicands[num_multiplicands - 1].push(-sum);
-
-    multiplicands
+    let list = multiplicands
         .into_iter()
         .map(|x| Rc::new(DenseMultilinearExtension::from_evaluations_vec(nv, x)))
-        .collect()
+        .collect();
+
+    end_timer!(start);
+    list
 }
 
 #[cfg(test)]
