@@ -1,8 +1,5 @@
-#![allow(dead_code)]
-
-use std::marker::PhantomData;
-
 use ark_ff::PrimeField;
+use std::marker::PhantomData;
 
 mod errors;
 mod structs;

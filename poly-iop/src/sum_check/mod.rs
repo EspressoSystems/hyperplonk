@@ -34,16 +34,15 @@ pub trait SumCheck<F: PrimeField> {
     /// SumCheck prover/verifier.
     fn init_transcript() -> Self::Transcript;
 
-    /// generate proof of the sum of polynomial over {0,1}^`num_vars`
+    /// Generate proof of the sum of polynomial over {0,1}^`num_vars`
     ///
-    /// The polynomial is represented by a list of products of polynomials along
-    /// with its coefficient that is meant to be added together.
+    /// The polynomial is represented in the form of a VirtualPolynomial.
     fn prove(
         poly: &Self::PolyList,
         transcript: &mut Self::Transcript,
     ) -> Result<Self::Proof, PolyIOPErrors>;
 
-    /// verify the claimed sum using the proof
+    /// Verify the claimed sum using the proof
     fn verify(
         sum: F,
         proof: &Self::Proof,
@@ -142,21 +141,9 @@ impl<F: PrimeField> SumCheck<F> for PolyIOP<F> {
         res
     }
 
-    /// generate proof of the sum of polynomial over {0,1}^`num_vars`
+    /// Generate proof of the sum of polynomial over {0,1}^`num_vars`
     ///
-    /// The polynomial is represented by a list of products of polynomials along
-    /// with its coefficient that is meant to be added together.
-    ///
-    /// This data structure of the polynomial is a list of list of
-    /// `(coefficient, DenseMultilinearExtension)`.
-    /// * Number of products n = `polynomial.products.len()`,
-    /// * Number of multiplicands of ith product m_i =
-    ///   `polynomial.products[i].1.len()`,
-    /// * Coefficient of ith product c_i = `polynomial.products[i].0`
-    ///
-    /// The resulting polynomial is
-    ///
-    /// $$\sum_{i=0}^{n}C_i\cdot\prod_{j=0}^{m_i}P_{ij}$$
+    /// The polynomial is represented in the form of a VirtualPolynomial.
     fn prove(
         poly: &Self::PolyList,
         transcript: &mut Self::Transcript,

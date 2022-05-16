@@ -161,7 +161,7 @@ impl<F: PrimeField> SumCheckVerifier<F> for IOPVerifierState<F> {
     }
 }
 
-/// interpolate a uni-variate degree-`p_i.len()-1` polynomial and evaluate this
+/// Interpolate a uni-variate degree-`p_i.len()-1` polynomial and evaluate this
 /// polynomial at `eval_at`.
 pub(crate) fn interpolate_uni_poly<F: PrimeField>(p_i: &[F], eval_at: F) -> F {
     let start = start_timer!(|| "sum check interpolate uni poly");

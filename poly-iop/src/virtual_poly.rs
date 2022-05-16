@@ -199,7 +199,7 @@ impl<F: PrimeField> VirtualPolynomial<F> {
     }
 
     /// Sample a random virtual polynomial, return the polynomial and its sum.
-    pub(crate) fn rand<R: RngCore>(
+    pub fn rand<R: RngCore>(
         nv: usize,
         num_multiplicands_range: (usize, usize),
         num_products: usize,
@@ -224,7 +224,7 @@ impl<F: PrimeField> VirtualPolynomial<F> {
 
     /// Sample a random virtual polynomial that evaluates to zero everywhere on
     /// the boolean hypercube.
-    pub(crate) fn rand_zero<R: RngCore>(
+    pub fn rand_zero<R: RngCore>(
         nv: usize,
         num_multiplicands_range: (usize, usize),
         num_products: usize,

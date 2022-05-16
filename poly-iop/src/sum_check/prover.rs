@@ -18,7 +18,7 @@ impl<F: PrimeField> SumCheckProver<F> for IOPProverState<F> {
     type PolyList = VirtualPolynomial<F>;
     type ProverMessage = IOPProverMessage<F>;
 
-    /// initialize the prover to argue for the sum of polynomial over
+    /// Initialize the prover to argue for the sum of polynomial over
     /// {0,1}^`num_vars`
     fn prover_init(polynomial: &Self::PolyList) -> Result<Self, PolyIOPErrors> {
         let start = start_timer!(|| "sum check prover init");
@@ -36,7 +36,7 @@ impl<F: PrimeField> SumCheckProver<F> for IOPProverState<F> {
         })
     }
 
-    /// receive message from verifier, generate prover message, and proceed to
+    /// Receive message from verifier, generate prover message, and proceed to
     /// next round
     ///
     /// Main algorithm used is from section 3.2 of [XZZPS19](https://eprint.iacr.org/2019/317.pdf#subsection.3.2).
