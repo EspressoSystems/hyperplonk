@@ -20,20 +20,6 @@ impl<F: PrimeField> SumCheckProver<F> for IOPProverState<F> {
 
     /// initialize the prover to argue for the sum of polynomial over
     /// {0,1}^`num_vars`
-    ///
-    /// The polynomial is represented by a list of products of polynomials along
-    /// with its coefficient that is meant to be added together.
-    ///
-    /// This data structure of the polynomial is a list of list of
-    /// `(coefficient, DenseMultilinearExtension)`.
-    /// * Number of products n = `polynomial.products.len()`,
-    /// * Number of multiplicands of ith product m_i =
-    ///   `polynomial.products[i].1.len()`,
-    /// * Coefficient of ith product c_i = `polynomial.products[i].0`
-    ///
-    /// The resulting polynomial is
-    ///
-    /// $$\sum_{i=0}^{n}C_i\cdot\prod_{j=0}^{m_i}P_{ij}$$
     fn prover_init(polynomial: &Self::PolyList) -> Result<Self, PolyIOPErrors> {
         let start = start_timer!(|| "sum check prover init");
         if polynomial.domain_info.num_variables == 0 {

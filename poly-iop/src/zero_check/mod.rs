@@ -27,6 +27,8 @@ pub trait ZeroCheck<F: PrimeField> {
     /// ZeroCheck prover/verifier.
     fn init_transcript() -> Self::Transcript;
 
+    /// initialize the prover to argue for the sum of polynomial over
+    /// {0,1}^`num_vars` is zero.
     fn prove(
         poly: &Self::PolyList,
         transcript: &mut Self::Transcript,
@@ -44,7 +46,11 @@ impl<F: PrimeField> ZeroCheck<F> for PolyIOP<F> {
     type Proof = IOPProof<F>;
     type PolyList = VirtualPolynomial<F>;
     type DomainInfo = DomainInfo<F>;
-    type SubClaim = SubClaim<F>;
+
+    /// A ZeroCheck SubClaim consists of
+    /// - the SubClaim from the ZeroCheck
+    /// - the initial challenge r which is used to build eq(x, r)
+    type SubClaim = (SubClaim<F>, Vec<F>);
     type Transcript = IOPTranscript<F>;
 
     /// Initialize the system with a transcript
@@ -57,39 +63,53 @@ impl<F: PrimeField> ZeroCheck<F> for PolyIOP<F> {
         IOPTranscript::<F>::new(b"Initializing ZeroCheck transcript")
     }
 
+    /// initialize the prover to argue for the sum of polynomial over
+    /// {0,1}^`num_vars` is zero.
     fn prove(
         poly: &Self::PolyList,
         transcript: &mut Self::Transcript,
     ) -> Result<Self::Proof, PolyIOPErrors> {
         let start = start_timer!(|| "zero check prove");
+
         let length = poly.domain_info.num_variables;
         let r = transcript.get_and_append_challenge_vectors(b"vector r", length)?;
         let f_hat = build_f_hat(poly, r.as_ref())?;
         let res = <Self as SumCheck<F>>::prove(&f_hat, transcript);
+
         end_timer!(start);
         res
     }
 
     /// Verify the claimed sum using the proof.
-    /// Caller needs to makes sure that `\hat f = f * eq(x, r)`
+    /// the initial challenge `r` is also returned.
+    /// The caller needs to makes sure that `\hat f = f * eq(x, r)`
     fn verify(
         proof: &Self::Proof,
         fx_domain_info: &Self::DomainInfo,
         transcript: &mut Self::Transcript,
     ) -> Result<Self::SubClaim, PolyIOPErrors> {
         let start = start_timer!(|| "zero check verify");
-        println!(
-            "sum: {}",
-            proof.proofs[0].evaluations[0] + proof.proofs[0].evaluations[1]
-        );
 
-        // hat_fx's max degree is increased by #variables
+        // check that the sum is zero
+        if proof.proofs[0].evaluations[0] + proof.proofs[0].evaluations[1] != F::zero() {
+            return Err(PolyIOPErrors::InvalidProof(format!(
+                "zero check: sum {} is not zero",
+                proof.proofs[0].evaluations[0] + proof.proofs[0].evaluations[1]
+            )));
+        }
+
+        // check the correctness of r (To be completed)
+        let length = fx_domain_info.num_variables;
+        let r = transcript.get_and_append_challenge_vectors(b"vector r", length)?;
+
+        // hat_fx's max degree is increased by eq(x, r).degree() which is 1
         let mut hat_fx_domain_info = fx_domain_info.clone();
-        hat_fx_domain_info.max_degree += hat_fx_domain_info.num_variables;
-        let res = <Self as SumCheck<F>>::verify(F::zero(), proof, &hat_fx_domain_info, transcript);
+        hat_fx_domain_info.max_degree += 1;
+        let subclaim =
+            <Self as SumCheck<F>>::verify(F::zero(), proof, &hat_fx_domain_info, transcript)?;
 
         end_timer!(start);
-        res
+        Ok((subclaim, r))
     }
 }
 
@@ -107,7 +127,7 @@ fn build_f_hat<F: PrimeField>(
 
     let eq_x_r = build_eq_x_r(r);
     let mut res = poly.clone();
-    res.mul_by_mle(eq_x_r, F::one(), r.len())?;
+    res.mul_by_mle(eq_x_r, F::one())?;
 
     end_timer!(start);
     Ok(res)
@@ -182,25 +202,46 @@ mod test {
         num_products: usize,
     ) -> Result<(), PolyIOPErrors> {
         let mut rng = test_rng();
-        let mut transcript = <PolyIOP<Fr> as ZeroCheck<Fr>>::init_transcript();
-        transcript.append_message(b"testing", b"initializing transcript for testing")?;
-        let poly =
-            VirtualPolynomial::rand_zero(nv, num_multiplicands_range, num_products, &mut rng)?;
 
-        let proof = <PolyIOP<Fr> as ZeroCheck<Fr>>::prove(&poly, &mut transcript)?;
-        println!(
-            "{}",
-            proof.proofs[0].evaluations[0] + proof.proofs[0].evaluations[1]
-        );
+        {
+            // good path: zero virtual poly
+            let poly =
+                VirtualPolynomial::rand_zero(nv, num_multiplicands_range, num_products, &mut rng)?;
 
-        let poly_info = poly.domain_info.clone();
-        let mut transcript = <PolyIOP<Fr> as ZeroCheck<Fr>>::init_transcript();
-        transcript.append_message(b"testing", b"initializing transcript for testing")?;
-        let subclaim = <PolyIOP<Fr> as ZeroCheck<Fr>>::verify(&proof, &poly_info, &mut transcript)?;
-        assert!(
-            poly.evaluate(&subclaim.point)? == subclaim.expected_evaluation,
-            "wrong subclaim"
-        );
+            let mut transcript = <PolyIOP<Fr> as ZeroCheck<Fr>>::init_transcript();
+            transcript.append_message(b"testing", b"initializing transcript for testing")?;
+            let proof = <PolyIOP<Fr> as ZeroCheck<Fr>>::prove(&poly, &mut transcript)?;
+
+            let poly_info = poly.domain_info.clone();
+            let mut transcript = <PolyIOP<Fr> as ZeroCheck<Fr>>::init_transcript();
+            transcript.append_message(b"testing", b"initializing transcript for testing")?;
+            let subclaim =
+                <PolyIOP<Fr> as ZeroCheck<Fr>>::verify(&proof, &poly_info, &mut transcript)?.0;
+            assert!(
+                poly.evaluate(&subclaim.point)? == subclaim.expected_evaluation,
+                "wrong subclaim"
+            );
+        }
+
+        {
+            // bad path: random virtual poly
+            let (poly, _sum) =
+                VirtualPolynomial::rand(nv, num_multiplicands_range, num_products, &mut rng)?;
+
+            let mut transcript = <PolyIOP<Fr> as ZeroCheck<Fr>>::init_transcript();
+            transcript.append_message(b"testing", b"initializing transcript for testing")?;
+            let proof = <PolyIOP<Fr> as ZeroCheck<Fr>>::prove(&poly, &mut transcript)?;
+
+            let poly_info = poly.domain_info.clone();
+            let mut transcript = <PolyIOP<Fr> as ZeroCheck<Fr>>::init_transcript();
+            transcript.append_message(b"testing", b"initializing transcript for testing")?;
+
+            assert!(
+                <PolyIOP<Fr> as ZeroCheck<Fr>>::verify(&proof, &poly_info, &mut transcript)
+                    .is_err()
+            );
+        }
+
         Ok(())
     }
 
