@@ -1,49 +1,27 @@
 //! Prover
-use std::rc::Rc;
 
-// TODO: some of the struct is generic for Sum Checks and Zero Checks.
-// If so move them to src/structs.rs
 use super::SumCheckProver;
-use crate::{errors::PolyIOPErrors, structs::IOPProverMessage, virtual_poly::VirtualPolynomial};
+use crate::{
+    errors::PolyIOPErrors,
+    structs::{IOPProverMessage, IOPProverState},
+    virtual_poly::VirtualPolynomial,
+};
 use ark_ff::PrimeField;
 use ark_poly::{DenseMultilinearExtension, MultilinearExtension};
 use ark_std::{end_timer, start_timer, vec::Vec};
+use std::rc::Rc;
 
 #[cfg(feature = "parallel")]
 use rayon::iter::{IndexedParallelIterator, IntoParallelRefMutIterator, ParallelIterator};
 
-/// Prover State
-pub struct ProverState<F: PrimeField> {
-    /// sampled randomness given by the verifier
-    pub challenges: Vec<F>,
-    /// the current round number
-    pub(crate) round: usize,
-    /// pointer to the virtual polynomial
-    pub(crate) poly: VirtualPolynomial<F>,
-}
-
-impl<F: PrimeField> SumCheckProver<F> for ProverState<F> {
+impl<F: PrimeField> SumCheckProver<F> for IOPProverState<F> {
     type PolyList = VirtualPolynomial<F>;
     type ProverMessage = IOPProverMessage<F>;
 
-    /// initialize the prover to argue for the sum of polynomial over
+    /// Initialize the prover to argue for the sum of polynomial over
     /// {0,1}^`num_vars`
-    ///
-    /// The polynomial is represented by a list of products of polynomials along
-    /// with its coefficient that is meant to be added together.
-    ///
-    /// This data structure of the polynomial is a list of list of
-    /// `(coefficient, DenseMultilinearExtension)`.
-    /// * Number of products n = `polynomial.products.len()`,
-    /// * Number of multiplicands of ith product m_i =
-    ///   `polynomial.products[i].1.len()`,
-    /// * Coefficient of ith product c_i = `polynomial.products[i].0`
-    ///
-    /// The resulting polynomial is
-    ///
-    /// $$\sum_{i=0}^{n}C_i\cdot\prod_{j=0}^{m_i}P_{ij}$$
     fn prover_init(polynomial: &Self::PolyList) -> Result<Self, PolyIOPErrors> {
-        let start = start_timer!(|| "prover init");
+        let start = start_timer!(|| "sum check prover init");
         if polynomial.domain_info.num_variables == 0 {
             return Err(PolyIOPErrors::InvalidParameters(
                 "Attempt to prove a constant.".to_string(),
@@ -51,14 +29,14 @@ impl<F: PrimeField> SumCheckProver<F> for ProverState<F> {
         }
         end_timer!(start);
 
-        Ok(ProverState {
+        Ok(Self {
             challenges: Vec::with_capacity(polynomial.domain_info.num_variables),
             round: 0,
             poly: polynomial.clone(),
         })
     }
 
-    /// receive message from verifier, generate prover message, and proceed to
+    /// Receive message from verifier, generate prover message, and proceed to
     /// next round
     ///
     /// Main algorithm used is from section 3.2 of [XZZPS19](https://eprint.iacr.org/2019/317.pdf#subsection.3.2).
@@ -66,7 +44,8 @@ impl<F: PrimeField> SumCheckProver<F> for ProverState<F> {
         &mut self,
         challenge: &Option<F>,
     ) -> Result<Self::ProverMessage, PolyIOPErrors> {
-        let start = start_timer!(|| format!("prove {}-th round and update state", self.round));
+        let start =
+            start_timer!(|| format!("sum check prove {}-th round and update state", self.round));
 
         let fix_argument = start_timer!(|| "fix argument");
 

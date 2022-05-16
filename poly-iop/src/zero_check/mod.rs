@@ -1,11 +1,7 @@
-mod prover;
-mod verifier;
-
 use ark_ff::PrimeField;
 use ark_poly::DenseMultilinearExtension;
-pub use prover::ProverState;
+use ark_std::{end_timer, start_timer};
 use std::rc::Rc;
-pub use verifier::VerifierState;
 
 use crate::{
     errors::PolyIOPErrors,
@@ -31,6 +27,8 @@ pub trait ZeroCheck<F: PrimeField> {
     /// ZeroCheck prover/verifier.
     fn init_transcript() -> Self::Transcript;
 
+    /// initialize the prover to argue for the sum of polynomial over
+    /// {0,1}^`num_vars` is zero.
     fn prove(
         poly: &Self::PolyList,
         transcript: &mut Self::Transcript,
@@ -48,7 +46,11 @@ impl<F: PrimeField> ZeroCheck<F> for PolyIOP<F> {
     type Proof = IOPProof<F>;
     type PolyList = VirtualPolynomial<F>;
     type DomainInfo = DomainInfo<F>;
-    type SubClaim = SubClaim<F>;
+
+    /// A ZeroCheck SubClaim consists of
+    /// - the SubClaim from the ZeroCheck
+    /// - the initial challenge r which is used to build eq(x, r)
+    type SubClaim = (SubClaim<F>, Vec<F>);
     type Transcript = IOPTranscript<F>;
 
     /// Initialize the system with a transcript
@@ -61,29 +63,53 @@ impl<F: PrimeField> ZeroCheck<F> for PolyIOP<F> {
         IOPTranscript::<F>::new(b"Initializing ZeroCheck transcript")
     }
 
+    /// initialize the prover to argue for the sum of polynomial over
+    /// {0,1}^`num_vars` is zero.
     fn prove(
         poly: &Self::PolyList,
         transcript: &mut Self::Transcript,
     ) -> Result<Self::Proof, PolyIOPErrors> {
+        let start = start_timer!(|| "zero check prove");
+
         let length = poly.domain_info.num_variables;
         let r = transcript.get_and_append_challenge_vectors(b"vector r", length)?;
-        let f_hat = build_f_hat(poly, r.as_ref());
-        <Self as SumCheck<F>>::prove(&f_hat, transcript)
+        let f_hat = build_f_hat(poly, r.as_ref())?;
+        let res = <Self as SumCheck<F>>::prove(&f_hat, transcript);
+
+        end_timer!(start);
+        res
     }
 
     /// Verify the claimed sum using the proof.
-    /// Caller needs to makes sure that `\hat f = f * eq(x, r)`
+    /// the initial challenge `r` is also returned.
+    /// The caller needs to makes sure that `\hat f = f * eq(x, r)`
     fn verify(
         proof: &Self::Proof,
-        domain_info: &Self::DomainInfo,
+        fx_domain_info: &Self::DomainInfo,
         transcript: &mut Self::Transcript,
     ) -> Result<Self::SubClaim, PolyIOPErrors> {
-        println!(
-            "sum: {}",
-            proof.proofs[0].evaluations[0] + proof.proofs[0].evaluations[1]
-        );
+        let start = start_timer!(|| "zero check verify");
 
-        <Self as SumCheck<F>>::verify(F::zero(), proof, domain_info, transcript)
+        // check that the sum is zero
+        if proof.proofs[0].evaluations[0] + proof.proofs[0].evaluations[1] != F::zero() {
+            return Err(PolyIOPErrors::InvalidProof(format!(
+                "zero check: sum {} is not zero",
+                proof.proofs[0].evaluations[0] + proof.proofs[0].evaluations[1]
+            )));
+        }
+
+        // generate `r` and pass it to the caller for correctness check
+        let length = fx_domain_info.num_variables;
+        let r = transcript.get_and_append_challenge_vectors(b"vector r", length)?;
+
+        // hat_fx's max degree is increased by eq(x, r).degree() which is 1
+        let mut hat_fx_domain_info = fx_domain_info.clone();
+        hat_fx_domain_info.max_degree += 1;
+        let subclaim =
+            <Self as SumCheck<F>>::verify(F::zero(), proof, &hat_fx_domain_info, transcript)?;
+
+        end_timer!(start);
+        Ok((subclaim, r))
     }
 }
 
@@ -91,39 +117,20 @@ impl<F: PrimeField> ZeroCheck<F> for PolyIOP<F> {
 //      \hat f(x) = \sum_{x_i \in eval_x} f(x_i) eq(x, r)
 // where
 //      eq(x,y) = \prod_i=1^num_var (x_i * y_i + (1-x_i)*(1-y_i))
-fn build_f_hat<F: PrimeField>(poly: &VirtualPolynomial<F>, r: &[F]) -> VirtualPolynomial<F> {
+fn build_f_hat<F: PrimeField>(
+    poly: &VirtualPolynomial<F>,
+    r: &[F],
+) -> Result<VirtualPolynomial<F>, PolyIOPErrors> {
+    let start = start_timer!(|| "zero check build hat f");
+
     assert_eq!(poly.domain_info.num_variables, r.len());
-    let mut res = poly.clone();
+
     let eq_x_r = build_eq_x_r(r);
-    res.add_product([eq_x_r; 1], F::one());
-    // // First, we build array for {1 - r_i}
-    // let one_minus_r: Vec<F> = r.iter().map(|ri| F::one() - ri).collect();
+    let mut res = poly.clone();
+    res.mul_by_mle(eq_x_r, F::one())?;
 
-    // let mut eval = vec![];
-    // // let eq_x_r = build_eq_x_r(r);
-    // let num_var = r.len();
-    // let mut res = VirtualPolynomial::new(num_var);
-    // // res.add_product([eq_x_r; 1], F::one());
-
-    // for i in 0..1 << num_var {
-    //     let bit_sequence = bit_decompose(i, num_var);
-    //     let bit_points: Vec<F> = bit_sequence.iter().map(|&x| F::from(x as
-    // u64)).collect();     let mut eq_eval = F::one();
-    //     for (&bit, (ri, one_minus_ri)) in
-    // bit_sequence.iter().zip(r.iter().zip(one_minus_r.iter()))     {
-    //         if bit {
-    //             eq_eval *= ri;
-    //         } else {
-    //             eq_eval *= one_minus_ri;
-    //         }
-    //     }
-    //     eval.push(eq_eval * poly.evaluate(&bit_points))
-    // }
-    // let hat_f = Rc::new(DenseMultilinearExtension::from_evaluations_vec(
-    //     num_var, eval,
-    // ));
-    // res.add_product([hat_f; 1], F::one());
-    res
+    end_timer!(start);
+    Ok(res)
 }
 
 // Evaluate
@@ -131,6 +138,8 @@ fn build_f_hat<F: PrimeField>(poly: &VirtualPolynomial<F>, r: &[F]) -> VirtualPo
 // over r, which is
 //      eq(x,y) = \prod_i=1^num_var (x_i * r_i + (1-x_i)*(1-r_i))
 fn build_eq_x_r<F: PrimeField>(r: &[F]) -> Rc<DenseMultilinearExtension<F>> {
+    let start = start_timer!(|| "zero check build build eq_x_r");
+
     // we build eq(x,r) from its evaluations
     // we want to evaluate eq(x,r) over x \in {0, 1}^num_vars
     // for example, with num_vars = 4, x is a binary vector of 4, then
@@ -157,18 +166,14 @@ fn build_eq_x_r<F: PrimeField>(r: &[F]) -> Rc<DenseMultilinearExtension<F>> {
 
         for (&bit, (ri, one_minus_ri)) in bit_sequence.iter().zip(r.iter().zip(one_minus_r.iter()))
         {
-            if bit {
-                current_eval *= *ri;
-            } else {
-                current_eval *= *one_minus_ri;
-            }
+            current_eval *= if bit { *ri } else { *one_minus_ri };
         }
         eval.push(current_eval);
     }
-    let res = Rc::new(DenseMultilinearExtension::from_evaluations_vec(
-        num_var, eval,
-    ));
+    let mle = DenseMultilinearExtension::from_evaluations_vec(num_var, eval);
 
+    let res = Rc::new(mle);
+    end_timer!(start);
     res
 }
 
@@ -186,131 +191,83 @@ fn bit_decompose(input: u64, num_var: usize) -> Vec<bool> {
 mod test {
 
     use super::ZeroCheck;
-    use crate::{virtual_poly::test::random_zero_list_of_products, PolyIOP, VirtualPolynomial};
+    use crate::{errors::PolyIOPErrors, PolyIOP, VirtualPolynomial};
     use ark_bls12_381::Fr;
-    use ark_ff::UniformRand;
-    use ark_poly::{DenseMultilinearExtension, MultilinearExtension};
     use ark_std::test_rng;
-    use std::rc::Rc;
 
-    fn test_polynomial(nv: usize, num_multiplicands_range: (usize, usize), num_products: usize) {
+    fn test_zerocheck(
+        nv: usize,
+        num_multiplicands_range: (usize, usize),
+        num_products: usize,
+    ) -> Result<(), PolyIOPErrors> {
         let mut rng = test_rng();
-        let mut transcript = PolyIOP::init_transcript();
-        transcript
-            .append_message(b"testing", b"initializing transcript for testing")
-            .unwrap();
-        let poly = random_zero_list_of_products::<Fr, _>(
-            nv,
-            num_multiplicands_range,
-            num_products,
-            &mut rng,
-        );
-        // println!("{:?}", poly);
 
-        let proof = PolyIOP::prove(&poly, &mut transcript).expect("fail to prove");
-        println!(
-            "{}",
-            proof.proofs[0].evaluations[0] + proof.proofs[0].evaluations[1]
-        );
+        {
+            // good path: zero virtual poly
+            let poly =
+                VirtualPolynomial::rand_zero(nv, num_multiplicands_range, num_products, &mut rng)?;
 
-        let poly_info = poly.domain_info.clone();
-        let mut transcript = PolyIOP::init_transcript();
-        transcript
-            .append_message(b"testing", b"initializing transcript for testing")
-            .unwrap();
-        let subclaim =
-            PolyIOP::verify(&proof, &poly_info, &mut transcript).expect("fail to verify");
-        assert!(
-            poly.evaluate(&subclaim.point) == subclaim.expected_evaluation,
-            "wrong subclaim"
-        );
+            let mut transcript = <PolyIOP<Fr> as ZeroCheck<Fr>>::init_transcript();
+            transcript.append_message(b"testing", b"initializing transcript for testing")?;
+            let proof = <PolyIOP<Fr> as ZeroCheck<Fr>>::prove(&poly, &mut transcript)?;
+
+            let poly_info = poly.domain_info.clone();
+            let mut transcript = <PolyIOP<Fr> as ZeroCheck<Fr>>::init_transcript();
+            transcript.append_message(b"testing", b"initializing transcript for testing")?;
+            let subclaim =
+                <PolyIOP<Fr> as ZeroCheck<Fr>>::verify(&proof, &poly_info, &mut transcript)?.0;
+            assert!(
+                poly.evaluate(&subclaim.point)? == subclaim.expected_evaluation,
+                "wrong subclaim"
+            );
+        }
+
+        {
+            // bad path: random virtual poly whose sum is not zero
+            let (poly, _sum) =
+                VirtualPolynomial::rand(nv, num_multiplicands_range, num_products, &mut rng)?;
+
+            let mut transcript = <PolyIOP<Fr> as ZeroCheck<Fr>>::init_transcript();
+            transcript.append_message(b"testing", b"initializing transcript for testing")?;
+            let proof = <PolyIOP<Fr> as ZeroCheck<Fr>>::prove(&poly, &mut transcript)?;
+
+            let poly_info = poly.domain_info.clone();
+            let mut transcript = <PolyIOP<Fr> as ZeroCheck<Fr>>::init_transcript();
+            transcript.append_message(b"testing", b"initializing transcript for testing")?;
+
+            assert!(
+                <PolyIOP<Fr> as ZeroCheck<Fr>>::verify(&proof, &poly_info, &mut transcript)
+                    .is_err()
+            );
+        }
+
+        Ok(())
     }
 
     #[test]
-    fn test_trivial_polynomial() {
+    fn test_trivial_polynomial() -> Result<(), PolyIOPErrors> {
         let nv = 1;
         let num_multiplicands_range = (4, 5);
         let num_products = 1;
 
-        test_polynomial(nv, num_multiplicands_range, num_products);
+        test_zerocheck(nv, num_multiplicands_range, num_products)
     }
     #[test]
-    fn test_normal_polynomial() {
-        let nv = 16;
+    fn test_normal_polynomial() -> Result<(), PolyIOPErrors> {
+        let nv = 5;
         let num_multiplicands_range = (4, 9);
         let num_products = 5;
 
-        test_polynomial(nv, num_multiplicands_range, num_products);
+        test_zerocheck(nv, num_multiplicands_range, num_products)
     }
     #[test]
-    #[should_panic]
-    fn zero_polynomial_should_error() {
+
+    fn zero_polynomial_should_error() -> Result<(), PolyIOPErrors> {
         let nv = 0;
         let num_multiplicands_range = (4, 13);
         let num_products = 5;
 
-        test_polynomial(nv, num_multiplicands_range, num_products);
-    }
-
-    #[test]
-    /// Test that the memory usage of shared-reference is linear to number of
-    /// unique MLExtensions instead of total number of multiplicands.
-    fn test_shared_reference() {
-        let mut rng = test_rng();
-        let ml_extensions: Vec<_> = (0..5)
-            .map(|_| Rc::new(DenseMultilinearExtension::<Fr>::rand(8, &mut rng)))
-            .collect();
-        let mut poly = VirtualPolynomial::new(8);
-        poly.add_product(
-            vec![
-                ml_extensions[2].clone(),
-                ml_extensions[3].clone(),
-                ml_extensions[0].clone(),
-            ],
-            Fr::rand(&mut rng),
-        );
-        poly.add_product(
-            vec![
-                ml_extensions[1].clone(),
-                ml_extensions[4].clone(),
-                ml_extensions[4].clone(),
-            ],
-            Fr::rand(&mut rng),
-        );
-        poly.add_product(
-            vec![
-                ml_extensions[3].clone(),
-                ml_extensions[2].clone(),
-                ml_extensions[1].clone(),
-            ],
-            Fr::rand(&mut rng),
-        );
-        poly.add_product(
-            vec![ml_extensions[0].clone(), ml_extensions[0].clone()],
-            Fr::rand(&mut rng),
-        );
-        poly.add_product(vec![ml_extensions[4].clone()], Fr::rand(&mut rng));
-
-        assert_eq!(poly.flattened_ml_extensions.len(), 5);
-
-        let mut transcript = PolyIOP::init_transcript();
-
-        transcript
-            .append_message(b"testing", b"initializing transcript for testing")
-            .unwrap();
-        let poly_info = poly.domain_info.clone();
-        let proof = PolyIOP::prove(&poly, &mut transcript).expect("fail to prove");
-
-        let mut transcript = PolyIOP::init_transcript();
-
-        transcript
-            .append_message(b"testing", b"initializing transcript for testing")
-            .unwrap();
-        let subclaim =
-            PolyIOP::verify(&proof, &poly_info, &mut transcript).expect("fail to verify");
-        assert!(
-            poly.evaluate(&subclaim.point) == subclaim.expected_evaluation,
-            "wrong subclaim"
-        );
+        assert!(test_zerocheck(nv, num_multiplicands_range, num_products).is_err());
+        Ok(())
     }
 }
