@@ -9,7 +9,10 @@ mod utils;
 mod virtual_poly;
 mod zero_check;
 
+pub use errors::PolyIOPErrors;
+pub use sum_check::SumCheck;
 pub use virtual_poly::VirtualPolynomial;
+pub use zero_check::ZeroCheck;
 
 /// Struct for PolyIOP protocol.
 /// It is instantiated with

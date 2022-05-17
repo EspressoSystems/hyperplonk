@@ -27,7 +27,7 @@ impl<F: PrimeField> IOPTranscript<F> {
     }
 
     // append the message to the transcript
-    pub(crate) fn append_message(
+    pub fn append_message(
         &mut self,
         label: &'static [u8],
         msg: &[u8],
