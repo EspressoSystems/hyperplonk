@@ -23,6 +23,9 @@
 <span id="18">18</span>
 <span id="19">19</span>
 <span id="20">20</span>
+<span id="21">21</span>
+<span id="22">22</span>
+<span id="23">23</span>
 </pre><pre class="rust"><code><span class="kw">use</span> <span class="ident">ark_ff::PrimeField</span>;
 <span class="kw">use</span> <span class="ident">std::marker::PhantomData</span>;
 
@@ -34,7 +37,10 @@
 <span class="kw">mod</span> <span class="ident">virtual_poly</span>;
 <span class="kw">mod</span> <span class="ident">zero_check</span>;
 
+<span class="kw">pub</span> <span class="kw">use</span> <span class="ident">errors::PolyIOPErrors</span>;
+<span class="kw">pub</span> <span class="kw">use</span> <span class="ident">sum_check::SumCheck</span>;
 <span class="kw">pub</span> <span class="kw">use</span> <span class="ident">virtual_poly::VirtualPolynomial</span>;
+<span class="kw">pub</span> <span class="kw">use</span> <span class="ident">zero_check::ZeroCheck</span>;
 
 <span class="doccomment">/// Struct for PolyIOP protocol.</span>
 <span class="doccomment">/// It is instantiated with</span>
