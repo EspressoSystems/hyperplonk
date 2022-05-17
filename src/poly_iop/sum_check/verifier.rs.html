@@ -187,6 +187,58 @@
 <span id="182">182</span>
 <span id="183">183</span>
 <span id="184">184</span>
+<span id="185">185</span>
+<span id="186">186</span>
+<span id="187">187</span>
+<span id="188">188</span>
+<span id="189">189</span>
+<span id="190">190</span>
+<span id="191">191</span>
+<span id="192">192</span>
+<span id="193">193</span>
+<span id="194">194</span>
+<span id="195">195</span>
+<span id="196">196</span>
+<span id="197">197</span>
+<span id="198">198</span>
+<span id="199">199</span>
+<span id="200">200</span>
+<span id="201">201</span>
+<span id="202">202</span>
+<span id="203">203</span>
+<span id="204">204</span>
+<span id="205">205</span>
+<span id="206">206</span>
+<span id="207">207</span>
+<span id="208">208</span>
+<span id="209">209</span>
+<span id="210">210</span>
+<span id="211">211</span>
+<span id="212">212</span>
+<span id="213">213</span>
+<span id="214">214</span>
+<span id="215">215</span>
+<span id="216">216</span>
+<span id="217">217</span>
+<span id="218">218</span>
+<span id="219">219</span>
+<span id="220">220</span>
+<span id="221">221</span>
+<span id="222">222</span>
+<span id="223">223</span>
+<span id="224">224</span>
+<span id="225">225</span>
+<span id="226">226</span>
+<span id="227">227</span>
+<span id="228">228</span>
+<span id="229">229</span>
+<span id="230">230</span>
+<span id="231">231</span>
+<span id="232">232</span>
+<span id="233">233</span>
+<span id="234">234</span>
+<span id="235">235</span>
+<span id="236">236</span>
 </pre><pre class="rust"><code><span class="comment">// TODO: some of the struct is generic for Sum Checks and Zero Checks.</span>
 <span class="comment">// If so move them to src/structs.rs</span>
 
@@ -305,7 +357,7 @@
                         <span class="self">self</span>.<span class="ident">max_degree</span> <span class="op">+</span> <span class="number">1</span>
                     )));
                 }
-                <span class="prelude-val">Ok</span>(<span class="ident">interpolate_uni_poly</span>::<span class="op">&lt;</span><span class="ident">F</span><span class="op">&gt;</span>(<span class="kw-2">&amp;</span><span class="ident">evaluations</span>, <span class="ident">challenge</span>))
+                <span class="ident">interpolate_uni_poly</span>::<span class="op">&lt;</span><span class="ident">F</span><span class="op">&gt;</span>(<span class="kw-2">&amp;</span><span class="ident">evaluations</span>, <span class="ident">challenge</span>)
             })
             .<span class="ident">collect</span>::<span class="op">&lt;</span><span class="prelude-ty">Result</span><span class="op">&lt;</span><span class="ident">Vec</span><span class="op">&lt;</span><span class="kw">_</span><span class="op">&gt;</span>, <span class="ident">PolyIOPErrors</span><span class="op">&gt;</span><span class="op">&gt;</span>()<span class="question-mark">?</span>;
 
@@ -323,7 +375,7 @@
                         <span class="self">self</span>.<span class="ident">max_degree</span> <span class="op">+</span> <span class="number">1</span>
                     )));
                 }
-                <span class="prelude-val">Ok</span>(<span class="ident">interpolate_uni_poly</span>::<span class="op">&lt;</span><span class="ident">F</span><span class="op">&gt;</span>(<span class="kw-2">&amp;</span><span class="ident">evaluations</span>, <span class="ident">challenge</span>))
+                <span class="ident">interpolate_uni_poly</span>::<span class="op">&lt;</span><span class="ident">F</span><span class="op">&gt;</span>(<span class="kw-2">&amp;</span><span class="ident">evaluations</span>, <span class="ident">challenge</span>)
             })
             .<span class="ident">collect</span>::<span class="op">&lt;</span><span class="prelude-ty">Result</span><span class="op">&lt;</span><span class="ident">Vec</span><span class="op">&lt;</span><span class="kw">_</span><span class="op">&gt;</span>, <span class="ident">PolyIOPErrors</span><span class="op">&gt;</span><span class="op">&gt;</span>()<span class="question-mark">?</span>;
         <span class="comment">// insert the asserted_sum to the first position of the expected vector</span>
@@ -351,25 +403,77 @@
 }
 
 <span class="doccomment">/// Interpolate a uni-variate degree-`p_i.len()-1` polynomial and evaluate this</span>
-<span class="doccomment">/// polynomial at `eval_at`.</span>
-<span class="kw">pub</span>(<span class="kw">crate</span>) <span class="kw">fn</span> <span class="ident">interpolate_uni_poly</span><span class="op">&lt;</span><span class="ident">F</span>: <span class="ident">PrimeField</span><span class="op">&gt;</span>(<span class="ident">p_i</span>: <span class="kw-2">&amp;</span>[<span class="ident">F</span>], <span class="ident">eval_at</span>: <span class="ident">F</span>) -&gt; <span class="ident">F</span> {
-    <span class="kw">let</span> <span class="ident">start</span> <span class="op">=</span> <span class="macro">start_timer!</span>(<span class="op">|</span><span class="op">|</span> <span class="string">&quot;sum check interpolate uni poly&quot;</span>);
-    <span class="kw">let</span> <span class="kw-2">mut</span> <span class="ident">result</span> <span class="op">=</span> <span class="ident">F::zero</span>();
-    <span class="kw">let</span> <span class="kw-2">mut</span> <span class="ident">i</span> <span class="op">=</span> <span class="ident">F::zero</span>();
-    <span class="kw">for</span> <span class="ident">term</span> <span class="kw">in</span> <span class="ident">p_i</span>.<span class="ident">iter</span>() {
-        <span class="kw">let</span> <span class="kw-2">mut</span> <span class="ident">term</span> <span class="op">=</span> <span class="kw-2">*</span><span class="ident">term</span>;
-        <span class="kw">let</span> <span class="kw-2">mut</span> <span class="ident">j</span> <span class="op">=</span> <span class="ident">F::zero</span>();
-        <span class="kw">for</span> <span class="kw">_</span> <span class="kw">in</span> <span class="number">0</span>..<span class="ident">p_i</span>.<span class="ident">len</span>() {
-            <span class="kw">if</span> <span class="ident">j</span> <span class="op">!</span><span class="op">=</span> <span class="ident">i</span> {
-                <span class="ident">term</span> <span class="op">=</span> <span class="ident">term</span> <span class="op">*</span> (<span class="ident">eval_at</span> <span class="op">-</span> <span class="ident">j</span>) <span class="op">/</span> (<span class="ident">i</span> <span class="op">-</span> <span class="ident">j</span>)
-            }
-            <span class="ident">j</span> <span class="op">+</span><span class="op">=</span> <span class="ident">F::one</span>();
-        }
-        <span class="ident">i</span> <span class="op">+</span><span class="op">=</span> <span class="ident">F::one</span>();
-        <span class="ident">result</span> <span class="op">+</span><span class="op">=</span> <span class="ident">term</span>;
+<span class="doccomment">/// polynomial at `eval_at`:</span>
+<span class="doccomment">///   \sum_{i=0}^len p_i * (\prod_{j!=i} (eval_at - j)/(i-j) )</span>
+<span class="doccomment">/// This implementation is linear in number of inputs in terms of field</span>
+<span class="doccomment">/// operations. It also has a quadratic term in primitive operations which is</span>
+<span class="doccomment">/// negligible compared to field operations.</span>
+<span class="kw">pub</span>(<span class="kw">crate</span>) <span class="kw">fn</span> <span class="ident">interpolate_uni_poly</span><span class="op">&lt;</span><span class="ident">F</span>: <span class="ident">PrimeField</span><span class="op">&gt;</span>(
+    <span class="ident">p_i</span>: <span class="kw-2">&amp;</span>[<span class="ident">F</span>],
+    <span class="ident">eval_at</span>: <span class="ident">F</span>,
+) -&gt; <span class="prelude-ty">Result</span><span class="op">&lt;</span><span class="ident">F</span>, <span class="ident">PolyIOPErrors</span><span class="op">&gt;</span> {
+    <span class="kw">let</span> <span class="ident">start</span> <span class="op">=</span> <span class="macro">start_timer!</span>(<span class="op">|</span><span class="op">|</span> <span class="string">&quot;sum check interpolate uni poly opt&quot;</span>);
+
+    <span class="kw">let</span> <span class="kw-2">mut</span> <span class="ident">res</span> <span class="op">=</span> <span class="ident">F::zero</span>();
+
+    <span class="comment">// prod = \prod_{j!=i} (eval_at - j)</span>
+    <span class="kw">let</span> <span class="kw-2">mut</span> <span class="ident">evals</span> <span class="op">=</span> <span class="macro">vec!</span>[];
+    <span class="kw">let</span> <span class="ident">len</span> <span class="op">=</span> <span class="ident">p_i</span>.<span class="ident">len</span>();
+    <span class="kw">let</span> <span class="kw-2">mut</span> <span class="ident">prod</span> <span class="op">=</span> <span class="ident">eval_at</span>;
+    <span class="ident">evals</span>.<span class="ident">push</span>(<span class="ident">eval_at</span>);
+
+    <span class="kw">for</span> <span class="ident">e</span> <span class="kw">in</span> <span class="number">1</span>..<span class="ident">len</span> {
+        <span class="kw">let</span> <span class="ident">tmp</span> <span class="op">=</span> <span class="ident">eval_at</span> <span class="op">-</span> <span class="ident">F::from</span>(<span class="ident">e</span> <span class="kw">as</span> <span class="ident">u64</span>);
+        <span class="ident">evals</span>.<span class="ident">push</span>(<span class="ident">tmp</span>);
+        <span class="ident">prod</span> <span class="kw-2">*</span><span class="op">=</span> <span class="ident">tmp</span>;
     }
+
+    <span class="kw">for</span> <span class="ident">i</span> <span class="kw">in</span> <span class="number">0</span>..<span class="ident">len</span> {
+        <span class="kw">let</span> <span class="ident">divisor</span> <span class="op">=</span> <span class="ident">get_divisor</span>(<span class="ident">i</span>, <span class="ident">len</span>)<span class="question-mark">?</span>;
+        <span class="kw">let</span> <span class="ident">divisor_f</span> <span class="op">=</span> {
+            <span class="kw">if</span> <span class="ident">divisor</span> <span class="op">&lt;</span> <span class="number">0</span> {
+                <span class="op">-</span><span class="ident">F::from</span>((<span class="op">-</span><span class="ident">divisor</span>) <span class="kw">as</span> <span class="ident">u128</span>)
+            } <span class="kw">else</span> {
+                <span class="ident">F::from</span>(<span class="ident">divisor</span> <span class="kw">as</span> <span class="ident">u128</span>)
+            }
+        };
+        <span class="ident">res</span> <span class="op">+</span><span class="op">=</span> <span class="ident">p_i</span>[<span class="ident">i</span>] <span class="op">*</span> <span class="ident">prod</span> <span class="op">/</span> (<span class="ident">divisor_f</span> <span class="op">*</span> <span class="ident">evals</span>[<span class="ident">i</span>]);
+    }
+
     <span class="macro">end_timer!</span>(<span class="ident">start</span>);
-    <span class="ident">result</span>
+    <span class="prelude-val">Ok</span>(<span class="ident">res</span>)
+}
+
+<span class="doccomment">/// Compute \prod_{j!=i)^len (i-j). This function takes O(n^2) number of</span>
+<span class="doccomment">/// primitive operations which is negligible compared to field operations.</span>
+<span class="comment">// We know</span>
+<span class="comment">//  - factorial(20) ~ 2^61</span>
+<span class="comment">//  - factorial(33) ~ 2^123</span>
+<span class="comment">// so we will be able to store the result for len&lt;=20 with i64;</span>
+<span class="comment">// for len&lt;=33 with i128; and we do not currently support len&gt;33.</span>
+<span class="attribute">#[<span class="ident">inline</span>]</span>
+<span class="kw">fn</span> <span class="ident">get_divisor</span>(<span class="ident">i</span>: <span class="ident">usize</span>, <span class="ident">len</span>: <span class="ident">usize</span>) -&gt; <span class="prelude-ty">Result</span><span class="op">&lt;</span><span class="ident">i128</span>, <span class="ident">PolyIOPErrors</span><span class="op">&gt;</span> {
+    <span class="kw">if</span> <span class="ident">len</span> <span class="op">&lt;</span><span class="op">=</span> <span class="number">20</span> {
+        <span class="kw">let</span> <span class="kw-2">mut</span> <span class="ident">res</span> <span class="op">=</span> <span class="number">1i64</span>;
+        <span class="kw">for</span> <span class="ident">j</span> <span class="kw">in</span> <span class="number">0</span>..<span class="ident">len</span> {
+            <span class="kw">if</span> <span class="ident">j</span> <span class="op">!</span><span class="op">=</span> <span class="ident">i</span> {
+                <span class="ident">res</span> <span class="kw-2">*</span><span class="op">=</span> <span class="ident">i</span> <span class="kw">as</span> <span class="ident">i64</span> <span class="op">-</span> <span class="ident">j</span> <span class="kw">as</span> <span class="ident">i64</span>;
+            }
+        }
+        <span class="prelude-val">Ok</span>(<span class="ident">res</span> <span class="kw">as</span> <span class="ident">i128</span>)
+    } <span class="kw">else</span> <span class="kw">if</span> <span class="ident">len</span> <span class="op">&lt;</span><span class="op">=</span> <span class="number">33</span> {
+        <span class="kw">let</span> <span class="kw-2">mut</span> <span class="ident">res</span> <span class="op">=</span> <span class="number">1i128</span>;
+        <span class="kw">for</span> <span class="ident">j</span> <span class="kw">in</span> <span class="number">0</span>..<span class="ident">len</span> {
+            <span class="kw">if</span> <span class="ident">j</span> <span class="op">!</span><span class="op">=</span> <span class="ident">i</span> {
+                <span class="ident">res</span> <span class="kw-2">*</span><span class="op">=</span> <span class="ident">i</span> <span class="kw">as</span> <span class="ident">i128</span> <span class="op">-</span> <span class="ident">j</span> <span class="kw">as</span> <span class="ident">i128</span>;
+            }
+        }
+        <span class="prelude-val">Ok</span>(<span class="ident">res</span>)
+    } <span class="kw">else</span> {
+        <span class="prelude-val">Err</span>(<span class="ident">PolyIOPErrors::InvalidParameters</span>(
+            <span class="string">&quot;Do not support number variable &gt; 33&quot;</span>.<span class="ident">to_string</span>(),
+        ))
+    }
 }
 </code></pre></div>
 </section><section id="search" class="content hidden"></section></div></main><div id="rustdoc-vars" data-root-path="../../../" data-current-crate="poly_iop" data-themes="ayu,dark,light" data-resource-suffix="" data-rustdoc-version="1.60.0 (7737e0b5c 2022-04-04)" ></div>
