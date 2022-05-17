@@ -163,10 +163,10 @@ impl<E: PairingEngine> UniversalParams<E> {
         for i in 0..num_vars {
             let size = 1 << (num_vars - i);
             let pp_k_g = Evaluations {
-                evals: (&pp_g[start..(start + size)]).to_vec(),
+                evals: pp_g[start..(start + size)].to_vec(),
             };
             let pp_k_h = Evaluations {
-                evals: (&pp_h[start..(start + size)]).to_vec(),
+                evals: pp_h[start..(start + size)].to_vec(),
             };
             powers_of_g.push(pp_k_g);
             powers_of_h.push(pp_k_h);

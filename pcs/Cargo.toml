@@ -15,7 +15,6 @@ ark-poly = {version = "^0.3.0", default-features = false }
 ark-sponge = {version = "^0.3.0", default-features = false}
 ark-bls12-381 = { version = "0.3.0", default-features = false, features = [ "curve" ] }
 
-rayon = { version = "1.5.2", default-features = false, optional = true }
 displaydoc = { version = "0.2.3", default-features = false }
 
 # Benchmarks
@@ -28,7 +27,6 @@ harness = false
 default = [ "parallel", "print-trace" ]
 # default = [ "parallel" ]
 parallel = [ 
-    "rayon",
     "ark-std/parallel", 
     "ark-ff/parallel",  
     "ark-poly/parallel", 
