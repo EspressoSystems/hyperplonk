@@ -81,28 +81,32 @@ impl<E: PairingEngine> MultilinearCommitmentScheme<E> for KZGMultilinearPC<E> {
 
         let mut proofs = Vec::new();
 
-        // todo: refactor the following code for better readability
-        for (i, (&p, hi)) in point
+        for (i, (&point_at_k, hi)) in point
             .iter()
             .zip(prover_param.powers_of_h.iter())
             .take(nv)
             .enumerate()
         {
             let k = nv - i;
-            let point_at_k = p;
-            q[k] = (0..(1 << (k - 1))).map(|_| E::Fr::zero()).collect();
-            r[k - 1] = (0..(1 << (k - 1))).map(|_| E::Fr::zero()).collect();
+            let cur_dim = 1 << (k - 1);
+            let mut cur_q = vec![E::Fr::zero(); cur_dim];
+            let mut cur_r = vec![E::Fr::zero(); cur_dim];
+
             for b in 0..(1 << (k - 1)) {
-                q[k][b] = r[k][(b << 1) + 1] - r[k][b << 1];
-                r[k - 1][b] =
+                // q_b = pre_r [2^b + 1] - pre_r [2^b]
+                cur_q[b] = r[k][(b << 1) + 1] - r[k][b << 1];
+
+                // r_b = pre_r [2^b]*(1-p) + pre_r [2^b + 1] * p
+                cur_r[b] =
                     r[k][b << 1] * (E::Fr::one() - point_at_k) + (r[k][(b << 1) + 1] * point_at_k);
             }
-            let scalars: Vec<_> = (0..(1 << k))
-                .map(|x| q[k][x >> 1].into_repr()) // fine
-                .collect();
 
-            let pi_h = VariableBaseMSM::multi_scalar_mul(&hi.evals, &scalars).into_affine(); // no need to move outside and partition
-            proofs.push(pi_h);
+            let scalars: Vec<_> = (0..(1 << k)).map(|x| cur_q[x >> 1].into_repr()).collect();
+
+            q[k] = cur_q;
+            r[k - 1] = cur_r;
+
+            proofs.push(VariableBaseMSM::multi_scalar_mul(&hi.evals, &scalars).into_affine());
         }
 
         Ok(Proof { proofs })
