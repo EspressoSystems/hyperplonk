@@ -223,7 +223,9 @@ fn remove_dummy_variable<F: Field>(poly: &[F], pad: usize) -> Result<Vec<F>, PCS
 /// generate eq(t,x), a product of multilinear polynomials with fixed t.
 /// eq(a,b) is takes extensions of a,b in {0,1}^num_vars such that if a and b in
 /// {0,1}^num_vars are equal then this polynomial evaluates to 1.
-fn eq_extension<F: Field>(t: &[F]) -> Vec<DenseMultilinearExtension<F>> {
+fn eq_extension<F: PrimeField>(t: &[F]) -> Vec<DenseMultilinearExtension<F>> {
+    let start = start_timer!(|| "eq extension");
+
     let dim = t.len();
     let mut result = Vec::new();
     for (i, &ti) in t.iter().enumerate().take(dim) {
@@ -236,5 +238,24 @@ fn eq_extension<F: Field>(t: &[F]) -> Vec<DenseMultilinearExtension<F>> {
         result.push(DenseMultilinearExtension::from_evaluations_vec(dim, poly));
     }
 
+    end_timer!(start);
     result
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+    use ark_bls12_381::Bls12_381;
+    use ark_std::test_rng;
+    type E = Bls12_381;
+
+    #[test]
+    fn test_srs_gen() -> Result<(), PCSErrors> {
+        let mut rng = test_rng();
+        for nv in 4..10 {
+            let _ = UniversalParams::<E>::gen_srs_for_testing(&mut rng, nv)?;
+        }
+
+        Ok(())
+    }
 }

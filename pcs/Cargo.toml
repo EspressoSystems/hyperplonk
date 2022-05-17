@@ -18,9 +18,6 @@ ark-bls12-381 = { version = "0.3.0", default-features = false, features = [ "cur
 rayon = { version = "1.5.2", default-features = false, optional = true }
 displaydoc = { version = "0.2.3", default-features = false }
 
-# use poly-iop for the `eq(x,r)` function
-poly-iop = { path = "../poly-iop" }
-
 # Benchmarks
 [[bench]]
 name = "pcs-benches"
@@ -28,15 +25,14 @@ path = "benches/bench.rs"
 harness = false
 
 [features]
-# default = [ "parallel", "print-trace" ]
-default = [ "parallel" ]
+default = [ "parallel", "print-trace" ]
+# default = [ "parallel" ]
 parallel = [ 
     "rayon",
     "ark-std/parallel", 
     "ark-ff/parallel",  
     "ark-poly/parallel", 
     "ark-ec/parallel",
-    "poly-iop/parallel"
     ]
 print-trace = [ 
     "ark-std/print-trace" 

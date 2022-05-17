@@ -212,9 +212,9 @@ mod tests {
     fn setup_commit_verify_correct_polynomials() -> Result<(), PCSErrors> {
         let mut rng = test_rng();
 
-        // normal polynomials
         let uni_params = KZGMultilinearPC::<E>::setup(&mut rng, 10)?;
 
+        // normal polynomials
         let poly1 = DenseMultilinearExtension::rand(8, &mut rng);
         test_kzg_mlpc_helper(&uni_params, &poly1, &mut rng)?;
 
@@ -222,7 +222,6 @@ mod tests {
         test_kzg_mlpc_helper(&uni_params, &poly2, &mut rng)?;
 
         // single-variate polynomials
-
         let poly3 = DenseMultilinearExtension::rand(1, &mut rng);
         test_kzg_mlpc_helper(&uni_params, &poly3, &mut rng)?;
 

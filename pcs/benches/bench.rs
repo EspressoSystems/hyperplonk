@@ -13,9 +13,9 @@ fn bench_pcs() -> Result<(), PCSErrors> {
     let mut rng = test_rng();
 
     // normal polynomials
-    let uni_params = KZGMultilinearPC::<Bls12_381>::setup(&mut rng, 12)?;
+    let uni_params = KZGMultilinearPC::<Bls12_381>::setup(&mut rng, 18)?;
 
-    for nv in 4..12 {
+    for nv in 4..19 {
         let repetition = if nv < 10 {
             100
         } else if nv < 20 {
