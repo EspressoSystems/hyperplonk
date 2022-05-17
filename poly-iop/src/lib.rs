@@ -12,7 +12,7 @@ mod zero_check;
 pub use errors::PolyIOPErrors;
 pub use sum_check::SumCheck;
 pub use virtual_poly::VirtualPolynomial;
-pub use zero_check::ZeroCheck;
+pub use zero_check::{build_eq_x_r, ZeroCheck};
 
 /// Struct for PolyIOP protocol.
 /// It is instantiated with

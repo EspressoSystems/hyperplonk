@@ -137,7 +137,9 @@ fn build_f_hat<F: PrimeField>(
 //      eq(x,y) = \prod_i=1^num_var (x_i * y_i + (1-x_i)*(1-y_i))
 // over r, which is
 //      eq(x,y) = \prod_i=1^num_var (x_i * r_i + (1-x_i)*(1-r_i))
-fn build_eq_x_r<F: PrimeField>(r: &[F]) -> Result<Rc<DenseMultilinearExtension<F>>, PolyIOPErrors> {
+pub fn build_eq_x_r<F: PrimeField>(
+    r: &[F],
+) -> Result<Rc<DenseMultilinearExtension<F>>, PolyIOPErrors> {
     let start = start_timer!(|| "zero check build eq_x_r");
 
     // we build eq(x,r) from its evaluations

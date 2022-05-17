@@ -2,10 +2,11 @@
 
 use ark_std::string::String;
 use displaydoc::Display;
+use poly_iop::PolyIOPErrors;
 
-/// A `enum` specifying the possible failure modes of the PolyIOP.
+/// A `enum` specifying the possible failure modes of the PCS.
 #[derive(Display, Debug)]
-pub enum PolyIOPErrors {
+pub enum PCSErrors {
     /// Invalid Prover: {0}
     InvalidProver(String),
     /// Invalid Verifier: {0}
@@ -14,14 +15,20 @@ pub enum PolyIOPErrors {
     InvalidProof(String),
     /// Invalid parameters: {0}
     InvalidParameters(String),
-    /// Invalid Transcript: {0}
-    InvalidTranscript(String),
     /// An error during (de)serialization: {0}
     SerializationError(ark_serialize::SerializationError),
+    /// An error from PolyIop
+    PolyIOPError(PolyIOPErrors),
 }
 
-impl From<ark_serialize::SerializationError> for PolyIOPErrors {
+impl From<ark_serialize::SerializationError> for PCSErrors {
     fn from(e: ark_serialize::SerializationError) -> Self {
         Self::SerializationError(e)
+    }
+}
+
+impl From<PolyIOPErrors> for PCSErrors {
+    fn from(e: PolyIOPErrors) -> Self {
+        Self::PolyIOPError(e)
     }
 }
