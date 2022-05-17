@@ -5,7 +5,7 @@ use ark_ec::{
 use ark_ff::PrimeField;
 use ark_poly::MultilinearExtension;
 use ark_serialize::{CanonicalDeserialize, CanonicalSerialize, Read, SerializationError, Write};
-use ark_std::{rand::RngCore, vec::Vec, One, Zero};
+use ark_std::{end_timer, rand::RngCore, start_timer, vec::Vec, One, Zero};
 
 use crate::{
     KZGMultilinearPC, MultilinearCommitmentScheme, PCSErrors, ProverParam, UniversalParams,
@@ -39,7 +39,10 @@ impl<E: PairingEngine> MultilinearCommitmentScheme<E> for KZGMultilinearPC<E> {
     /// WARNING: THIS FUNCTION IS FOR TESTING PURPOSE ONLY.
     /// THE OUTPUT SRS SHOULD NOT BE USED IN PRODUCTION.
     fn setup<R: RngCore>(rng: &mut R, num_vars: usize) -> Result<Self::SRS, PCSErrors> {
-        Self::SRS::gen_srs_for_testing(rng, num_vars)
+        let setup_timer = start_timer!(|| format!("SRS setup for dim {}", num_vars));
+        let res = Self::SRS::gen_srs_for_testing(rng, num_vars);
+        end_timer!(setup_timer);
+        res
     }
 
     /// Generate a commitment for a polynomial
@@ -47,6 +50,8 @@ impl<E: PairingEngine> MultilinearCommitmentScheme<E> for KZGMultilinearPC<E> {
         prover_param: &Self::ProverParam,
         poly: &impl MultilinearExtension<E::Fr>,
     ) -> Result<Self::Commitment, PCSErrors> {
+        let commit_timer = start_timer!(|| "commit");
+
         let nv = poly.num_vars();
         let scalars: Vec<_> = poly
             .to_evaluations()
@@ -58,6 +63,8 @@ impl<E: PairingEngine> MultilinearCommitmentScheme<E> for KZGMultilinearPC<E> {
             scalars.as_slice(),
         )
         .into_affine();
+
+        end_timer!(commit_timer);
         Ok(Commitment { nv, g_product })
     }
 
@@ -68,6 +75,8 @@ impl<E: PairingEngine> MultilinearCommitmentScheme<E> for KZGMultilinearPC<E> {
         polynomial: &impl MultilinearExtension<E::Fr>,
         point: &[E::Fr],
     ) -> Result<Self::Proof, PCSErrors> {
+        let open_timer = start_timer!(|| "open");
+
         assert_eq!(
             polynomial.num_vars(),
             prover_param.num_vars,
@@ -87,6 +96,8 @@ impl<E: PairingEngine> MultilinearCommitmentScheme<E> for KZGMultilinearPC<E> {
             .take(nv)
             .enumerate()
         {
+            let ith_round = start_timer!(|| format!("{}-th round", i));
+
             let k = nv - i;
             let cur_dim = 1 << (k - 1);
             let mut cur_q = vec![E::Fr::zero(); cur_dim];
@@ -106,9 +117,12 @@ impl<E: PairingEngine> MultilinearCommitmentScheme<E> for KZGMultilinearPC<E> {
             q[k] = cur_q;
             r[k - 1] = cur_r;
 
+            // this is a MSM over G2 and is likely to be the bottleneck
             proofs.push(VariableBaseMSM::multi_scalar_mul(&hi.evals, &scalars).into_affine());
+            end_timer!(ith_round);
         }
 
+        end_timer!(open_timer);
         Ok(Proof { proofs })
     }
 
@@ -121,6 +135,9 @@ impl<E: PairingEngine> MultilinearCommitmentScheme<E> for KZGMultilinearPC<E> {
         value: E::Fr,
         proof: &Self::Proof,
     ) -> Result<bool, PCSErrors> {
+        let verify_timer = start_timer!(|| "verify");
+        let prepare_inputs_timer = start_timer!(|| "prepare pairing inputs");
+
         let scalar_size = E::Fr::size_in_bits();
         let window_size = FixedBaseMSM::get_mul_window_size(verifier_param.num_vars);
 
@@ -139,6 +156,9 @@ impl<E: PairingEngine> MultilinearCommitmentScheme<E> for KZGMultilinearPC<E> {
 
         let g1_vec: Vec<E::G1Affine> = E::G1Projective::batch_normalization_into_affine(&g1_vec);
         let tmp = g1_vec[verifier_param.num_vars];
+        end_timer!(prepare_inputs_timer);
+
+        let pairing_product_timer = start_timer!(|| "pairing product");
 
         let mut pairings: Vec<_> = g1_vec
             .into_iter()
@@ -152,7 +172,11 @@ impl<E: PairingEngine> MultilinearCommitmentScheme<E> for KZGMultilinearPC<E> {
             E::G2Prepared::from(verifier_param.h),
         ));
 
-        Ok(E::product_of_pairings(pairings.iter()) == E::Fqk::one())
+        let res = E::product_of_pairings(pairings.iter()) == E::Fqk::one();
+
+        end_timer!(pairing_product_timer);
+        end_timer!(verify_timer);
+        Ok(res)
     }
 }
 
