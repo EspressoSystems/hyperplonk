@@ -21,9 +21,15 @@ displaydoc = { version = "0.2.3", default-features = false }
 # use poly-iop for the `eq(x,r)` function
 poly-iop = { path = "../poly-iop" }
 
+# Benchmarks
+[[bench]]
+name = "pcs-benches"
+path = "benches/bench.rs"
+harness = false
+
 [features]
-default = [ "parallel", "print-trace" ]
-# default = [ "parallel" ]
+# default = [ "parallel", "print-trace" ]
+default = [ "parallel" ]
 parallel = [ 
     "rayon",
     "ark-std/parallel", 
