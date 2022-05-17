@@ -116,7 +116,7 @@ impl<F: PrimeField> SumCheckVerifier<F> for IOPVerifierState<F> {
                         self.max_degree + 1
                     )));
                 }
-                Ok(interpolate_uni_poly::<F>(&evaluations, challenge))
+                interpolate_uni_poly::<F>(&evaluations, challenge)
             })
             .collect::<Result<Vec<_>, PolyIOPErrors>>()?;
 
@@ -134,7 +134,7 @@ impl<F: PrimeField> SumCheckVerifier<F> for IOPVerifierState<F> {
                         self.max_degree + 1
                     )));
                 }
-                Ok(interpolate_uni_poly::<F>(&evaluations, challenge))
+                interpolate_uni_poly::<F>(&evaluations, challenge)
             })
             .collect::<Result<Vec<_>, PolyIOPErrors>>()?;
         // insert the asserted_sum to the first position of the expected vector
@@ -162,23 +162,75 @@ impl<F: PrimeField> SumCheckVerifier<F> for IOPVerifierState<F> {
 }
 
 /// Interpolate a uni-variate degree-`p_i.len()-1` polynomial and evaluate this
-/// polynomial at `eval_at`.
-pub(crate) fn interpolate_uni_poly<F: PrimeField>(p_i: &[F], eval_at: F) -> F {
-    let start = start_timer!(|| "sum check interpolate uni poly");
-    let mut result = F::zero();
-    let mut i = F::zero();
-    for term in p_i.iter() {
-        let mut term = *term;
-        let mut j = F::zero();
-        for _ in 0..p_i.len() {
-            if j != i {
-                term = term * (eval_at - j) / (i - j)
-            }
-            j += F::one();
-        }
-        i += F::one();
-        result += term;
+/// polynomial at `eval_at`:
+///   \sum_{i=0}^len p_i * (\prod_{j!=i} (eval_at - j)/(i-j) )
+/// This implementation is linear in number of inputs in terms of field
+/// operations. It also has a quadratic term in primitive operations which is
+/// negligible compared to field operations.
+pub(crate) fn interpolate_uni_poly<F: PrimeField>(
+    p_i: &[F],
+    eval_at: F,
+) -> Result<F, PolyIOPErrors> {
+    let start = start_timer!(|| "sum check interpolate uni poly opt");
+
+    let mut res = F::zero();
+
+    // prod = \prod_{j!=i} (eval_at - j)
+    let mut evals = vec![];
+    let len = p_i.len();
+    let mut prod = eval_at;
+    evals.push(eval_at);
+
+    for e in 1..len {
+        let tmp = eval_at - F::from(e as u64);
+        evals.push(tmp);
+        prod *= tmp;
     }
+
+    for i in 0..len {
+        let divisor = get_divisor(i, len)?;
+        let divisor_f = {
+            if divisor < 0 {
+                -F::from((-divisor) as u128)
+            } else {
+                F::from(divisor as u128)
+            }
+        };
+        res += p_i[i] * prod / (divisor_f * evals[i]);
+    }
+
     end_timer!(start);
-    result
+    Ok(res)
+}
+
+/// Compute \prod_{j!=i)^len (i-j). This function takes O(n^2) number of
+/// primitive operations which is negligible compared to field operations.
+// We know
+//  - factorial(20) ~ 2^61
+//  - factorial(33) ~ 2^123
+// so we will be able to store the result for len<=20 with i64;
+// for len<=33 with i128; and we do not currently support len>33.
+#[inline]
+fn get_divisor(i: usize, len: usize) -> Result<i128, PolyIOPErrors> {
+    if len <= 20 {
+        let mut res = 1i64;
+        for j in 0..len {
+            if j != i {
+                res *= i as i64 - j as i64;
+            }
+        }
+        Ok(res as i128)
+    } else if len <= 33 {
+        let mut res = 1i128;
+        for j in 0..len {
+            if j != i {
+                res *= i as i128 - j as i128;
+            }
+        }
+        Ok(res)
+    } else {
+        Err(PolyIOPErrors::InvalidParameters(
+            "Do not support number variable > 33".to_string(),
+        ))
+    }
 }

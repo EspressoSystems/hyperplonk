@@ -205,7 +205,7 @@ impl<F: PrimeField> VirtualPolynomial<F> {
         num_products: usize,
         rng: &mut R,
     ) -> Result<(Self, F), PolyIOPErrors> {
-        let start = start_timer!("sample random virtual polynomial");
+        let start = start_timer!(|| "sample random virtual polynomial");
 
         let mut sum = F::zero();
         let mut poly = VirtualPolynomial::new(nv);
@@ -252,7 +252,7 @@ fn random_mle_list<F: PrimeField, R: RngCore>(
     degree: usize,
     rng: &mut R,
 ) -> (Vec<Rc<DenseMultilinearExtension<F>>>, F) {
-    let start = start_timer!("sample random mle list");
+    let start = start_timer!(|| "sample random mle list");
     let mut multiplicands = Vec::with_capacity(degree);
     for _ in 0..degree {
         multiplicands.push(Vec::with_capacity(1 << nv))
@@ -285,7 +285,7 @@ pub fn random_zero_mle_list<F: PrimeField, R: RngCore>(
     degree: usize,
     rng: &mut R,
 ) -> Vec<Rc<DenseMultilinearExtension<F>>> {
-    let start = start_timer!("sample random zero mle list");
+    let start = start_timer!(|| "sample random zero mle list");
 
     let mut multiplicands = Vec::with_capacity(degree);
     for _ in 0..degree {
