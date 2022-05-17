@@ -125,7 +125,7 @@ fn build_f_hat<F: PrimeField>(
 
     assert_eq!(poly.domain_info.num_variables, r.len());
 
-    let eq_x_r = build_eq_x_r(r);
+    let eq_x_r = build_eq_x_r(r)?;
     let mut res = poly.clone();
     res.mul_by_mle(eq_x_r, F::one())?;
 
@@ -137,8 +137,8 @@ fn build_f_hat<F: PrimeField>(
 //      eq(x,y) = \prod_i=1^num_var (x_i * y_i + (1-x_i)*(1-y_i))
 // over r, which is
 //      eq(x,y) = \prod_i=1^num_var (x_i * r_i + (1-x_i)*(1-r_i))
-fn build_eq_x_r<F: PrimeField>(r: &[F]) -> Rc<DenseMultilinearExtension<F>> {
-    let start = start_timer!(|| "zero check build build eq_x_r");
+fn build_eq_x_r<F: PrimeField>(r: &[F]) -> Result<Rc<DenseMultilinearExtension<F>>, PolyIOPErrors> {
+    let start = start_timer!(|| "zero check build eq_x_r");
 
     // we build eq(x,r) from its evaluations
     // we want to evaluate eq(x,r) over x \in {0, 1}^num_vars
@@ -151,49 +151,58 @@ fn build_eq_x_r<F: PrimeField>(r: &[F]) -> Rc<DenseMultilinearExtension<F>> {
     //  1 1 1 1 -> r0       * r1        * r2        * r3
     // we will need 2^num_var evaluations
 
-    // First, we build array for {1 - r_i}
-    let one_minus_r: Vec<F> = r.iter().map(|ri| F::one() - ri).collect();
+    let mut eval = Vec::new();
+    build_eq_x_r_helper(r, &mut eval)?;
 
-    let num_var = r.len();
-    let mut eval = vec![];
-
-    // TODO: optimize the following code
-    // currently, a naive implementation requires num_var * 2^num_var
-    // field multiplications.
-    for i in 0..1 << num_var {
-        let mut current_eval = F::one();
-        let bit_sequence = bit_decompose(i, num_var);
-
-        for (&bit, (ri, one_minus_ri)) in bit_sequence.iter().zip(r.iter().zip(one_minus_r.iter()))
-        {
-            current_eval *= if bit { *ri } else { *one_minus_ri };
-        }
-        eval.push(current_eval);
-    }
-    let mle = DenseMultilinearExtension::from_evaluations_vec(num_var, eval);
+    let mle = DenseMultilinearExtension::from_evaluations_vec(r.len(), eval);
 
     let res = Rc::new(mle);
     end_timer!(start);
-    res
+    Ok(res)
 }
 
-fn bit_decompose(input: u64, num_var: usize) -> Vec<bool> {
-    let mut res = Vec::with_capacity(num_var);
-    let mut i = input;
-    for _ in 0..num_var {
-        res.push(i & 1 == 1);
-        i >>= 1;
+/// A helper function to build eq(x, r) recursively.
+/// This function takes `r.len()` steps, and for each step it requires a maximum
+/// `r.len()-1` multiplications.
+fn build_eq_x_r_helper<F: PrimeField>(r: &[F], buf: &mut Vec<F>) -> Result<(), PolyIOPErrors> {
+    if r.is_empty() {
+        return Err(PolyIOPErrors::InvalidParameters(
+            "r length is 0".to_string(),
+        ));
+    } else if r.len() == 1 {
+        // initializing the buffer with [1-r0, r0]
+        buf.push(F::one() - r[0]);
+        buf.push(r[0]);
+    } else {
+        build_eq_x_r_helper(&r[1..], buf)?;
+
+        // suppose in the previous step we have [b1, ..., b_k]
+        // for the current step we will need
+        // if x0 = 0:   (1-r0) * [b_1, ..., b_k]
+        // if x0 = 1:   r0 * [b1, ..., b_k]
+
+        let mut res = vec![];
+        for &e in buf.iter() {
+            let tmp = e * r[0];
+            res.push(e - tmp);
+            res.push(tmp);
+        }
+        *buf = res;
     }
-    res
+
+    Ok(())
 }
 
 #[cfg(test)]
 mod test {
 
-    use super::ZeroCheck;
+    use super::{build_eq_x_r, ZeroCheck};
     use crate::{errors::PolyIOPErrors, PolyIOP, VirtualPolynomial};
     use ark_bls12_381::Fr;
-    use ark_std::test_rng;
+    use ark_ff::{PrimeField, UniformRand};
+    use ark_poly::DenseMultilinearExtension;
+    use ark_std::{end_timer, start_timer, test_rng};
+    use std::rc::Rc;
 
     fn test_zerocheck(
         nv: usize,
@@ -260,8 +269,8 @@ mod test {
 
         test_zerocheck(nv, num_multiplicands_range, num_products)
     }
-    #[test]
 
+    #[test]
     fn zero_polynomial_should_error() -> Result<(), PolyIOPErrors> {
         let nv = 0;
         let num_multiplicands_range = (4, 13);
@@ -269,5 +278,71 @@ mod test {
 
         assert!(test_zerocheck(nv, num_multiplicands_range, num_products).is_err());
         Ok(())
+    }
+
+    #[test]
+    fn test_eq_xr() {
+        let mut rng = test_rng();
+        for nv in 4..10 {
+            let r: Vec<Fr> = (0..nv).map(|_| Fr::rand(&mut rng)).collect();
+            let eq_x_r = build_eq_x_r(r.as_ref()).unwrap();
+            let eq_x_r2 = build_eq_x_r_for_test(r.as_ref());
+            assert_eq!(eq_x_r, eq_x_r2);
+        }
+    }
+
+    /// Naive method to build eq(x, r).
+    /// Only used for testing purpose.
+    // Evaluate
+    //      eq(x,y) = \prod_i=1^num_var (x_i * y_i + (1-x_i)*(1-y_i))
+    // over r, which is
+    //      eq(x,y) = \prod_i=1^num_var (x_i * r_i + (1-x_i)*(1-r_i))
+    fn build_eq_x_r_for_test<F: PrimeField>(r: &[F]) -> Rc<DenseMultilinearExtension<F>> {
+        let start = start_timer!(|| "zero check naive build eq_x_r");
+
+        // we build eq(x,r) from its evaluations
+        // we want to evaluate eq(x,r) over x \in {0, 1}^num_vars
+        // for example, with num_vars = 4, x is a binary vector of 4, then
+        //  0 0 0 0 -> (1-r0)   * (1-r1)    * (1-r2)    * (1-r3)
+        //  1 0 0 0 -> r0       * (1-r1)    * (1-r2)    * (1-r3)
+        //  0 1 0 0 -> (1-r0)   * r1        * (1-r2)    * (1-r3)
+        //  1 1 0 0 -> r0       * r1        * (1-r2)    * (1-r3)
+        //  ....
+        //  1 1 1 1 -> r0       * r1        * r2        * r3
+        // we will need 2^num_var evaluations
+
+        // First, we build array for {1 - r_i}
+        let one_minus_r: Vec<F> = r.iter().map(|ri| F::one() - ri).collect();
+
+        let num_var = r.len();
+        let mut eval = vec![];
+
+        for i in 0..1 << num_var {
+            let mut current_eval = F::one();
+            let bit_sequence = bit_decompose(i, num_var);
+
+            for (&bit, (ri, one_minus_ri)) in
+                bit_sequence.iter().zip(r.iter().zip(one_minus_r.iter()))
+            {
+                current_eval *= if bit { *ri } else { *one_minus_ri };
+            }
+            eval.push(current_eval);
+        }
+
+        let mle = DenseMultilinearExtension::from_evaluations_vec(num_var, eval);
+
+        let res = Rc::new(mle);
+        end_timer!(start);
+        res
+    }
+
+    fn bit_decompose(input: u64, num_var: usize) -> Vec<bool> {
+        let mut res = Vec::with_capacity(num_var);
+        let mut i = input;
+        for _ in 0..num_var {
+            res.push(i & 1 == 1);
+            i >>= 1;
+        }
+        res
     }
 }
