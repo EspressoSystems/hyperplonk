@@ -117,11 +117,6 @@ impl<E: PairingEngine> MultilinearCommitmentScheme<E> for KZGMultilinearPC<E> {
         value: E::Fr,
         proof: &Self::Proof,
     ) -> Result<bool, PCSErrors> {
-        let left = E::pairing(
-            commitment.g_product.into_projective() - verifier_param.g.mul(value),
-            verifier_param.h,
-        );
-
         let scalar_size = E::Fr::size_in_bits();
         let window_size = FixedBaseMSM::get_mul_window_size(verifier_param.num_vars);
 
@@ -133,18 +128,27 @@ impl<E: PairingEngine> MultilinearCommitmentScheme<E> for KZGMultilinearPC<E> {
         let g_mul: Vec<E::G1Projective> =
             FixedBaseMSM::multi_scalar_mul(scalar_size, window_size, &g_table, point);
 
-        let pairing_lefts: Vec<_> = (0..verifier_param.num_vars)
-            .map(|i| verifier_param.g_mask_random[i].into_projective() - g_mul[i])
+        let mut g1_vec: Vec<_> = (0..verifier_param.num_vars)
+            .map(|i| verifier_param.g_mask[i].into_projective() - g_mul[i])
             .collect();
-        let pairing_lefts: Vec<E::G1Affine> =
-            E::G1Projective::batch_normalization_into_affine(&pairing_lefts);
-        let pairing_lefts = pairing_lefts.into_iter().map(E::G1Prepared::from);
+        g1_vec.push(verifier_param.g.mul(value) - commitment.g_product.into_projective());
 
-        let pairing_rights = proof.proofs.iter().map(|x| E::G2Prepared::from(*x));
+        let g1_vec: Vec<E::G1Affine> = E::G1Projective::batch_normalization_into_affine(&g1_vec);
+        let tmp = g1_vec[verifier_param.num_vars];
 
-        let pairings: Vec<_> = pairing_lefts.zip(pairing_rights).collect();
-        let right = E::product_of_pairings(pairings.iter());
-        Ok(left == right)
+        let mut pairings: Vec<_> = g1_vec
+            .into_iter()
+            .take(verifier_param.num_vars)
+            .map(E::G1Prepared::from)
+            .zip(proof.proofs.iter().map(|&x| E::G2Prepared::from(x)))
+            .collect();
+
+        pairings.push((
+            E::G1Prepared::from(tmp),
+            E::G2Prepared::from(verifier_param.h),
+        ));
+
+        Ok(E::product_of_pairings(pairings.iter()) == E::Fqk::one())
     }
 }
 

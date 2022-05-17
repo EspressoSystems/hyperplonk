@@ -49,7 +49,7 @@ pub struct VerifierParam<E: PairingEngine> {
     /// generator of G2
     pub h: E::G2Affine,
     /// g^t1, g^t2, ...
-    pub g_mask_random: Vec<E::G1Affine>,
+    pub g_mask: Vec<E::G1Affine>,
 }
 
 impl<E: PairingEngine> UniversalParams<E> {
@@ -64,7 +64,7 @@ impl<E: PairingEngine> UniversalParams<E> {
             num_vars: self.prover_param.num_vars,
             g: self.prover_param.g,
             h: self.prover_param.h,
-            g_mask_random: self.g_mask.clone(),
+            g_mask: self.g_mask.clone(),
         }
     }
 
@@ -85,8 +85,8 @@ impl<E: PairingEngine> UniversalParams<E> {
 
         let to_reduce = self.prover_param.num_vars - supported_num_vars;
         let ck = ProverParam {
-            powers_of_h: (&self.prover_param.powers_of_h[to_reduce..]).to_vec(),
-            powers_of_g: (&self.prover_param.powers_of_g[to_reduce..]).to_vec(),
+            powers_of_h: self.prover_param.powers_of_h[to_reduce..].to_vec(),
+            powers_of_g: self.prover_param.powers_of_g[to_reduce..].to_vec(),
             g: self.prover_param.g,
             h: self.prover_param.h,
             num_vars: supported_num_vars,
@@ -95,7 +95,7 @@ impl<E: PairingEngine> UniversalParams<E> {
             num_vars: supported_num_vars,
             g: self.prover_param.g,
             h: self.prover_param.h,
-            g_mask_random: (&self.g_mask[to_reduce..]).to_vec(),
+            g_mask: self.g_mask[to_reduce..].to_vec(),
         };
         Ok((ck, vk))
     }
