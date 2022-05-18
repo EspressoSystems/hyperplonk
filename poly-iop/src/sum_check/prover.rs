@@ -1,4 +1,4 @@
-//! Prover
+//! Prover subroutines for a SumCheck protocol.
 
 use super::SumCheckProver;
 use crate::{
@@ -15,14 +15,14 @@ use std::rc::Rc;
 use rayon::iter::{IndexedParallelIterator, IntoParallelRefMutIterator, ParallelIterator};
 
 impl<F: PrimeField> SumCheckProver<F> for IOPProverState<F> {
-    type PolyList = VirtualPolynomial<F>;
+    type VirtualPolynomial = VirtualPolynomial<F>;
     type ProverMessage = IOPProverMessage<F>;
 
-    /// Initialize the prover to argue for the sum of polynomial over
-    /// {0,1}^`num_vars`
-    fn prover_init(polynomial: &Self::PolyList) -> Result<Self, PolyIOPErrors> {
+    /// Initialize the prover state to argue for the sum of the input polynomial
+    /// over {0,1}^`num_vars`.
+    fn prover_init(polynomial: &Self::VirtualPolynomial) -> Result<Self, PolyIOPErrors> {
         let start = start_timer!(|| "sum check prover init");
-        if polynomial.domain_info.num_variables == 0 {
+        if polynomial.aux_info.num_variables == 0 {
             return Err(PolyIOPErrors::InvalidParameters(
                 "Attempt to prove a constant.".to_string(),
             ));
@@ -30,14 +30,14 @@ impl<F: PrimeField> SumCheckProver<F> for IOPProverState<F> {
         end_timer!(start);
 
         Ok(Self {
-            challenges: Vec::with_capacity(polynomial.domain_info.num_variables),
+            challenges: Vec::with_capacity(polynomial.aux_info.num_variables),
             round: 0,
             poly: polynomial.clone(),
         })
     }
 
     /// Receive message from verifier, generate prover message, and proceed to
-    /// next round
+    /// next round.
     ///
     /// Main algorithm used is from section 3.2 of [XZZPS19](https://eprint.iacr.org/2019/317.pdf#subsection.3.2).
     fn prove_round_and_update_state(
@@ -64,18 +64,23 @@ impl<F: PrimeField> SumCheckProver<F> for IOPProverState<F> {
             }
             self.challenges.push(*chal);
 
-            // fix argument
-            let i = self.round;
-            let r = self.challenges[i - 1];
+            // fix argument and evaluate f(x) over r for r.len() <= x.len()
+            // i.e.:
+            // for each mle g(x_0, ... x_n) within the flattened_mle
+            // eval g(x_0,...x_n) over [r_0, ..., r_m] with m <= n
+            // and mutate g to g(r_0, ...r_m, x_{m+1},... x_n)
+            //
+            // TODO(ZZ): have a question on this. Let's chat @binyi.
+            let r = self.challenges[self.round - 1];
             #[cfg(feature = "parallel")]
             flattened_ml_extensions
                 .par_iter_mut()
-                .for_each(|multiplicand| *multiplicand = multiplicand.fix_variables(&[r]));
+                .for_each(|mle| *mle = mle.fix_variables(&[r]));
 
             #[cfg(not(feature = "parallel"))]
             flattened_ml_extensions
                 .iter_mut()
-                .for_each(|multiplicand| *multiplicand = multiplicand.fix_variables(&[r]));
+                .for_each(|mle| *mle = mle.fix_variables(&[r]));
         } else if self.round > 0 {
             return Err(PolyIOPErrors::InvalidProver(
                 "verifier message is empty".to_string(),
@@ -85,7 +90,7 @@ impl<F: PrimeField> SumCheckProver<F> for IOPProverState<F> {
 
         self.round += 1;
 
-        if self.round > self.poly.domain_info.num_variables {
+        if self.round > self.poly.aux_info.num_variables {
             return Err(PolyIOPErrors::InvalidProver(
                 "Prover is not active".to_string(),
             ));
@@ -93,8 +98,8 @@ impl<F: PrimeField> SumCheckProver<F> for IOPProverState<F> {
 
         let products_list = self.poly.products.clone();
         let i = self.round;
-        let nv = self.poly.domain_info.num_variables;
-        let degree = self.poly.domain_info.max_degree; // the degree of univariate polynomial sent by prover at this round
+        let nv = self.poly.aux_info.num_variables;
+        let degree = self.poly.aux_info.max_degree; // the degree of univariate polynomial sent by prover at this round
 
         let mut products_sum = Vec::with_capacity(degree + 1);
         products_sum.resize(degree + 1, F::zero());

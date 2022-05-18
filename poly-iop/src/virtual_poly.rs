@@ -1,4 +1,7 @@
-use crate::{errors::PolyIOPErrors, structs::DomainInfo};
+//! This module defines our main mathematical object `VirtualPolynomial`; and
+//! various functions associated with it.
+
+use crate::errors::PolyIOPErrors;
 use ark_ff::PrimeField;
 use ark_poly::{DenseMultilinearExtension, MultilinearExtension};
 use ark_std::{
@@ -38,7 +41,7 @@ use std::{cmp::max, collections::HashMap, marker::PhantomData, ops::Add, rc::Rc}
 #[derive(Clone, Debug, Default, PartialEq)]
 pub struct VirtualPolynomial<F: PrimeField> {
     /// Aux information about the multilinear polynomial
-    pub domain_info: DomainInfo<F>,
+    pub aux_info: VPAuxInfo<F>,
     /// list of reference to products (as usize) of multilinear extension
     pub products: Vec<(F, Vec<usize>)>,
     /// Stores multilinear extensions in which product multiplicand can refer
@@ -46,6 +49,18 @@ pub struct VirtualPolynomial<F: PrimeField> {
     pub flattened_ml_extensions: Vec<Rc<DenseMultilinearExtension<F>>>,
     /// Pointers to the above poly extensions
     raw_pointers_lookup_table: HashMap<*const DenseMultilinearExtension<F>, usize>,
+}
+
+#[derive(Clone, Debug, Default, PartialEq)]
+/// Auxiliary information about the multilinear polynomial
+pub struct VPAuxInfo<F: PrimeField> {
+    /// max number of multiplicands in each product
+    pub max_degree: usize,
+    /// number of variables of the polynomial
+    pub num_variables: usize,
+    /// Associated field
+    #[doc(hidden)]
+    pub(crate) phantom: PhantomData<F>,
 }
 
 impl<F: PrimeField> Add for &VirtualPolynomial<F> {
@@ -69,10 +84,10 @@ impl<F: PrimeField> Add for &VirtualPolynomial<F> {
 }
 
 impl<F: PrimeField> VirtualPolynomial<F> {
-    /// Returns an empty polynomial
+    /// Creates an empty virtual polynomial with `num_variables`.
     pub fn new(num_variables: usize) -> Self {
         VirtualPolynomial {
-            domain_info: DomainInfo {
+            aux_info: VPAuxInfo {
                 max_degree: 0,
                 num_variables,
                 phantom: PhantomData::default(),
@@ -83,27 +98,31 @@ impl<F: PrimeField> VirtualPolynomial<F> {
         }
     }
 
-    /// Returns an new virtual polynomial from a MLE
+    /// Creates an new virtual polynomial from a MLE and its coefficient.
     pub fn new_from_mle(mle: Rc<DenseMultilinearExtension<F>>, coefficient: F) -> Self {
         let mle_ptr: *const DenseMultilinearExtension<F> = Rc::as_ptr(&mle);
         let mut hm = HashMap::new();
         hm.insert(mle_ptr, 0);
 
         VirtualPolynomial {
-            domain_info: DomainInfo {
+            aux_info: VPAuxInfo {
                 // The max degree is the max degree of any individual variable
                 max_degree: 1,
                 num_variables: mle.num_vars,
                 phantom: PhantomData::default(),
             },
+            // here `0` points to the first polynomial of `flattened_ml_extensions`
             products: vec![(coefficient, vec![0])],
             flattened_ml_extensions: vec![mle],
             raw_pointers_lookup_table: hm,
         }
     }
 
-    /// Add a list of multilinear extensions that is meant to be multiplied
-    /// together. The resulting polynomial will be multiplied by the scalar
+    /// Add a list of multilinear extensions to self.
+    /// Returns an error if the list is empty, or the MLE has a different
+    /// `num_vars` from self.
+    ///
+    /// The MLEs will be multiplied together, and then multiplied by the scalar
     /// `coefficient`.
     pub fn add_mle_list(
         &mut self,
@@ -112,13 +131,20 @@ impl<F: PrimeField> VirtualPolynomial<F> {
     ) -> Result<(), PolyIOPErrors> {
         let mle_list: Vec<Rc<DenseMultilinearExtension<F>>> = mle_list.into_iter().collect();
         let mut indexed_product = Vec::with_capacity(mle_list.len());
-        assert!(!mle_list.is_empty());
-        self.domain_info.max_degree = max(self.domain_info.max_degree, mle_list.len());
+
+        if mle_list.is_empty() {
+            return Err(PolyIOPErrors::InvalidParameters(
+                "input mle_list is empty".to_string(),
+            ));
+        }
+
+        self.aux_info.max_degree = max(self.aux_info.max_degree, mle_list.len());
+
         for mle in mle_list {
-            if mle.num_vars != self.domain_info.num_variables {
+            if mle.num_vars != self.aux_info.num_variables {
                 return Err(PolyIOPErrors::InvalidParameters(format!(
                     "product has a multiplicand with wrong number of variables {} vs {}",
-                    mle.num_vars, self.domain_info.num_variables
+                    mle.num_vars, self.aux_info.num_variables
                 )));
             }
 
@@ -137,16 +163,26 @@ impl<F: PrimeField> VirtualPolynomial<F> {
     }
 
     /// Multiple the current VirtualPolynomial by an MLE:
-    /// - add the MLE to the MLE list
-    /// - multiple each product by MLE and its coefficient
+    /// - add the MLE to the MLE list;
+    /// - multiple each product by MLE and its coefficient.
+    /// Returns an error if the MLE has a different `num_vars` from self.
     pub fn mul_by_mle(
         &mut self,
         mle: Rc<DenseMultilinearExtension<F>>,
         coefficient: F,
     ) -> Result<(), PolyIOPErrors> {
         let start = start_timer!(|| "mul by mle");
+
+        if mle.num_vars != self.aux_info.num_variables {
+            return Err(PolyIOPErrors::InvalidParameters(format!(
+                "product has a multiplicand with wrong number of variables {} vs {}",
+                mle.num_vars, self.aux_info.num_variables
+            )));
+        }
+
         let mle_ptr: *const DenseMultilinearExtension<F> = Rc::as_ptr(&mle);
 
+        // check if this mle already exists in the virtual polynomial
         let mle_index = match self.raw_pointers_lookup_table.get(&mle_ptr) {
             Some(&p) => p,
             None => {
@@ -158,22 +194,27 @@ impl<F: PrimeField> VirtualPolynomial<F> {
         };
 
         for (prod_coef, indices) in self.products.iter_mut() {
+            // - add the MLE to the MLE list;
+            // - multiple each product by MLE and its coefficient.
             indices.push(mle_index);
             *prod_coef *= coefficient;
         }
-        self.domain_info.max_degree += 1;
+
+        // increase the max degree by one as the MLE has degree 1.
+        self.aux_info.max_degree += 1;
         end_timer!(start);
         Ok(())
     }
 
-    /// Evaluate the polynomial at point `point`
+    /// Evaluate the virtual polynomial at point `point`.
+    /// Returns an error is point.len() does not match `num_variables`.
     pub fn evaluate(&self, point: &[F]) -> Result<F, PolyIOPErrors> {
         let start = start_timer!(|| "evaluation");
 
-        if self.domain_info.num_variables != point.len() {
+        if self.aux_info.num_variables != point.len() {
             return Err(PolyIOPErrors::InvalidParameters(format!(
                 "wrong number of variables {} vs {}",
-                self.domain_info.num_variables,
+                self.aux_info.num_variables,
                 point.len()
             )));
         }
@@ -222,8 +263,8 @@ impl<F: PrimeField> VirtualPolynomial<F> {
         Ok((poly, sum))
     }
 
-    /// Sample a random virtual polynomial that evaluates to zero everywhere on
-    /// the boolean hypercube.
+    /// Sample a random virtual polynomial that evaluates to zero everywhere
+    /// over the boolean hypercube.
     pub fn rand_zero<R: RngCore>(
         nv: usize,
         num_multiplicands_range: (usize, usize),
@@ -236,10 +277,33 @@ impl<F: PrimeField> VirtualPolynomial<F> {
                 rng.gen_range(num_multiplicands_range.0..num_multiplicands_range.1);
             let product = random_zero_mle_list(nv, num_multiplicands, rng);
             let coefficient = F::rand(rng);
-            poly.add_mle_list(product.into_iter(), coefficient).unwrap();
+            poly.add_mle_list(product.into_iter(), coefficient)?;
         }
 
         Ok(poly)
+    }
+
+    // Input poly f(x) and a random vector r, output
+    //      \hat f(x) = \sum_{x_i \in eval_x} f(x_i) eq(x, r)
+    // where
+    //      eq(x,y) = \prod_i=1^num_var (x_i * y_i + (1-x_i)*(1-y_i))
+    pub fn build_f_hat(&self, r: &[F]) -> Result<Self, PolyIOPErrors> {
+        let start = start_timer!(|| "zero check build hat f");
+
+        if self.aux_info.num_variables != r.len() {
+            return Err(PolyIOPErrors::InvalidParameters(format!(
+                "r.len() is different from number of variables: {} vs {}",
+                r.len(),
+                self.aux_info.num_variables
+            )));
+        }
+
+        let eq_x_r = build_eq_x_r(r)?;
+        let mut res = self.clone();
+        res.mul_by_mle(eq_x_r, F::one())?;
+
+        end_timer!(start);
+        Ok(res)
     }
 }
 
@@ -307,6 +371,68 @@ pub fn random_zero_mle_list<F: PrimeField, R: RngCore>(
     list
 }
 
+// This function build the eq(x, r) polynomial for any given r.
+//
+// Evaluate
+//      eq(x,y) = \prod_i=1^num_var (x_i * y_i + (1-x_i)*(1-y_i))
+// over r, which is
+//      eq(x,y) = \prod_i=1^num_var (x_i * r_i + (1-x_i)*(1-r_i))
+fn build_eq_x_r<F: PrimeField>(r: &[F]) -> Result<Rc<DenseMultilinearExtension<F>>, PolyIOPErrors> {
+    let start = start_timer!(|| "zero check build eq_x_r");
+
+    // we build eq(x,r) from its evaluations
+    // we want to evaluate eq(x,r) over x \in {0, 1}^num_vars
+    // for example, with num_vars = 4, x is a binary vector of 4, then
+    //  0 0 0 0 -> (1-r0)   * (1-r1)    * (1-r2)    * (1-r3)
+    //  1 0 0 0 -> r0       * (1-r1)    * (1-r2)    * (1-r3)
+    //  0 1 0 0 -> (1-r0)   * r1        * (1-r2)    * (1-r3)
+    //  1 1 0 0 -> r0       * r1        * (1-r2)    * (1-r3)
+    //  ....
+    //  1 1 1 1 -> r0       * r1        * r2        * r3
+    // we will need 2^num_var evaluations
+
+    let mut eval = Vec::new();
+    build_eq_x_r_helper(r, &mut eval)?;
+
+    let mle = DenseMultilinearExtension::from_evaluations_vec(r.len(), eval);
+
+    let res = Rc::new(mle);
+    end_timer!(start);
+    Ok(res)
+}
+
+/// A helper function to build eq(x, r) recursively.
+/// This function takes `r.len()` steps, and for each step it requires a maximum
+/// `r.len()-1` multiplications.
+fn build_eq_x_r_helper<F: PrimeField>(r: &[F], buf: &mut Vec<F>) -> Result<(), PolyIOPErrors> {
+    if r.is_empty() {
+        return Err(PolyIOPErrors::InvalidParameters(
+            "r length is 0".to_string(),
+        ));
+    } else if r.len() == 1 {
+        // initializing the buffer with [1-r_0, r_0]
+        buf.push(F::one() - r[0]);
+        buf.push(r[0]);
+    } else {
+        build_eq_x_r_helper(&r[1..], buf)?;
+
+        // suppose at the previous step we received [b_1, ..., b_k]
+        // for the current step we will need
+        // if x_0 = 0:   (1-r0) * [b_1, ..., b_k]
+        // if x_0 = 1:   r0 * [b_1, ..., b_k]
+
+        let mut res = vec![];
+        for &b_i in buf.iter() {
+            let tmp = r[0] * b_i;
+            res.push(b_i - tmp);
+            res.push(tmp);
+        }
+        *buf = res;
+    }
+
+    Ok(())
+}
+
 #[cfg(test)]
 pub(crate) mod test {
     use super::*;
@@ -363,5 +489,71 @@ pub(crate) mod test {
         }
 
         Ok(())
+    }
+
+    #[test]
+    fn test_eq_xr() {
+        let mut rng = test_rng();
+        for nv in 4..10 {
+            let r: Vec<Fr> = (0..nv).map(|_| Fr::rand(&mut rng)).collect();
+            let eq_x_r = build_eq_x_r(r.as_ref()).unwrap();
+            let eq_x_r2 = build_eq_x_r_for_test(r.as_ref());
+            assert_eq!(eq_x_r, eq_x_r2);
+        }
+    }
+
+    /// Naive method to build eq(x, r).
+    /// Only used for testing purpose.
+    // Evaluate
+    //      eq(x,y) = \prod_i=1^num_var (x_i * y_i + (1-x_i)*(1-y_i))
+    // over r, which is
+    //      eq(x,y) = \prod_i=1^num_var (x_i * r_i + (1-x_i)*(1-r_i))
+    fn build_eq_x_r_for_test<F: PrimeField>(r: &[F]) -> Rc<DenseMultilinearExtension<F>> {
+        let start = start_timer!(|| "zero check naive build eq_x_r");
+
+        // we build eq(x,r) from its evaluations
+        // we want to evaluate eq(x,r) over x \in {0, 1}^num_vars
+        // for example, with num_vars = 4, x is a binary vector of 4, then
+        //  0 0 0 0 -> (1-r0)   * (1-r1)    * (1-r2)    * (1-r3)
+        //  1 0 0 0 -> r0       * (1-r1)    * (1-r2)    * (1-r3)
+        //  0 1 0 0 -> (1-r0)   * r1        * (1-r2)    * (1-r3)
+        //  1 1 0 0 -> r0       * r1        * (1-r2)    * (1-r3)
+        //  ....
+        //  1 1 1 1 -> r0       * r1        * r2        * r3
+        // we will need 2^num_var evaluations
+
+        // First, we build array for {1 - r_i}
+        let one_minus_r: Vec<F> = r.iter().map(|ri| F::one() - ri).collect();
+
+        let num_var = r.len();
+        let mut eval = vec![];
+
+        for i in 0..1 << num_var {
+            let mut current_eval = F::one();
+            let bit_sequence = bit_decompose(i, num_var);
+
+            for (&bit, (ri, one_minus_ri)) in
+                bit_sequence.iter().zip(r.iter().zip(one_minus_r.iter()))
+            {
+                current_eval *= if bit { *ri } else { *one_minus_ri };
+            }
+            eval.push(current_eval);
+        }
+
+        let mle = DenseMultilinearExtension::from_evaluations_vec(num_var, eval);
+
+        let res = Rc::new(mle);
+        end_timer!(start);
+        res
+    }
+
+    fn bit_decompose(input: u64, num_var: usize) -> Vec<bool> {
+        let mut res = Vec::with_capacity(num_var);
+        let mut i = input;
+        for _ in 0..num_var {
+            res.push(i & 1 == 1);
+            i >>= 1;
+        }
+        res
     }
 }
