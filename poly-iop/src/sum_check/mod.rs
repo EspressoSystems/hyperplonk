@@ -95,7 +95,7 @@ pub trait SumCheckVerifier<F: PrimeField> {
     ) -> Result<Self::Challenge, PolyIOPErrors>;
 
     /// This function verifies the deferred checks in the interactive version of
-    /// the protocol; and generate the subclaim. Returns an error is the
+    /// the protocol; and generate the subclaim. Returns an error if the
     /// proof failed to verify.
     ///
     /// If the asserted sum is correct, then the multilinear polynomial

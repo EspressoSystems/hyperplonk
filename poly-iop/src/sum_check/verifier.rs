@@ -81,7 +81,7 @@ impl<F: PrimeField> SumCheckVerifier<F> for IOPVerifierState<F> {
     }
 
     /// This function verifies the deferred checks in the interactive version of
-    /// the protocol; and generate the subclaim. Returns an error is the
+    /// the protocol; and generate the subclaim. Returns an error if the
     /// proof failed to verify.
     ///
     /// If the asserted sum is correct, then the multilinear polynomial
@@ -184,7 +184,7 @@ fn interpolate_uni_poly<F: PrimeField>(p_i: &[F], eval_at: F) -> Result<F, PolyI
     let mut res = F::zero();
 
     // compute
-    //  - prod = \prod_{j!=i} (eval_at - j)
+    //  - prod = \prod (eval_at - j)
     //  - evals = [eval_at - j]
     let mut evals = vec![];
     let len = p_i.len();
