@@ -54,6 +54,14 @@ impl<F: PrimeField> SumCheckProver<F> for IOPProverState<F> {
         }
 
         let fix_argument = start_timer!(|| "fix argument");
+        // Step 1:
+        // fix argument and evaluate f(x) over r for r.len() <= x.len()
+        // i.e.:
+        // for each mle g(x_0, ... x_n) within the flattened_mle
+        // eval g(x_0,...x_n) over [r_0, ..., r_m] with m <= n
+        // and mutate g to g(r_0, ...r_m, x_{m+1},... x_n)
+        //
+        // TODO(ZZ): have a question on this. Let's chat @binyi.
 
         // Step 1:
         // fix argument and evaluate f(x) over x_m = r; where r is the challenge
