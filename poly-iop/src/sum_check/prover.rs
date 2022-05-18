@@ -47,7 +47,21 @@ impl<F: PrimeField> SumCheckProver<F> for IOPProverState<F> {
         let start =
             start_timer!(|| format!("sum check prove {}-th round and update state", self.round));
 
+        if self.round >= self.poly.aux_info.num_variables {
+            return Err(PolyIOPErrors::InvalidProver(
+                "Prover is not active".to_string(),
+            ));
+        }
+
         let fix_argument = start_timer!(|| "fix argument");
+        // Step 1:
+        // fix argument and evaluate f(x) over r for r.len() <= x.len()
+        // i.e.:
+        // for each mle g(x_0, ... x_n) within the flattened_mle
+        // eval g(x_0,...x_n) over [r_0, ..., r_m] with m <= n
+        // and mutate g to g(r_0, ...r_m, x_{m+1},... x_n)
+        //
+        // TODO(ZZ): have a question on this. Let's chat @binyi.
 
         let mut flattened_ml_extensions: Vec<DenseMultilinearExtension<F>> = self
             .poly
@@ -64,13 +78,6 @@ impl<F: PrimeField> SumCheckProver<F> for IOPProverState<F> {
             }
             self.challenges.push(*chal);
 
-            // fix argument and evaluate f(x) over r for r.len() <= x.len()
-            // i.e.:
-            // for each mle g(x_0, ... x_n) within the flattened_mle
-            // eval g(x_0,...x_n) over [r_0, ..., r_m] with m <= n
-            // and mutate g to g(r_0, ...r_m, x_{m+1},... x_n)
-            //
-            // TODO(ZZ): have a question on this. Let's chat @binyi.
             let r = self.challenges[self.round - 1];
             #[cfg(feature = "parallel")]
             flattened_ml_extensions
@@ -90,30 +97,22 @@ impl<F: PrimeField> SumCheckProver<F> for IOPProverState<F> {
 
         self.round += 1;
 
-        if self.round > self.poly.aux_info.num_variables {
-            return Err(PolyIOPErrors::InvalidProver(
-                "Prover is not active".to_string(),
-            ));
-        }
-
         let products_list = self.poly.products.clone();
-        let i = self.round;
-        let nv = self.poly.aux_info.num_variables;
-        let degree = self.poly.aux_info.max_degree; // the degree of univariate polynomial sent by prover at this round
-
-        let mut products_sum = Vec::with_capacity(degree + 1);
-        products_sum.resize(degree + 1, F::zero());
+        let mut products_sum = Vec::with_capacity(self.poly.aux_info.max_degree + 1);
+        products_sum.resize(self.poly.aux_info.max_degree + 1, F::zero());
 
         let compute_sum = start_timer!(|| "compute sum");
-        // generate sum
+        // Step 2: generate sum for the partial evaluated polynomial:
+        // f(r_0, ...r_m, x_{m+1},... x_n)
+
         #[cfg(feature = "parallel")]
         products_sum.par_iter_mut().enumerate().for_each(|(t, e)| {
-            for b in 0..1 << (nv - i) {
+            for b in 0..1 << (self.poly.aux_info.num_variables - self.round) {
                 // evaluate P_round(t)
                 for (coefficient, products) in products_list.iter() {
-                    let num_multiplicands = products.len();
+                    let num_mles = products.len();
                     let mut product = *coefficient;
-                    for &f in products.iter().take(num_multiplicands) {
+                    for &f in products.iter().take(num_mles) {
                         let table = &flattened_ml_extensions[f]; // f's range is checked in init
                         product *= table[b << 1] * (F::one() - F::from(t as u64))
                             + table[(b << 1) + 1] * F::from(t as u64);
@@ -124,26 +123,23 @@ impl<F: PrimeField> SumCheckProver<F> for IOPProverState<F> {
         });
 
         #[cfg(not(feature = "parallel"))]
-        for b in 0..1 << (nv - i) {
-            products_sum
-                .iter_mut()
-                .take(degree + 1)
-                .enumerate()
-                .for_each(|(t, e)| {
-                    // evaluate P_round(t)
-                    for (coefficient, products) in products_list.iter() {
-                        let num_multiplicands = products.len();
-                        let mut product = *coefficient;
-                        for &f in products.iter().take(num_multiplicands) {
-                            let table = &flattened_ml_extensions[f]; // f's range is checked in init
-                            product *= table[b << 1] * (F::one() - F::from(t as u64))
-                                + table[(b << 1) + 1] * F::from(t as u64);
-                        }
-                        *e += product;
+        products_sum.iter_mut().enumerate().for_each(|(t, e)| {
+            for b in 0..1 << (self.poly.aux_info.num_variables - self.round) {
+                // evaluate P_round(t)
+                for (coefficient, products) in products_list.iter() {
+                    let num_mles = products.len();
+                    let mut product = *coefficient;
+                    for &f in products.iter().take(num_mles) {
+                        let table = &flattened_ml_extensions[f]; // f's range is checked in init
+                        product *= table[b << 1] * (F::one() - F::from(t as u64))
+                            + table[(b << 1) + 1] * F::from(t as u64);
                     }
-                });
-        }
+                    *e += product;
+                }
+            }
+        });
 
+        // update prover's state to the partial evaluated polynomial
         self.poly.flattened_ml_extensions = flattened_ml_extensions
             .iter()
             .map(|x| Rc::new(x.clone()))

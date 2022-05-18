@@ -21,7 +21,7 @@ pub trait SumCheck<F: PrimeField> {
     type SubClaim;
     type Transcript;
 
-    /// extract sum from the proof
+    /// Extract sum from the proof
     fn extract_sum(proof: &Self::Proof) -> F;
 
     /// Initialize the system with a transcript
@@ -110,15 +110,12 @@ pub trait SumCheckVerifier<F: PrimeField> {
 
 impl<F: PrimeField> SumCheck<F> for PolyIOP<F> {
     type Proof = IOPProof<F>;
-
     type VirtualPolynomial = VirtualPolynomial<F>;
-
     type VPAuxInfo = VPAuxInfo<F>;
-
     type SubClaim = SubClaim<F>;
-
     type Transcript = IOPTranscript<F>;
 
+    /// Extract sum from the proof
     fn extract_sum(proof: &Self::Proof) -> F {
         let start = start_timer!(|| "extract sum");
         let res = proof.proofs[0].evaluations[0] + proof.proofs[0].evaluations[1];
@@ -167,7 +164,7 @@ impl<F: PrimeField> SumCheck<F> for PolyIOP<F> {
         })
     }
 
-    /// verify the claimed sum using the proof
+    /// Verify the claimed sum using the proof
     fn verify(
         claimed_sum: F,
         proof: &Self::Proof,
