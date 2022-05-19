@@ -218,9 +218,7 @@ fn remove_dummy_variable<F: Field>(poly: &[F], pad: usize) -> Result<Vec<F>, PCS
     Ok((0..(1 << nv)).map(|x| poly[x << pad]).collect())
 }
 
-/// TODO: improve the complexity of this code with `PolyIOP::build_eq_x_r`
-///
-/// generate eq(t,x), a product of multilinear polynomials with fixed t.
+/// Generate eq(t,x), a product of multilinear polynomials with fixed t.
 /// eq(a,b) is takes extensions of a,b in {0,1}^num_vars such that if a and b in
 /// {0,1}^num_vars are equal then this polynomial evaluates to 1.
 fn eq_extension<F: PrimeField>(t: &[F]) -> Vec<DenseMultilinearExtension<F>> {

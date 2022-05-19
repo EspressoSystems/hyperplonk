@@ -45,7 +45,10 @@ impl<E: PairingEngine> MultilinearCommitmentScheme<E> for KZGMultilinearPC<E> {
         res
     }
 
-    /// Generate a commitment for a polynomial
+    /// Generate a commitment for a polynomial.
+    ///
+    /// This function takes `2^num_vars` number of scalar multiplications over
+    /// G1.
     fn commit(
         prover_param: &Self::ProverParam,
         poly: &impl MultilinearExtension<E::Fr>,
@@ -69,7 +72,14 @@ impl<E: PairingEngine> MultilinearCommitmentScheme<E> for KZGMultilinearPC<E> {
     }
 
     /// On input a polynomial `p` and a point `point`, outputs a proof for the
-    /// same.
+    /// same. This function does not need to take the evaluation value as an
+    /// input.
+    ///
+    /// This function takes 2^{num_var +1} number of scalar multiplications over
+    /// G2:
+    /// - it proceeds with `num_var` number of rounds,
+    /// - at round i, we compute an MSM for `2^{num_var - i + 1}` number of G2
+    ///   elements.
     fn open(
         prover_param: &Self::ProverParam,
         polynomial: &impl MultilinearExtension<E::Fr>,
@@ -128,6 +138,10 @@ impl<E: PairingEngine> MultilinearCommitmentScheme<E> for KZGMultilinearPC<E> {
 
     /// Verifies that `value` is the evaluation at `x` of the polynomial
     /// committed inside `comm`.
+    ///
+    /// This function takes
+    /// - num_var number of pairing product.
+    /// - num_var number of MSM
     fn verify(
         verifier_param: &Self::VerifierParam,
         commitment: &Self::Commitment,
@@ -205,6 +219,9 @@ mod tests {
         let value = poly.evaluate(&point).unwrap();
         assert!(KZGMultilinearPC::verify(&vk, &com, &point, value, &proof)?);
 
+        let value = Fr::rand(rng);
+        assert!(!KZGMultilinearPC::verify(&vk, &com, &point, value, &proof)?);
+
         Ok(())
     }
 
@@ -236,28 +253,5 @@ mod tests {
 
         // normal polynomials
         assert!(KZGMultilinearPC::<E>::setup(&mut rng, 0).is_err());
-    }
-
-    #[test]
-    fn setup_commit_verify_incorrect_polynomial_should_return_false() -> Result<(), PCSErrors> {
-        let mut rng = test_rng();
-        let nv = 8;
-        let uni_params = KZGMultilinearPC::<E>::setup(&mut rng, nv)?;
-        let poly = DenseMultilinearExtension::rand(nv, &mut rng);
-        let nv = uni_params.prover_param.num_vars;
-        let (ck, vk) = uni_params.trim(nv)?;
-        let point: Vec<_> = (0..nv).map(|_| Fr::rand(&mut rng)).collect();
-        let com = KZGMultilinearPC::commit(&ck, &poly)?;
-        let proof = KZGMultilinearPC::open(&ck, &poly, &point)?;
-
-        let value = poly.evaluate(&point).unwrap();
-        assert!(!KZGMultilinearPC::verify(
-            &vk,
-            &com,
-            &point,
-            value + &(1u16.into()),
-            &proof
-        )?);
-        Ok(())
     }
 }
