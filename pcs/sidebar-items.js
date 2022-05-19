@@ -1,1 +1,1 @@
-initSidebarItems({});
+initSidebarItems({"enum":[["PCSErrors","A `enum` specifying the possible failure modes of the PCS."]],"struct":[["KZGMultilinearPC","KZG Polynomial Commitment Scheme on multilinear extensions."],["ProverParam","Prover Parameters"],["UniversalParams","Universal Parameter"],["VerifierParam","Verifier Parameters"]],"trait":[["MultilinearCommitmentScheme",""]]});
