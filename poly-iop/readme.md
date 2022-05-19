@@ -3,5 +3,5 @@ Poly IOP
 
 Implements the following protocols
 
-- [ ] sum checks
-- [ ] zero checks
+- [x] sum checks
+- [x] zero checks
