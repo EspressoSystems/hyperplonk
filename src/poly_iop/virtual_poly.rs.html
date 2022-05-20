@@ -555,15 +555,6 @@
 <span id="550">550</span>
 <span id="551">551</span>
 <span id="552">552</span>
-<span id="553">553</span>
-<span id="554">554</span>
-<span id="555">555</span>
-<span id="556">556</span>
-<span id="557">557</span>
-<span id="558">558</span>
-<span id="559">559</span>
-<span id="560">560</span>
-<span id="561">561</span>
 </pre><pre class="rust"><code><span class="doccomment">//! This module defines our main mathematical object `VirtualPolynomial`; and</span>
 <span class="doccomment">//! various functions associated with it.</span>
 
@@ -1002,8 +993,9 @@
 }
 
 <span class="attribute">#[<span class="ident">cfg</span>(<span class="ident">test</span>)]</span>
-<span class="kw">pub</span>(<span class="kw">crate</span>) <span class="kw">mod</span> <span class="ident">test</span> {
+<span class="kw">mod</span> <span class="ident">test</span> {
     <span class="kw">use</span> <span class="kw">super</span>::<span class="kw-2">*</span>;
+    <span class="kw">use</span> <span class="ident"><span class="kw">crate</span>::utils::bit_decompose</span>;
     <span class="kw">use</span> <span class="ident">ark_bls12_381::Fr</span>;
     <span class="kw">use</span> <span class="ident">ark_ff::UniformRand</span>;
     <span class="kw">use</span> <span class="ident">ark_std::test_rng</span>;
@@ -1112,16 +1104,6 @@
 
         <span class="kw">let</span> <span class="ident">res</span> <span class="op">=</span> <span class="ident">Rc::new</span>(<span class="ident">mle</span>);
         <span class="macro">end_timer!</span>(<span class="ident">start</span>);
-        <span class="ident">res</span>
-    }
-
-    <span class="kw">fn</span> <span class="ident">bit_decompose</span>(<span class="ident">input</span>: <span class="ident">u64</span>, <span class="ident">num_var</span>: <span class="ident">usize</span>) -&gt; <span class="ident">Vec</span><span class="op">&lt;</span><span class="ident">bool</span><span class="op">&gt;</span> {
-        <span class="kw">let</span> <span class="kw-2">mut</span> <span class="ident">res</span> <span class="op">=</span> <span class="ident">Vec::with_capacity</span>(<span class="ident">num_var</span>);
-        <span class="kw">let</span> <span class="kw-2">mut</span> <span class="ident">i</span> <span class="op">=</span> <span class="ident">input</span>;
-        <span class="kw">for</span> <span class="kw">_</span> <span class="kw">in</span> <span class="number">0</span>..<span class="ident">num_var</span> {
-            <span class="ident">res</span>.<span class="ident">push</span>(<span class="ident">i</span> <span class="op">&amp;</span> <span class="number">1</span> <span class="op">==</span> <span class="number">1</span>);
-            <span class="ident">i</span> <span class="op">&gt;</span><span class="op">&gt;</span><span class="op">=</span> <span class="number">1</span>;
-        }
         <span class="ident">res</span>
     }
 }
