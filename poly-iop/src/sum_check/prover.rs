@@ -65,7 +65,7 @@ impl<F: PrimeField> SumCheckProver<F> for IOPProverState<F> {
         //
         //    g(r_1, ..., r_{m-1}, x_m ... x_n)
         //
-        // eval g over r_m, and mutate g to g(r_1, ... r_m,, x_{m_1}... x_n)
+        // eval g over r_m, and mutate g to g(r_1, ... r_m,, x_{m+1}... x_n)
         let mut flattened_ml_extensions: Vec<DenseMultilinearExtension<F>> = self
             .poly
             .flattened_ml_extensions
