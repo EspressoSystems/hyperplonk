@@ -118,7 +118,7 @@ impl<F: PrimeField> VirtualPolynomial<F> {
         }
     }
 
-    /// Add a list of multilinear extensions to self.
+    /// Add a product of list of multilinear extensions to self
     /// Returns an error if the list is empty, or the MLE has a different
     /// `num_vars` from self.
     ///
@@ -287,7 +287,9 @@ impl<F: PrimeField> VirtualPolynomial<F> {
     //      \hat f(x) = \sum_{x_i \in eval_x} f(x_i) eq(x, r)
     // where
     //      eq(x,y) = \prod_i=1^num_var (x_i * y_i + (1-x_i)*(1-y_i))
-    pub fn build_f_hat(&self, r: &[F]) -> Result<Self, PolyIOPErrors> {
+    //
+    // This function is used in ZeroCheck.
+    pub(crate) fn build_f_hat(&self, r: &[F]) -> Result<Self, PolyIOPErrors> {
         let start = start_timer!(|| "zero check build hat f");
 
         if self.aux_info.num_variables != r.len() {

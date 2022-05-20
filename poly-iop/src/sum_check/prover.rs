@@ -57,9 +57,9 @@ impl<F: PrimeField> SumCheckProver<F> for IOPProverState<F> {
         // Step 1:
         // fix argument and evaluate f(x) over r for r.len() <= x.len()
         // i.e.:
-        // for each mle g(x_0, ... x_n) within the flattened_mle
-        // eval g(x_0,...x_n) over [r_0, ..., r_m] with m <= n
-        // and mutate g to g(r_0, ...r_m, x_{m+1},... x_n)
+        // for each mle g(x_0, ... x_{n-1}) within the flattened_mle
+        // eval g(x_0,...x_{n-1}) over [r_0, ..., r_{m-1}] with m <= n
+        // and mutate g to g(r_0, ...r_{m-1}, x_m,... x_{n-1})
         //
         // TODO(ZZ): have a question on this. Let's chat @binyi.
 
