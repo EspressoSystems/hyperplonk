@@ -213,164 +213,23 @@
 <span id="208">208</span>
 <span id="209">209</span>
 <span id="210">210</span>
-<span id="211">211</span>
-<span id="212">212</span>
-<span id="213">213</span>
-<span id="214">214</span>
-<span id="215">215</span>
-<span id="216">216</span>
-<span id="217">217</span>
-<span id="218">218</span>
-<span id="219">219</span>
-<span id="220">220</span>
-<span id="221">221</span>
-<span id="222">222</span>
-<span id="223">223</span>
-<span id="224">224</span>
-<span id="225">225</span>
-<span id="226">226</span>
-<span id="227">227</span>
-<span id="228">228</span>
-<span id="229">229</span>
-<span id="230">230</span>
-<span id="231">231</span>
-<span id="232">232</span>
-<span id="233">233</span>
-<span id="234">234</span>
-<span id="235">235</span>
-<span id="236">236</span>
-<span id="237">237</span>
-<span id="238">238</span>
-<span id="239">239</span>
-<span id="240">240</span>
-<span id="241">241</span>
-<span id="242">242</span>
-<span id="243">243</span>
-<span id="244">244</span>
-<span id="245">245</span>
-<span id="246">246</span>
-<span id="247">247</span>
-<span id="248">248</span>
-<span id="249">249</span>
-<span id="250">250</span>
-<span id="251">251</span>
-<span id="252">252</span>
-<span id="253">253</span>
-<span id="254">254</span>
-<span id="255">255</span>
-<span id="256">256</span>
-<span id="257">257</span>
-<span id="258">258</span>
-<span id="259">259</span>
-<span id="260">260</span>
-<span id="261">261</span>
-<span id="262">262</span>
-<span id="263">263</span>
-<span id="264">264</span>
-<span id="265">265</span>
-<span id="266">266</span>
-<span id="267">267</span>
-<span id="268">268</span>
-<span id="269">269</span>
-<span id="270">270</span>
-<span id="271">271</span>
-<span id="272">272</span>
-<span id="273">273</span>
-<span id="274">274</span>
-<span id="275">275</span>
-<span id="276">276</span>
-<span id="277">277</span>
-<span id="278">278</span>
-<span id="279">279</span>
-<span id="280">280</span>
-<span id="281">281</span>
-<span id="282">282</span>
-<span id="283">283</span>
-<span id="284">284</span>
-<span id="285">285</span>
-<span id="286">286</span>
-<span id="287">287</span>
-<span id="288">288</span>
-<span id="289">289</span>
-<span id="290">290</span>
-<span id="291">291</span>
-<span id="292">292</span>
-<span id="293">293</span>
-<span id="294">294</span>
-<span id="295">295</span>
-<span id="296">296</span>
-<span id="297">297</span>
-<span id="298">298</span>
-<span id="299">299</span>
-<span id="300">300</span>
-<span id="301">301</span>
-<span id="302">302</span>
-<span id="303">303</span>
-<span id="304">304</span>
-<span id="305">305</span>
-<span id="306">306</span>
-<span id="307">307</span>
-<span id="308">308</span>
-<span id="309">309</span>
-<span id="310">310</span>
-<span id="311">311</span>
-<span id="312">312</span>
-<span id="313">313</span>
-<span id="314">314</span>
-<span id="315">315</span>
-<span id="316">316</span>
-<span id="317">317</span>
-<span id="318">318</span>
-<span id="319">319</span>
-<span id="320">320</span>
-<span id="321">321</span>
-<span id="322">322</span>
-<span id="323">323</span>
-<span id="324">324</span>
-<span id="325">325</span>
-<span id="326">326</span>
-<span id="327">327</span>
-<span id="328">328</span>
-<span id="329">329</span>
-<span id="330">330</span>
-<span id="331">331</span>
-<span id="332">332</span>
-<span id="333">333</span>
-<span id="334">334</span>
-<span id="335">335</span>
-<span id="336">336</span>
-<span id="337">337</span>
-<span id="338">338</span>
-<span id="339">339</span>
-<span id="340">340</span>
-<span id="341">341</span>
-<span id="342">342</span>
-<span id="343">343</span>
-<span id="344">344</span>
-<span id="345">345</span>
-<span id="346">346</span>
-<span id="347">347</span>
-<span id="348">348</span>
-<span id="349">349</span>
-<span id="350">350</span>
-</pre><pre class="rust"><code><span class="kw">use</span> <span class="ident">ark_ff::PrimeField</span>;
-<span class="kw">use</span> <span class="ident">ark_poly::DenseMultilinearExtension</span>;
-<span class="kw">use</span> <span class="ident">ark_std</span>::{<span class="ident">end_timer</span>, <span class="ident">start_timer</span>};
-<span class="kw">use</span> <span class="ident">std::rc::Rc</span>;
+</pre><pre class="rust"><code><span class="doccomment">//! Main module for the ZeroCheck protocol.</span>
 
 <span class="kw">use</span> <span class="kw">crate</span>::{
     <span class="ident">errors::PolyIOPErrors</span>,
-    <span class="ident">structs</span>::{<span class="ident">DomainInfo</span>, <span class="ident">IOPProof</span>, <span class="ident">SubClaim</span>},
+    <span class="ident">structs</span>::{<span class="ident">IOPProof</span>, <span class="ident">SubClaim</span>},
     <span class="ident">sum_check::SumCheck</span>,
     <span class="ident">transcript::IOPTranscript</span>,
-    <span class="ident">virtual_poly::VirtualPolynomial</span>,
+    <span class="ident">virtual_poly</span>::{<span class="ident">VPAuxInfo</span>, <span class="ident">VirtualPolynomial</span>},
     <span class="ident">PolyIOP</span>,
 };
+<span class="kw">use</span> <span class="ident">ark_ff::PrimeField</span>;
+<span class="kw">use</span> <span class="ident">ark_std</span>::{<span class="ident">end_timer</span>, <span class="ident">start_timer</span>};
 
 <span class="kw">pub</span> <span class="kw">trait</span> <span class="ident">ZeroCheck</span><span class="op">&lt;</span><span class="ident">F</span>: <span class="ident">PrimeField</span><span class="op">&gt;</span> {
     <span class="kw">type</span> <span class="ident">Proof</span>;
-    <span class="kw">type</span> <span class="ident">PolyList</span>;
-    <span class="kw">type</span> <span class="ident">DomainInfo</span>;
+    <span class="kw">type</span> <span class="ident">VirtualPolynomial</span>;
+    <span class="kw">type</span> <span class="ident">VPAuxInfo</span>;
     <span class="kw">type</span> <span class="ident">SubClaim</span>;
     <span class="kw">type</span> <span class="ident">Transcript</span>;
 
@@ -385,22 +244,22 @@
     <span class="doccomment">/// initialize the prover to argue for the sum of polynomial over</span>
     <span class="doccomment">/// {0,1}^`num_vars` is zero.</span>
     <span class="kw">fn</span> <span class="ident">prove</span>(
-        <span class="ident">poly</span>: <span class="kw-2">&amp;</span><span class="ident"><span class="self">Self</span>::PolyList</span>,
+        <span class="ident">poly</span>: <span class="kw-2">&amp;</span><span class="ident"><span class="self">Self</span>::VirtualPolynomial</span>,
         <span class="ident">transcript</span>: <span class="kw-2">&amp;mut</span> <span class="ident"><span class="self">Self</span>::Transcript</span>,
     ) -&gt; <span class="prelude-ty">Result</span><span class="op">&lt;</span><span class="ident"><span class="self">Self</span>::Proof</span>, <span class="ident">PolyIOPErrors</span><span class="op">&gt;</span>;
 
     <span class="doccomment">/// verify the claimed sum using the proof</span>
     <span class="kw">fn</span> <span class="ident">verify</span>(
         <span class="ident">proof</span>: <span class="kw-2">&amp;</span><span class="ident"><span class="self">Self</span>::Proof</span>,
-        <span class="ident">domain_info</span>: <span class="kw-2">&amp;</span><span class="ident"><span class="self">Self</span>::DomainInfo</span>,
+        <span class="ident">aux_info</span>: <span class="kw-2">&amp;</span><span class="ident"><span class="self">Self</span>::VPAuxInfo</span>,
         <span class="ident">transcript</span>: <span class="kw-2">&amp;mut</span> <span class="ident"><span class="self">Self</span>::Transcript</span>,
     ) -&gt; <span class="prelude-ty">Result</span><span class="op">&lt;</span><span class="ident"><span class="self">Self</span>::SubClaim</span>, <span class="ident">PolyIOPErrors</span><span class="op">&gt;</span>;
 }
 
 <span class="kw">impl</span><span class="op">&lt;</span><span class="ident">F</span>: <span class="ident">PrimeField</span><span class="op">&gt;</span> <span class="ident">ZeroCheck</span><span class="op">&lt;</span><span class="ident">F</span><span class="op">&gt;</span> <span class="kw">for</span> <span class="ident">PolyIOP</span><span class="op">&lt;</span><span class="ident">F</span><span class="op">&gt;</span> {
     <span class="kw">type</span> <span class="ident">Proof</span> <span class="op">=</span> <span class="ident">IOPProof</span><span class="op">&lt;</span><span class="ident">F</span><span class="op">&gt;</span>;
-    <span class="kw">type</span> <span class="ident">PolyList</span> <span class="op">=</span> <span class="ident">VirtualPolynomial</span><span class="op">&lt;</span><span class="ident">F</span><span class="op">&gt;</span>;
-    <span class="kw">type</span> <span class="ident">DomainInfo</span> <span class="op">=</span> <span class="ident">DomainInfo</span><span class="op">&lt;</span><span class="ident">F</span><span class="op">&gt;</span>;
+    <span class="kw">type</span> <span class="ident">VirtualPolynomial</span> <span class="op">=</span> <span class="ident">VirtualPolynomial</span><span class="op">&lt;</span><span class="ident">F</span><span class="op">&gt;</span>;
+    <span class="kw">type</span> <span class="ident">VPAuxInfo</span> <span class="op">=</span> <span class="ident">VPAuxInfo</span><span class="op">&lt;</span><span class="ident">F</span><span class="op">&gt;</span>;
 
     <span class="doccomment">/// A ZeroCheck SubClaim consists of</span>
     <span class="doccomment">/// - the SubClaim from the ZeroCheck</span>
@@ -418,29 +277,41 @@
         <span class="ident">IOPTranscript</span>::<span class="op">&lt;</span><span class="ident">F</span><span class="op">&gt;</span><span class="ident">::new</span>(<span class="string">b&quot;Initializing ZeroCheck transcript&quot;</span>)
     }
 
-    <span class="doccomment">/// initialize the prover to argue for the sum of polynomial over</span>
+    <span class="doccomment">/// Initialize the prover to argue for the sum of polynomial f(x) over</span>
     <span class="doccomment">/// {0,1}^`num_vars` is zero.</span>
+    <span class="doccomment">///</span>
+    <span class="doccomment">/// f(x) is zero if \hat f(x) := f(x) * eq(x,r) is also a zero polynomial</span>
+    <span class="doccomment">/// for a random r sampled from transcript.</span>
+    <span class="doccomment">///</span>
+    <span class="doccomment">/// This function will build the \hat f(x) and then invoke the sumcheck</span>
+    <span class="doccomment">/// protocol to generate a proof for which the sum of \hat f(x) is zero</span>
     <span class="kw">fn</span> <span class="ident">prove</span>(
-        <span class="ident">poly</span>: <span class="kw-2">&amp;</span><span class="ident"><span class="self">Self</span>::PolyList</span>,
+        <span class="ident">poly</span>: <span class="kw-2">&amp;</span><span class="ident"><span class="self">Self</span>::VirtualPolynomial</span>,
         <span class="ident">transcript</span>: <span class="kw-2">&amp;mut</span> <span class="ident"><span class="self">Self</span>::Transcript</span>,
     ) -&gt; <span class="prelude-ty">Result</span><span class="op">&lt;</span><span class="ident"><span class="self">Self</span>::Proof</span>, <span class="ident">PolyIOPErrors</span><span class="op">&gt;</span> {
         <span class="kw">let</span> <span class="ident">start</span> <span class="op">=</span> <span class="macro">start_timer!</span>(<span class="op">|</span><span class="op">|</span> <span class="string">&quot;zero check prove&quot;</span>);
 
-        <span class="kw">let</span> <span class="ident">length</span> <span class="op">=</span> <span class="ident">poly</span>.<span class="ident">domain_info</span>.<span class="ident">num_variables</span>;
+        <span class="kw">let</span> <span class="ident">length</span> <span class="op">=</span> <span class="ident">poly</span>.<span class="ident">aux_info</span>.<span class="ident">num_variables</span>;
         <span class="kw">let</span> <span class="ident">r</span> <span class="op">=</span> <span class="ident">transcript</span>.<span class="ident">get_and_append_challenge_vectors</span>(<span class="string">b&quot;vector r&quot;</span>, <span class="ident">length</span>)<span class="question-mark">?</span>;
-        <span class="kw">let</span> <span class="ident">f_hat</span> <span class="op">=</span> <span class="ident">build_f_hat</span>(<span class="ident">poly</span>, <span class="ident">r</span>.<span class="ident">as_ref</span>())<span class="question-mark">?</span>;
+        <span class="kw">let</span> <span class="ident">f_hat</span> <span class="op">=</span> <span class="ident">poly</span>.<span class="ident">build_f_hat</span>(<span class="ident">r</span>.<span class="ident">as_ref</span>())<span class="question-mark">?</span>;
         <span class="kw">let</span> <span class="ident">res</span> <span class="op">=</span> <span class="op">&lt;</span><span class="self">Self</span> <span class="kw">as</span> <span class="ident">SumCheck</span><span class="op">&lt;</span><span class="ident">F</span><span class="op">&gt;</span><span class="op">&gt;</span><span class="ident">::prove</span>(<span class="kw-2">&amp;</span><span class="ident">f_hat</span>, <span class="ident">transcript</span>);
 
         <span class="macro">end_timer!</span>(<span class="ident">start</span>);
         <span class="ident">res</span>
     }
 
-    <span class="doccomment">/// Verify the claimed sum using the proof.</span>
-    <span class="doccomment">/// the initial challenge `r` is also returned.</span>
-    <span class="doccomment">/// The caller needs to makes sure that `\hat f = f * eq(x, r)`</span>
+    <span class="doccomment">/// Verify that the polynomial&#39;s sum is zero using the proof.</span>
+    <span class="doccomment">/// Return a Self::Subclaim that consists of the</span>
+    <span class="doccomment">///</span>
+    <span class="doccomment">/// - a Subclaim that the sum is zero</span>
+    <span class="doccomment">/// - the initial challenge `r` that is used to build `eq(x, r)`</span>
+    <span class="doccomment">///</span>
+    <span class="doccomment">/// This function will check that \hat f(x)&#39;s sum is zero. It does not check</span>
+    <span class="doccomment">/// `\hat f(x)` is build correctly. The caller needs to makes sure that</span>
+    <span class="doccomment">/// `\hat f(x) = f(x) * eq(x, r)`</span>
     <span class="kw">fn</span> <span class="ident">verify</span>(
         <span class="ident">proof</span>: <span class="kw-2">&amp;</span><span class="ident"><span class="self">Self</span>::Proof</span>,
-        <span class="ident">fx_domain_info</span>: <span class="kw-2">&amp;</span><span class="ident"><span class="self">Self</span>::DomainInfo</span>,
+        <span class="ident">fx_aux_info</span>: <span class="kw-2">&amp;</span><span class="ident"><span class="self">Self</span>::VPAuxInfo</span>,
         <span class="ident">transcript</span>: <span class="kw-2">&amp;mut</span> <span class="ident"><span class="self">Self</span>::Transcript</span>,
     ) -&gt; <span class="prelude-ty">Result</span><span class="op">&lt;</span><span class="ident"><span class="self">Self</span>::SubClaim</span>, <span class="ident">PolyIOPErrors</span><span class="op">&gt;</span> {
         <span class="kw">let</span> <span class="ident">start</span> <span class="op">=</span> <span class="macro">start_timer!</span>(<span class="op">|</span><span class="op">|</span> <span class="string">&quot;zero check verify&quot;</span>);
@@ -454,112 +325,27 @@
         }
 
         <span class="comment">// generate `r` and pass it to the caller for correctness check</span>
-        <span class="kw">let</span> <span class="ident">length</span> <span class="op">=</span> <span class="ident">fx_domain_info</span>.<span class="ident">num_variables</span>;
+        <span class="kw">let</span> <span class="ident">length</span> <span class="op">=</span> <span class="ident">fx_aux_info</span>.<span class="ident">num_variables</span>;
         <span class="kw">let</span> <span class="ident">r</span> <span class="op">=</span> <span class="ident">transcript</span>.<span class="ident">get_and_append_challenge_vectors</span>(<span class="string">b&quot;vector r&quot;</span>, <span class="ident">length</span>)<span class="question-mark">?</span>;
 
         <span class="comment">// hat_fx&#39;s max degree is increased by eq(x, r).degree() which is 1</span>
-        <span class="kw">let</span> <span class="kw-2">mut</span> <span class="ident">hat_fx_domain_info</span> <span class="op">=</span> <span class="ident">fx_domain_info</span>.<span class="ident">clone</span>();
-        <span class="ident">hat_fx_domain_info</span>.<span class="ident">max_degree</span> <span class="op">+</span><span class="op">=</span> <span class="number">1</span>;
+        <span class="kw">let</span> <span class="kw-2">mut</span> <span class="ident">hat_fx_aux_info</span> <span class="op">=</span> <span class="ident">fx_aux_info</span>.<span class="ident">clone</span>();
+        <span class="ident">hat_fx_aux_info</span>.<span class="ident">max_degree</span> <span class="op">+</span><span class="op">=</span> <span class="number">1</span>;
         <span class="kw">let</span> <span class="ident">subclaim</span> <span class="op">=</span>
-            <span class="op">&lt;</span><span class="self">Self</span> <span class="kw">as</span> <span class="ident">SumCheck</span><span class="op">&lt;</span><span class="ident">F</span><span class="op">&gt;</span><span class="op">&gt;</span><span class="ident">::verify</span>(<span class="ident">F::zero</span>(), <span class="ident">proof</span>, <span class="kw-2">&amp;</span><span class="ident">hat_fx_domain_info</span>, <span class="ident">transcript</span>)<span class="question-mark">?</span>;
+            <span class="op">&lt;</span><span class="self">Self</span> <span class="kw">as</span> <span class="ident">SumCheck</span><span class="op">&lt;</span><span class="ident">F</span><span class="op">&gt;</span><span class="op">&gt;</span><span class="ident">::verify</span>(<span class="ident">F::zero</span>(), <span class="ident">proof</span>, <span class="kw-2">&amp;</span><span class="ident">hat_fx_aux_info</span>, <span class="ident">transcript</span>)<span class="question-mark">?</span>;
 
         <span class="macro">end_timer!</span>(<span class="ident">start</span>);
         <span class="prelude-val">Ok</span>((<span class="ident">subclaim</span>, <span class="ident">r</span>))
     }
 }
 
-<span class="comment">// Input poly f(x) and a random vector r, output</span>
-<span class="comment">//      \hat f(x) = \sum_{x_i \in eval_x} f(x_i) eq(x, r)</span>
-<span class="comment">// where</span>
-<span class="comment">//      eq(x,y) = \prod_i=1^num_var (x_i * y_i + (1-x_i)*(1-y_i))</span>
-<span class="kw">fn</span> <span class="ident">build_f_hat</span><span class="op">&lt;</span><span class="ident">F</span>: <span class="ident">PrimeField</span><span class="op">&gt;</span>(
-    <span class="ident">poly</span>: <span class="kw-2">&amp;</span><span class="ident">VirtualPolynomial</span><span class="op">&lt;</span><span class="ident">F</span><span class="op">&gt;</span>,
-    <span class="ident">r</span>: <span class="kw-2">&amp;</span>[<span class="ident">F</span>],
-) -&gt; <span class="prelude-ty">Result</span><span class="op">&lt;</span><span class="ident">VirtualPolynomial</span><span class="op">&lt;</span><span class="ident">F</span><span class="op">&gt;</span>, <span class="ident">PolyIOPErrors</span><span class="op">&gt;</span> {
-    <span class="kw">let</span> <span class="ident">start</span> <span class="op">=</span> <span class="macro">start_timer!</span>(<span class="op">|</span><span class="op">|</span> <span class="string">&quot;zero check build hat f&quot;</span>);
-
-    <span class="macro">assert_eq!</span>(<span class="ident">poly</span>.<span class="ident">domain_info</span>.<span class="ident">num_variables</span>, <span class="ident">r</span>.<span class="ident">len</span>());
-
-    <span class="kw">let</span> <span class="ident">eq_x_r</span> <span class="op">=</span> <span class="ident">build_eq_x_r</span>(<span class="ident">r</span>)<span class="question-mark">?</span>;
-    <span class="kw">let</span> <span class="kw-2">mut</span> <span class="ident">res</span> <span class="op">=</span> <span class="ident">poly</span>.<span class="ident">clone</span>();
-    <span class="ident">res</span>.<span class="ident">mul_by_mle</span>(<span class="ident">eq_x_r</span>, <span class="ident">F::one</span>())<span class="question-mark">?</span>;
-
-    <span class="macro">end_timer!</span>(<span class="ident">start</span>);
-    <span class="prelude-val">Ok</span>(<span class="ident">res</span>)
-}
-
-<span class="comment">// Evaluate</span>
-<span class="comment">//      eq(x,y) = \prod_i=1^num_var (x_i * y_i + (1-x_i)*(1-y_i))</span>
-<span class="comment">// over r, which is</span>
-<span class="comment">//      eq(x,y) = \prod_i=1^num_var (x_i * r_i + (1-x_i)*(1-r_i))</span>
-<span class="kw">pub</span> <span class="kw">fn</span> <span class="ident">build_eq_x_r</span><span class="op">&lt;</span><span class="ident">F</span>: <span class="ident">PrimeField</span><span class="op">&gt;</span>(
-    <span class="ident">r</span>: <span class="kw-2">&amp;</span>[<span class="ident">F</span>],
-) -&gt; <span class="prelude-ty">Result</span><span class="op">&lt;</span><span class="ident">Rc</span><span class="op">&lt;</span><span class="ident">DenseMultilinearExtension</span><span class="op">&lt;</span><span class="ident">F</span><span class="op">&gt;</span><span class="op">&gt;</span>, <span class="ident">PolyIOPErrors</span><span class="op">&gt;</span> {
-    <span class="kw">let</span> <span class="ident">start</span> <span class="op">=</span> <span class="macro">start_timer!</span>(<span class="op">|</span><span class="op">|</span> <span class="string">&quot;zero check build eq_x_r&quot;</span>);
-
-    <span class="comment">// we build eq(x,r) from its evaluations</span>
-    <span class="comment">// we want to evaluate eq(x,r) over x \in {0, 1}^num_vars</span>
-    <span class="comment">// for example, with num_vars = 4, x is a binary vector of 4, then</span>
-    <span class="comment">//  0 0 0 0 -&gt; (1-r0)   * (1-r1)    * (1-r2)    * (1-r3)</span>
-    <span class="comment">//  1 0 0 0 -&gt; r0       * (1-r1)    * (1-r2)    * (1-r3)</span>
-    <span class="comment">//  0 1 0 0 -&gt; (1-r0)   * r1        * (1-r2)    * (1-r3)</span>
-    <span class="comment">//  1 1 0 0 -&gt; r0       * r1        * (1-r2)    * (1-r3)</span>
-    <span class="comment">//  ....</span>
-    <span class="comment">//  1 1 1 1 -&gt; r0       * r1        * r2        * r3</span>
-    <span class="comment">// we will need 2^num_var evaluations</span>
-
-    <span class="kw">let</span> <span class="kw-2">mut</span> <span class="ident">eval</span> <span class="op">=</span> <span class="ident">Vec::new</span>();
-    <span class="ident">build_eq_x_r_helper</span>(<span class="ident">r</span>, <span class="kw-2">&amp;mut</span> <span class="ident">eval</span>)<span class="question-mark">?</span>;
-
-    <span class="kw">let</span> <span class="ident">mle</span> <span class="op">=</span> <span class="ident">DenseMultilinearExtension::from_evaluations_vec</span>(<span class="ident">r</span>.<span class="ident">len</span>(), <span class="ident">eval</span>);
-
-    <span class="kw">let</span> <span class="ident">res</span> <span class="op">=</span> <span class="ident">Rc::new</span>(<span class="ident">mle</span>);
-    <span class="macro">end_timer!</span>(<span class="ident">start</span>);
-    <span class="prelude-val">Ok</span>(<span class="ident">res</span>)
-}
-
-<span class="doccomment">/// A helper function to build eq(x, r) recursively.</span>
-<span class="doccomment">/// This function takes `r.len()` steps, and for each step it requires a maximum</span>
-<span class="doccomment">/// `r.len()-1` multiplications.</span>
-<span class="kw">fn</span> <span class="ident">build_eq_x_r_helper</span><span class="op">&lt;</span><span class="ident">F</span>: <span class="ident">PrimeField</span><span class="op">&gt;</span>(<span class="ident">r</span>: <span class="kw-2">&amp;</span>[<span class="ident">F</span>], <span class="ident">buf</span>: <span class="kw-2">&amp;mut</span> <span class="ident">Vec</span><span class="op">&lt;</span><span class="ident">F</span><span class="op">&gt;</span>) -&gt; <span class="prelude-ty">Result</span><span class="op">&lt;</span>(), <span class="ident">PolyIOPErrors</span><span class="op">&gt;</span> {
-    <span class="kw">if</span> <span class="ident">r</span>.<span class="ident">is_empty</span>() {
-        <span class="kw">return</span> <span class="prelude-val">Err</span>(<span class="ident">PolyIOPErrors::InvalidParameters</span>(
-            <span class="string">&quot;r length is 0&quot;</span>.<span class="ident">to_string</span>(),
-        ));
-    } <span class="kw">else</span> <span class="kw">if</span> <span class="ident">r</span>.<span class="ident">len</span>() <span class="op">==</span> <span class="number">1</span> {
-        <span class="comment">// initializing the buffer with [1-r0, r0]</span>
-        <span class="ident">buf</span>.<span class="ident">push</span>(<span class="ident">F::one</span>() <span class="op">-</span> <span class="ident">r</span>[<span class="number">0</span>]);
-        <span class="ident">buf</span>.<span class="ident">push</span>(<span class="ident">r</span>[<span class="number">0</span>]);
-    } <span class="kw">else</span> {
-        <span class="ident">build_eq_x_r_helper</span>(<span class="kw-2">&amp;</span><span class="ident">r</span>[<span class="number">1</span>..], <span class="ident">buf</span>)<span class="question-mark">?</span>;
-
-        <span class="comment">// suppose in the previous step we have [b1, ..., b_k]</span>
-        <span class="comment">// for the current step we will need</span>
-        <span class="comment">// if x0 = 0:   (1-r0) * [b_1, ..., b_k]</span>
-        <span class="comment">// if x0 = 1:   r0 * [b1, ..., b_k]</span>
-
-        <span class="kw">let</span> <span class="kw-2">mut</span> <span class="ident">res</span> <span class="op">=</span> <span class="macro">vec!</span>[];
-        <span class="kw">for</span> <span class="kw-2">&amp;</span><span class="ident">e</span> <span class="kw">in</span> <span class="ident">buf</span>.<span class="ident">iter</span>() {
-            <span class="kw">let</span> <span class="ident">tmp</span> <span class="op">=</span> <span class="ident">e</span> <span class="op">*</span> <span class="ident">r</span>[<span class="number">0</span>];
-            <span class="ident">res</span>.<span class="ident">push</span>(<span class="ident">e</span> <span class="op">-</span> <span class="ident">tmp</span>);
-            <span class="ident">res</span>.<span class="ident">push</span>(<span class="ident">tmp</span>);
-        }
-        <span class="kw-2">*</span><span class="ident">buf</span> <span class="op">=</span> <span class="ident">res</span>;
-    }
-
-    <span class="prelude-val">Ok</span>(())
-}
-
 <span class="attribute">#[<span class="ident">cfg</span>(<span class="ident">test</span>)]</span>
 <span class="kw">mod</span> <span class="ident">test</span> {
 
-    <span class="kw">use</span> <span class="kw">super</span>::{<span class="ident">build_eq_x_r</span>, <span class="ident">ZeroCheck</span>};
+    <span class="kw">use</span> <span class="ident"><span class="kw">super</span>::ZeroCheck</span>;
     <span class="kw">use</span> <span class="kw">crate</span>::{<span class="ident">errors::PolyIOPErrors</span>, <span class="ident">PolyIOP</span>, <span class="ident">VirtualPolynomial</span>};
     <span class="kw">use</span> <span class="ident">ark_bls12_381::Fr</span>;
-    <span class="kw">use</span> <span class="ident">ark_ff</span>::{<span class="ident">PrimeField</span>, <span class="ident">UniformRand</span>};
-    <span class="kw">use</span> <span class="ident">ark_poly::DenseMultilinearExtension</span>;
-    <span class="kw">use</span> <span class="ident">ark_std</span>::{<span class="ident">end_timer</span>, <span class="ident">start_timer</span>, <span class="ident">test_rng</span>};
-    <span class="kw">use</span> <span class="ident">std::rc::Rc</span>;
+    <span class="kw">use</span> <span class="ident">ark_std::test_rng</span>;
 
     <span class="kw">fn</span> <span class="ident">test_zerocheck</span>(
         <span class="ident">nv</span>: <span class="ident">usize</span>,
@@ -577,7 +363,7 @@
             <span class="ident">transcript</span>.<span class="ident">append_message</span>(<span class="string">b&quot;testing&quot;</span>, <span class="string">b&quot;initializing transcript for testing&quot;</span>)<span class="question-mark">?</span>;
             <span class="kw">let</span> <span class="ident">proof</span> <span class="op">=</span> <span class="op">&lt;</span><span class="ident">PolyIOP</span><span class="op">&lt;</span><span class="ident">Fr</span><span class="op">&gt;</span> <span class="kw">as</span> <span class="ident">ZeroCheck</span><span class="op">&lt;</span><span class="ident">Fr</span><span class="op">&gt;</span><span class="op">&gt;</span><span class="ident">::prove</span>(<span class="kw-2">&amp;</span><span class="ident">poly</span>, <span class="kw-2">&amp;mut</span> <span class="ident">transcript</span>)<span class="question-mark">?</span>;
 
-            <span class="kw">let</span> <span class="ident">poly_info</span> <span class="op">=</span> <span class="ident">poly</span>.<span class="ident">domain_info</span>.<span class="ident">clone</span>();
+            <span class="kw">let</span> <span class="ident">poly_info</span> <span class="op">=</span> <span class="ident">poly</span>.<span class="ident">aux_info</span>.<span class="ident">clone</span>();
             <span class="kw">let</span> <span class="kw-2">mut</span> <span class="ident">transcript</span> <span class="op">=</span> <span class="op">&lt;</span><span class="ident">PolyIOP</span><span class="op">&lt;</span><span class="ident">Fr</span><span class="op">&gt;</span> <span class="kw">as</span> <span class="ident">ZeroCheck</span><span class="op">&lt;</span><span class="ident">Fr</span><span class="op">&gt;</span><span class="op">&gt;</span><span class="ident">::init_transcript</span>();
             <span class="ident">transcript</span>.<span class="ident">append_message</span>(<span class="string">b&quot;testing&quot;</span>, <span class="string">b&quot;initializing transcript for testing&quot;</span>)<span class="question-mark">?</span>;
             <span class="kw">let</span> <span class="ident">subclaim</span> <span class="op">=</span>
@@ -597,7 +383,7 @@
             <span class="ident">transcript</span>.<span class="ident">append_message</span>(<span class="string">b&quot;testing&quot;</span>, <span class="string">b&quot;initializing transcript for testing&quot;</span>)<span class="question-mark">?</span>;
             <span class="kw">let</span> <span class="ident">proof</span> <span class="op">=</span> <span class="op">&lt;</span><span class="ident">PolyIOP</span><span class="op">&lt;</span><span class="ident">Fr</span><span class="op">&gt;</span> <span class="kw">as</span> <span class="ident">ZeroCheck</span><span class="op">&lt;</span><span class="ident">Fr</span><span class="op">&gt;</span><span class="op">&gt;</span><span class="ident">::prove</span>(<span class="kw-2">&amp;</span><span class="ident">poly</span>, <span class="kw-2">&amp;mut</span> <span class="ident">transcript</span>)<span class="question-mark">?</span>;
 
-            <span class="kw">let</span> <span class="ident">poly_info</span> <span class="op">=</span> <span class="ident">poly</span>.<span class="ident">domain_info</span>.<span class="ident">clone</span>();
+            <span class="kw">let</span> <span class="ident">poly_info</span> <span class="op">=</span> <span class="ident">poly</span>.<span class="ident">aux_info</span>.<span class="ident">clone</span>();
             <span class="kw">let</span> <span class="kw-2">mut</span> <span class="ident">transcript</span> <span class="op">=</span> <span class="op">&lt;</span><span class="ident">PolyIOP</span><span class="op">&lt;</span><span class="ident">Fr</span><span class="op">&gt;</span> <span class="kw">as</span> <span class="ident">ZeroCheck</span><span class="op">&lt;</span><span class="ident">Fr</span><span class="op">&gt;</span><span class="op">&gt;</span><span class="ident">::init_transcript</span>();
             <span class="ident">transcript</span>.<span class="ident">append_message</span>(<span class="string">b&quot;testing&quot;</span>, <span class="string">b&quot;initializing transcript for testing&quot;</span>)<span class="question-mark">?</span>;
 
@@ -635,72 +421,6 @@
 
         <span class="macro">assert!</span>(<span class="ident">test_zerocheck</span>(<span class="ident">nv</span>, <span class="ident">num_multiplicands_range</span>, <span class="ident">num_products</span>).<span class="ident">is_err</span>());
         <span class="prelude-val">Ok</span>(())
-    }
-
-    <span class="attribute">#[<span class="ident">test</span>]</span>
-    <span class="kw">fn</span> <span class="ident">test_eq_xr</span>() {
-        <span class="kw">let</span> <span class="kw-2">mut</span> <span class="ident">rng</span> <span class="op">=</span> <span class="ident">test_rng</span>();
-        <span class="kw">for</span> <span class="ident">nv</span> <span class="kw">in</span> <span class="number">4</span>..<span class="number">10</span> {
-            <span class="kw">let</span> <span class="ident">r</span>: <span class="ident">Vec</span><span class="op">&lt;</span><span class="ident">Fr</span><span class="op">&gt;</span> <span class="op">=</span> (<span class="number">0</span>..<span class="ident">nv</span>).<span class="ident">map</span>(<span class="op">|</span><span class="kw">_</span><span class="op">|</span> <span class="ident">Fr::rand</span>(<span class="kw-2">&amp;mut</span> <span class="ident">rng</span>)).<span class="ident">collect</span>();
-            <span class="kw">let</span> <span class="ident">eq_x_r</span> <span class="op">=</span> <span class="ident">build_eq_x_r</span>(<span class="ident">r</span>.<span class="ident">as_ref</span>()).<span class="ident">unwrap</span>();
-            <span class="kw">let</span> <span class="ident">eq_x_r2</span> <span class="op">=</span> <span class="ident">build_eq_x_r_for_test</span>(<span class="ident">r</span>.<span class="ident">as_ref</span>());
-            <span class="macro">assert_eq!</span>(<span class="ident">eq_x_r</span>, <span class="ident">eq_x_r2</span>);
-        }
-    }
-
-    <span class="doccomment">/// Naive method to build eq(x, r).</span>
-    <span class="doccomment">/// Only used for testing purpose.</span>
-    <span class="comment">// Evaluate</span>
-    <span class="comment">//      eq(x,y) = \prod_i=1^num_var (x_i * y_i + (1-x_i)*(1-y_i))</span>
-    <span class="comment">// over r, which is</span>
-    <span class="comment">//      eq(x,y) = \prod_i=1^num_var (x_i * r_i + (1-x_i)*(1-r_i))</span>
-    <span class="kw">fn</span> <span class="ident">build_eq_x_r_for_test</span><span class="op">&lt;</span><span class="ident">F</span>: <span class="ident">PrimeField</span><span class="op">&gt;</span>(<span class="ident">r</span>: <span class="kw-2">&amp;</span>[<span class="ident">F</span>]) -&gt; <span class="ident">Rc</span><span class="op">&lt;</span><span class="ident">DenseMultilinearExtension</span><span class="op">&lt;</span><span class="ident">F</span><span class="op">&gt;</span><span class="op">&gt;</span> {
-        <span class="kw">let</span> <span class="ident">start</span> <span class="op">=</span> <span class="macro">start_timer!</span>(<span class="op">|</span><span class="op">|</span> <span class="string">&quot;zero check naive build eq_x_r&quot;</span>);
-
-        <span class="comment">// we build eq(x,r) from its evaluations</span>
-        <span class="comment">// we want to evaluate eq(x,r) over x \in {0, 1}^num_vars</span>
-        <span class="comment">// for example, with num_vars = 4, x is a binary vector of 4, then</span>
-        <span class="comment">//  0 0 0 0 -&gt; (1-r0)   * (1-r1)    * (1-r2)    * (1-r3)</span>
-        <span class="comment">//  1 0 0 0 -&gt; r0       * (1-r1)    * (1-r2)    * (1-r3)</span>
-        <span class="comment">//  0 1 0 0 -&gt; (1-r0)   * r1        * (1-r2)    * (1-r3)</span>
-        <span class="comment">//  1 1 0 0 -&gt; r0       * r1        * (1-r2)    * (1-r3)</span>
-        <span class="comment">//  ....</span>
-        <span class="comment">//  1 1 1 1 -&gt; r0       * r1        * r2        * r3</span>
-        <span class="comment">// we will need 2^num_var evaluations</span>
-
-        <span class="comment">// First, we build array for {1 - r_i}</span>
-        <span class="kw">let</span> <span class="ident">one_minus_r</span>: <span class="ident">Vec</span><span class="op">&lt;</span><span class="ident">F</span><span class="op">&gt;</span> <span class="op">=</span> <span class="ident">r</span>.<span class="ident">iter</span>().<span class="ident">map</span>(<span class="op">|</span><span class="ident">ri</span><span class="op">|</span> <span class="ident">F::one</span>() <span class="op">-</span> <span class="ident">ri</span>).<span class="ident">collect</span>();
-
-        <span class="kw">let</span> <span class="ident">num_var</span> <span class="op">=</span> <span class="ident">r</span>.<span class="ident">len</span>();
-        <span class="kw">let</span> <span class="kw-2">mut</span> <span class="ident">eval</span> <span class="op">=</span> <span class="macro">vec!</span>[];
-
-        <span class="kw">for</span> <span class="ident">i</span> <span class="kw">in</span> <span class="number">0</span>..<span class="number">1</span> <span class="op">&lt;</span><span class="op">&lt;</span> <span class="ident">num_var</span> {
-            <span class="kw">let</span> <span class="kw-2">mut</span> <span class="ident">current_eval</span> <span class="op">=</span> <span class="ident">F::one</span>();
-            <span class="kw">let</span> <span class="ident">bit_sequence</span> <span class="op">=</span> <span class="ident">bit_decompose</span>(<span class="ident">i</span>, <span class="ident">num_var</span>);
-
-            <span class="kw">for</span> (<span class="kw-2">&amp;</span><span class="ident">bit</span>, (<span class="ident">ri</span>, <span class="ident">one_minus_ri</span>)) <span class="kw">in</span>
-                <span class="ident">bit_sequence</span>.<span class="ident">iter</span>().<span class="ident">zip</span>(<span class="ident">r</span>.<span class="ident">iter</span>().<span class="ident">zip</span>(<span class="ident">one_minus_r</span>.<span class="ident">iter</span>()))
-            {
-                <span class="ident">current_eval</span> <span class="kw-2">*</span><span class="op">=</span> <span class="kw">if</span> <span class="ident">bit</span> { <span class="kw-2">*</span><span class="ident">ri</span> } <span class="kw">else</span> { <span class="kw-2">*</span><span class="ident">one_minus_ri</span> };
-            }
-            <span class="ident">eval</span>.<span class="ident">push</span>(<span class="ident">current_eval</span>);
-        }
-
-        <span class="kw">let</span> <span class="ident">mle</span> <span class="op">=</span> <span class="ident">DenseMultilinearExtension::from_evaluations_vec</span>(<span class="ident">num_var</span>, <span class="ident">eval</span>);
-
-        <span class="kw">let</span> <span class="ident">res</span> <span class="op">=</span> <span class="ident">Rc::new</span>(<span class="ident">mle</span>);
-        <span class="macro">end_timer!</span>(<span class="ident">start</span>);
-        <span class="ident">res</span>
-    }
-
-    <span class="kw">fn</span> <span class="ident">bit_decompose</span>(<span class="ident">input</span>: <span class="ident">u64</span>, <span class="ident">num_var</span>: <span class="ident">usize</span>) -&gt; <span class="ident">Vec</span><span class="op">&lt;</span><span class="ident">bool</span><span class="op">&gt;</span> {
-        <span class="kw">let</span> <span class="kw-2">mut</span> <span class="ident">res</span> <span class="op">=</span> <span class="ident">Vec::with_capacity</span>(<span class="ident">num_var</span>);
-        <span class="kw">let</span> <span class="kw-2">mut</span> <span class="ident">i</span> <span class="op">=</span> <span class="ident">input</span>;
-        <span class="kw">for</span> <span class="kw">_</span> <span class="kw">in</span> <span class="number">0</span>..<span class="ident">num_var</span> {
-            <span class="ident">res</span>.<span class="ident">push</span>(<span class="ident">i</span> <span class="op">&amp;</span> <span class="number">1</span> <span class="op">==</span> <span class="number">1</span>);
-            <span class="ident">i</span> <span class="op">&gt;</span><span class="op">&gt;</span><span class="op">=</span> <span class="number">1</span>;
-        }
-        <span class="ident">res</span>
     }
 }
 </code></pre></div>

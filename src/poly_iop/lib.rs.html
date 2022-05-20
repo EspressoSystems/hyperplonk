@@ -26,6 +26,17 @@
 <span id="21">21</span>
 <span id="22">22</span>
 <span id="23">23</span>
+<span id="24">24</span>
+<span id="25">25</span>
+<span id="26">26</span>
+<span id="27">27</span>
+<span id="28">28</span>
+<span id="29">29</span>
+<span id="30">30</span>
+<span id="31">31</span>
+<span id="32">32</span>
+<span id="33">33</span>
+<span id="34">34</span>
 </pre><pre class="rust"><code><span class="kw">use</span> <span class="ident">ark_ff::PrimeField</span>;
 <span class="kw">use</span> <span class="ident">std::marker::PhantomData</span>;
 
@@ -40,13 +51,24 @@
 <span class="kw">pub</span> <span class="kw">use</span> <span class="ident">errors::PolyIOPErrors</span>;
 <span class="kw">pub</span> <span class="kw">use</span> <span class="ident">sum_check::SumCheck</span>;
 <span class="kw">pub</span> <span class="kw">use</span> <span class="ident">virtual_poly::VirtualPolynomial</span>;
-<span class="kw">pub</span> <span class="kw">use</span> <span class="ident">zero_check</span>::{<span class="ident">build_eq_x_r</span>, <span class="ident">ZeroCheck</span>};
+<span class="kw">pub</span> <span class="kw">use</span> <span class="ident">zero_check::ZeroCheck</span>;
 
+<span class="attribute">#[<span class="ident">derive</span>(<span class="ident">Clone</span>, <span class="ident">Debug</span>, <span class="ident">Default</span>, <span class="ident">Copy</span>)]</span>
 <span class="doccomment">/// Struct for PolyIOP protocol.</span>
-<span class="doccomment">/// It is instantiated with</span>
+<span class="doccomment">/// It has an associated type `F` that defines the prime field the multi-variate</span>
+<span class="doccomment">/// polynomial operates on.</span>
+<span class="doccomment">///</span>
+<span class="doccomment">/// An PolyIOP may be instantiated with one of the following:</span>
 <span class="doccomment">/// - SumCheck protocol.</span>
 <span class="doccomment">/// - ZeroCheck protocol.</span>
+<span class="doccomment">/// - PermutationCheck protocol.</span>
+<span class="doccomment">///</span>
+<span class="doccomment">/// Those individual protocol may have similar or identical APIs.</span>
+<span class="doccomment">/// The systematic way to invoke specific protocol is, for example</span>
+<span class="doccomment">///     `&lt;PolyIOP&lt;F&gt; as SumCheck&lt;F&gt;&gt;::prove()`</span>
 <span class="kw">pub</span> <span class="kw">struct</span> <span class="ident">PolyIOP</span><span class="op">&lt;</span><span class="ident">F</span>: <span class="ident">PrimeField</span><span class="op">&gt;</span> {
+    <span class="doccomment">/// Associated field</span>
+    <span class="attribute">#[<span class="ident">doc</span>(<span class="ident">hidden</span>)]</span>
     <span class="ident">phantom</span>: <span class="ident">PhantomData</span><span class="op">&lt;</span><span class="ident">F</span><span class="op">&gt;</span>,
 }
 </code></pre></div>

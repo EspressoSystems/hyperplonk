@@ -239,14 +239,25 @@
 <span id="234">234</span>
 <span id="235">235</span>
 <span id="236">236</span>
-</pre><pre class="rust"><code><span class="comment">// TODO: some of the struct is generic for Sum Checks and Zero Checks.</span>
-<span class="comment">// If so move them to src/structs.rs</span>
+<span id="237">237</span>
+<span id="238">238</span>
+<span id="239">239</span>
+<span id="240">240</span>
+<span id="241">241</span>
+<span id="242">242</span>
+<span id="243">243</span>
+<span id="244">244</span>
+<span id="245">245</span>
+<span id="246">246</span>
+<span id="247">247</span>
+</pre><pre class="rust"><code><span class="doccomment">//! Verifier subroutines for a SumCheck protocol.</span>
 
 <span class="kw">use</span> <span class="ident"><span class="kw">super</span>::SumCheckVerifier</span>;
 <span class="kw">use</span> <span class="kw">crate</span>::{
     <span class="ident">errors::PolyIOPErrors</span>,
-    <span class="ident">structs</span>::{<span class="ident">DomainInfo</span>, <span class="ident">IOPProverMessage</span>, <span class="ident">IOPVerifierState</span>, <span class="ident">SubClaim</span>},
+    <span class="ident">structs</span>::{<span class="ident">IOPProverMessage</span>, <span class="ident">IOPVerifierState</span>, <span class="ident">SubClaim</span>},
     <span class="ident">transcript::IOPTranscript</span>,
+    <span class="ident">virtual_poly::VPAuxInfo</span>,
 };
 <span class="kw">use</span> <span class="ident">ark_ff::PrimeField</span>;
 <span class="kw">use</span> <span class="ident">ark_std</span>::{<span class="ident">end_timer</span>, <span class="ident">start_timer</span>};
@@ -255,14 +266,14 @@
 <span class="kw">use</span> <span class="ident">rayon::iter</span>::{<span class="ident">IndexedParallelIterator</span>, <span class="ident">IntoParallelIterator</span>, <span class="ident">ParallelIterator</span>};
 
 <span class="kw">impl</span><span class="op">&lt;</span><span class="ident">F</span>: <span class="ident">PrimeField</span><span class="op">&gt;</span> <span class="ident">SumCheckVerifier</span><span class="op">&lt;</span><span class="ident">F</span><span class="op">&gt;</span> <span class="kw">for</span> <span class="ident">IOPVerifierState</span><span class="op">&lt;</span><span class="ident">F</span><span class="op">&gt;</span> {
-    <span class="kw">type</span> <span class="ident">DomainInfo</span> <span class="op">=</span> <span class="ident">DomainInfo</span><span class="op">&lt;</span><span class="ident">F</span><span class="op">&gt;</span>;
+    <span class="kw">type</span> <span class="ident">VPAuxInfo</span> <span class="op">=</span> <span class="ident">VPAuxInfo</span><span class="op">&lt;</span><span class="ident">F</span><span class="op">&gt;</span>;
     <span class="kw">type</span> <span class="ident">ProverMessage</span> <span class="op">=</span> <span class="ident">IOPProverMessage</span><span class="op">&lt;</span><span class="ident">F</span><span class="op">&gt;</span>;
     <span class="kw">type</span> <span class="ident">Challenge</span> <span class="op">=</span> <span class="ident">F</span>;
     <span class="kw">type</span> <span class="ident">Transcript</span> <span class="op">=</span> <span class="ident">IOPTranscript</span><span class="op">&lt;</span><span class="ident">F</span><span class="op">&gt;</span>;
     <span class="kw">type</span> <span class="ident">SubClaim</span> <span class="op">=</span> <span class="ident">SubClaim</span><span class="op">&lt;</span><span class="ident">F</span><span class="op">&gt;</span>;
 
-    <span class="doccomment">/// initialize the verifier</span>
-    <span class="kw">fn</span> <span class="ident">verifier_init</span>(<span class="ident">index_info</span>: <span class="kw-2">&amp;</span><span class="ident"><span class="self">Self</span>::DomainInfo</span>) -&gt; <span class="self">Self</span> {
+    <span class="doccomment">/// Initialize the verifier&#39;s state.</span>
+    <span class="kw">fn</span> <span class="ident">verifier_init</span>(<span class="ident">index_info</span>: <span class="kw-2">&amp;</span><span class="ident"><span class="self">Self</span>::VPAuxInfo</span>) -&gt; <span class="self">Self</span> {
         <span class="kw">let</span> <span class="ident">start</span> <span class="op">=</span> <span class="macro">start_timer!</span>(<span class="op">|</span><span class="op">|</span> <span class="string">&quot;sum check verifier init&quot;</span>);
         <span class="kw">let</span> <span class="ident">res</span> <span class="op">=</span> <span class="self">Self</span> {
             <span class="ident">round</span>: <span class="number">1</span>,
@@ -276,12 +287,12 @@
         <span class="ident">res</span>
     }
 
-    <span class="doccomment">/// Run verifier at current round, given prover message</span>
+    <span class="doccomment">/// Run verifier for the current round, given a prover message.</span>
     <span class="doccomment">///</span>
-    <span class="doccomment">/// Normally, this function should perform actual verification. Instead,</span>
-    <span class="doccomment">/// `verify_round` only samples and stores randomness and perform</span>
-    <span class="doccomment">/// verifications altogether in `check_and_generate_subclaim` at</span>
-    <span class="doccomment">/// the last step.</span>
+    <span class="doccomment">/// Note that `verify_round_and_update_state` only samples and stores</span>
+    <span class="doccomment">/// challenges; and update the verifier&#39;s state accordingly. The actual</span>
+    <span class="doccomment">/// verifications are deferred (in batch) to `check_and_generate_subclaim`</span>
+    <span class="doccomment">/// at the last step.</span>
     <span class="kw">fn</span> <span class="ident">verify_round_and_update_state</span>(
         <span class="kw-2">&amp;mut</span> <span class="self">self</span>,
         <span class="ident">prover_msg</span>: <span class="kw-2">&amp;</span><span class="ident"><span class="self">Self</span>::ProverMessage</span>,
@@ -296,23 +307,24 @@
             ));
         }
 
-        <span class="comment">// Now, verifier should check if the received P(0) + P(1) = expected. The check</span>
-        <span class="comment">// is moved to `check_and_generate_subclaim`, and will be done after the</span>
-        <span class="comment">// last round.</span>
+        <span class="comment">// In an interactive protocol, the verifier should</span>
+        <span class="comment">//</span>
+        <span class="comment">// 1. check if the received &#39;P(0) + P(1) = expected`.</span>
+        <span class="comment">// 2. set `expected` to P(r)`</span>
+        <span class="comment">//</span>
+        <span class="comment">// When we turn the protocol to a non-interactive one, it is sufficient to defer</span>
+        <span class="comment">// such checks to `check_and_generate_subclaim` after the last round.</span>
 
         <span class="kw">let</span> <span class="ident">challenge</span> <span class="op">=</span> <span class="ident">transcript</span>.<span class="ident">get_and_append_challenge</span>(<span class="string">b&quot;Internal round&quot;</span>)<span class="question-mark">?</span>;
         <span class="self">self</span>.<span class="ident">challenges</span>.<span class="ident">push</span>(<span class="ident">challenge</span>);
         <span class="self">self</span>.<span class="ident">polynomials_received</span>
             .<span class="ident">push</span>(<span class="ident">prover_msg</span>.<span class="ident">evaluations</span>.<span class="ident">to_vec</span>());
 
-        <span class="comment">// Now, verifier should set `expected` to P(r).</span>
-        <span class="comment">// This operation is also moved to `check_and_generate_subclaim`,</span>
-        <span class="comment">// and will be done after the last round.</span>
-
         <span class="kw">if</span> <span class="self">self</span>.<span class="ident">round</span> <span class="op">==</span> <span class="self">self</span>.<span class="ident">num_vars</span> {
             <span class="comment">// accept and close</span>
             <span class="self">self</span>.<span class="ident">finished</span> <span class="op">=</span> <span class="bool-val">true</span>;
         } <span class="kw">else</span> {
+            <span class="comment">// proceed to the next round</span>
             <span class="self">self</span>.<span class="ident">round</span> <span class="op">+</span><span class="op">=</span> <span class="number">1</span>;
         }
 
@@ -320,10 +332,12 @@
         <span class="prelude-val">Ok</span>(<span class="ident">challenge</span>)
     }
 
-    <span class="doccomment">/// verify the sumcheck phase, and generate the subclaim</span>
+    <span class="doccomment">/// This function verifies the deferred checks in the interactive version of</span>
+    <span class="doccomment">/// the protocol; and generate the subclaim. Returns an error if the</span>
+    <span class="doccomment">/// proof failed to verify.</span>
     <span class="doccomment">///</span>
     <span class="doccomment">/// If the asserted sum is correct, then the multilinear polynomial</span>
-    <span class="doccomment">/// evaluated at `subclaim.point` is `subclaim.expected_evaluation`.</span>
+    <span class="doccomment">/// evaluated at `subclaim.point` will be `subclaim.expected_evaluation`.</span>
     <span class="doccomment">/// Otherwise, it is highly unlikely that those two will be equal.</span>
     <span class="doccomment">/// Larger field size guarantees smaller soundness error.</span>
     <span class="kw">fn</span> <span class="ident">check_and_generate_subclaim</span>(
@@ -343,6 +357,8 @@
             ));
         }
 
+        <span class="comment">// the deferred check during the interactive phase:</span>
+        <span class="comment">// 2. set `expected` to P(r)`</span>
         <span class="attribute">#[<span class="ident">cfg</span>(<span class="ident">feature</span> <span class="op">=</span> <span class="string">&quot;parallel&quot;</span>)]</span>
         <span class="kw">let</span> <span class="kw-2">mut</span> <span class="ident">expected_vec</span> <span class="op">=</span> <span class="self">self</span>
             .<span class="ident">polynomials_received</span>
@@ -378,6 +394,7 @@
                 <span class="ident">interpolate_uni_poly</span>::<span class="op">&lt;</span><span class="ident">F</span><span class="op">&gt;</span>(<span class="kw-2">&amp;</span><span class="ident">evaluations</span>, <span class="ident">challenge</span>)
             })
             .<span class="ident">collect</span>::<span class="op">&lt;</span><span class="prelude-ty">Result</span><span class="op">&lt;</span><span class="ident">Vec</span><span class="op">&lt;</span><span class="kw">_</span><span class="op">&gt;</span>, <span class="ident">PolyIOPErrors</span><span class="op">&gt;</span><span class="op">&gt;</span>()<span class="question-mark">?</span>;
+
         <span class="comment">// insert the asserted_sum to the first position of the expected vector</span>
         <span class="ident">expected_vec</span>.<span class="ident">insert</span>(<span class="number">0</span>, <span class="kw-2">*</span><span class="ident">asserted_sum</span>);
 
@@ -387,6 +404,8 @@
             .<span class="ident">zip</span>(<span class="ident">expected_vec</span>.<span class="ident">iter</span>())
             .<span class="ident">take</span>(<span class="self">self</span>.<span class="ident">num_vars</span>)
         {
+            <span class="comment">// the deferred check during the interactive phase:</span>
+            <span class="comment">// 1. check if the received &#39;P(0) + P(1) = expected`.</span>
             <span class="kw">if</span> <span class="ident">evaluations</span>[<span class="number">0</span>] <span class="op">+</span> <span class="ident">evaluations</span>[<span class="number">1</span>] <span class="op">!</span><span class="op">=</span> <span class="ident">expected</span> {
                 <span class="kw">return</span> <span class="prelude-val">Err</span>(<span class="ident">PolyIOPErrors::InvalidProof</span>(
                     <span class="string">&quot;Prover message is not consistent with the claim.&quot;</span>.<span class="ident">to_string</span>(),
@@ -395,8 +414,9 @@
         }
         <span class="macro">end_timer!</span>(<span class="ident">start</span>);
         <span class="prelude-val">Ok</span>(<span class="ident">SubClaim</span> {
-            <span class="ident">point</span>: <span class="self">self</span>.<span class="ident">challenges</span>.<span class="ident">to_vec</span>(),
-            <span class="comment">// the last expected value (unchecked) will be included in the subclaim</span>
+            <span class="ident">point</span>: <span class="self">self</span>.<span class="ident">challenges</span>.<span class="ident">clone</span>(),
+            <span class="comment">// the last expected value (not checked within this function) will be included in the</span>
+            <span class="comment">// subclaim</span>
             <span class="ident">expected_evaluation</span>: <span class="ident">expected_vec</span>[<span class="self">self</span>.<span class="ident">num_vars</span>],
         })
     }
@@ -404,19 +424,20 @@
 
 <span class="doccomment">/// Interpolate a uni-variate degree-`p_i.len()-1` polynomial and evaluate this</span>
 <span class="doccomment">/// polynomial at `eval_at`:</span>
+<span class="doccomment">///</span>
 <span class="doccomment">///   \sum_{i=0}^len p_i * (\prod_{j!=i} (eval_at - j)/(i-j) )</span>
+<span class="doccomment">///</span>
 <span class="doccomment">/// This implementation is linear in number of inputs in terms of field</span>
 <span class="doccomment">/// operations. It also has a quadratic term in primitive operations which is</span>
 <span class="doccomment">/// negligible compared to field operations.</span>
-<span class="kw">pub</span>(<span class="kw">crate</span>) <span class="kw">fn</span> <span class="ident">interpolate_uni_poly</span><span class="op">&lt;</span><span class="ident">F</span>: <span class="ident">PrimeField</span><span class="op">&gt;</span>(
-    <span class="ident">p_i</span>: <span class="kw-2">&amp;</span>[<span class="ident">F</span>],
-    <span class="ident">eval_at</span>: <span class="ident">F</span>,
-) -&gt; <span class="prelude-ty">Result</span><span class="op">&lt;</span><span class="ident">F</span>, <span class="ident">PolyIOPErrors</span><span class="op">&gt;</span> {
+<span class="kw">fn</span> <span class="ident">interpolate_uni_poly</span><span class="op">&lt;</span><span class="ident">F</span>: <span class="ident">PrimeField</span><span class="op">&gt;</span>(<span class="ident">p_i</span>: <span class="kw-2">&amp;</span>[<span class="ident">F</span>], <span class="ident">eval_at</span>: <span class="ident">F</span>) -&gt; <span class="prelude-ty">Result</span><span class="op">&lt;</span><span class="ident">F</span>, <span class="ident">PolyIOPErrors</span><span class="op">&gt;</span> {
     <span class="kw">let</span> <span class="ident">start</span> <span class="op">=</span> <span class="macro">start_timer!</span>(<span class="op">|</span><span class="op">|</span> <span class="string">&quot;sum check interpolate uni poly opt&quot;</span>);
 
     <span class="kw">let</span> <span class="kw-2">mut</span> <span class="ident">res</span> <span class="op">=</span> <span class="ident">F::zero</span>();
 
-    <span class="comment">// prod = \prod_{j!=i} (eval_at - j)</span>
+    <span class="comment">// compute</span>
+    <span class="comment">//  - prod = \prod (eval_at - j)</span>
+    <span class="comment">//  - evals = [eval_at - j]</span>
     <span class="kw">let</span> <span class="kw-2">mut</span> <span class="ident">evals</span> <span class="op">=</span> <span class="macro">vec!</span>[];
     <span class="kw">let</span> <span class="ident">len</span> <span class="op">=</span> <span class="ident">p_i</span>.<span class="ident">len</span>();
     <span class="kw">let</span> <span class="kw-2">mut</span> <span class="ident">prod</span> <span class="op">=</span> <span class="ident">eval_at</span>;
@@ -429,6 +450,7 @@
     }
 
     <span class="kw">for</span> <span class="ident">i</span> <span class="kw">in</span> <span class="number">0</span>..<span class="ident">len</span> {
+        <span class="comment">// res += p_i * prod / (divisor * (eval_at - j))</span>
         <span class="kw">let</span> <span class="ident">divisor</span> <span class="op">=</span> <span class="ident">get_divisor</span>(<span class="ident">i</span>, <span class="ident">len</span>)<span class="question-mark">?</span>;
         <span class="kw">let</span> <span class="ident">divisor_f</span> <span class="op">=</span> {
             <span class="kw">if</span> <span class="ident">divisor</span> <span class="op">&lt;</span> <span class="number">0</span> {
