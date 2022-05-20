@@ -5,7 +5,8 @@ use ark_poly::DenseMultilinearExtension;
 
 use crate::PolyIOPErrors;
 
-/// Compute `prod(0,x)` which is
+/// Compute `prod(0,x) := prod(0, x1, …, xn)` which is the MLE over the
+/// evaluations of the following polynomial on the boolean hypercube {0,1}^n:
 ///
 ///  (w(x) + \beta s_id(x) + \gamma)/(w(x) + \beta s_perm(x) + \gamma)
 ///
