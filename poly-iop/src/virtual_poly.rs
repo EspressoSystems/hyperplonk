@@ -436,8 +436,9 @@ fn build_eq_x_r_helper<F: PrimeField>(r: &[F], buf: &mut Vec<F>) -> Result<(), P
 }
 
 #[cfg(test)]
-pub(crate) mod test {
+mod test {
     use super::*;
+    use crate::utils::bit_decompose;
     use ark_bls12_381::Fr;
     use ark_ff::UniformRand;
     use ark_std::test_rng;
@@ -546,16 +547,6 @@ pub(crate) mod test {
 
         let res = Rc::new(mle);
         end_timer!(start);
-        res
-    }
-
-    fn bit_decompose(input: u64, num_var: usize) -> Vec<bool> {
-        let mut res = Vec::with_capacity(num_var);
-        let mut i = input;
-        for _ in 0..num_var {
-            res.push(i & 1 == 1);
-            i >>= 1;
-        }
         res
     }
 }

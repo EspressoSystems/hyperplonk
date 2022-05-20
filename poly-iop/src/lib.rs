@@ -2,6 +2,7 @@ use ark_ff::PrimeField;
 use std::marker::PhantomData;
 
 mod errors;
+mod perm_check;
 mod structs;
 mod sum_check;
 mod transcript;
