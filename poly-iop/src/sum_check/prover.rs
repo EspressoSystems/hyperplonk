@@ -106,7 +106,7 @@ impl<F: PrimeField> SumCheckProver<F> for IOPProverState<F> {
 
         let compute_sum = start_timer!(|| "compute sum");
         // Step 2: generate sum for the partial evaluated polynomial:
-        // f(r_1, ... r_m,, x_{m_1}... x_n)
+        // f(r_1, ... r_m,, x_{m+1}... x_n)
 
         #[cfg(feature = "parallel")]
         products_sum.par_iter_mut().enumerate().for_each(|(t, e)| {
