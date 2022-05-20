@@ -23,7 +23,7 @@ fn bench_sum_check() -> Result<(), PolyIOPErrors> {
 
             let (poly, asserted_sum) =
                 VirtualPolynomial::rand(nv, (degree, degree + 1), 2, &mut rng)?;
-            let poly_info = poly.domain_info.clone();
+            let poly_info = poly.aux_info.clone();
             let proof = {
                 let start = Instant::now();
                 for _ in 0..repetition {
@@ -84,7 +84,7 @@ fn bench_zero_check() -> Result<(), PolyIOPErrors> {
             };
 
             let poly = VirtualPolynomial::rand_zero(nv, (degree, degree + 1), 2, &mut rng)?;
-            let poly_info = poly.domain_info.clone();
+            let poly_info = poly.aux_info.clone();
             let proof = {
                 let start = Instant::now();
                 let mut transcript = <PolyIOP<Fr> as ZeroCheck<Fr>>::init_transcript();

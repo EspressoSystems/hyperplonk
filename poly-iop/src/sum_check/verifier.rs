@@ -1,11 +1,11 @@
-// TODO: some of the struct is generic for Sum Checks and Zero Checks.
-// If so move them to src/structs.rs
+//! Verifier subroutines for a SumCheck protocol.
 
 use super::SumCheckVerifier;
 use crate::{
     errors::PolyIOPErrors,
-    structs::{DomainInfo, IOPProverMessage, IOPVerifierState, SubClaim},
+    structs::{IOPProverMessage, IOPVerifierState, SubClaim},
     transcript::IOPTranscript,
+    virtual_poly::VPAuxInfo,
 };
 use ark_ff::PrimeField;
 use ark_std::{end_timer, start_timer};
@@ -14,14 +14,14 @@ use ark_std::{end_timer, start_timer};
 use rayon::iter::{IndexedParallelIterator, IntoParallelIterator, ParallelIterator};
 
 impl<F: PrimeField> SumCheckVerifier<F> for IOPVerifierState<F> {
-    type DomainInfo = DomainInfo<F>;
+    type VPAuxInfo = VPAuxInfo<F>;
     type ProverMessage = IOPProverMessage<F>;
     type Challenge = F;
     type Transcript = IOPTranscript<F>;
     type SubClaim = SubClaim<F>;
 
-    /// initialize the verifier
-    fn verifier_init(index_info: &Self::DomainInfo) -> Self {
+    /// Initialize the verifier's state.
+    fn verifier_init(index_info: &Self::VPAuxInfo) -> Self {
         let start = start_timer!(|| "sum check verifier init");
         let res = Self {
             round: 1,
@@ -35,12 +35,12 @@ impl<F: PrimeField> SumCheckVerifier<F> for IOPVerifierState<F> {
         res
     }
 
-    /// Run verifier at current round, given prover message
+    /// Run verifier for the current round, given a prover message.
     ///
-    /// Normally, this function should perform actual verification. Instead,
-    /// `verify_round` only samples and stores randomness and perform
-    /// verifications altogether in `check_and_generate_subclaim` at
-    /// the last step.
+    /// Note that `verify_round_and_update_state` only samples and stores
+    /// challenges; and update the verifier's state accordingly. The actual
+    /// verifications are deferred (in batch) to `check_and_generate_subclaim`
+    /// at the last step.
     fn verify_round_and_update_state(
         &mut self,
         prover_msg: &Self::ProverMessage,
@@ -55,23 +55,24 @@ impl<F: PrimeField> SumCheckVerifier<F> for IOPVerifierState<F> {
             ));
         }
 
-        // Now, verifier should check if the received P(0) + P(1) = expected. The check
-        // is moved to `check_and_generate_subclaim`, and will be done after the
-        // last round.
+        // In an interactive protocol, the verifier should
+        //
+        // 1. check if the received 'P(0) + P(1) = expected`.
+        // 2. set `expected` to P(r)`
+        //
+        // When we turn the protocol to a non-interactive one, it is sufficient to defer
+        // such checks to `check_and_generate_subclaim` after the last round.
 
         let challenge = transcript.get_and_append_challenge(b"Internal round")?;
         self.challenges.push(challenge);
         self.polynomials_received
             .push(prover_msg.evaluations.to_vec());
 
-        // Now, verifier should set `expected` to P(r).
-        // This operation is also moved to `check_and_generate_subclaim`,
-        // and will be done after the last round.
-
         if self.round == self.num_vars {
             // accept and close
             self.finished = true;
         } else {
+            // proceed to the next round
             self.round += 1;
         }
 
@@ -79,10 +80,12 @@ impl<F: PrimeField> SumCheckVerifier<F> for IOPVerifierState<F> {
         Ok(challenge)
     }
 
-    /// verify the sumcheck phase, and generate the subclaim
+    /// This function verifies the deferred checks in the interactive version of
+    /// the protocol; and generate the subclaim. Returns an error if the
+    /// proof failed to verify.
     ///
     /// If the asserted sum is correct, then the multilinear polynomial
-    /// evaluated at `subclaim.point` is `subclaim.expected_evaluation`.
+    /// evaluated at `subclaim.point` will be `subclaim.expected_evaluation`.
     /// Otherwise, it is highly unlikely that those two will be equal.
     /// Larger field size guarantees smaller soundness error.
     fn check_and_generate_subclaim(
@@ -102,6 +105,8 @@ impl<F: PrimeField> SumCheckVerifier<F> for IOPVerifierState<F> {
             ));
         }
 
+        // the deferred check during the interactive phase:
+        // 2. set `expected` to P(r)`
         #[cfg(feature = "parallel")]
         let mut expected_vec = self
             .polynomials_received
@@ -137,6 +142,7 @@ impl<F: PrimeField> SumCheckVerifier<F> for IOPVerifierState<F> {
                 interpolate_uni_poly::<F>(&evaluations, challenge)
             })
             .collect::<Result<Vec<_>, PolyIOPErrors>>()?;
+
         // insert the asserted_sum to the first position of the expected vector
         expected_vec.insert(0, *asserted_sum);
 
@@ -146,6 +152,8 @@ impl<F: PrimeField> SumCheckVerifier<F> for IOPVerifierState<F> {
             .zip(expected_vec.iter())
             .take(self.num_vars)
         {
+            // the deferred check during the interactive phase:
+            // 1. check if the received 'P(0) + P(1) = expected`.
             if evaluations[0] + evaluations[1] != expected {
                 return Err(PolyIOPErrors::InvalidProof(
                     "Prover message is not consistent with the claim.".to_string(),
@@ -154,8 +162,9 @@ impl<F: PrimeField> SumCheckVerifier<F> for IOPVerifierState<F> {
         }
         end_timer!(start);
         Ok(SubClaim {
-            point: self.challenges.to_vec(),
-            // the last expected value (unchecked) will be included in the subclaim
+            point: self.challenges.clone(),
+            // the last expected value (not checked within this function) will be included in the
+            // subclaim
             expected_evaluation: expected_vec[self.num_vars],
         })
     }
@@ -163,19 +172,20 @@ impl<F: PrimeField> SumCheckVerifier<F> for IOPVerifierState<F> {
 
 /// Interpolate a uni-variate degree-`p_i.len()-1` polynomial and evaluate this
 /// polynomial at `eval_at`:
+///
 ///   \sum_{i=0}^len p_i * (\prod_{j!=i} (eval_at - j)/(i-j) )
+///
 /// This implementation is linear in number of inputs in terms of field
 /// operations. It also has a quadratic term in primitive operations which is
 /// negligible compared to field operations.
-pub(crate) fn interpolate_uni_poly<F: PrimeField>(
-    p_i: &[F],
-    eval_at: F,
-) -> Result<F, PolyIOPErrors> {
+fn interpolate_uni_poly<F: PrimeField>(p_i: &[F], eval_at: F) -> Result<F, PolyIOPErrors> {
     let start = start_timer!(|| "sum check interpolate uni poly opt");
 
     let mut res = F::zero();
 
-    // prod = \prod_{j!=i} (eval_at - j)
+    // compute
+    //  - prod = \prod (eval_at - j)
+    //  - evals = [eval_at - j]
     let mut evals = vec![];
     let len = p_i.len();
     let mut prod = eval_at;
@@ -188,6 +198,7 @@ pub(crate) fn interpolate_uni_poly<F: PrimeField>(
     }
 
     for i in 0..len {
+        // res += p_i * prod / (divisor * (eval_at - j))
         let divisor = get_divisor(i, len)?;
         let divisor_f = {
             if divisor < 0 {

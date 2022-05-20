@@ -1,12 +1,10 @@
 //! This module implements the sum check protocol.
-//! Currently this is a simple wrapper of the sumcheck protocol
-//! from Arkworks.
 
 use crate::{
     errors::PolyIOPErrors,
-    structs::{DomainInfo, IOPProof, IOPProverState, IOPVerifierState, SubClaim},
+    structs::{IOPProof, IOPProverState, IOPVerifierState, SubClaim},
     transcript::IOPTranscript,
-    virtual_poly::VirtualPolynomial,
+    virtual_poly::{VPAuxInfo, VirtualPolynomial},
     PolyIOP,
 };
 use ark_ff::PrimeField;
@@ -18,12 +16,12 @@ mod verifier;
 /// Trait for doing sum check protocols.
 pub trait SumCheck<F: PrimeField> {
     type Proof;
-    type PolyList;
-    type DomainInfo;
+    type VirtualPolynomial;
+    type VPAuxInfo;
     type SubClaim;
     type Transcript;
 
-    /// extract sum from the proof
+    /// Extract sum from the proof
     fn extract_sum(proof: &Self::Proof) -> F;
 
     /// Initialize the system with a transcript
@@ -38,7 +36,7 @@ pub trait SumCheck<F: PrimeField> {
     ///
     /// The polynomial is represented in the form of a VirtualPolynomial.
     fn prove(
-        poly: &Self::PolyList,
+        poly: &Self::VirtualPolynomial,
         transcript: &mut Self::Transcript,
     ) -> Result<Self::Proof, PolyIOPErrors>;
 
@@ -46,7 +44,7 @@ pub trait SumCheck<F: PrimeField> {
     fn verify(
         sum: F,
         proof: &Self::Proof,
-        domain_info: &Self::DomainInfo,
+        aux_info: &Self::VPAuxInfo,
         transcript: &mut Self::Transcript,
     ) -> Result<Self::SubClaim, PolyIOPErrors>;
 }
@@ -56,17 +54,15 @@ pub trait SumCheckProver<F: PrimeField>
 where
     Self: Sized,
 {
-    type PolyList;
+    type VirtualPolynomial;
     type ProverMessage;
 
-    /// Initialize the prover to argue for the sum of polynomial over
-    /// {0,1}^`num_vars`
-    ///
-    /// The polynomial is represented in the form of a VirtualPolynomial.
-    fn prover_init(polynomial: &Self::PolyList) -> Result<Self, PolyIOPErrors>;
+    /// Initialize the prover state to argue for the sum of the input polynomial
+    /// over {0,1}^`num_vars`.
+    fn prover_init(polynomial: &Self::VirtualPolynomial) -> Result<Self, PolyIOPErrors>;
 
-    /// receive message from verifier, generate prover message, and proceed to
-    /// next round
+    /// Receive message from verifier, generate prover message, and proceed to
+    /// next round.
     ///
     /// Main algorithm used is from section 3.2 of [XZZPS19](https://eprint.iacr.org/2019/317.pdf#subsection.3.2).
     fn prove_round_and_update_state(
@@ -77,31 +73,33 @@ where
 
 /// Trait for sum check protocol verifier side APIs.
 pub trait SumCheckVerifier<F: PrimeField> {
-    type DomainInfo;
+    type VPAuxInfo;
     type ProverMessage;
     type Challenge;
     type Transcript;
     type SubClaim;
 
-    /// initialize the verifier
-    fn verifier_init(index_info: &Self::DomainInfo) -> Self;
+    /// Initialize the verifier's state.
+    fn verifier_init(index_info: &Self::VPAuxInfo) -> Self;
 
-    /// Run verifier at current round, given prover message
+    /// Run verifier for the current round, given a prover message.
     ///
-    /// Normally, this function should perform actual verification. Instead,
-    /// `verify_round` only samples and stores randomness and perform
-    /// verifications altogether in `check_and_generate_subclaim` at
-    /// the last step.
+    /// Note that `verify_round_and_update_state` only samples and stores
+    /// challenges; and update the verifier's state accordingly. The actual
+    /// verifications are deferred (in batch) to `check_and_generate_subclaim`
+    /// at the last step.
     fn verify_round_and_update_state(
         &mut self,
         prover_msg: &Self::ProverMessage,
         transcript: &mut Self::Transcript,
     ) -> Result<Self::Challenge, PolyIOPErrors>;
 
-    /// verify the sumcheck phase, and generate the subclaim
+    /// This function verifies the deferred checks in the interactive version of
+    /// the protocol; and generate the subclaim. Returns an error if the
+    /// proof failed to verify.
     ///
     /// If the asserted sum is correct, then the multilinear polynomial
-    /// evaluated at `subclaim.point` is `subclaim.expected_evaluation`.
+    /// evaluated at `subclaim.point` will be `subclaim.expected_evaluation`.
     /// Otherwise, it is highly unlikely that those two will be equal.
     /// Larger field size guarantees smaller soundness error.
     fn check_and_generate_subclaim(
@@ -112,15 +110,12 @@ pub trait SumCheckVerifier<F: PrimeField> {
 
 impl<F: PrimeField> SumCheck<F> for PolyIOP<F> {
     type Proof = IOPProof<F>;
-
-    type PolyList = VirtualPolynomial<F>;
-
-    type DomainInfo = DomainInfo<F>;
-
+    type VirtualPolynomial = VirtualPolynomial<F>;
+    type VPAuxInfo = VPAuxInfo<F>;
     type SubClaim = SubClaim<F>;
-
     type Transcript = IOPTranscript<F>;
 
+    /// Extract sum from the proof
     fn extract_sum(proof: &Self::Proof) -> F {
         let start = start_timer!(|| "extract sum");
         let res = proof.proofs[0].evaluations[0] + proof.proofs[0].evaluations[1];
@@ -145,17 +140,17 @@ impl<F: PrimeField> SumCheck<F> for PolyIOP<F> {
     ///
     /// The polynomial is represented in the form of a VirtualPolynomial.
     fn prove(
-        poly: &Self::PolyList,
+        poly: &Self::VirtualPolynomial,
         transcript: &mut Self::Transcript,
     ) -> Result<Self::Proof, PolyIOPErrors> {
         let start = start_timer!(|| "sum check prove");
 
-        transcript.append_domain_info(&poly.domain_info)?;
+        transcript.append_aux_info(&poly.aux_info)?;
 
         let mut prover_state = IOPProverState::prover_init(poly)?;
         let mut challenge = None;
-        let mut prover_msgs = Vec::with_capacity(poly.domain_info.num_variables);
-        for _ in 0..poly.domain_info.num_variables {
+        let mut prover_msgs = Vec::with_capacity(poly.aux_info.num_variables);
+        for _ in 0..poly.aux_info.num_variables {
             let prover_msg =
                 IOPProverState::prove_round_and_update_state(&mut prover_state, &challenge)?;
             transcript.append_prover_message(&prover_msg)?;
@@ -169,18 +164,18 @@ impl<F: PrimeField> SumCheck<F> for PolyIOP<F> {
         })
     }
 
-    /// verify the claimed sum using the proof
+    /// Verify the claimed sum using the proof
     fn verify(
         claimed_sum: F,
         proof: &Self::Proof,
-        domain_info: &Self::DomainInfo,
+        aux_info: &Self::VPAuxInfo,
         transcript: &mut Self::Transcript,
     ) -> Result<Self::SubClaim, PolyIOPErrors> {
         let start = start_timer!(|| "sum check verify");
 
-        transcript.append_domain_info(domain_info)?;
-        let mut verifier_state = IOPVerifierState::verifier_init(domain_info);
-        for i in 0..domain_info.num_variables {
+        transcript.append_aux_info(aux_info)?;
+        let mut verifier_state = IOPVerifierState::verifier_init(aux_info);
+        for i in 0..aux_info.num_variables {
             let prover_msg = proof.proofs.get(i).expect("proof is incomplete");
             transcript.append_prover_message(prover_msg)?;
             IOPVerifierState::verify_round_and_update_state(
@@ -218,7 +213,7 @@ mod test {
         let (poly, asserted_sum) =
             VirtualPolynomial::rand(nv, num_multiplicands_range, num_products, &mut rng)?;
         let proof = <PolyIOP<Fr> as SumCheck<Fr>>::prove(&poly, &mut transcript)?;
-        let poly_info = poly.domain_info.clone();
+        let poly_info = poly.aux_info.clone();
         let mut transcript = <PolyIOP<Fr> as SumCheck<Fr>>::init_transcript();
         let subclaim = <PolyIOP<Fr> as SumCheck<Fr>>::verify(
             asserted_sum,
@@ -241,7 +236,7 @@ mod test {
         let mut rng = test_rng();
         let (poly, asserted_sum) =
             VirtualPolynomial::<Fr>::rand(nv, num_multiplicands_range, num_products, &mut rng)?;
-        let poly_info = poly.domain_info.clone();
+        let poly_info = poly.aux_info.clone();
         let mut prover_state = IOPProverState::prover_init(&poly)?;
         let mut verifier_state = IOPVerifierState::verifier_init(&poly_info);
         let mut challenge = None;
@@ -249,7 +244,7 @@ mod test {
         transcript
             .append_message(b"testing", b"initializing transcript for testing")
             .unwrap();
-        for _ in 0..poly.domain_info.num_variables {
+        for _ in 0..poly.aux_info.num_variables {
             let prover_message =
                 IOPProverState::prove_round_and_update_state(&mut prover_state, &challenge)
                     .unwrap();
@@ -362,7 +357,7 @@ mod test {
         drop(prover);
 
         let mut transcript = <PolyIOP<Fr> as SumCheck<Fr>>::init_transcript();
-        let poly_info = poly.domain_info.clone();
+        let poly_info = poly.aux_info.clone();
         let proof = <PolyIOP<Fr> as SumCheck<Fr>>::prove(&poly, &mut transcript)?;
         let asserted_sum = <PolyIOP<Fr> as SumCheck<Fr>>::extract_sum(&proof);
 

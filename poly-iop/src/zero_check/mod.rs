@@ -1,21 +1,20 @@
-use ark_ff::PrimeField;
-use ark_poly::DenseMultilinearExtension;
-use ark_std::{end_timer, start_timer};
-use std::rc::Rc;
+//! Main module for the ZeroCheck protocol.
 
 use crate::{
     errors::PolyIOPErrors,
-    structs::{DomainInfo, IOPProof, SubClaim},
+    structs::{IOPProof, SubClaim},
     sum_check::SumCheck,
     transcript::IOPTranscript,
-    virtual_poly::VirtualPolynomial,
+    virtual_poly::{VPAuxInfo, VirtualPolynomial},
     PolyIOP,
 };
+use ark_ff::PrimeField;
+use ark_std::{end_timer, start_timer};
 
 pub trait ZeroCheck<F: PrimeField> {
     type Proof;
-    type PolyList;
-    type DomainInfo;
+    type VirtualPolynomial;
+    type VPAuxInfo;
     type SubClaim;
     type Transcript;
 
@@ -30,22 +29,22 @@ pub trait ZeroCheck<F: PrimeField> {
     /// initialize the prover to argue for the sum of polynomial over
     /// {0,1}^`num_vars` is zero.
     fn prove(
-        poly: &Self::PolyList,
+        poly: &Self::VirtualPolynomial,
         transcript: &mut Self::Transcript,
     ) -> Result<Self::Proof, PolyIOPErrors>;
 
     /// verify the claimed sum using the proof
     fn verify(
         proof: &Self::Proof,
-        domain_info: &Self::DomainInfo,
+        aux_info: &Self::VPAuxInfo,
         transcript: &mut Self::Transcript,
     ) -> Result<Self::SubClaim, PolyIOPErrors>;
 }
 
 impl<F: PrimeField> ZeroCheck<F> for PolyIOP<F> {
     type Proof = IOPProof<F>;
-    type PolyList = VirtualPolynomial<F>;
-    type DomainInfo = DomainInfo<F>;
+    type VirtualPolynomial = VirtualPolynomial<F>;
+    type VPAuxInfo = VPAuxInfo<F>;
 
     /// A ZeroCheck SubClaim consists of
     /// - the SubClaim from the ZeroCheck
@@ -63,29 +62,41 @@ impl<F: PrimeField> ZeroCheck<F> for PolyIOP<F> {
         IOPTranscript::<F>::new(b"Initializing ZeroCheck transcript")
     }
 
-    /// initialize the prover to argue for the sum of polynomial over
+    /// Initialize the prover to argue for the sum of polynomial f(x) over
     /// {0,1}^`num_vars` is zero.
+    ///
+    /// f(x) is zero if \hat f(x) := f(x) * eq(x,r) is also a zero polynomial
+    /// for a random r sampled from transcript.
+    ///
+    /// This function will build the \hat f(x) and then invoke the sumcheck
+    /// protocol to generate a proof for which the sum of \hat f(x) is zero
     fn prove(
-        poly: &Self::PolyList,
+        poly: &Self::VirtualPolynomial,
         transcript: &mut Self::Transcript,
     ) -> Result<Self::Proof, PolyIOPErrors> {
         let start = start_timer!(|| "zero check prove");
 
-        let length = poly.domain_info.num_variables;
+        let length = poly.aux_info.num_variables;
         let r = transcript.get_and_append_challenge_vectors(b"vector r", length)?;
-        let f_hat = build_f_hat(poly, r.as_ref())?;
+        let f_hat = poly.build_f_hat(r.as_ref())?;
         let res = <Self as SumCheck<F>>::prove(&f_hat, transcript);
 
         end_timer!(start);
         res
     }
 
-    /// Verify the claimed sum using the proof.
-    /// the initial challenge `r` is also returned.
-    /// The caller needs to makes sure that `\hat f = f * eq(x, r)`
+    /// Verify that the polynomial's sum is zero using the proof.
+    /// Return a Self::Subclaim that consists of the
+    ///
+    /// - a Subclaim that the sum is zero
+    /// - the initial challenge `r` that is used to build `eq(x, r)`
+    ///
+    /// This function will check that \hat f(x)'s sum is zero. It does not check
+    /// `\hat f(x)` is build correctly. The caller needs to makes sure that
+    /// `\hat f(x) = f(x) * eq(x, r)`
     fn verify(
         proof: &Self::Proof,
-        fx_domain_info: &Self::DomainInfo,
+        fx_aux_info: &Self::VPAuxInfo,
         transcript: &mut Self::Transcript,
     ) -> Result<Self::SubClaim, PolyIOPErrors> {
         let start = start_timer!(|| "zero check verify");
@@ -99,112 +110,27 @@ impl<F: PrimeField> ZeroCheck<F> for PolyIOP<F> {
         }
 
         // generate `r` and pass it to the caller for correctness check
-        let length = fx_domain_info.num_variables;
+        let length = fx_aux_info.num_variables;
         let r = transcript.get_and_append_challenge_vectors(b"vector r", length)?;
 
         // hat_fx's max degree is increased by eq(x, r).degree() which is 1
-        let mut hat_fx_domain_info = fx_domain_info.clone();
-        hat_fx_domain_info.max_degree += 1;
+        let mut hat_fx_aux_info = fx_aux_info.clone();
+        hat_fx_aux_info.max_degree += 1;
         let subclaim =
-            <Self as SumCheck<F>>::verify(F::zero(), proof, &hat_fx_domain_info, transcript)?;
+            <Self as SumCheck<F>>::verify(F::zero(), proof, &hat_fx_aux_info, transcript)?;
 
         end_timer!(start);
         Ok((subclaim, r))
     }
 }
 
-// Input poly f(x) and a random vector r, output
-//      \hat f(x) = \sum_{x_i \in eval_x} f(x_i) eq(x, r)
-// where
-//      eq(x,y) = \prod_i=1^num_var (x_i * y_i + (1-x_i)*(1-y_i))
-fn build_f_hat<F: PrimeField>(
-    poly: &VirtualPolynomial<F>,
-    r: &[F],
-) -> Result<VirtualPolynomial<F>, PolyIOPErrors> {
-    let start = start_timer!(|| "zero check build hat f");
-
-    assert_eq!(poly.domain_info.num_variables, r.len());
-
-    let eq_x_r = build_eq_x_r(r)?;
-    let mut res = poly.clone();
-    res.mul_by_mle(eq_x_r, F::one())?;
-
-    end_timer!(start);
-    Ok(res)
-}
-
-// Evaluate
-//      eq(x,y) = \prod_i=1^num_var (x_i * y_i + (1-x_i)*(1-y_i))
-// over r, which is
-//      eq(x,y) = \prod_i=1^num_var (x_i * r_i + (1-x_i)*(1-r_i))
-pub fn build_eq_x_r<F: PrimeField>(
-    r: &[F],
-) -> Result<Rc<DenseMultilinearExtension<F>>, PolyIOPErrors> {
-    let start = start_timer!(|| "zero check build eq_x_r");
-
-    // we build eq(x,r) from its evaluations
-    // we want to evaluate eq(x,r) over x \in {0, 1}^num_vars
-    // for example, with num_vars = 4, x is a binary vector of 4, then
-    //  0 0 0 0 -> (1-r0)   * (1-r1)    * (1-r2)    * (1-r3)
-    //  1 0 0 0 -> r0       * (1-r1)    * (1-r2)    * (1-r3)
-    //  0 1 0 0 -> (1-r0)   * r1        * (1-r2)    * (1-r3)
-    //  1 1 0 0 -> r0       * r1        * (1-r2)    * (1-r3)
-    //  ....
-    //  1 1 1 1 -> r0       * r1        * r2        * r3
-    // we will need 2^num_var evaluations
-
-    let mut eval = Vec::new();
-    build_eq_x_r_helper(r, &mut eval)?;
-
-    let mle = DenseMultilinearExtension::from_evaluations_vec(r.len(), eval);
-
-    let res = Rc::new(mle);
-    end_timer!(start);
-    Ok(res)
-}
-
-/// A helper function to build eq(x, r) recursively.
-/// This function takes `r.len()` steps, and for each step it requires a maximum
-/// `r.len()-1` multiplications.
-fn build_eq_x_r_helper<F: PrimeField>(r: &[F], buf: &mut Vec<F>) -> Result<(), PolyIOPErrors> {
-    if r.is_empty() {
-        return Err(PolyIOPErrors::InvalidParameters(
-            "r length is 0".to_string(),
-        ));
-    } else if r.len() == 1 {
-        // initializing the buffer with [1-r0, r0]
-        buf.push(F::one() - r[0]);
-        buf.push(r[0]);
-    } else {
-        build_eq_x_r_helper(&r[1..], buf)?;
-
-        // suppose in the previous step we have [b1, ..., b_k]
-        // for the current step we will need
-        // if x0 = 0:   (1-r0) * [b_1, ..., b_k]
-        // if x0 = 1:   r0 * [b1, ..., b_k]
-
-        let mut res = vec![];
-        for &e in buf.iter() {
-            let tmp = e * r[0];
-            res.push(e - tmp);
-            res.push(tmp);
-        }
-        *buf = res;
-    }
-
-    Ok(())
-}
-
 #[cfg(test)]
 mod test {
 
-    use super::{build_eq_x_r, ZeroCheck};
+    use super::ZeroCheck;
     use crate::{errors::PolyIOPErrors, PolyIOP, VirtualPolynomial};
     use ark_bls12_381::Fr;
-    use ark_ff::{PrimeField, UniformRand};
-    use ark_poly::DenseMultilinearExtension;
-    use ark_std::{end_timer, start_timer, test_rng};
-    use std::rc::Rc;
+    use ark_std::test_rng;
 
     fn test_zerocheck(
         nv: usize,
@@ -222,7 +148,7 @@ mod test {
             transcript.append_message(b"testing", b"initializing transcript for testing")?;
             let proof = <PolyIOP<Fr> as ZeroCheck<Fr>>::prove(&poly, &mut transcript)?;
 
-            let poly_info = poly.domain_info.clone();
+            let poly_info = poly.aux_info.clone();
             let mut transcript = <PolyIOP<Fr> as ZeroCheck<Fr>>::init_transcript();
             transcript.append_message(b"testing", b"initializing transcript for testing")?;
             let subclaim =
@@ -242,7 +168,7 @@ mod test {
             transcript.append_message(b"testing", b"initializing transcript for testing")?;
             let proof = <PolyIOP<Fr> as ZeroCheck<Fr>>::prove(&poly, &mut transcript)?;
 
-            let poly_info = poly.domain_info.clone();
+            let poly_info = poly.aux_info.clone();
             let mut transcript = <PolyIOP<Fr> as ZeroCheck<Fr>>::init_transcript();
             transcript.append_message(b"testing", b"initializing transcript for testing")?;
 
@@ -280,71 +206,5 @@ mod test {
 
         assert!(test_zerocheck(nv, num_multiplicands_range, num_products).is_err());
         Ok(())
-    }
-
-    #[test]
-    fn test_eq_xr() {
-        let mut rng = test_rng();
-        for nv in 4..10 {
-            let r: Vec<Fr> = (0..nv).map(|_| Fr::rand(&mut rng)).collect();
-            let eq_x_r = build_eq_x_r(r.as_ref()).unwrap();
-            let eq_x_r2 = build_eq_x_r_for_test(r.as_ref());
-            assert_eq!(eq_x_r, eq_x_r2);
-        }
-    }
-
-    /// Naive method to build eq(x, r).
-    /// Only used for testing purpose.
-    // Evaluate
-    //      eq(x,y) = \prod_i=1^num_var (x_i * y_i + (1-x_i)*(1-y_i))
-    // over r, which is
-    //      eq(x,y) = \prod_i=1^num_var (x_i * r_i + (1-x_i)*(1-r_i))
-    fn build_eq_x_r_for_test<F: PrimeField>(r: &[F]) -> Rc<DenseMultilinearExtension<F>> {
-        let start = start_timer!(|| "zero check naive build eq_x_r");
-
-        // we build eq(x,r) from its evaluations
-        // we want to evaluate eq(x,r) over x \in {0, 1}^num_vars
-        // for example, with num_vars = 4, x is a binary vector of 4, then
-        //  0 0 0 0 -> (1-r0)   * (1-r1)    * (1-r2)    * (1-r3)
-        //  1 0 0 0 -> r0       * (1-r1)    * (1-r2)    * (1-r3)
-        //  0 1 0 0 -> (1-r0)   * r1        * (1-r2)    * (1-r3)
-        //  1 1 0 0 -> r0       * r1        * (1-r2)    * (1-r3)
-        //  ....
-        //  1 1 1 1 -> r0       * r1        * r2        * r3
-        // we will need 2^num_var evaluations
-
-        // First, we build array for {1 - r_i}
-        let one_minus_r: Vec<F> = r.iter().map(|ri| F::one() - ri).collect();
-
-        let num_var = r.len();
-        let mut eval = vec![];
-
-        for i in 0..1 << num_var {
-            let mut current_eval = F::one();
-            let bit_sequence = bit_decompose(i, num_var);
-
-            for (&bit, (ri, one_minus_ri)) in
-                bit_sequence.iter().zip(r.iter().zip(one_minus_r.iter()))
-            {
-                current_eval *= if bit { *ri } else { *one_minus_ri };
-            }
-            eval.push(current_eval);
-        }
-
-        let mle = DenseMultilinearExtension::from_evaluations_vec(num_var, eval);
-
-        let res = Rc::new(mle);
-        end_timer!(start);
-        res
-    }
-
-    fn bit_decompose(input: u64, num_var: usize) -> Vec<bool> {
-        let mut res = Vec::with_capacity(num_var);
-        let mut i = input;
-        for _ in 0..num_var {
-            res.push(i & 1 == 1);
-            i >>= 1;
-        }
-        res
     }
 }
