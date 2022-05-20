@@ -54,15 +54,18 @@ impl<F: PrimeField> SumCheckProver<F> for IOPProverState<F> {
         }
 
         let fix_argument = start_timer!(|| "fix argument");
-        // Step 1:
-        // fix argument and evaluate f(x) over r for r.len() <= x.len()
-        // i.e.:
-        // for each mle g(x_0, ... x_{n-1}) within the flattened_mle
-        // eval g(x_0,...x_{n-1}) over [r_0, ..., r_{m-1}] with m <= n
-        // and mutate g to g(r_0, ...r_{m-1}, x_m,... x_{n-1})
-        //
-        // TODO(ZZ): have a question on this. Let's chat @binyi.
 
+        // Step 1:
+        // fix argument and evaluate f(x) over x_m = r; where r is the challenge
+        // for the current round, and m is the round number, indexed from 1
+        //
+        // i.e.:
+        // at round m <=n, for each mle g(x_1, ... x_n) within the flattened_mle
+        // which has already been evaluated to
+        //
+        //    g(r_1, ..., r_{m-1}, x_m ... x_n)
+        //
+        // eval g over r_m, and mutate g to g(r_1, ... r_m,, x_{m_1}... x_n)
         let mut flattened_ml_extensions: Vec<DenseMultilinearExtension<F>> = self
             .poly
             .flattened_ml_extensions
@@ -103,7 +106,7 @@ impl<F: PrimeField> SumCheckProver<F> for IOPProverState<F> {
 
         let compute_sum = start_timer!(|| "compute sum");
         // Step 2: generate sum for the partial evaluated polynomial:
-        // f(r_0, ...r_m, x_{m+1},... x_n)
+        // f(r_1, ... r_m,, x_{m_1}... x_n)
 
         #[cfg(feature = "parallel")]
         products_sum.par_iter_mut().enumerate().for_each(|(t, e)| {
