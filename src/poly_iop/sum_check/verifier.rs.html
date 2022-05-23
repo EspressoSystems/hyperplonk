@@ -250,6 +250,68 @@
 <span id="245">245</span>
 <span id="246">246</span>
 <span id="247">247</span>
+<span id="248">248</span>
+<span id="249">249</span>
+<span id="250">250</span>
+<span id="251">251</span>
+<span id="252">252</span>
+<span id="253">253</span>
+<span id="254">254</span>
+<span id="255">255</span>
+<span id="256">256</span>
+<span id="257">257</span>
+<span id="258">258</span>
+<span id="259">259</span>
+<span id="260">260</span>
+<span id="261">261</span>
+<span id="262">262</span>
+<span id="263">263</span>
+<span id="264">264</span>
+<span id="265">265</span>
+<span id="266">266</span>
+<span id="267">267</span>
+<span id="268">268</span>
+<span id="269">269</span>
+<span id="270">270</span>
+<span id="271">271</span>
+<span id="272">272</span>
+<span id="273">273</span>
+<span id="274">274</span>
+<span id="275">275</span>
+<span id="276">276</span>
+<span id="277">277</span>
+<span id="278">278</span>
+<span id="279">279</span>
+<span id="280">280</span>
+<span id="281">281</span>
+<span id="282">282</span>
+<span id="283">283</span>
+<span id="284">284</span>
+<span id="285">285</span>
+<span id="286">286</span>
+<span id="287">287</span>
+<span id="288">288</span>
+<span id="289">289</span>
+<span id="290">290</span>
+<span id="291">291</span>
+<span id="292">292</span>
+<span id="293">293</span>
+<span id="294">294</span>
+<span id="295">295</span>
+<span id="296">296</span>
+<span id="297">297</span>
+<span id="298">298</span>
+<span id="299">299</span>
+<span id="300">300</span>
+<span id="301">301</span>
+<span id="302">302</span>
+<span id="303">303</span>
+<span id="304">304</span>
+<span id="305">305</span>
+<span id="306">306</span>
+<span id="307">307</span>
+<span id="308">308</span>
+<span id="309">309</span>
 </pre><pre class="rust"><code><span class="doccomment">//! Verifier subroutines for a SumCheck protocol.</span>
 
 <span class="kw">use</span> <span class="ident"><span class="kw">super</span>::SumCheckVerifier</span>;
@@ -433,69 +495,131 @@
 <span class="kw">fn</span> <span class="ident">interpolate_uni_poly</span><span class="op">&lt;</span><span class="ident">F</span>: <span class="ident">PrimeField</span><span class="op">&gt;</span>(<span class="ident">p_i</span>: <span class="kw-2">&amp;</span>[<span class="ident">F</span>], <span class="ident">eval_at</span>: <span class="ident">F</span>) -&gt; <span class="prelude-ty">Result</span><span class="op">&lt;</span><span class="ident">F</span>, <span class="ident">PolyIOPErrors</span><span class="op">&gt;</span> {
     <span class="kw">let</span> <span class="ident">start</span> <span class="op">=</span> <span class="macro">start_timer!</span>(<span class="op">|</span><span class="op">|</span> <span class="string">&quot;sum check interpolate uni poly opt&quot;</span>);
 
-    <span class="kw">let</span> <span class="kw-2">mut</span> <span class="ident">res</span> <span class="op">=</span> <span class="ident">F::zero</span>();
-
-    <span class="comment">// compute</span>
-    <span class="comment">//  - prod = \prod (eval_at - j)</span>
-    <span class="comment">//  - evals = [eval_at - j]</span>
-    <span class="kw">let</span> <span class="kw-2">mut</span> <span class="ident">evals</span> <span class="op">=</span> <span class="macro">vec!</span>[];
     <span class="kw">let</span> <span class="ident">len</span> <span class="op">=</span> <span class="ident">p_i</span>.<span class="ident">len</span>();
+    <span class="kw">let</span> <span class="kw-2">mut</span> <span class="ident">evals</span> <span class="op">=</span> <span class="macro">vec!</span>[];
     <span class="kw">let</span> <span class="kw-2">mut</span> <span class="ident">prod</span> <span class="op">=</span> <span class="ident">eval_at</span>;
     <span class="ident">evals</span>.<span class="ident">push</span>(<span class="ident">eval_at</span>);
 
+    <span class="comment">// `prod = \prod_{j} (eval_at - j)`</span>
     <span class="kw">for</span> <span class="ident">e</span> <span class="kw">in</span> <span class="number">1</span>..<span class="ident">len</span> {
         <span class="kw">let</span> <span class="ident">tmp</span> <span class="op">=</span> <span class="ident">eval_at</span> <span class="op">-</span> <span class="ident">F::from</span>(<span class="ident">e</span> <span class="kw">as</span> <span class="ident">u64</span>);
         <span class="ident">evals</span>.<span class="ident">push</span>(<span class="ident">tmp</span>);
         <span class="ident">prod</span> <span class="kw-2">*</span><span class="op">=</span> <span class="ident">tmp</span>;
     }
+    <span class="kw">let</span> <span class="kw-2">mut</span> <span class="ident">res</span> <span class="op">=</span> <span class="ident">F::zero</span>();
+    <span class="comment">// we want to compute \prod (j!=i) (i-j) for a given i</span>
+    <span class="comment">//</span>
+    <span class="comment">// we start from the last step, which is</span>
+    <span class="comment">//  denom[len-1] = (len-1) * (len-2) *... * 2 * 1</span>
+    <span class="comment">// the step before that is</span>
+    <span class="comment">//  denom[len-2] = (len-2) * (len-3) * ... * 2 * 1 * -1</span>
+    <span class="comment">// and the step before that is</span>
+    <span class="comment">//  denom[len-3] = (len-3) * (len-4) * ... * 2 * 1 * -1 * -2</span>
+    <span class="comment">//</span>
+    <span class="comment">// i.e., for any i, the one before this will be derived from</span>
+    <span class="comment">//  denom[i-1] = denom[i] * (len-i) / i</span>
+    <span class="comment">//</span>
+    <span class="comment">// that is, we only need to store</span>
+    <span class="comment">// - the last denom for i = len-1, and</span>
+    <span class="comment">// - the ratio between current step and fhe last step, which is the product of</span>
+    <span class="comment">//   (len-i) / i from all previous steps and we store this product as a fraction</span>
+    <span class="comment">//   number to reduce field divisions.</span>
 
-    <span class="kw">for</span> <span class="ident">i</span> <span class="kw">in</span> <span class="number">0</span>..<span class="ident">len</span> {
-        <span class="comment">// res += p_i * prod / (divisor * (eval_at - j))</span>
-        <span class="kw">let</span> <span class="ident">divisor</span> <span class="op">=</span> <span class="ident">get_divisor</span>(<span class="ident">i</span>, <span class="ident">len</span>)<span class="question-mark">?</span>;
-        <span class="kw">let</span> <span class="ident">divisor_f</span> <span class="op">=</span> {
-            <span class="kw">if</span> <span class="ident">divisor</span> <span class="op">&lt;</span> <span class="number">0</span> {
-                <span class="op">-</span><span class="ident">F::from</span>((<span class="op">-</span><span class="ident">divisor</span>) <span class="kw">as</span> <span class="ident">u128</span>)
+    <span class="comment">// We know</span>
+    <span class="comment">//  - 2^61 &lt; factorial(20) &lt; 2^62</span>
+    <span class="comment">//  - 2^122 &lt; factorial(33) &lt; 2^123</span>
+    <span class="comment">// so we will be able to compute the ratio</span>
+    <span class="comment">//  - for len &lt;= 20 with i64</span>
+    <span class="comment">//  - for len &lt;= 33 with i128</span>
+    <span class="comment">//  - for len &gt;  33 with BigInt</span>
+    <span class="kw">if</span> <span class="ident">p_i</span>.<span class="ident">len</span>() <span class="op">&lt;</span><span class="op">=</span> <span class="number">20</span> {
+        <span class="kw">let</span> <span class="ident">last_denominator</span> <span class="op">=</span> <span class="ident">F::from</span>(<span class="ident">u64_factorial</span>(<span class="ident">len</span> <span class="op">-</span> <span class="number">1</span>));
+        <span class="kw">let</span> <span class="kw-2">mut</span> <span class="ident">ratio_numerator</span> <span class="op">=</span> <span class="number">1i64</span>;
+        <span class="kw">let</span> <span class="kw-2">mut</span> <span class="ident">ratio_enumerator</span> <span class="op">=</span> <span class="number">1u64</span>;
+
+        <span class="kw">for</span> <span class="ident">i</span> <span class="kw">in</span> (<span class="number">0</span>..<span class="ident">len</span>).<span class="ident">rev</span>() {
+            <span class="kw">let</span> <span class="ident">ratio_numerator_f</span> <span class="op">=</span> <span class="kw">if</span> <span class="ident">ratio_numerator</span> <span class="op">&lt;</span> <span class="number">0</span> {
+                <span class="op">-</span><span class="ident">F::from</span>((<span class="op">-</span><span class="ident">ratio_numerator</span>) <span class="kw">as</span> <span class="ident">u64</span>)
             } <span class="kw">else</span> {
-                <span class="ident">F::from</span>(<span class="ident">divisor</span> <span class="kw">as</span> <span class="ident">u128</span>)
-            }
-        };
-        <span class="ident">res</span> <span class="op">+</span><span class="op">=</span> <span class="ident">p_i</span>[<span class="ident">i</span>] <span class="op">*</span> <span class="ident">prod</span> <span class="op">/</span> (<span class="ident">divisor_f</span> <span class="op">*</span> <span class="ident">evals</span>[<span class="ident">i</span>]);
-    }
+                <span class="ident">F::from</span>(<span class="ident">ratio_numerator</span> <span class="kw">as</span> <span class="ident">u64</span>)
+            };
 
+            <span class="ident">res</span> <span class="op">+</span><span class="op">=</span> <span class="ident">p_i</span>[<span class="ident">i</span>] <span class="op">*</span> <span class="ident">prod</span> <span class="op">*</span> <span class="ident">F::from</span>(<span class="ident">ratio_enumerator</span>)
+                <span class="op">/</span> (<span class="ident">last_denominator</span> <span class="op">*</span> <span class="ident">ratio_numerator_f</span> <span class="op">*</span> <span class="ident">evals</span>[<span class="ident">i</span>]);
+
+            <span class="comment">// compute denom for the next step is current_denom * (len-i)/i</span>
+            <span class="kw">if</span> <span class="ident">i</span> <span class="op">!</span><span class="op">=</span> <span class="number">0</span> {
+                <span class="ident">ratio_numerator</span> <span class="kw-2">*</span><span class="op">=</span> <span class="op">-</span>(<span class="ident">len</span> <span class="kw">as</span> <span class="ident">i64</span> <span class="op">-</span> <span class="ident">i</span> <span class="kw">as</span> <span class="ident">i64</span>);
+                <span class="ident">ratio_enumerator</span> <span class="kw-2">*</span><span class="op">=</span> <span class="ident">i</span> <span class="kw">as</span> <span class="ident">u64</span>;
+            }
+        }
+    } <span class="kw">else</span> <span class="kw">if</span> <span class="ident">p_i</span>.<span class="ident">len</span>() <span class="op">&lt;</span><span class="op">=</span> <span class="number">33</span> {
+        <span class="kw">let</span> <span class="ident">last_denominator</span> <span class="op">=</span> <span class="ident">F::from</span>(<span class="ident">u128_factorial</span>(<span class="ident">len</span> <span class="op">-</span> <span class="number">1</span>));
+        <span class="kw">let</span> <span class="kw-2">mut</span> <span class="ident">ratio_numerator</span> <span class="op">=</span> <span class="number">1i128</span>;
+        <span class="kw">let</span> <span class="kw-2">mut</span> <span class="ident">ratio_enumerator</span> <span class="op">=</span> <span class="number">1u128</span>;
+
+        <span class="kw">for</span> <span class="ident">i</span> <span class="kw">in</span> (<span class="number">0</span>..<span class="ident">len</span>).<span class="ident">rev</span>() {
+            <span class="kw">let</span> <span class="ident">ratio_numerator_f</span> <span class="op">=</span> <span class="kw">if</span> <span class="ident">ratio_numerator</span> <span class="op">&lt;</span> <span class="number">0</span> {
+                <span class="op">-</span><span class="ident">F::from</span>((<span class="op">-</span><span class="ident">ratio_numerator</span>) <span class="kw">as</span> <span class="ident">u128</span>)
+            } <span class="kw">else</span> {
+                <span class="ident">F::from</span>(<span class="ident">ratio_numerator</span> <span class="kw">as</span> <span class="ident">u128</span>)
+            };
+
+            <span class="ident">res</span> <span class="op">+</span><span class="op">=</span> <span class="ident">p_i</span>[<span class="ident">i</span>] <span class="op">*</span> <span class="ident">prod</span> <span class="op">*</span> <span class="ident">F::from</span>(<span class="ident">ratio_enumerator</span>)
+                <span class="op">/</span> (<span class="ident">last_denominator</span> <span class="op">*</span> <span class="ident">ratio_numerator_f</span> <span class="op">*</span> <span class="ident">evals</span>[<span class="ident">i</span>]);
+
+            <span class="comment">// compute denom for the next step is current_denom * (len-i)/i</span>
+            <span class="kw">if</span> <span class="ident">i</span> <span class="op">!</span><span class="op">=</span> <span class="number">0</span> {
+                <span class="ident">ratio_numerator</span> <span class="kw-2">*</span><span class="op">=</span> <span class="op">-</span>(<span class="ident">len</span> <span class="kw">as</span> <span class="ident">i128</span> <span class="op">-</span> <span class="ident">i</span> <span class="kw">as</span> <span class="ident">i128</span>);
+                <span class="ident">ratio_enumerator</span> <span class="kw-2">*</span><span class="op">=</span> <span class="ident">i</span> <span class="kw">as</span> <span class="ident">u128</span>;
+            }
+        }
+    } <span class="kw">else</span> {
+        <span class="kw">let</span> <span class="kw-2">mut</span> <span class="ident">denom_up</span> <span class="op">=</span> <span class="ident">field_factorial</span>::<span class="op">&lt;</span><span class="ident">F</span><span class="op">&gt;</span>(<span class="ident">len</span> <span class="op">-</span> <span class="number">1</span>);
+        <span class="kw">let</span> <span class="kw-2">mut</span> <span class="ident">denom_down</span> <span class="op">=</span> <span class="ident">F::one</span>();
+
+        <span class="kw">for</span> <span class="ident">i</span> <span class="kw">in</span> (<span class="number">0</span>..<span class="ident">len</span>).<span class="ident">rev</span>() {
+            <span class="ident">res</span> <span class="op">+</span><span class="op">=</span> <span class="ident">p_i</span>[<span class="ident">i</span>] <span class="op">*</span> <span class="ident">prod</span> <span class="op">*</span> <span class="ident">denom_down</span> <span class="op">/</span> (<span class="ident">denom_up</span> <span class="op">*</span> <span class="ident">evals</span>[<span class="ident">i</span>]);
+
+            <span class="comment">// compute denom for the next step is current_denom * (len-i)/i</span>
+            <span class="kw">if</span> <span class="ident">i</span> <span class="op">!</span><span class="op">=</span> <span class="number">0</span> {
+                <span class="ident">denom_up</span> <span class="kw-2">*</span><span class="op">=</span> <span class="op">-</span><span class="ident">F::from</span>((<span class="ident">len</span> <span class="op">-</span> <span class="ident">i</span>) <span class="kw">as</span> <span class="ident">u64</span>);
+                <span class="ident">denom_down</span> <span class="kw-2">*</span><span class="op">=</span> <span class="ident">F::from</span>(<span class="ident">i</span> <span class="kw">as</span> <span class="ident">u64</span>);
+            }
+        }
+    }
     <span class="macro">end_timer!</span>(<span class="ident">start</span>);
     <span class="prelude-val">Ok</span>(<span class="ident">res</span>)
 }
 
-<span class="doccomment">/// Compute \prod_{j!=i)^len (i-j). This function takes O(n^2) number of</span>
-<span class="doccomment">/// primitive operations which is negligible compared to field operations.</span>
-<span class="comment">// We know</span>
-<span class="comment">//  - factorial(20) ~ 2^61</span>
-<span class="comment">//  - factorial(33) ~ 2^123</span>
-<span class="comment">// so we will be able to store the result for len&lt;=20 with i64;</span>
-<span class="comment">// for len&lt;=33 with i128; and we do not currently support len&gt;33.</span>
+<span class="doccomment">/// compute the factorial(a) = 1 * 2 * ... * a</span>
 <span class="attribute">#[<span class="ident">inline</span>]</span>
-<span class="kw">fn</span> <span class="ident">get_divisor</span>(<span class="ident">i</span>: <span class="ident">usize</span>, <span class="ident">len</span>: <span class="ident">usize</span>) -&gt; <span class="prelude-ty">Result</span><span class="op">&lt;</span><span class="ident">i128</span>, <span class="ident">PolyIOPErrors</span><span class="op">&gt;</span> {
-    <span class="kw">if</span> <span class="ident">len</span> <span class="op">&lt;</span><span class="op">=</span> <span class="number">20</span> {
-        <span class="kw">let</span> <span class="kw-2">mut</span> <span class="ident">res</span> <span class="op">=</span> <span class="number">1i64</span>;
-        <span class="kw">for</span> <span class="ident">j</span> <span class="kw">in</span> <span class="number">0</span>..<span class="ident">len</span> {
-            <span class="kw">if</span> <span class="ident">j</span> <span class="op">!</span><span class="op">=</span> <span class="ident">i</span> {
-                <span class="ident">res</span> <span class="kw-2">*</span><span class="op">=</span> <span class="ident">i</span> <span class="kw">as</span> <span class="ident">i64</span> <span class="op">-</span> <span class="ident">j</span> <span class="kw">as</span> <span class="ident">i64</span>;
-            }
-        }
-        <span class="prelude-val">Ok</span>(<span class="ident">res</span> <span class="kw">as</span> <span class="ident">i128</span>)
-    } <span class="kw">else</span> <span class="kw">if</span> <span class="ident">len</span> <span class="op">&lt;</span><span class="op">=</span> <span class="number">33</span> {
-        <span class="kw">let</span> <span class="kw-2">mut</span> <span class="ident">res</span> <span class="op">=</span> <span class="number">1i128</span>;
-        <span class="kw">for</span> <span class="ident">j</span> <span class="kw">in</span> <span class="number">0</span>..<span class="ident">len</span> {
-            <span class="kw">if</span> <span class="ident">j</span> <span class="op">!</span><span class="op">=</span> <span class="ident">i</span> {
-                <span class="ident">res</span> <span class="kw-2">*</span><span class="op">=</span> <span class="ident">i</span> <span class="kw">as</span> <span class="ident">i128</span> <span class="op">-</span> <span class="ident">j</span> <span class="kw">as</span> <span class="ident">i128</span>;
-            }
-        }
-        <span class="prelude-val">Ok</span>(<span class="ident">res</span>)
-    } <span class="kw">else</span> {
-        <span class="prelude-val">Err</span>(<span class="ident">PolyIOPErrors::InvalidParameters</span>(
-            <span class="string">&quot;Do not support number variable &gt; 33&quot;</span>.<span class="ident">to_string</span>(),
-        ))
+<span class="kw">fn</span> <span class="ident">field_factorial</span><span class="op">&lt;</span><span class="ident">F</span>: <span class="ident">PrimeField</span><span class="op">&gt;</span>(<span class="ident">a</span>: <span class="ident">usize</span>) -&gt; <span class="ident">F</span> {
+    <span class="kw">let</span> <span class="kw-2">mut</span> <span class="ident">res</span> <span class="op">=</span> <span class="number">1u64</span>;
+    <span class="kw">for</span> <span class="ident">i</span> <span class="kw">in</span> <span class="number">1</span>..<span class="op">=</span><span class="ident">a</span> {
+        <span class="ident">res</span> <span class="kw-2">*</span><span class="op">=</span> <span class="ident">i</span> <span class="kw">as</span> <span class="ident">u64</span>;
     }
+    <span class="ident">F::from</span>(<span class="ident">res</span>)
+}
+
+<span class="doccomment">/// compute the factorial(a) = 1 * 2 * ... * a</span>
+<span class="attribute">#[<span class="ident">inline</span>]</span>
+<span class="kw">fn</span> <span class="ident">u128_factorial</span>(<span class="ident">a</span>: <span class="ident">usize</span>) -&gt; <span class="ident">u128</span> {
+    <span class="kw">let</span> <span class="kw-2">mut</span> <span class="ident">res</span> <span class="op">=</span> <span class="number">1u128</span>;
+    <span class="kw">for</span> <span class="ident">i</span> <span class="kw">in</span> <span class="number">1</span>..<span class="op">=</span><span class="ident">a</span> {
+        <span class="ident">res</span> <span class="kw-2">*</span><span class="op">=</span> <span class="ident">i</span> <span class="kw">as</span> <span class="ident">u128</span>;
+    }
+    <span class="ident">res</span>
+}
+
+<span class="doccomment">/// compute the factorial(a) = 1 * 2 * ... * a</span>
+<span class="attribute">#[<span class="ident">inline</span>]</span>
+<span class="kw">fn</span> <span class="ident">u64_factorial</span>(<span class="ident">a</span>: <span class="ident">usize</span>) -&gt; <span class="ident">u64</span> {
+    <span class="kw">let</span> <span class="kw-2">mut</span> <span class="ident">res</span> <span class="op">=</span> <span class="number">1u64</span>;
+    <span class="kw">for</span> <span class="ident">i</span> <span class="kw">in</span> <span class="number">1</span>..<span class="op">=</span><span class="ident">a</span> {
+        <span class="ident">res</span> <span class="kw-2">*</span><span class="op">=</span> <span class="ident">i</span> <span class="kw">as</span> <span class="ident">u64</span>;
+    }
+    <span class="ident">res</span>
 }
 </code></pre></div>
 </section><section id="search" class="content hidden"></section></div></main><div id="rustdoc-vars" data-root-path="../../../" data-current-crate="poly_iop" data-themes="ayu,dark,light" data-resource-suffix="" data-rustdoc-version="1.61.0 (fe5b13d68 2022-05-18)" ></div>
