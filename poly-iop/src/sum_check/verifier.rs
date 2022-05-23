@@ -181,37 +181,138 @@ impl<F: PrimeField> SumCheckVerifier<F> for IOPVerifierState<F> {
 fn interpolate_uni_poly<F: PrimeField>(p_i: &[F], eval_at: F) -> Result<F, PolyIOPErrors> {
     let start = start_timer!(|| "sum check interpolate uni poly opt");
 
-    let mut res = F::zero();
-
-    // compute
-    //  - prod = \prod (eval_at - j)
-    //  - evals = [eval_at - j]
-    let mut evals = vec![];
     let len = p_i.len();
+    let mut evals = vec![];
     let mut prod = eval_at;
     evals.push(eval_at);
 
+    // `prod = \prod_{j} (eval_at - j)`
     for e in 1..len {
         let tmp = eval_at - F::from(e as u64);
         evals.push(tmp);
         prod *= tmp;
     }
+    let mut res = F::zero();
+    // we want to compute \prod (j!=i) (i-j) for a given i
+    //
+    // we start from the last step, which is
+    //  denom[len-1] = (len-1) * (len-2) *... * 2 * 1
+    // the step before that is
+    //  denom[len-2] = (len-2) * (len-3) * ... * 2 * 1 * -1
+    // and the step before that is
+    //  denom[len-3] = (len-3) * (len-4) * ... * 2 * 1 * -1 * -2
+    //
+    // that is, we only need to store the current denom[i] (as a fraction number),
+    // and the one before this will be derived from
+    //  denom[i-1] = denom[i] * (len-i) / i
+    //
 
-    for i in 0..len {
-        // res += p_i * prod / (divisor * (eval_at - j))
-        let divisor = get_divisor(i, len)?;
-        let divisor_f = {
-            if divisor < 0 {
-                -F::from((-divisor) as u128)
+    // We know
+    //  - 2^57 < (factorial(12))^2 < 2^58
+    //  - 2^122 < (factorial(20))^2 < 2^123
+    //  - 2^122 < factorial(33) < 2^123
+    // so we will be able to compute the denom
+    //  - for len <= 12 with i64
+    //  - for len <= 20 with i128
+    //  - for len <= 33 with i128 in quadratic time
+    //  - for len >  33 with BigInt
+    if p_i.len() <= 12 {
+        let mut denom_up = u64_factorial(len - 1) as i64;
+        let mut denom_down = 1u64;
+
+        for i in (0..len).rev() {
+            let demon_up_f = if denom_up < 0 {
+                -F::from((-denom_up) as u64)
             } else {
-                F::from(divisor as u128)
-            }
-        };
-        res += p_i[i] * prod / (divisor_f * evals[i]);
-    }
+                F::from(denom_up as u64)
+            };
 
+            res += p_i[i] * prod * F::from(denom_down) / (demon_up_f * evals[i]);
+
+            // compute denom for the next step is current_denom * (len-i)/i
+            if i != 0 {
+                denom_up *= -(len as i64 - i as i64);
+                denom_down *= i as u64;
+            }
+        }
+    } else if p_i.len() <= 20 {
+        let mut denom_up = u128_factorial(len - 1) as i128;
+        let mut denom_down = 1u128;
+
+        for i in (0..len).rev() {
+            let demon_up_f = if denom_up < 0 {
+                -F::from((-denom_up) as u128)
+            } else {
+                F::from(denom_up as u128)
+            };
+
+            res += p_i[i] * prod * F::from(denom_down) / (demon_up_f * evals[i]);
+
+            // compute denom for the next step is current_denom * (len-i)/i
+            if i != 0 {
+                denom_up *= -(len as i128 - i as i128);
+                denom_down *= i as u128;
+            }
+        }
+    } else if p_i.len() <= 33 {
+        for i in 0..len {
+            // res += p_i * prod / (divisor * (eval_at - j))
+            let divisor = get_divisor(i, len)?;
+            let divisor_f = {
+                if divisor < 0 {
+                    -F::from((-divisor) as u128)
+                } else {
+                    F::from(divisor as u128)
+                }
+            };
+            res += p_i[i] * prod / (divisor_f * evals[i]);
+        }
+    } else {
+        let mut denom_up = field_factorial::<F>(len - 1);
+        let mut denom_down = F::one();
+
+        for i in (0..len).rev() {
+            res += p_i[i] * prod * denom_down / (denom_up * evals[i]);
+
+            // compute denom for the next step is current_denom * (len-i)/i
+            if i != 0 {
+                denom_up *= -F::from((len - i) as u64);
+                denom_down *= F::from(i as u64);
+            }
+        }
+    }
     end_timer!(start);
     Ok(res)
+}
+
+/// compute the factorial(a) = 1 * 2 * ... * a
+#[inline]
+fn field_factorial<F: PrimeField>(a: usize) -> F {
+    let mut res = 1u64;
+    for i in 1..=a {
+        res *= i as u64;
+    }
+    F::from(res)
+}
+
+/// compute the factorial(a) = 1 * 2 * ... * a
+#[inline]
+fn u128_factorial(a: usize) -> u128 {
+    let mut res = 1u128;
+    for i in 1..=a {
+        res *= i as u128;
+    }
+    res
+}
+
+/// compute the factorial(a) = 1 * 2 * ... * a
+#[inline]
+fn u64_factorial(a: usize) -> u64 {
+    let mut res = 1u64;
+    for i in 1..=a {
+        res *= i as u64;
+    }
+    res
 }
 
 /// Compute \prod_{j!=i)^len (i-j). This function takes O(n^2) number of
