@@ -215,9 +215,9 @@ fn interpolate_uni_poly<F: PrimeField>(p_i: &[F], eval_at: F) -> Result<F, PolyI
     //  - 2^61 < factorial(20) < 2^62
     //  - 2^122 < factorial(33) < 2^123
     // so we will be able to compute the ratio
-    //  - for len <= 12 with i64
-    //  - for len <= 20 with i128
-    //  - for len >  20 with BigInt
+    //  - for len <= 20 with i64
+    //  - for len <= 33 with i128
+    //  - for len >  33 with BigInt
     if p_i.len() <= 20 {
         let denom = F::from(u64_factorial(len - 1));
         let mut ratio_numerator = 1i64;
