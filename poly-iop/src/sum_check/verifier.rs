@@ -219,7 +219,7 @@ fn interpolate_uni_poly<F: PrimeField>(p_i: &[F], eval_at: F) -> Result<F, PolyI
     //  - for len <= 33 with i128
     //  - for len >  33 with BigInt
     if p_i.len() <= 20 {
-        let denom = F::from(u64_factorial(len - 1));
+        let last_denominator = F::from(u64_factorial(len - 1));
         let mut ratio_numerator = 1i64;
         let mut ratio_enumerator = 1u64;
 
@@ -230,8 +230,8 @@ fn interpolate_uni_poly<F: PrimeField>(p_i: &[F], eval_at: F) -> Result<F, PolyI
                 F::from(ratio_numerator as u64)
             };
 
-            res +=
-                p_i[i] * prod * F::from(ratio_enumerator) / (denom * ratio_numerator_f * evals[i]);
+            res += p_i[i] * prod * F::from(ratio_enumerator)
+                / (last_denominator * ratio_numerator_f * evals[i]);
 
             // compute denom for the next step is current_denom * (len-i)/i
             if i != 0 {
@@ -240,7 +240,7 @@ fn interpolate_uni_poly<F: PrimeField>(p_i: &[F], eval_at: F) -> Result<F, PolyI
             }
         }
     } else if p_i.len() <= 33 {
-        let denom = F::from(u128_factorial(len - 1));
+        let last_denominator = F::from(u128_factorial(len - 1));
         let mut ratio_numerator = 1i128;
         let mut ratio_enumerator = 1u128;
 
@@ -251,8 +251,8 @@ fn interpolate_uni_poly<F: PrimeField>(p_i: &[F], eval_at: F) -> Result<F, PolyI
                 F::from(ratio_numerator as u128)
             };
 
-            res +=
-                p_i[i] * prod * F::from(ratio_enumerator) / (denom * ratio_numerator_f * evals[i]);
+            res += p_i[i] * prod * F::from(ratio_enumerator)
+                / (last_denominator * ratio_numerator_f * evals[i]);
 
             // compute denom for the next step is current_denom * (len-i)/i
             if i != 0 {
