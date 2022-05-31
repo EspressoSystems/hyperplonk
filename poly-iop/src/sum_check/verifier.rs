@@ -282,7 +282,7 @@ fn interpolate_uni_poly<F: PrimeField>(p_i: &[F], eval_at: F) -> Result<F, PolyI
 #[inline]
 fn field_factorial<F: PrimeField>(a: usize) -> F {
     let mut res = F::one();
-    for i in 1..=a {
+    for i in 2..=a {
         res *= F::from(i as u64);
     }
     res
@@ -292,7 +292,7 @@ fn field_factorial<F: PrimeField>(a: usize) -> F {
 #[inline]
 fn u128_factorial(a: usize) -> u128 {
     let mut res = 1u128;
-    for i in 1..=a {
+    for i in 2..=a {
         res *= i as u128;
     }
     res
@@ -302,7 +302,7 @@ fn u128_factorial(a: usize) -> u128 {
 #[inline]
 fn u64_factorial(a: usize) -> u64 {
     let mut res = 1u64;
-    for i in 1..=a {
+    for i in 2..=a {
         res *= i as u64;
     }
     res
