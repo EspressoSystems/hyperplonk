@@ -281,11 +281,11 @@ fn interpolate_uni_poly<F: PrimeField>(p_i: &[F], eval_at: F) -> Result<F, PolyI
 /// compute the factorial(a) = 1 * 2 * ... * a
 #[inline]
 fn field_factorial<F: PrimeField>(a: usize) -> F {
-    let mut res = 1u64;
+    let mut res = F::one();
     for i in 1..=a {
-        res *= i as u64;
+        res *= F::from(i as u64);
     }
-    F::from(res)
+    res
 }
 
 /// compute the factorial(a) = 1 * 2 * ... * a
@@ -306,4 +306,47 @@ fn u64_factorial(a: usize) -> u64 {
         res *= i as u64;
     }
     res
+}
+
+#[cfg(test)]
+mod test {
+    use super::interpolate_uni_poly;
+    use crate::errors::PolyIOPErrors;
+    use ark_bls12_381::Fr;
+    use ark_poly::{univariate::DensePolynomial, Polynomial, UVPolynomial};
+    use ark_std::{vec::Vec, UniformRand};
+
+    #[test]
+    fn test_interpolation() -> Result<(), PolyIOPErrors> {
+        let mut prng = ark_std::test_rng();
+
+        // test a polynomial with 20 known points, i.e., with degree 19
+        let poly = DensePolynomial::<Fr>::rand(20 - 1, &mut prng);
+        let evals = (0..20)
+            .map(|i| poly.evaluate(&Fr::from(i)))
+            .collect::<Vec<Fr>>();
+        let query = Fr::rand(&mut prng);
+
+        assert_eq!(poly.evaluate(&query), interpolate_uni_poly(&evals, query)?);
+
+        // test a polynomial with 33 known points, i.e., with degree 32
+        let poly = DensePolynomial::<Fr>::rand(33 - 1, &mut prng);
+        let evals = (0..33)
+            .map(|i| poly.evaluate(&Fr::from(i)))
+            .collect::<Vec<Fr>>();
+        let query = Fr::rand(&mut prng);
+
+        assert_eq!(poly.evaluate(&query), interpolate_uni_poly(&evals, query)?);
+
+        // test a polynomial with 64 known points, i.e., with degree 63
+        let poly = DensePolynomial::<Fr>::rand(64 - 1, &mut prng);
+        let evals = (0..64)
+            .map(|i| poly.evaluate(&Fr::from(i)))
+            .collect::<Vec<Fr>>();
+        let query = Fr::rand(&mut prng);
+
+        assert_eq!(poly.evaluate(&query), interpolate_uni_poly(&evals, query)?);
+
+        Ok(())
+    }
 }
