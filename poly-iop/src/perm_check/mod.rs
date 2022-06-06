@@ -73,7 +73,7 @@ fn compute_prod_1<F: PrimeField>(
         prod_x0_evals.push(eval_x_0);
 
         // prod(x, 1)
-        let eval = prod_0.evaluate(&[sequence_f.as_slice(), &[F::zero()]].concat());
+        let eval = prod_0.evaluate(&[sequence_f.as_slice(), &[F::one()]].concat());
         let eval_x_1 = match eval {
             Some(p) => p,
             None => {
@@ -88,9 +88,9 @@ fn compute_prod_1<F: PrimeField>(
         prod_1x_evals.push(eval_x_0 * eval_x_1);
     }
 
-    let prod_x_0 = DenseMultilinearExtension::from_evaluations_vec(num_vars + 1, prod_x0_evals);
-    let prod_x_1 = DenseMultilinearExtension::from_evaluations_vec(num_vars + 1, prod_x1_evals);
-    let prod_1_x = DenseMultilinearExtension::from_evaluations_vec(num_vars + 1, prod_1x_evals);
+    let prod_x_0 = DenseMultilinearExtension::from_evaluations_vec(num_vars, prod_x0_evals);
+    let prod_x_1 = DenseMultilinearExtension::from_evaluations_vec(num_vars, prod_x1_evals);
+    let prod_1_x = DenseMultilinearExtension::from_evaluations_vec(num_vars, prod_1x_evals);
 
     Ok([prod_1_x, prod_x_0, prod_x_1])
 }
@@ -127,6 +127,49 @@ mod test {
                     .collect();
 
                 let prod_0 = compute_prod_0(&beta, &gamma, &w, &s_id, &s_perm)?;
+
+                let eval = prod_0.evaluate(&r).unwrap();
+
+                let w_eval = w.evaluate(&r).unwrap();
+                let s_id_eval = s_id.evaluate(&r).unwrap();
+                let s_perm_eval = s_perm.evaluate(&r).unwrap();
+                let eval_rec =
+                    (w_eval + beta * s_id_eval + gamma) / (w_eval + beta * s_perm_eval + gamma);
+
+                assert_eq!(eval, eval_rec);
+            }
+        }
+        Ok(())
+    }
+
+    #[test]
+    fn test_compute_prod_1() -> Result<(), PolyIOPErrors> {
+        let mut rng = test_rng();
+
+        for num_vars in 2..6 {
+            let w_vec: Vec<Fr> = (0..(1 << num_vars)).map(|_| Fr::rand(&mut rng)).collect();
+            let w = DenseMultilinearExtension::from_evaluations_vec(num_vars, w_vec);
+
+            let s_id_vec: Vec<Fr> = (0..(1 << num_vars)).map(|_| Fr::rand(&mut rng)).collect();
+            let s_id = DenseMultilinearExtension::from_evaluations_vec(num_vars, s_id_vec);
+
+            let s_perm_vec: Vec<Fr> = (0..(1 << num_vars)).map(|_| Fr::rand(&mut rng)).collect();
+            let s_perm = DenseMultilinearExtension::from_evaluations_vec(num_vars, s_perm_vec);
+
+            let beta = Fr::rand(&mut rng);
+            let gamma = Fr::rand(&mut rng);
+            for i in 0..1 << num_vars {
+                let r: Vec<Fr> = bit_decompose(i, num_vars)
+                    .iter()
+                    .map(|&x| Fr::from(x))
+                    .collect();
+
+                let prod_0 = compute_prod_0(&beta, &gamma, &w, &s_id, &s_perm)?;
+                // println!("{:?}", prod_0);
+                let res = compute_prod_1(&prod_0)?;
+                let _prod_x0 = &res[0];
+                let _prod_x1 = &res[1];
+                let _prod_1x = &res[2];
 
                 let eval = prod_0.evaluate(&r).unwrap();
 
