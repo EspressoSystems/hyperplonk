@@ -11,7 +11,8 @@ macro_rules! to_bytes {
     }};
 }
 
-#[cfg(test)]
+// #[cfg(test)]
+#[allow(dead_code)]
 pub(crate) fn bit_decompose(input: u64, num_var: usize) -> Vec<bool> {
     let mut res = Vec::with_capacity(num_var);
     let mut i = input;
