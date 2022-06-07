@@ -1,8 +1,9 @@
 //! This module implements the permutation check protocol.
 
-use crate::{utils::bit_decompose, PolyIOPErrors};
+use crate::{utils::get_index, PolyIOPErrors};
 use ark_ff::PrimeField;
-use ark_poly::{DenseMultilinearExtension, MultilinearExtension};
+use ark_poly::DenseMultilinearExtension;
+use ark_std::{end_timer, start_timer};
 
 /// Compute `prod(0,x) := prod(0, x1, …, xn)` which is the MLE over the
 /// evaluations of the following polynomial on the boolean hypercube {0,1}^n:
@@ -12,6 +13,9 @@ use ark_poly::{DenseMultilinearExtension, MultilinearExtension};
 /// where
 /// - beta and gamma are challenges
 /// - w(x), s_id(x), s_perm(x) are mle-s
+///
+/// Error: NONE. caller checks num_vars matches
+/// Cost: linear in N.
 #[allow(dead_code)]
 // TODO: remove
 fn compute_prod_0<F: PrimeField>(
@@ -21,13 +25,8 @@ fn compute_prod_0<F: PrimeField>(
     s_id: &DenseMultilinearExtension<F>,
     s_perm: &DenseMultilinearExtension<F>,
 ) -> Result<DenseMultilinearExtension<F>, PolyIOPErrors> {
+    let start = start_timer!(|| "compute prod(1,x)");
     let num_vars = w.num_vars;
-
-    if num_vars != s_id.num_vars || num_vars != s_perm.num_vars {
-        return Err(PolyIOPErrors::InvalidParameters(
-            "num of variables do not match".to_string(),
-        ));
-    }
     let eval: Vec<F> = w
         .iter()
         .zip(s_id.iter().zip(s_perm.iter()))
@@ -38,61 +37,82 @@ fn compute_prod_0<F: PrimeField>(
         .collect();
 
     let res = DenseMultilinearExtension::from_evaluations_vec(num_vars, eval);
-
+    end_timer!(start);
     Ok(res)
 }
 
-/// TODO: description
-/// Input prod(0, x)
-/// Return [prod(1,x):= prod(x,0) * prod(x,1), prod(x,0), prod(x,1)]
+/// Compute the following 4 polynomials
+/// - prod(0, x)
+/// - prod(1, x)
+/// - prod(x, 0)
+/// - prod(x, 1)
+///
+/// where
+/// `prod(0,x) := prod(x0, x1, …, xn)` which is the MLE over the
+/// evaluations of the following polynomial on the boolean hypercube {0,1}^n:
+///
+///  (w(x) + \beta s_id(x) + \gamma)/(w(x) + \beta s_perm(x) + \gamma)
+///
+/// where
+/// - beta and gamma are challenges
+/// - w(x), s_id(x), s_perm(x) are mle-s
+///
+/// Error: num_vars matches
+/// Cost: linear in N.
 #[allow(dead_code)]
 // TODO: remove
-fn compute_prod_1<F: PrimeField>(
-    prod_0: &DenseMultilinearExtension<F>,
-) -> Result<[DenseMultilinearExtension<F>; 3], PolyIOPErrors> {
-    let num_vars = prod_0.num_vars - 1;
+fn compute_products<F: PrimeField>(
+    beta: &F,
+    gamma: &F,
+    w: &DenseMultilinearExtension<F>,
+    s_id: &DenseMultilinearExtension<F>,
+    s_perm: &DenseMultilinearExtension<F>,
+) -> Result<[DenseMultilinearExtension<F>; 4], PolyIOPErrors> {
+    let start = start_timer!(|| "compute all prod polynomial");
 
-    let mut prod_x0_evals = vec![];
-    let mut prod_x1_evals = vec![];
-    let mut prod_1x_evals = vec![];
+    let num_vars = w.num_vars;
 
-    for i in 0..1u64 << num_vars {
-        let sequence = bit_decompose(i, num_vars);
-        let sequence_f: Vec<F> = sequence.iter().map(|&x| F::from(x)).collect();
-
-        // prod(x, 0)
-        let eval = prod_0.evaluate(&[sequence_f.as_slice(), &[F::zero()]].concat());
-        let eval_x_0 = match eval {
-            Some(p) => p,
-            None => {
-                return Err(PolyIOPErrors::InvalidParameters(
-                    "Evaluation failed".to_string(),
-                ))
-            },
-        };
-        prod_x0_evals.push(eval_x_0);
-
-        // prod(x, 1)
-        let eval = prod_0.evaluate(&[sequence_f.as_slice(), &[F::one()]].concat());
-        let eval_x_1 = match eval {
-            Some(p) => p,
-            None => {
-                return Err(PolyIOPErrors::InvalidParameters(
-                    "Evaluation failed".to_string(),
-                ))
-            },
-        };
-        prod_x1_evals.push(eval_x_1);
-
-        // prod(1, x)
-        prod_1x_evals.push(eval_x_0 * eval_x_1);
+    if num_vars != s_id.num_vars || num_vars != s_perm.num_vars {
+        return Err(PolyIOPErrors::InvalidParameters(
+            "num of variables do not match".to_string(),
+        ));
     }
 
-    let prod_x_0 = DenseMultilinearExtension::from_evaluations_vec(num_vars, prod_x0_evals);
-    let prod_x_1 = DenseMultilinearExtension::from_evaluations_vec(num_vars, prod_x1_evals);
-    let prod_1_x = DenseMultilinearExtension::from_evaluations_vec(num_vars, prod_1x_evals);
+    let prod_0x = compute_prod_0(beta, gamma, w, s_id, s_perm)?;
 
-    Ok([prod_1_x, prod_x_0, prod_x_1])
+    let eval_0x = &prod_0x.evaluations;
+    let mut eval_1x = vec![];
+    for i in 0..(1 << num_vars) - 1 {
+        let (a, b, sign) = get_index(i, num_vars);
+        if sign == false {
+            eval_1x.push(eval_0x[a] * eval_0x[b]);
+        } else {
+            if a >= eval_1x.len() || b >= eval_1x.len() {
+                return Err(PolyIOPErrors::ShouldNotArrive);
+            }
+            eval_1x.push(eval_1x[a] * eval_1x[b]);
+        }
+    }
+    eval_1x.push(F::zero());
+
+    let mut eval_x0 = vec![];
+    let mut eval_x1 = vec![];
+    for (i, (&x0, &x1)) in eval_0x.iter().zip(eval_1x.iter()).enumerate() {
+        if i & 1 == 0 {
+            eval_x0.push(x0);
+            eval_x0.push(x1);
+        } else {
+            eval_x1.push(x0);
+            eval_x1.push(x1);
+        }
+    }
+
+    let prod_1x = DenseMultilinearExtension::from_evaluations_vec(num_vars, eval_1x);
+    let prod_x0 = DenseMultilinearExtension::from_evaluations_vec(num_vars, eval_x0);
+    let prod_x1 = DenseMultilinearExtension::from_evaluations_vec(num_vars, eval_x1);
+
+    end_timer!(start);
+    Ok([prod_0x, prod_1x, prod_x0, prod_x1])
 }
 
 #[cfg(test)]
@@ -143,7 +163,7 @@ mod test {
     }
 
     #[test]
-    fn test_compute_prod_1() -> Result<(), PolyIOPErrors> {
+    fn test_compute_prod() -> Result<(), PolyIOPErrors> {
         let mut rng = test_rng();
 
         for num_vars in 2..6 {
@@ -164,14 +184,10 @@ mod test {
                     .map(|&x| Fr::from(x))
                     .collect();
 
-                let prod_0 = compute_prod_0(&beta, &gamma, &w, &s_id, &s_perm)?;
-                // println!("{:?}", prod_0);
-                let res = compute_prod_1(&prod_0)?;
-                let _prod_x0 = &res[0];
-                let _prod_x1 = &res[1];
-                let _prod_1x = &res[2];
+                // TODO: also test res[1..4]
+                let res = compute_products(&beta, &gamma, &w, &s_id, &s_perm)?;
 
-                let eval = prod_0.evaluate(&r).unwrap();
+                let eval = res[0].evaluate(&r).unwrap();
 
                 let w_eval = w.evaluate(&r).unwrap();
                 let s_id_eval = s_id.evaluate(&r).unwrap();
