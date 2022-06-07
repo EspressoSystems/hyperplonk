@@ -11,8 +11,7 @@ macro_rules! to_bytes {
     }};
 }
 
-/// decompose an integer into a binary vector
-// #[cfg(test)]
+/// Decompose an integer into a binary vector in little endian.
 #[allow(dead_code)]
 pub(crate) fn bit_decompose(input: u64, num_var: usize) -> Vec<bool> {
     let mut res = Vec::with_capacity(num_var);
@@ -24,8 +23,7 @@ pub(crate) fn bit_decompose(input: u64, num_var: usize) -> Vec<bool> {
     res
 }
 
-/// project a binary vector into an integer
-// #[cfg(test)]
+/// Project a little endian binary vector into an integer.
 #[allow(dead_code)]
 pub(crate) fn project(input: &[bool]) -> u64 {
     let mut res = 0;
@@ -36,17 +34,20 @@ pub(crate) fn project(input: &[bool]) -> u64 {
     res
 }
 
-// input index `i := (i_0, ...i_n)`, return three elements:
-// - `a:= (i_1, ..., i_n, 0)`
-// - `b:= (i_1, ..., i_n, 1)`
-// - `sign:= a_0`
+// Input index
+// - `i := (i_0, ...i_{n-1})`,
+// - `num_vars := n`
+// return three elements:
+// - `a:= (i_1, ..., i_{n-1}, 0)`
+// - `b:= (i_1, ..., i_{n-1}, 1)`
+// - `sign:= i_0`
 #[inline]
 pub(crate) fn get_index(i: usize, num_vars: usize) -> (usize, usize, bool) {
     let bit_sequence = bit_decompose(i as u64, num_vars);
-    let a = project(&[bit_sequence[1..].as_ref(), [false].as_ref()].concat()) as usize;
-    let b = project(&[bit_sequence[1..].as_ref(), [false].as_ref()].concat()) as usize;
+    let x0 = project(&[bit_sequence[1..].as_ref(), [false].as_ref()].concat()) as usize;
+    let x1 = project(&[bit_sequence[1..].as_ref(), [true].as_ref()].concat()) as usize;
 
-    (a, b, bit_sequence[0])
+    (x0, x1, bit_sequence[0])
 }
 
 #[cfg(test)]

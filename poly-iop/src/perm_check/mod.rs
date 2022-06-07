@@ -14,7 +14,7 @@ use ark_std::{end_timer, start_timer};
 /// - beta and gamma are challenges
 /// - w(x), s_id(x), s_perm(x) are mle-s
 ///
-/// Error: NONE. caller checks num_vars matches
+/// The caller needs to check num_vars matches in w/s_id/s_perm
 /// Cost: linear in N.
 #[allow(dead_code)]
 // TODO: remove
@@ -48,7 +48,7 @@ fn compute_prod_0<F: PrimeField>(
 /// - prod(x, 1)
 ///
 /// where
-/// `prod(0,x) := prod(x0, x1, …, xn)` which is the MLE over the
+/// `prod(0,x) := prod(0, x0, x1, …, xn)` which is the MLE over the
 /// evaluations of the following polynomial on the boolean hypercube {0,1}^n:
 ///
 ///  (w(x) + \beta s_id(x) + \gamma)/(w(x) + \beta s_perm(x) + \gamma)
@@ -57,7 +57,7 @@ fn compute_prod_0<F: PrimeField>(
 /// - beta and gamma are challenges
 /// - w(x), s_id(x), s_perm(x) are mle-s
 ///
-/// Error: num_vars matches
+/// Returns an error when the num_vars in w/s_id/s_perm does not match
 /// Cost: linear in N.
 #[allow(dead_code)]
 // TODO: remove
@@ -82,9 +82,9 @@ fn compute_products<F: PrimeField>(
 
     let eval_0x = &prod_0x.evaluations;
     let mut eval_1x = vec![];
-    for i in 0..(1 << num_vars) - 1 {
-        let (a, b, sign) = get_index(i, num_vars);
-        if sign == false {
+    for x in 0..(1 << num_vars) - 1 {
+        let (a, b, sign) = get_index(x, num_vars);
+        if !sign {
             eval_1x.push(eval_0x[a] * eval_0x[b]);
         } else {
             if a >= eval_1x.len() || b >= eval_1x.len() {
@@ -97,13 +97,13 @@ fn compute_products<F: PrimeField>(
 
     let mut eval_x0 = vec![];
     let mut eval_x1 = vec![];
-    for (i, (&x0, &x1)) in eval_0x.iter().zip(eval_1x.iter()).enumerate() {
-        if i & 1 == 0 {
-            eval_x0.push(x0);
-            eval_x0.push(x1);
+    for (x, (&zero_x, &one_x)) in eval_0x.iter().zip(eval_1x.iter()).enumerate() {
+        if x & 1 == 0 {
+            eval_x0.push(zero_x);
+            eval_x0.push(one_x);
         } else {
-            eval_x1.push(x0);
-            eval_x1.push(x1);
+            eval_x1.push(zero_x);
+            eval_x1.push(one_x);
         }
     }
 
@@ -140,13 +140,14 @@ mod test {
 
             let beta = Fr::rand(&mut rng);
             let gamma = Fr::rand(&mut rng);
+
+            let prod_0 = compute_prod_0(&beta, &gamma, &w, &s_id, &s_perm)?;
+
             for i in 0..1 << num_vars {
                 let r: Vec<Fr> = bit_decompose(i, num_vars)
                     .iter()
                     .map(|&x| Fr::from(x))
                     .collect();
-
-                let prod_0 = compute_prod_0(&beta, &gamma, &w, &s_id, &s_perm)?;
 
                 let eval = prod_0.evaluate(&r).unwrap();
 
@@ -178,14 +179,15 @@ mod test {
 
             let beta = Fr::rand(&mut rng);
             let gamma = Fr::rand(&mut rng);
+
+            // TODO: also test res[1..4]
+            let res = compute_products(&beta, &gamma, &w, &s_id, &s_perm)?;
+
             for i in 0..1 << num_vars {
                 let r: Vec<Fr> = bit_decompose(i, num_vars)
                     .iter()
                     .map(|&x| Fr::from(x))
                     .collect();
-
-                // TODO: also test res[1..4]
-                let res = compute_products(&beta, &gamma, &w, &s_id, &s_perm)?;
 
                 let eval = res[0].evaluate(&r).unwrap();
 
