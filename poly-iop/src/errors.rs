@@ -16,6 +16,8 @@ pub enum PolyIOPErrors {
     InvalidParameters(String),
     /// Invalid Transcript: {0}
     InvalidTranscript(String),
+    /// Should not arrive to this point
+    ShouldNotArrive,
     /// An error during (de)serialization: {0}
     SerializationError(ark_serialize::SerializationError),
 }
