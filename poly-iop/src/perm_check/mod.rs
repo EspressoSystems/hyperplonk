@@ -41,21 +41,24 @@ fn compute_prod_0<F: PrimeField>(
     Ok(res)
 }
 
-/// Compute the following 4 polynomials
+/// Compute the following 5 polynomials
+/// - prod(x)
 /// - prod(0, x)
 /// - prod(1, x)
 /// - prod(x, 0)
 /// - prod(x, 1)
 ///
 /// where
-/// `prod(0,x) := prod(0, x0, x1, …, xn)` which is the MLE over the
+/// - `prod(0,x) := prod(0, x0, x1, …, xn)` which is the MLE over the
 /// evaluations of the following polynomial on the boolean hypercube {0,1}^n:
 ///
 ///  (w(x) + \beta s_id(x) + \gamma)/(w(x) + \beta s_perm(x) + \gamma)
 ///
-/// where
-/// - beta and gamma are challenges
-/// - w(x), s_id(x), s_perm(x) are mle-s
+///   where
+///   - beta and gamma are challenges
+///   - w(x), s_id(x), s_perm(x) are mle-s
+///
+/// - `prod(1,x) := prod(x, 0) * prod(x, 1)`
 ///
 /// Returns an error when the num_vars in w/s_id/s_perm does not match
 /// Cost: linear in N.
@@ -67,7 +70,7 @@ fn compute_products<F: PrimeField>(
     w: &DenseMultilinearExtension<F>,
     s_id: &DenseMultilinearExtension<F>,
     s_perm: &DenseMultilinearExtension<F>,
-) -> Result<[DenseMultilinearExtension<F>; 4], PolyIOPErrors> {
+) -> Result<[DenseMultilinearExtension<F>; 5], PolyIOPErrors> {
     let start = start_timer!(|| "compute all prod polynomial");
 
     let num_vars = w.num_vars;
@@ -77,42 +80,74 @@ fn compute_products<F: PrimeField>(
             "num of variables do not match".to_string(),
         ));
     }
-
+    // ===================================
+    // prod(0, x)
+    // ===================================
     let prod_0x = compute_prod_0(beta, gamma, w, s_id, s_perm)?;
 
+    // ===================================
+    // prod(1, x)
+    // ===================================
+    //
+    // `prod(1, x)` can be computed via recursing the following formula for 2^n-1
+    // times
+    //
+    // `prod(1, x_1, ..., x_n) :=
+    //      prod(x_1, x_2, ..., x_n, 0) * prod(x_1, x_2, ..., x_n, 1)`
+    //
+    // At any given step, the right hand side of the equation
+    // is available via either eval_0x or the current view of eval_1x
     let eval_0x = &prod_0x.evaluations;
     let mut eval_1x = vec![];
     for x in 0..(1 << num_vars) - 1 {
-        let (a, b, sign) = get_index(x, num_vars);
+        // sign will decide if the evaluation should be looked up from eval_0x or
+        // eval_1x; x_zero_index is the index for the evaluation (x_2, ..., x_n,
+        // 0); x_one_index is the index for the evaluation (x_2, ..., x_n, 1);
+        let (x_zero_index, x_one_index, sign) = get_index(x, num_vars);
         if !sign {
-            eval_1x.push(eval_0x[a] * eval_0x[b]);
+            eval_1x.push(eval_0x[x_zero_index] * eval_0x[x_one_index]);
         } else {
-            if a >= eval_1x.len() || b >= eval_1x.len() {
+            // sanity check: if we are trying to look up from the eval_1x table,
+            // then the target index must already exist
+            if x_zero_index >= eval_1x.len() || x_one_index >= eval_1x.len() {
                 return Err(PolyIOPErrors::ShouldNotArrive);
             }
-            eval_1x.push(eval_1x[a] * eval_1x[b]);
+            eval_1x.push(eval_1x[x_zero_index] * eval_1x[x_one_index]);
         }
     }
+    // prod(1, 1, ..., 1) := 0
     eval_1x.push(F::zero());
 
+    // ===================================
+    // prod(x)
+    // ===================================
+    // prod(x)'s evaluation is indeed `e := [eval_0x[..], eval_1x[..]].concat()`
+    let eval = [eval_0x.as_slice(), eval_1x.as_slice()].concat();
+
+    // ===================================
+    // prod(x, 0) and prod(x, 1)
+    // ===================================
+    //
+    // now we compute eval_x0 and eval_x1
+    // eval_0x will be the odd coefficients of eval
+    // and eval_1x will be the even coefficients of eval
     let mut eval_x0 = vec![];
     let mut eval_x1 = vec![];
-    for (x, (&zero_x, &one_x)) in eval_0x.iter().zip(eval_1x.iter()).enumerate() {
+    for (x, &prod_x) in eval.iter().enumerate() {
         if x & 1 == 0 {
-            eval_x0.push(zero_x);
-            eval_x0.push(one_x);
+            eval_x0.push(prod_x);
         } else {
-            eval_x1.push(zero_x);
-            eval_x1.push(one_x);
+            eval_x1.push(prod_x);
         }
     }
 
     let prod_1x = DenseMultilinearExtension::from_evaluations_vec(num_vars, eval_1x);
     let prod_x0 = DenseMultilinearExtension::from_evaluations_vec(num_vars, eval_x0);
     let prod_x1 = DenseMultilinearExtension::from_evaluations_vec(num_vars, eval_x1);
+    let prod = DenseMultilinearExtension::from_evaluations_vec(num_vars + 1, eval);
 
     end_timer!(start);
-    Ok([prod_0x, prod_1x, prod_x0, prod_x1])
+    Ok([prod, prod_0x, prod_1x, prod_x0, prod_x1])
 }
 
 #[cfg(test)]
@@ -180,7 +215,7 @@ mod test {
             let beta = Fr::rand(&mut rng);
             let gamma = Fr::rand(&mut rng);
 
-            // TODO: also test res[1..4]
+            // TODO: also test other 4 polynomials
             let res = compute_products(&beta, &gamma, &w, &s_id, &s_perm)?;
 
             for i in 0..1 << num_vars {
@@ -189,7 +224,7 @@ mod test {
                     .map(|&x| Fr::from(x))
                     .collect();
 
-                let eval = res[0].evaluate(&r).unwrap();
+                let eval = res[1].evaluate(&r).unwrap();
 
                 let w_eval = w.evaluate(&r).unwrap();
                 let s_id_eval = s_id.evaluate(&r).unwrap();
