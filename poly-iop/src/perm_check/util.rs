@@ -45,9 +45,6 @@ pub(super) fn build_q_x<F: PrimeField>(
     // - numerator
     // - denominator
     let prod_0x = Rc::new(prods[1].clone());
-    let prod_1x = Rc::new(prods[2].clone());
-    let prod_x0 = Rc::new(prods[3].clone());
-    let prod_x1 = Rc::new(prods[4].clone());
     let numerator = Rc::new(prods[5].clone());
     let denominator = Rc::new(prods[6].clone());
 
@@ -64,8 +61,9 @@ pub(super) fn build_q_x<F: PrimeField>(
     //       + alpha * (
     //             (w(x) + beta * s_perm(x) + gamma) * prod(0, x)
     //           - (w(x) + beta * s_id(x)   + gamma))
-    res.add_mle_list([prod_1x], F::one())?;
-    res.add_mle_list([prod_x0, prod_x1], -F::one())?;
+    let tmp = &(&prods[2] - &prods[3]) - &prods[4];
+    let tmp = Rc::new(tmp);
+    res.add_mle_list([tmp], F::one())?;
 
     end_timer!(start);
     Ok(res)
@@ -249,6 +247,14 @@ pub(super) fn compute_prod_0<F: PrimeField>(
     Ok((prod_0x, numerator, denominator))
 }
 
+/// An MLE that represent an identity permutation: `f(index) \mapto index`
+pub(super) fn identity_permutation_mle<F: PrimeField>(
+    num_vars: usize,
+) -> DenseMultilinearExtension<F> {
+    let s_id_vec = (0..1u64 << num_vars).map(|index| F::from(index)).collect();
+    DenseMultilinearExtension::from_evaluations_vec(num_vars, s_id_vec)
+}
+
 #[cfg(test)]
 mod test {
     use super::*;
@@ -257,12 +263,6 @@ mod test {
     use ark_ff::UniformRand;
     use ark_poly::MultilinearExtension;
     use ark_std::test_rng;
-
-    /// An MLE that represent an identity permutation: `f(index) \mapto index`
-    fn identity_permutation_mle<F: PrimeField>(num_vars: usize) -> DenseMultilinearExtension<F> {
-        let s_id_vec = (0..1u64 << num_vars).map(|index| F::from(index)).collect();
-        DenseMultilinearExtension::from_evaluations_vec(num_vars, s_id_vec)
-    }
 
     #[test]
     fn test_compute_prod_0() -> Result<(), PolyIOPErrors> {
