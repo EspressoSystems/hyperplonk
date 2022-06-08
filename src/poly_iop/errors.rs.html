@@ -30,6 +30,8 @@
 <span id="25">25</span>
 <span id="26">26</span>
 <span id="27">27</span>
+<span id="28">28</span>
+<span id="29">29</span>
 </pre><pre class="rust"><code><span class="doccomment">//! Error module.</span>
 
 <span class="kw">use</span> <span class="ident">ark_std::string::String</span>;
@@ -48,6 +50,8 @@
     <span class="ident">InvalidParameters</span>(<span class="ident">String</span>),
     <span class="doccomment">/// Invalid Transcript: {0}</span>
     <span class="ident">InvalidTranscript</span>(<span class="ident">String</span>),
+    <span class="doccomment">/// Should not arrive to this point</span>
+    <span class="ident">ShouldNotArrive</span>,
     <span class="doccomment">/// An error during (de)serialization: {0}</span>
     <span class="ident">SerializationError</span>(<span class="ident">ark_serialize::SerializationError</span>),
 }
