@@ -1,33 +1,74 @@
 //! This module implements useful functions for the permutation check protocol.
 
-use crate::{utils::get_index, PolyIOPErrors};
+use crate::{utils::get_index, PolyIOPErrors, VirtualPolynomial};
 use ark_ff::PrimeField;
 use ark_poly::DenseMultilinearExtension;
 use ark_std::{end_timer, start_timer};
+use std::rc::Rc;
 
 /// Compute `Q(x)` which a virtual polynomial of degree 2 defined as
 ///
 /// Q(x) := prod(1,x) - prod(x, 0) - prod(x, 1)
 ///       + alpha * (
 ///             (w(x) + beta * s_perm(x) + gamma) * prod(0, x)
-///          - (w(x) + beta * s_id(x)   + gamma))
-///
+///           - (w(x) + beta * s_id(x)   + gamma))
 ///
 /// Returns an error when the num_vars in w/s_id/s_perm does not match
-
+///
 /// Cost: linear in N.
 #[allow(dead_code)]
 // TODO: remove
 pub(super) fn build_q_x<F: PrimeField>(
+    alpha: &F,
     beta: &F,
     gamma: &F,
     w: &DenseMultilinearExtension<F>,
     s_id: &DenseMultilinearExtension<F>,
     s_perm: &DenseMultilinearExtension<F>,
-) -> Result<DenseMultilinearExtension<F>, PolyIOPErrors> {
-    let prods = compute_products(beta, gamma, w, s_id, s_perm)?;
+) -> Result<VirtualPolynomial<F>, PolyIOPErrors> {
+    let start = start_timer!(|| "compute Q(x)");
 
-    todo!()
+    let num_vars = w.num_vars;
+    if num_vars != s_id.num_vars || num_vars != s_perm.num_vars {
+        return Err(PolyIOPErrors::InvalidParameters(
+            "num of variables do not match".to_string(),
+        ));
+    }
+
+    let prods = compute_products(beta, gamma, w, s_id, s_perm)?;
+    // prods consists of the following:
+    // - prod(x)
+    // - prod(0, x)
+    // - prod(1, x)
+    // - prod(x, 0)
+    // - prod(x, 1)
+    // - numerator
+    // - denominator
+    let prod_0x = Rc::new(prods[1].clone());
+    let prod_1x = Rc::new(prods[2].clone());
+    let prod_x0 = Rc::new(prods[3].clone());
+    let prod_x1 = Rc::new(prods[4].clone());
+    let numerator = Rc::new(prods[5].clone());
+    let denominator = Rc::new(prods[6].clone());
+
+    // compute (w(x) + beta * s_perm(x) + gamma) * prod(0, x) * alpha
+    // which is prods[6] * prod[1] * alpha
+    let mut res = VirtualPolynomial::new_from_mle(denominator, *alpha);
+    res.mul_by_mle(prod_0x, F::one())?;
+
+    //   (w(x) + beta * s_perm(x) + gamma) * prod(0, x) * alpha
+    // - (w(x) + beta * s_id(x)   + gamma) * alpha
+    res.add_mle_list([numerator], -*alpha)?;
+
+    // Q(x) := prod(1,x) - prod(x, 0) - prod(x, 1)
+    //       + alpha * (
+    //             (w(x) + beta * s_perm(x) + gamma) * prod(0, x)
+    //           - (w(x) + beta * s_id(x)   + gamma))
+    res.add_mle_list([prod_1x], F::one())?;
+    res.add_mle_list([prod_x0, prod_x1], -F::one())?;
+
+    end_timer!(start);
+    Ok(res)
 }
 
 /// Compute the following 5 polynomials
@@ -68,11 +109,6 @@ pub(super) fn compute_products<F: PrimeField>(
 
     let num_vars = w.num_vars;
 
-    if num_vars != s_id.num_vars || num_vars != s_perm.num_vars {
-        return Err(PolyIOPErrors::InvalidParameters(
-            "num of variables do not match".to_string(),
-        ));
-    }
     // ===================================
     // prod(0, x)
     // ===================================
@@ -172,6 +208,7 @@ pub(super) fn compute_products<F: PrimeField>(
 /// The caller needs to check num_vars matches in w/s_id/s_perm
 /// Cost: linear in N.
 #[allow(dead_code)]
+#[allow(clippy::type_complexity)]
 // TODO: remove
 pub(super) fn compute_prod_0<F: PrimeField>(
     beta: &F,
@@ -300,6 +337,29 @@ mod test {
 
                 assert_eq!(eval, eval_rec);
             }
+        }
+        Ok(())
+    }
+
+    #[test]
+    fn test_compute_qx() -> Result<(), PolyIOPErrors> {
+        let mut rng = test_rng();
+
+        for num_vars in 2..6 {
+            let w_vec: Vec<Fr> = (0..(1 << num_vars)).map(|_| Fr::rand(&mut rng)).collect();
+            let w = DenseMultilinearExtension::from_evaluations_vec(num_vars, w_vec);
+
+            let s_id = identity_permutation_mle::<Fr>(num_vars);
+
+            let s_perm_vec: Vec<Fr> = (0..(1 << num_vars)).map(|_| Fr::rand(&mut rng)).collect();
+            let s_perm = DenseMultilinearExtension::from_evaluations_vec(num_vars, s_perm_vec);
+
+            let alpha = Fr::rand(&mut rng);
+            let beta = Fr::rand(&mut rng);
+            let gamma = Fr::rand(&mut rng);
+
+            // TODO: test the correctness of res
+            let _res = build_q_x(&alpha, &beta, &gamma, &w, &s_id, &s_perm)?;
         }
         Ok(())
     }
