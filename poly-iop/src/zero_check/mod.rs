@@ -47,7 +47,7 @@ impl<F: PrimeField> ZeroCheck<F> for PolyIOP<F> {
     type VPAuxInfo = VPAuxInfo<F>;
 
     /// A ZeroCheck SubClaim consists of
-    /// - the SubClaim from the ZeroCheck
+    /// - the SubClaim from the SumCheck
     /// - the initial challenge r which is used to build eq(x, r)
     type SubClaim = (SubClaim<F>, Vec<F>);
     type Transcript = IOPTranscript<F>;

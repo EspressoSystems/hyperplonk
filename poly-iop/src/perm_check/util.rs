@@ -10,32 +10,24 @@ use std::rc::Rc;
 ///
 /// Q(x) := prod(1,x) - prod(x, 0) - prod(x, 1)
 ///       + alpha * (
-///             (w(x) + beta * s_perm(x) + gamma) * prod(0, x)
-///           - (w(x) + beta * s_id(x)   + gamma))
+///             (g(x) + beta * s_perm(x) + gamma) * prod(0, x)
+///           - (f(x) + beta * s_id(x)   + gamma))
 ///
-/// Returns an error when the num_vars in w/s_id/s_perm does not match
+/// The caller needs to check num_vars matches in f/g/s_id/s_perm
 ///
 /// Cost: linear in N.
-#[allow(dead_code)]
-// TODO: remove
 pub(super) fn build_q_x<F: PrimeField>(
     alpha: &F,
     beta: &F,
     gamma: &F,
-    w: &DenseMultilinearExtension<F>,
+    fx: &DenseMultilinearExtension<F>,
+    gx: &DenseMultilinearExtension<F>,
     s_id: &DenseMultilinearExtension<F>,
     s_perm: &DenseMultilinearExtension<F>,
 ) -> Result<VirtualPolynomial<F>, PolyIOPErrors> {
     let start = start_timer!(|| "compute Q(x)");
 
-    let num_vars = w.num_vars;
-    if num_vars != s_id.num_vars || num_vars != s_perm.num_vars {
-        return Err(PolyIOPErrors::InvalidParameters(
-            "num of variables do not match".to_string(),
-        ));
-    }
-
-    let prods = compute_products(beta, gamma, w, s_id, s_perm)?;
+    let prods = compute_products(beta, gamma, fx, gx, s_id, s_perm)?;
     // prods consists of the following:
     // - prod(x)
     // - prod(0, x)
@@ -48,19 +40,19 @@ pub(super) fn build_q_x<F: PrimeField>(
     let numerator = Rc::new(prods[5].clone());
     let denominator = Rc::new(prods[6].clone());
 
-    // compute (w(x) + beta * s_perm(x) + gamma) * prod(0, x) * alpha
+    // compute (g(x) + beta * s_perm(x) + gamma) * prod(0, x) * alpha
     // which is prods[6] * prod[1] * alpha
     let mut res = VirtualPolynomial::new_from_mle(denominator, *alpha);
     res.mul_by_mle(prod_0x, F::one())?;
 
-    //   (w(x) + beta * s_perm(x) + gamma) * prod(0, x) * alpha
-    // - (w(x) + beta * s_id(x)   + gamma) * alpha
+    //   (g(x) + beta * s_perm(x) + gamma) * prod(0, x) * alpha
+    // - (f(x) + beta * s_id(x)   + gamma) * alpha
     res.add_mle_list([numerator], -*alpha)?;
 
     // Q(x) := prod(1,x) - prod(x, 0) - prod(x, 1)
     //       + alpha * (
-    //             (w(x) + beta * s_perm(x) + gamma) * prod(0, x)
-    //           - (w(x) + beta * s_id(x)   + gamma))
+    //             (g(x) + beta * s_perm(x) + gamma) * prod(0, x)
+    //           - (f(x) + beta * s_id(x)   + gamma))
     let tmp = &(&prods[2] - &prods[3]) - &prods[4];
     let tmp = Rc::new(tmp);
     res.add_mle_list([tmp], F::one())?;
@@ -82,35 +74,34 @@ pub(super) fn build_q_x<F: PrimeField>(
 /// - `prod(0,x) := prod(0, x0, x1, …, xn)` which is the MLE over the
 /// evaluations of the following polynomial on the boolean hypercube {0,1}^n:
 ///
-///  (w(x) + \beta s_id(x) + \gamma)/(w(x) + \beta s_perm(x) + \gamma)
+///  (f(x) + \beta s_id(x) + \gamma)/(g(x) + \beta s_perm(x) + \gamma)
 ///
 ///   where
 ///   - beta and gamma are challenges
-///   - w(x), s_id(x), s_perm(x) are mle-s
+///   - f(x), g(x), s_id(x), s_perm(x) are mle-s
 ///
 /// - `prod(1,x) := prod(x, 0) * prod(x, 1)`
-/// - numerator is the MLE for `w(x) + \beta s_id(x) + \gamma`
-/// - denominator is the MLE for `w(x) + \beta s_perm(x) + \gamma`
+/// - numerator is the MLE for `f(x) + \beta s_id(x) + \gamma`
+/// - denominator is the MLE for `g(x) + \beta s_perm(x) + \gamma`
 ///
-/// The caller needs to check num_vars matches in w/s_id/s_perm
+/// The caller needs to check num_vars matches in f/g/s_id/s_perm
 /// Cost: linear in N.
-#[allow(dead_code)]
-// TODO: remove
 pub(super) fn compute_products<F: PrimeField>(
     beta: &F,
     gamma: &F,
-    w: &DenseMultilinearExtension<F>,
+    fx: &DenseMultilinearExtension<F>,
+    gx: &DenseMultilinearExtension<F>,
     s_id: &DenseMultilinearExtension<F>,
     s_perm: &DenseMultilinearExtension<F>,
 ) -> Result<[DenseMultilinearExtension<F>; 7], PolyIOPErrors> {
     let start = start_timer!(|| "compute all prod polynomial");
 
-    let num_vars = w.num_vars;
+    let num_vars = fx.num_vars;
 
     // ===================================
     // prod(0, x)
     // ===================================
-    let (prod_0x, numerator, denominator) = compute_prod_0(beta, gamma, w, s_id, s_perm)?;
+    let (prod_0x, numerator, denominator) = compute_prod_0(beta, gamma, fx, gx, s_id, s_perm)?;
 
     // ===================================
     // prod(1, x)
@@ -194,24 +185,23 @@ pub(super) fn compute_products<F: PrimeField>(
 /// - `prod(0,x) := prod(0, x1, …, xn)` which is the MLE over the
 /// evaluations of the following polynomial on the boolean hypercube {0,1}^n:
 ///
-///  (w(x) + \beta s_id(x) + \gamma)/(w(x) + \beta s_perm(x) + \gamma)
+///  (f(x) + \beta s_id(x) + \gamma)/(g(x) + \beta s_perm(x) + \gamma)
 ///
 ///  where
 ///  - beta and gamma are challenges
-///  - w(x), s_id(x), s_perm(x) are mle-s
+///  - f(x), g(x), s_id(x), s_perm(x) are mle-s
 ///
-/// - numerator is the MLE for `w(x) + \beta s_id(x) + \gamma`
-/// - denominator is the MLE for `w(x) + \beta s_perm(x) + \gamma`
+/// - numerator is the MLE for `f(x) + \beta s_id(x) + \gamma`
+/// - denominator is the MLE for `g(x) + \beta s_perm(x) + \gamma`
 ///
-/// The caller needs to check num_vars matches in w/s_id/s_perm
+/// The caller needs to check num_vars matches in f/g/s_id/s_perm
 /// Cost: linear in N.
-#[allow(dead_code)]
 #[allow(clippy::type_complexity)]
-// TODO: remove
 pub(super) fn compute_prod_0<F: PrimeField>(
     beta: &F,
     gamma: &F,
-    w: &DenseMultilinearExtension<F>,
+    fx: &DenseMultilinearExtension<F>,
+    gx: &DenseMultilinearExtension<F>,
     s_id: &DenseMultilinearExtension<F>,
     s_perm: &DenseMultilinearExtension<F>,
 ) -> Result<
@@ -224,15 +214,16 @@ pub(super) fn compute_prod_0<F: PrimeField>(
 > {
     let start = start_timer!(|| "compute prod(1,x)");
 
-    let num_vars = w.num_vars;
+    let num_vars = fx.num_vars;
     let mut prod_0x_evals = vec![];
     let mut numerator_evals = vec![];
     let mut denominator_evals = vec![];
 
-    for (wi, (s_id_i, s_perm_i)) in w.iter().zip(s_id.iter().zip(s_perm.iter())) {
-        let tmp = *wi + *gamma;
-        let numerator = tmp + *beta * *s_id_i;
-        let denominator = tmp + *beta * *s_perm_i;
+    for (&fi, (&gi, (&s_id_i, &s_perm_i))) in
+        fx.iter().zip(gx.iter().zip(s_id.iter().zip(s_perm.iter())))
+    {
+        let numerator = fi + *beta * s_id_i + gamma;
+        let denominator = gi + *beta * s_perm_i + gamma;
 
         prod_0x_evals.push(numerator / denominator);
         numerator_evals.push(numerator);
@@ -251,7 +242,7 @@ pub(super) fn compute_prod_0<F: PrimeField>(
 pub(super) fn identity_permutation_mle<F: PrimeField>(
     num_vars: usize,
 ) -> DenseMultilinearExtension<F> {
-    let s_id_vec = (0..1u64 << num_vars).map(|index| F::from(index)).collect();
+    let s_id_vec = (0..1u64 << num_vars).map(F::from).collect();
     DenseMultilinearExtension::from_evaluations_vec(num_vars, s_id_vec)
 }
 
@@ -269,8 +260,11 @@ mod test {
         let mut rng = test_rng();
 
         for num_vars in 2..6 {
-            let w_vec: Vec<Fr> = (0..(1 << num_vars)).map(|_| Fr::rand(&mut rng)).collect();
-            let w = DenseMultilinearExtension::from_evaluations_vec(num_vars, w_vec);
+            let f_vec: Vec<Fr> = (0..(1 << num_vars)).map(|_| Fr::rand(&mut rng)).collect();
+            let f = DenseMultilinearExtension::from_evaluations_vec(num_vars, f_vec);
+
+            let g_vec: Vec<Fr> = (0..(1 << num_vars)).map(|_| Fr::rand(&mut rng)).collect();
+            let g = DenseMultilinearExtension::from_evaluations_vec(num_vars, g_vec);
 
             let s_id = identity_permutation_mle::<Fr>(num_vars);
 
@@ -280,7 +274,7 @@ mod test {
             let beta = Fr::rand(&mut rng);
             let gamma = Fr::rand(&mut rng);
 
-            let prod_0 = compute_prod_0(&beta, &gamma, &w, &s_id, &s_perm)?;
+            let prod_0 = compute_prod_0(&beta, &gamma, &f, &g, &s_id, &s_perm)?;
 
             for i in 0..1 << num_vars {
                 let r: Vec<Fr> = bit_decompose(i, num_vars)
@@ -290,11 +284,12 @@ mod test {
 
                 let eval = prod_0.0.evaluate(&r).unwrap();
 
-                let w_eval = w.evaluate(&r).unwrap();
+                let f_eval = f.evaluate(&r).unwrap();
+                let g_eval = g.evaluate(&r).unwrap();
                 let s_id_eval = s_id.evaluate(&r).unwrap();
                 let s_perm_eval = s_perm.evaluate(&r).unwrap();
                 let eval_rec =
-                    (w_eval + beta * s_id_eval + gamma) / (w_eval + beta * s_perm_eval + gamma);
+                    (f_eval + beta * s_id_eval + gamma) / (g_eval + beta * s_perm_eval + gamma);
 
                 assert_eq!(eval, eval_rec);
             }
@@ -307,8 +302,11 @@ mod test {
         let mut rng = test_rng();
 
         for num_vars in 2..6 {
-            let w_vec: Vec<Fr> = (0..(1 << num_vars)).map(|_| Fr::rand(&mut rng)).collect();
-            let w = DenseMultilinearExtension::from_evaluations_vec(num_vars, w_vec);
+            let f_vec: Vec<Fr> = (0..(1 << num_vars)).map(|_| Fr::rand(&mut rng)).collect();
+            let f = DenseMultilinearExtension::from_evaluations_vec(num_vars, f_vec);
+
+            let g_vec: Vec<Fr> = (0..(1 << num_vars)).map(|_| Fr::rand(&mut rng)).collect();
+            let g = DenseMultilinearExtension::from_evaluations_vec(num_vars, g_vec);
 
             let s_id = identity_permutation_mle::<Fr>(num_vars);
 
@@ -319,7 +317,7 @@ mod test {
             let gamma = Fr::rand(&mut rng);
 
             // TODO: also test other 4 polynomials
-            let res = compute_products(&beta, &gamma, &w, &s_id, &s_perm)?;
+            let res = compute_products(&beta, &gamma, &f, &g, &s_id, &s_perm)?;
 
             for i in 0..1 << num_vars {
                 let r: Vec<Fr> = bit_decompose(i, num_vars)
@@ -329,11 +327,12 @@ mod test {
 
                 let eval = res[1].evaluate(&r).unwrap();
 
-                let w_eval = w.evaluate(&r).unwrap();
+                let f_eval = f.evaluate(&r).unwrap();
+                let g_eval = g.evaluate(&r).unwrap();
                 let s_id_eval = s_id.evaluate(&r).unwrap();
                 let s_perm_eval = s_perm.evaluate(&r).unwrap();
                 let eval_rec =
-                    (w_eval + beta * s_id_eval + gamma) / (w_eval + beta * s_perm_eval + gamma);
+                    (f_eval + beta * s_id_eval + gamma) / (g_eval + beta * s_perm_eval + gamma);
 
                 assert_eq!(eval, eval_rec);
             }
@@ -346,8 +345,11 @@ mod test {
         let mut rng = test_rng();
 
         for num_vars in 2..6 {
-            let w_vec: Vec<Fr> = (0..(1 << num_vars)).map(|_| Fr::rand(&mut rng)).collect();
-            let w = DenseMultilinearExtension::from_evaluations_vec(num_vars, w_vec);
+            let f_vec: Vec<Fr> = (0..(1 << num_vars)).map(|_| Fr::rand(&mut rng)).collect();
+            let f = DenseMultilinearExtension::from_evaluations_vec(num_vars, f_vec);
+
+            let g_vec: Vec<Fr> = (0..(1 << num_vars)).map(|_| Fr::rand(&mut rng)).collect();
+            let g = DenseMultilinearExtension::from_evaluations_vec(num_vars, g_vec);
 
             let s_id = identity_permutation_mle::<Fr>(num_vars);
 
@@ -359,7 +361,7 @@ mod test {
             let gamma = Fr::rand(&mut rng);
 
             // TODO: test the correctness of res
-            let _res = build_q_x(&alpha, &beta, &gamma, &w, &s_id, &s_perm)?;
+            let _res = build_q_x(&alpha, &beta, &gamma, &f, &g, &s_id, &s_perm)?;
         }
         Ok(())
     }

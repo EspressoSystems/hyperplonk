@@ -23,7 +23,7 @@ use std::{cmp::max, collections::HashMap, marker::PhantomData, ops::Add, rc::Rc}
 ///
 /// The resulting polynomial is
 ///
-/// $$\sum_{i=0}^{n} c_i \cdot \prod_{j=0}^{m_i} P_{ij} $$
+/// $$ \sum_{i=0}^{n} c_i \cdot \prod_{j=0}^{m_i} P_{ij} $$
 ///
 /// Example:
 ///  f = c0 * f0 * f1 * f2 + c1 * f3 * f4
