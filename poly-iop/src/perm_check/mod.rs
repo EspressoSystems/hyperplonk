@@ -159,20 +159,9 @@ mod test {
     use ark_poly::MultilinearExtension;
     use ark_std::test_rng;
 
-    /// an identity MLE where
-    /// f(1, 0, 0, ..., 0, 0) = 1 which is stored in eval[2^(n-1)]
-    /// f(0, 1, 0, ..., 0, 0) = 1 which is stored in eval[2^(n-2)])
-    /// f(0, 0, 1, ..., 0, 0) = 1 which is stored in eval[2^(n-3)])
-    /// ...
-    /// f(0, 0, 0, ..., 1, 0) = 1 which is stored in eval[2^1]
-    /// f(0, 0, 0, ..., 0, 1) = 1 which is stored in eval[2^0]
-    /// and all reset evaluations are 0
-    fn mle_identity<F: PrimeField>(num_vars: usize) -> DenseMultilinearExtension<F> {
-        let mut s_id_vec = vec![F::zero(); 1 << num_vars];
-        for i in 1..num_vars {
-            let index = 1 << i;
-            s_id_vec[index] = F::one()
-        }
+    /// An MLE that represent an identity permutation: `f(index) \mapto index`
+    fn identity_permutation_mle<F: PrimeField>(num_vars: usize) -> DenseMultilinearExtension<F> {
+        let s_id_vec = (0..1u64 << num_vars).map(|index| F::from(index)).collect();
         DenseMultilinearExtension::from_evaluations_vec(num_vars, s_id_vec)
     }
 
@@ -184,7 +173,7 @@ mod test {
             let w_vec: Vec<Fr> = (0..(1 << num_vars)).map(|_| Fr::rand(&mut rng)).collect();
             let w = DenseMultilinearExtension::from_evaluations_vec(num_vars, w_vec);
 
-            let s_id = mle_identity::<Fr>(num_vars);
+            let s_id = identity_permutation_mle::<Fr>(num_vars);
 
             let s_perm_vec: Vec<Fr> = (0..(1 << num_vars)).map(|_| Fr::rand(&mut rng)).collect();
             let s_perm = DenseMultilinearExtension::from_evaluations_vec(num_vars, s_perm_vec);
@@ -222,7 +211,7 @@ mod test {
             let w_vec: Vec<Fr> = (0..(1 << num_vars)).map(|_| Fr::rand(&mut rng)).collect();
             let w = DenseMultilinearExtension::from_evaluations_vec(num_vars, w_vec);
 
-            let s_id = mle_identity::<Fr>(num_vars);
+            let s_id = identity_permutation_mle::<Fr>(num_vars);
 
             let s_perm_vec: Vec<Fr> = (0..(1 << num_vars)).map(|_| Fr::rand(&mut rng)).collect();
             let s_perm = DenseMultilinearExtension::from_evaluations_vec(num_vars, s_perm_vec);
