@@ -103,7 +103,7 @@ impl<F: PrimeField> PermutationCheck<F> for PolyIOP<F> {
         }
 
         // sample challenges := [alpha, beta, gamma]
-        let challenges = transcript.get_and_append_challenge_vectors(b"vector r", 3)?;
+        let challenges = transcript.get_and_append_challenge_vectors(b"q(x) challenge", 3)?;
 
         // identity permutation
         let s_id = identity_permutation_mle::<F>(num_vars);
@@ -200,7 +200,7 @@ mod test {
                 <PolyIOP<Fr> as PermutationCheck<Fr>>::prove(&w, &w, &s_id, &mut transcript)?;
 
             let poly_info = VPAuxInfo {
-                max_degree: 1,
+                max_degree: 2,
                 num_variables: nv,
                 phantom: PhantomData::default(),
             };

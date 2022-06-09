@@ -42,8 +42,8 @@ pub(super) fn build_q_x<F: PrimeField>(
 
     // compute (g(x) + beta * s_perm(x) + gamma) * prod(0, x) * alpha
     // which is prods[6] * prod[1] * alpha
-    let mut res = VirtualPolynomial::new_from_mle(denominator, *alpha);
-    res.mul_by_mle(prod_0x, F::one())?;
+    let mut res = VirtualPolynomial::new_from_mle(denominator, F::one());
+    res.mul_by_mle(prod_0x, *alpha)?;
 
     //   (g(x) + beta * s_perm(x) + gamma) * prod(0, x) * alpha
     // - (f(x) + beta * s_id(x)   + gamma) * alpha
@@ -251,6 +251,7 @@ mod test {
     use super::*;
     use crate::utils::bit_decompose;
     use ark_bls12_381::Fr;
+    // use ark_ff::{One, UniformRand, Zero};
     use ark_ff::UniformRand;
     use ark_poly::MultilinearExtension;
     use ark_std::test_rng;
@@ -360,8 +361,10 @@ mod test {
             let beta = Fr::rand(&mut rng);
             let gamma = Fr::rand(&mut rng);
 
-            // TODO: test the correctness of res
-            let _res = build_q_x(&alpha, &beta, &gamma, &f, &g, &s_id, &s_perm)?;
+            let _qx = build_q_x(&alpha, &beta, &gamma, &f, &g, &s_id, &s_perm)?;
+            // let eval: Vec<Fr> = (0..num_vars).map(|_| Fr::one()).collect();
+            // let res = qx.evaluate(&eval)?;
+            // assert!(res.is_zero())
         }
         Ok(())
     }
