@@ -242,9 +242,7 @@ pub(super) fn compute_prod_0<F: PrimeField>(
 }
 
 /// An MLE that represent an identity permutation: `f(index) \mapto index`
-pub(super) fn identity_permutation_mle<F: PrimeField>(
-    num_vars: usize,
-) -> DenseMultilinearExtension<F> {
+pub fn identity_permutation_mle<F: PrimeField>(num_vars: usize) -> DenseMultilinearExtension<F> {
     let s_id_vec = (0..1u64 << num_vars).map(F::from).collect();
     DenseMultilinearExtension::from_evaluations_vec(num_vars, s_id_vec)
 }
@@ -254,26 +252,20 @@ mod test {
     use super::*;
     use crate::utils::bit_decompose;
     use ark_bls12_381::Fr;
-    // use ark_ff::{One, UniformRand, Zero};
-    use ark_ff::UniformRand;
+    use ark_ff::{UniformRand, Zero};
     use ark_poly::MultilinearExtension;
-    use ark_std::test_rng;
+    use ark_std::{rand::RngCore, test_rng};
 
     #[test]
     fn test_compute_prod_0() -> Result<(), PolyIOPErrors> {
         let mut rng = test_rng();
 
         for num_vars in 2..6 {
-            let f_vec: Vec<Fr> = (0..(1 << num_vars)).map(|_| Fr::rand(&mut rng)).collect();
-            let f = DenseMultilinearExtension::from_evaluations_vec(num_vars, f_vec);
-
-            let g_vec: Vec<Fr> = (0..(1 << num_vars)).map(|_| Fr::rand(&mut rng)).collect();
-            let g = DenseMultilinearExtension::from_evaluations_vec(num_vars, g_vec);
+            let f = DenseMultilinearExtension::rand(num_vars, &mut rng);
+            let g = DenseMultilinearExtension::rand(num_vars, &mut rng);
 
             let s_id = identity_permutation_mle::<Fr>(num_vars);
-
-            let s_perm_vec: Vec<Fr> = (0..(1 << num_vars)).map(|_| Fr::rand(&mut rng)).collect();
-            let s_perm = DenseMultilinearExtension::from_evaluations_vec(num_vars, s_perm_vec);
+            let s_perm = DenseMultilinearExtension::rand(num_vars, &mut rng);
 
             let beta = Fr::rand(&mut rng);
             let gamma = Fr::rand(&mut rng);
@@ -306,21 +298,15 @@ mod test {
         let mut rng = test_rng();
 
         for num_vars in 2..6 {
-            let f_vec: Vec<Fr> = (0..(1 << num_vars)).map(|_| Fr::rand(&mut rng)).collect();
-            let f = DenseMultilinearExtension::from_evaluations_vec(num_vars, f_vec);
-
-            let g_vec: Vec<Fr> = (0..(1 << num_vars)).map(|_| Fr::rand(&mut rng)).collect();
-            let g = DenseMultilinearExtension::from_evaluations_vec(num_vars, g_vec);
+            let f = DenseMultilinearExtension::rand(num_vars, &mut rng);
+            let g = DenseMultilinearExtension::rand(num_vars, &mut rng);
 
             let s_id = identity_permutation_mle::<Fr>(num_vars);
-
-            let s_perm_vec: Vec<Fr> = (0..(1 << num_vars)).map(|_| Fr::rand(&mut rng)).collect();
-            let s_perm = DenseMultilinearExtension::from_evaluations_vec(num_vars, s_perm_vec);
+            let s_perm = DenseMultilinearExtension::rand(num_vars, &mut rng);
 
             let beta = Fr::rand(&mut rng);
             let gamma = Fr::rand(&mut rng);
 
-            // TODO: also test other 4 polynomials
             let res = compute_products(&beta, &gamma, &f, &g, &s_id, &s_perm)?;
 
             for i in 0..1 << num_vars {
@@ -349,25 +335,26 @@ mod test {
         let mut rng = test_rng();
 
         for num_vars in 2..6 {
-            let f_vec: Vec<Fr> = (0..(1 << num_vars)).map(|_| Fr::rand(&mut rng)).collect();
-            let f = DenseMultilinearExtension::from_evaluations_vec(num_vars, f_vec);
-
-            let g_vec: Vec<Fr> = (0..(1 << num_vars)).map(|_| Fr::rand(&mut rng)).collect();
-            let g = DenseMultilinearExtension::from_evaluations_vec(num_vars, g_vec);
+            let f = DenseMultilinearExtension::rand(num_vars, &mut rng);
+            let g = DenseMultilinearExtension::rand(num_vars, &mut rng);
 
             let s_id = identity_permutation_mle::<Fr>(num_vars);
-
-            let s_perm_vec: Vec<Fr> = (0..(1 << num_vars)).map(|_| Fr::rand(&mut rng)).collect();
-            let s_perm = DenseMultilinearExtension::from_evaluations_vec(num_vars, s_perm_vec);
+            let s_perm = DenseMultilinearExtension::rand(num_vars, &mut rng);
 
             let alpha = Fr::rand(&mut rng);
             let beta = Fr::rand(&mut rng);
             let gamma = Fr::rand(&mut rng);
 
-            let _qx = build_q_x(&alpha, &beta, &gamma, &f, &g, &s_id, &s_perm)?;
-            // let eval: Vec<Fr> = (0..num_vars).map(|_| Fr::one()).collect();
-            // let res = qx.evaluate(&eval)?;
-            // assert!(res.is_zero())
+            let qx = build_q_x(&alpha, &beta, &gamma, &f, &g, &s_id, &s_perm)?;
+
+            // test q_x is a 0 over boolean hypercube
+            for _ in 0..100 {
+                let eval: Vec<Fr> = (0..num_vars)
+                    .map(|_| Fr::from(rng.next_u32() % 2))
+                    .collect();
+                let res = qx.evaluate(&eval)?;
+                assert!(res.is_zero())
+            }
         }
         Ok(())
     }

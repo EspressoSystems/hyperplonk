@@ -1,9 +1,15 @@
 use ark_bls12_381::Fr;
+use ark_poly::{DenseMultilinearExtension, MultilinearExtension};
 use ark_std::test_rng;
-use poly_iop::{PolyIOP, PolyIOPErrors, SumCheck, VirtualPolynomial, ZeroCheck};
-use std::time::Instant;
+use poly_iop::{
+    identity_permutation_mle, PermutationCheck, PolyIOP, PolyIOPErrors, SumCheck, VPAuxInfo,
+    VirtualPolynomial, ZeroCheck,
+};
+use std::{marker::PhantomData, time::Instant};
 
 fn main() -> Result<(), PolyIOPErrors> {
+    bench_permutation_check()?;
+    println!("\n\n");
     bench_sum_check()?;
     println!("\n\n");
     bench_zero_check()
@@ -112,7 +118,7 @@ fn bench_zero_check() -> Result<(), PolyIOPErrors> {
                     "wrong subclaim"
                 );
                 println!(
-                    "zero check verification time for {} variables and {} degree:: {} ns",
+                    "zero check verification time for {} variables and {} degree: {} ns",
                     nv,
                     degree,
                     start.elapsed().as_nanos() / repetition as u128
@@ -122,5 +128,61 @@ fn bench_zero_check() -> Result<(), PolyIOPErrors> {
             println!("====================================");
         }
     }
+    Ok(())
+}
+
+fn bench_permutation_check() -> Result<(), PolyIOPErrors> {
+    let mut rng = test_rng();
+
+    for nv in 4..20 {
+        let repetition = if nv < 10 {
+            100
+        } else if nv < 20 {
+            50
+        } else {
+            10
+        };
+
+        let w = DenseMultilinearExtension::rand(nv, &mut rng);
+
+        // s_perm is the identity map
+        let s_perm = identity_permutation_mle(nv);
+
+        let poly_info = VPAuxInfo {
+            max_degree: 2,
+            num_variables: nv,
+            phantom: PhantomData::default(),
+        };
+        let proof = {
+            let start = Instant::now();
+            let mut transcript = <PolyIOP<Fr> as PermutationCheck<Fr>>::init_transcript();
+            transcript.append_message(b"testing", b"initializing transcript for testing")?;
+            let proof =
+                <PolyIOP<Fr> as PermutationCheck<Fr>>::prove(&w, &w, &s_perm, &mut transcript)?;
+
+            println!(
+                "permutation check proving time for {} variables: {} ns",
+                nv,
+                start.elapsed().as_nanos() / repetition as u128
+            );
+            proof
+        };
+
+        {
+            let start = Instant::now();
+            let mut transcript = <PolyIOP<Fr> as PermutationCheck<Fr>>::init_transcript();
+            transcript.append_message(b"testing", b"initializing transcript for testing")?;
+            let _subclaim =
+                <PolyIOP<Fr> as PermutationCheck<Fr>>::verify(&proof, &poly_info, &mut transcript)?;
+            println!(
+                "permutation check verification time for {} variables: {} ns",
+                nv,
+                start.elapsed().as_nanos() / repetition as u128
+            );
+        }
+
+        println!("====================================");
+    }
+
     Ok(())
 }

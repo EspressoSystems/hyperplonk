@@ -60,7 +60,7 @@ pub struct VPAuxInfo<F: PrimeField> {
     pub num_variables: usize,
     /// Associated field
     #[doc(hidden)]
-    pub(crate) phantom: PhantomData<F>,
+    pub phantom: PhantomData<F>,
 }
 
 impl<F: PrimeField> Add for &VirtualPolynomial<F> {

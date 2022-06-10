@@ -3,13 +3,15 @@
 use crate::{
     errors::PolyIOPErrors,
     perm_check::util::{build_q_x, identity_permutation_mle},
+    structs::IOPProof,
     transcript::IOPTranscript,
-    PolyIOP, ZeroCheck,
+    PolyIOP, VirtualPolynomial, ZeroCheck,
 };
 use ark_ff::PrimeField;
+use ark_poly::DenseMultilinearExtension;
 use ark_std::{end_timer, start_timer};
 
-mod util;
+pub mod util;
 
 /// A ZeroCheck is derived from ZeroCheck.
 pub trait PermutationCheck<F: PrimeField>: ZeroCheck<F> {
@@ -85,36 +87,39 @@ impl<F: PrimeField> PermutationCheck<F> for PolyIOP<F> {
         s_perm: &Self::MultilinearExtension,
         transcript: &mut Self::Transcript,
     ) -> Result<Self::Proof, PolyIOPErrors> {
-        let start = start_timer!(|| "Permutation check prove");
+        let res = prove_internal(fx, gx, s_perm, transcript)?;
+        Ok(res.0)
+        // let start = start_timer!(|| "Permutation check prove");
 
-        let num_vars = fx.num_vars;
-        if num_vars != gx.num_vars || num_vars != s_perm.num_vars {
-            return Err(PolyIOPErrors::InvalidParameters(
-                "num of variables do not match".to_string(),
-            ));
-        }
+        // let num_vars = fx.num_vars;
+        // if num_vars != gx.num_vars || num_vars != s_perm.num_vars {
+        //     return Err(PolyIOPErrors::InvalidParameters(
+        //         "num of variables do not match".to_string(),
+        //     ));
+        // }
 
-        // sample challenges := [alpha, beta, gamma]
-        let challenges = transcript.get_and_append_challenge_vectors(b"q(x) challenge", 3)?;
+        // // sample challenges := [alpha, beta, gamma]
+        // let challenges = transcript.get_and_append_challenge_vectors(b"q(x)
+        // challenge", 3)?;
 
-        // identity permutation
-        let s_id = identity_permutation_mle::<F>(num_vars);
+        // // identity permutation
+        // let s_id = identity_permutation_mle::<F>(num_vars);
 
-        // compute q(x)
-        let q_x = build_q_x(
-            &challenges[0],
-            &challenges[1],
-            &challenges[2],
-            fx,
-            gx,
-            &s_id,
-            s_perm,
-        )?;
+        // // compute q(x)
+        // let q_x = build_q_x(
+        //     &challenges[0],
+        //     &challenges[1],
+        //     &challenges[2],
+        //     fx,
+        //     gx,
+        //     &s_id,
+        //     s_perm,
+        // )?;
 
-        let iop_proof = <Self as ZeroCheck<F>>::prove(&q_x, transcript)?;
+        // let iop_proof = <Self as ZeroCheck<F>>::prove(&q_x, transcript)?;
 
-        end_timer!(start);
-        Ok(iop_proof)
+        // end_timer!(start);
+        // Ok(iop_proof)
     }
 
     /// Verify that an MLE g(x) is a permutation of an
@@ -127,7 +132,7 @@ impl<F: PrimeField> PermutationCheck<F> for PolyIOP<F> {
         let start = start_timer!(|| "Permutation check verify");
 
         // invoke the zero check on the iop_proof
-        let zero_check_sub_claim = <Self as ZeroCheck<F>>::verify(&proof, aux_info, transcript)?;
+        let zero_check_sub_claim = <Self as ZeroCheck<F>>::verify(proof, aux_info, transcript)?;
 
         let mut final_query = vec![F::one(); aux_info.num_variables];
         final_query[aux_info.num_variables - 1] = F::zero();
@@ -142,16 +147,58 @@ impl<F: PrimeField> PermutationCheck<F> for PolyIOP<F> {
     }
 }
 
+/// Initialize the prover to argue that an MLE g(x) is a permutation of
+/// MLE f(x) over a permutation given by s_perm
+/// Cost: O(N)
+fn prove_internal<F: PrimeField>(
+    fx: &DenseMultilinearExtension<F>,
+    gx: &DenseMultilinearExtension<F>,
+    s_perm: &DenseMultilinearExtension<F>,
+    transcript: &mut IOPTranscript<F>,
+) -> Result<(IOPProof<F>, VirtualPolynomial<F>), PolyIOPErrors> {
+    let start = start_timer!(|| "Permutation check prove");
+
+    let num_vars = fx.num_vars;
+    if num_vars != gx.num_vars || num_vars != s_perm.num_vars {
+        return Err(PolyIOPErrors::InvalidParameters(
+            "num of variables do not match".to_string(),
+        ));
+    }
+
+    // sample challenges := [alpha, beta, gamma]
+    let challenges = transcript.get_and_append_challenge_vectors(b"q(x) challenge", 3)?;
+
+    // identity permutation
+    let s_id = identity_permutation_mle::<F>(num_vars);
+
+    // compute q(x)
+    let q_x = build_q_x(
+        &challenges[0],
+        &challenges[1],
+        &challenges[2],
+        fx,
+        gx,
+        &s_id,
+        s_perm,
+    )?;
+
+    let iop_proof = <PolyIOP<F> as ZeroCheck<F>>::prove(&q_x, transcript)?;
+
+    end_timer!(start);
+    Ok((iop_proof, q_x))
+}
+
 #[cfg(test)]
 mod test {
 
     use super::PermutationCheck;
     use crate::{
-        errors::PolyIOPErrors, perm_check::util::identity_permutation_mle, virtual_poly::VPAuxInfo,
+        errors::PolyIOPErrors,
+        perm_check::{prove_internal, util::identity_permutation_mle},
+        virtual_poly::VPAuxInfo,
         PolyIOP,
     };
     use ark_bls12_381::Fr;
-    use ark_ff::UniformRand;
     use ark_poly::{DenseMultilinearExtension, MultilinearExtension};
     use ark_std::test_rng;
     use std::marker::PhantomData;
@@ -160,16 +207,15 @@ mod test {
         let mut rng = test_rng();
 
         {
-            // good path: zero virtual poly
-            let w_vec: Vec<Fr> = (0..(1 << nv)).map(|_| Fr::rand(&mut rng)).collect();
-            let w = DenseMultilinearExtension::from_evaluations_vec(nv, w_vec);
+            // good path: w is a permutation of w itself under the identify map
+            let w = DenseMultilinearExtension::rand(nv, &mut rng);
 
-            let s_id = identity_permutation_mle(nv);
+            // s_perm is the identity map
+            let s_perm = identity_permutation_mle(nv);
 
             let mut transcript = <PolyIOP<Fr> as PermutationCheck<Fr>>::init_transcript();
             transcript.append_message(b"testing", b"initializing transcript for testing")?;
-            let proof =
-                <PolyIOP<Fr> as PermutationCheck<Fr>>::prove(&w, &w, &s_id, &mut transcript)?;
+            let (proof, q_x) = prove_internal(&w, &w, &s_perm, &mut transcript)?;
 
             let poly_info = VPAuxInfo {
                 max_degree: 2,
@@ -183,33 +229,104 @@ mod test {
                 <PolyIOP<Fr> as PermutationCheck<Fr>>::verify(&proof, &poly_info, &mut transcript)?
                     .zero_check_sub_claim;
             assert_eq!(
-                w.evaluate(&subclaim.sum_check_sub_claim.point).unwrap(),
+                q_x.evaluate(&subclaim.sum_check_sub_claim.point).unwrap(),
                 subclaim.sum_check_sub_claim.expected_evaluation,
                 "wrong subclaim"
             );
         }
 
-        // {
-        //     // bad path: random virtual poly whose sum is not zero
-        //     let (poly, _sum) =
-        //         VirtualPolynomial::rand(nv, num_multiplicands_range, num_products,
-        // &mut rng)?;
+        {
+            // bad path 1: w is a not permutation of w itself under a random map
+            let w = DenseMultilinearExtension::rand(nv, &mut rng);
 
-        //     let mut transcript = <PolyIOP<Fr> as ZeroCheck<Fr>>::init_transcript();
-        //     transcript.append_message(b"testing", b"initializing transcript for
-        // testing")?;     let proof = <PolyIOP<Fr> as
-        // ZeroCheck<Fr>>::prove(&poly, &mut transcript)?;
+            // s_perm is a random map
+            let s_perm = DenseMultilinearExtension::rand(nv, &mut rng);
 
-        //     let poly_info = poly.aux_info.clone();
-        //     let mut transcript = <PolyIOP<Fr> as ZeroCheck<Fr>>::init_transcript();
-        //     transcript.append_message(b"testing", b"initializing transcript for
-        // testing")?;
+            let mut transcript = <PolyIOP<Fr> as PermutationCheck<Fr>>::init_transcript();
+            transcript.append_message(b"testing", b"initializing transcript for testing")?;
+            let (proof, q_x) = prove_internal(&w, &w, &s_perm, &mut transcript)?;
 
-        //     assert!(
-        //         <PolyIOP<Fr> as ZeroCheck<Fr>>::verify(&proof, &poly_info, &mut
-        // transcript)             .is_err()
-        //     );
-        // }
+            let poly_info = VPAuxInfo {
+                max_degree: 2,
+                num_variables: nv,
+                phantom: PhantomData::default(),
+            };
+
+            let mut transcript = <PolyIOP<Fr> as PermutationCheck<Fr>>::init_transcript();
+            transcript.append_message(b"testing", b"initializing transcript for testing")?;
+            if nv != 1 {
+                assert!(<PolyIOP<Fr> as PermutationCheck<Fr>>::verify(
+                    &proof,
+                    &poly_info,
+                    &mut transcript
+                )
+                .is_err());
+            } else {
+                // a trivial poly is always a permutation of itself, so the zero check should
+                // pass
+                let subclaim = <PolyIOP<Fr> as PermutationCheck<Fr>>::verify(
+                    &proof,
+                    &poly_info,
+                    &mut transcript,
+                )?
+                .zero_check_sub_claim;
+
+                // the evaluation should fail because a different s_perm is used for proof and
+                // for w |-> w mapping
+                assert_ne!(
+                    q_x.evaluate(&subclaim.sum_check_sub_claim.point).unwrap(),
+                    subclaim.sum_check_sub_claim.expected_evaluation,
+                    "wrong subclaim"
+                );
+            }
+        }
+
+        {
+            // bad path 2: f is a not permutation of g under a identity map
+            let f = DenseMultilinearExtension::rand(nv, &mut rng);
+            let g = DenseMultilinearExtension::rand(nv, &mut rng);
+
+            // s_perm is the identity map
+            let s_perm = identity_permutation_mle(nv);
+
+            let mut transcript = <PolyIOP<Fr> as PermutationCheck<Fr>>::init_transcript();
+            transcript.append_message(b"testing", b"initializing transcript for testing")?;
+            let (proof, q_x) = prove_internal(&f, &g, &s_perm, &mut transcript)?;
+
+            let poly_info = VPAuxInfo {
+                max_degree: 2,
+                num_variables: nv,
+                phantom: PhantomData::default(),
+            };
+
+            let mut transcript = <PolyIOP<Fr> as PermutationCheck<Fr>>::init_transcript();
+            transcript.append_message(b"testing", b"initializing transcript for testing")?;
+            if nv != 1 {
+                assert!(<PolyIOP<Fr> as PermutationCheck<Fr>>::verify(
+                    &proof,
+                    &poly_info,
+                    &mut transcript
+                )
+                .is_err());
+            } else {
+                // a trivial poly is always a permutation of itself, so the zero check should
+                // pass
+                let subclaim = <PolyIOP<Fr> as PermutationCheck<Fr>>::verify(
+                    &proof,
+                    &poly_info,
+                    &mut transcript,
+                )?
+                .zero_check_sub_claim;
+
+                // the evaluation should fail because a different s_perm is used for proof and
+                // for w |-> w mapping
+                assert_ne!(
+                    q_x.evaluate(&subclaim.sum_check_sub_claim.point).unwrap(),
+                    subclaim.sum_check_sub_claim.expected_evaluation,
+                    "wrong subclaim"
+                );
+            }
+        }
 
         Ok(())
     }
