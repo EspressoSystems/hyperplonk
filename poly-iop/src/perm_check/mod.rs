@@ -15,7 +15,7 @@ pub mod util;
 
 /// A ZeroCheck is derived from ZeroCheck.
 pub trait PermutationCheck<F: PrimeField>: ZeroCheck<F> {
-    type SubClaim;
+    type PermutationCheckSubClaim;
 
     /// Initialize the system with a transcript
     ///
@@ -40,7 +40,7 @@ pub trait PermutationCheck<F: PrimeField>: ZeroCheck<F> {
         proof: &Self::Proof,
         aux_info: &Self::VPAuxInfo,
         transcript: &mut Self::Transcript,
-    ) -> Result<Self::SubClaim, PolyIOPErrors>;
+    ) -> Result<Self::PermutationCheckSubClaim, PolyIOPErrors>;
 }
 
 /// A permutation subclaim consists of
@@ -66,7 +66,7 @@ impl<F: PrimeField> PermutationCheck<F> for PolyIOP<F> {
     /// A Permutation SubClaim is indeed a ZeroCheck SubClaim that consists of
     /// - the SubClaim from the SumCheck
     /// - the initial challenge r which is used to build eq(x, r)
-    type SubClaim = PermutationCheckSubClaim<F, Self>;
+    type PermutationCheckSubClaim = PermutationCheckSubClaim<F, Self>;
 
     /// Initialize the system with a transcript
     ///
@@ -89,37 +89,6 @@ impl<F: PrimeField> PermutationCheck<F> for PolyIOP<F> {
     ) -> Result<Self::Proof, PolyIOPErrors> {
         let res = prove_internal(fx, gx, s_perm, transcript)?;
         Ok(res.0)
-        // let start = start_timer!(|| "Permutation check prove");
-
-        // let num_vars = fx.num_vars;
-        // if num_vars != gx.num_vars || num_vars != s_perm.num_vars {
-        //     return Err(PolyIOPErrors::InvalidParameters(
-        //         "num of variables do not match".to_string(),
-        //     ));
-        // }
-
-        // // sample challenges := [alpha, beta, gamma]
-        // let challenges = transcript.get_and_append_challenge_vectors(b"q(x)
-        // challenge", 3)?;
-
-        // // identity permutation
-        // let s_id = identity_permutation_mle::<F>(num_vars);
-
-        // // compute q(x)
-        // let q_x = build_q_x(
-        //     &challenges[0],
-        //     &challenges[1],
-        //     &challenges[2],
-        //     fx,
-        //     gx,
-        //     &s_id,
-        //     s_perm,
-        // )?;
-
-        // let iop_proof = <Self as ZeroCheck<F>>::prove(&q_x, transcript)?;
-
-        // end_timer!(start);
-        // Ok(iop_proof)
     }
 
     /// Verify that an MLE g(x) is a permutation of an
@@ -128,7 +97,7 @@ impl<F: PrimeField> PermutationCheck<F> for PolyIOP<F> {
         proof: &Self::Proof,
         aux_info: &Self::VPAuxInfo,
         transcript: &mut Self::Transcript,
-    ) -> Result<Self::SubClaim, PolyIOPErrors> {
+    ) -> Result<Self::PermutationCheckSubClaim, PolyIOPErrors> {
         let start = start_timer!(|| "Permutation check verify");
 
         // invoke the zero check on the iop_proof
@@ -148,7 +117,8 @@ impl<F: PrimeField> PermutationCheck<F> for PolyIOP<F> {
 }
 
 /// Initialize the prover to argue that an MLE g(x) is a permutation of
-/// MLE f(x) over a permutation given by s_perm
+/// MLE f(x) over a permutation given by s_perm.
+/// Return both the proof, and the q(x) for internal testing.
 /// Cost: O(N)
 fn prove_internal<F: PrimeField>(
     fx: &DenseMultilinearExtension<F>,
@@ -319,7 +289,7 @@ mod test {
                 .zero_check_sub_claim;
 
                 // the evaluation should fail because a different s_perm is used for proof and
-                // for w |-> w mapping
+                // for f |-> g mapping
                 assert_ne!(
                     q_x.evaluate(&subclaim.sum_check_sub_claim.point).unwrap(),
                     subclaim.sum_check_sub_claim.expected_evaluation,
