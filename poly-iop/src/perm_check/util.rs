@@ -285,7 +285,8 @@ mod test {
             let beta = Fr::rand(&mut rng);
             let gamma = Fr::rand(&mut rng);
 
-            let (prod_0, ..) = compute_prod_0(&beta, &gamma, &f, &g, &s_id, &s_perm)?;
+            let (prod_0, numerator, denominator) =
+                compute_prod_0(&beta, &gamma, &f, &g, &s_id, &s_perm)?;
 
             for i in 0..1 << num_vars {
                 let r: Vec<Fr> = bit_decompose(i, num_vars)
@@ -293,16 +294,22 @@ mod test {
                     .map(|&x| Fr::from(x))
                     .collect();
 
-                let eval = prod_0.evaluate(&r).unwrap();
+                let prod_0_eval = prod_0.evaluate(&r).unwrap();
+                let numerator_eval = numerator.evaluate(&r).unwrap();
+                let denominator_eval = denominator.evaluate(&r).unwrap();
 
                 let f_eval = f.evaluate(&r).unwrap();
                 let g_eval = g.evaluate(&r).unwrap();
                 let s_id_eval = s_id.evaluate(&r).unwrap();
                 let s_perm_eval = s_perm.evaluate(&r).unwrap();
-                let eval_rec =
-                    (f_eval + beta * s_id_eval + gamma) / (g_eval + beta * s_perm_eval + gamma);
 
-                assert_eq!(eval, eval_rec);
+                let numerator_eval_rec = f_eval + beta * s_id_eval + gamma;
+                let denominator_eval_rec = g_eval + beta * s_perm_eval + gamma;
+                let prod_0_eval_rec = numerator_eval_rec / denominator_eval_rec;
+
+                assert_eq!(numerator_eval, numerator_eval_rec);
+                assert_eq!(denominator_eval, denominator_eval_rec);
+                assert_eq!(prod_0_eval, prod_0_eval_rec);
             }
         }
         Ok(())
