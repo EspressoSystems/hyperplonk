@@ -13,7 +13,7 @@ use ark_std::{end_timer, start_timer};
 
 pub mod util;
 
-/// A ZeroCheck is derived from ZeroCheck.
+/// A PermutationCheck is derived from ZeroCheck.
 pub trait PermutationCheck<F: PrimeField>: ZeroCheck<F> {
     type PermutationCheckSubClaim;
 
@@ -27,10 +27,19 @@ pub trait PermutationCheck<F: PrimeField>: ZeroCheck<F> {
 
     /// Initialize the prover to argue that an MLE g(x) is a permutation of
     /// MLE f(x) over a permutation given by s_perm.
+    /// Inputs:
+    /// - fx
+    /// - gx
+    /// - permutation defined by a polynomial
+    /// - alpha: a challenge generated after fixing the PC commitment of
+    ///   \tilde{prod}.
+    /// - transcript: a transcript that is used to generate the challenges beta
+    ///   and gamma
     fn prove(
         fx: &Self::MultilinearExtension,
         gx: &Self::MultilinearExtension,
         s_perm: &Self::MultilinearExtension,
+        alpha: &F,
         transcript: &mut Self::Transcript,
     ) -> Result<Self::Proof, PolyIOPErrors>;
 
@@ -79,15 +88,25 @@ impl<F: PrimeField> PermutationCheck<F> for PolyIOP<F> {
     }
 
     /// Initialize the prover to argue that an MLE g(x) is a permutation of
-    /// MLE f(x) over a permutation given by s_perm
+    /// MLE f(x) over a permutation given by s_perm.
+    /// Inputs:
+    /// - fx
+    /// - gx
+    /// - permutation defined by a polynomial
+    /// - alpha: a challenge generated after fixing the PC commitment of
+    ///   \tilde{prod}.
+    /// - transcript: a transcript that is used to generate the challenges beta
+    ///   and gamma
+    ///
     /// Cost: O(N)
     fn prove(
         fx: &Self::MultilinearExtension,
         gx: &Self::MultilinearExtension,
         s_perm: &Self::MultilinearExtension,
+        alpha: &F,
         transcript: &mut Self::Transcript,
     ) -> Result<Self::Proof, PolyIOPErrors> {
-        let res = prove_internal(fx, gx, s_perm, transcript)?;
+        let res = prove_internal(fx, gx, s_perm, alpha, transcript)?;
         Ok(res.0)
     }
 
@@ -118,12 +137,21 @@ impl<F: PrimeField> PermutationCheck<F> for PolyIOP<F> {
 
 /// Initialize the prover to argue that an MLE g(x) is a permutation of
 /// MLE f(x) over a permutation given by s_perm.
-/// Return both the proof, and the q(x) for internal testing.
+/// Inputs:
+/// - fx
+/// - gx
+/// - permutation defined by a polynomial
+/// - alpha: a challenge generated after fixing the PC commitment of
+///   \tilde{prod}.
+/// - transcript: a transcript that is used to generate the challenges beta and
+///   gamma
+///
 /// Cost: O(N)
 fn prove_internal<F: PrimeField>(
     fx: &DenseMultilinearExtension<F>,
     gx: &DenseMultilinearExtension<F>,
     s_perm: &DenseMultilinearExtension<F>,
+    alpha: &F,
     transcript: &mut IOPTranscript<F>,
 ) -> Result<(IOPProof<F>, VirtualPolynomial<F>), PolyIOPErrors> {
     let start = start_timer!(|| "Permutation check prove");
@@ -136,21 +164,13 @@ fn prove_internal<F: PrimeField>(
     }
 
     // sample challenges := [alpha, beta, gamma]
-    let challenges = transcript.get_and_append_challenge_vectors(b"q(x) challenge", 3)?;
+    let challenges = transcript.get_and_append_challenge_vectors(b"q(x) challenge", 2)?;
 
     // identity permutation
     let s_id = identity_permutation_mle::<F>(num_vars);
 
     // compute q(x)
-    let q_x = build_q_x(
-        &challenges[0],
-        &challenges[1],
-        &challenges[2],
-        fx,
-        gx,
-        &s_id,
-        s_perm,
-    )?;
+    let q_x = build_q_x(alpha, &challenges[0], &challenges[1], fx, gx, &s_id, s_perm)?;
 
     let iop_proof = <PolyIOP<F> as ZeroCheck<F>>::prove(&q_x, transcript)?;
 
@@ -169,6 +189,7 @@ mod test {
         PolyIOP,
     };
     use ark_bls12_381::Fr;
+    use ark_ff::UniformRand;
     use ark_poly::{DenseMultilinearExtension, MultilinearExtension};
     use ark_std::test_rng;
     use std::marker::PhantomData;
@@ -183,9 +204,11 @@ mod test {
             // s_perm is the identity map
             let s_perm = identity_permutation_mle(nv);
 
+            let alpha = Fr::rand(&mut rng);
+
             let mut transcript = <PolyIOP<Fr> as PermutationCheck<Fr>>::init_transcript();
             transcript.append_message(b"testing", b"initializing transcript for testing")?;
-            let (proof, q_x) = prove_internal(&w, &w, &s_perm, &mut transcript)?;
+            let (proof, q_x) = prove_internal(&w, &w, &s_perm, &alpha, &mut transcript)?;
 
             let poly_info = VPAuxInfo {
                 max_degree: 2,
@@ -212,9 +235,11 @@ mod test {
             // s_perm is a random map
             let s_perm = DenseMultilinearExtension::rand(nv, &mut rng);
 
+            let alpha = Fr::rand(&mut rng);
+
             let mut transcript = <PolyIOP<Fr> as PermutationCheck<Fr>>::init_transcript();
             transcript.append_message(b"testing", b"initializing transcript for testing")?;
-            let (proof, q_x) = prove_internal(&w, &w, &s_perm, &mut transcript)?;
+            let (proof, q_x) = prove_internal(&w, &w, &s_perm, &alpha, &mut transcript)?;
 
             let poly_info = VPAuxInfo {
                 max_degree: 2,
@@ -259,9 +284,11 @@ mod test {
             // s_perm is the identity map
             let s_perm = identity_permutation_mle(nv);
 
+            let alpha = Fr::rand(&mut rng);
+
             let mut transcript = <PolyIOP<Fr> as PermutationCheck<Fr>>::init_transcript();
             transcript.append_message(b"testing", b"initializing transcript for testing")?;
-            let (proof, q_x) = prove_internal(&f, &g, &s_perm, &mut transcript)?;
+            let (proof, q_x) = prove_internal(&f, &g, &s_perm, &alpha, &mut transcript)?;
 
             let poly_info = VPAuxInfo {
                 max_degree: 2,

@@ -1,6 +1,6 @@
 use ark_bls12_381::Fr;
 use ark_poly::{DenseMultilinearExtension, MultilinearExtension};
-use ark_std::test_rng;
+use ark_std::{test_rng, UniformRand};
 use poly_iop::{
     identity_permutation_mle, PermutationCheck, PolyIOP, PolyIOPErrors, SumCheck, VPAuxInfo,
     VirtualPolynomial, ZeroCheck,
@@ -147,18 +147,18 @@ fn bench_permutation_check() -> Result<(), PolyIOPErrors> {
 
         // s_perm is the identity map
         let s_perm = identity_permutation_mle(nv);
-
-        let poly_info = VPAuxInfo {
-            max_degree: 2,
-            num_variables: nv,
-            phantom: PhantomData::default(),
-        };
+        let alpha = Fr::rand(&mut rng);
         let proof = {
             let start = Instant::now();
             let mut transcript = <PolyIOP<Fr> as PermutationCheck<Fr>>::init_transcript();
             transcript.append_message(b"testing", b"initializing transcript for testing")?;
-            let proof =
-                <PolyIOP<Fr> as PermutationCheck<Fr>>::prove(&w, &w, &s_perm, &mut transcript)?;
+            let proof = <PolyIOP<Fr> as PermutationCheck<Fr>>::prove(
+                &w,
+                &w,
+                &s_perm,
+                &alpha,
+                &mut transcript,
+            )?;
 
             println!(
                 "permutation check proving time for {} variables: {} ns",
@@ -169,6 +169,12 @@ fn bench_permutation_check() -> Result<(), PolyIOPErrors> {
         };
 
         {
+            let poly_info = VPAuxInfo {
+                max_degree: 2,
+                num_variables: nv,
+                phantom: PhantomData::default(),
+            };
+
             let start = Instant::now();
             let mut transcript = <PolyIOP<Fr> as PermutationCheck<Fr>>::init_transcript();
             transcript.append_message(b"testing", b"initializing transcript for testing")?;

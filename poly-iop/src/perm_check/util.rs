@@ -254,7 +254,7 @@ mod test {
     use ark_bls12_381::Fr;
     use ark_ff::{UniformRand, Zero};
     use ark_poly::MultilinearExtension;
-    use ark_std::{rand::RngCore, test_rng};
+    use ark_std::test_rng;
 
     #[test]
     fn test_compute_prod_0() -> Result<(), PolyIOPErrors> {
@@ -270,7 +270,7 @@ mod test {
             let beta = Fr::rand(&mut rng);
             let gamma = Fr::rand(&mut rng);
 
-            let prod_0 = compute_prod_0(&beta, &gamma, &f, &g, &s_id, &s_perm)?;
+            let (prod_0, ..) = compute_prod_0(&beta, &gamma, &f, &g, &s_id, &s_perm)?;
 
             for i in 0..1 << num_vars {
                 let r: Vec<Fr> = bit_decompose(i, num_vars)
@@ -278,7 +278,7 @@ mod test {
                     .map(|&x| Fr::from(x))
                     .collect();
 
-                let eval = prod_0.0.evaluate(&r).unwrap();
+                let eval = prod_0.evaluate(&r).unwrap();
 
                 let f_eval = f.evaluate(&r).unwrap();
                 let g_eval = g.evaluate(&r).unwrap();
@@ -348,10 +348,9 @@ mod test {
             let qx = build_q_x(&alpha, &beta, &gamma, &f, &g, &s_id, &s_perm)?;
 
             // test q_x is a 0 over boolean hypercube
-            for _ in 0..100 {
-                let eval: Vec<Fr> = (0..num_vars)
-                    .map(|_| Fr::from(rng.next_u32() % 2))
-                    .collect();
+            for i in 0..1 << num_vars {
+                let bit_sequence = bit_decompose(i, num_vars);
+                let eval: Vec<Fr> = bit_sequence.iter().map(|x| Fr::from(*x as u64)).collect();
                 let res = qx.evaluate(&eval)?;
                 assert!(res.is_zero())
             }
