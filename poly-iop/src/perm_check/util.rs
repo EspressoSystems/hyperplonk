@@ -3,7 +3,7 @@
 use crate::{utils::get_index, PolyIOPErrors, VirtualPolynomial};
 use ark_ff::PrimeField;
 use ark_poly::DenseMultilinearExtension;
-use ark_std::{end_timer, start_timer};
+use ark_std::{end_timer, rand::RngCore, start_timer};
 use std::rc::Rc;
 
 /// Compute `Q(x)` which a virtual polynomial of degree 2 defined as
@@ -247,6 +247,21 @@ pub fn identity_permutation_mle<F: PrimeField>(num_vars: usize) -> DenseMultilin
     DenseMultilinearExtension::from_evaluations_vec(num_vars, s_id_vec)
 }
 
+/// An MLE that represent a random permutation
+pub fn random_permutation_mle<F: PrimeField, R: RngCore>(
+    num_vars: usize,
+    rng: &mut R,
+) -> DenseMultilinearExtension<F> {
+    let len = 1u64 << num_vars;
+    let mut s_id_vec: Vec<F> = (0..len).map(F::from).collect();
+    let mut s_perm_vec = vec![];
+    for _ in 0..len {
+        let index = rng.next_u64() as usize % s_id_vec.len();
+        s_perm_vec.push(s_id_vec.remove(index));
+    }
+    DenseMultilinearExtension::from_evaluations_vec(num_vars, s_perm_vec)
+}
+
 #[cfg(test)]
 mod test {
     use super::*;
@@ -265,7 +280,7 @@ mod test {
             let g = DenseMultilinearExtension::rand(num_vars, &mut rng);
 
             let s_id = identity_permutation_mle::<Fr>(num_vars);
-            let s_perm = DenseMultilinearExtension::rand(num_vars, &mut rng);
+            let s_perm = random_permutation_mle(num_vars, &mut rng);
 
             let beta = Fr::rand(&mut rng);
             let gamma = Fr::rand(&mut rng);
@@ -302,7 +317,7 @@ mod test {
             let g = DenseMultilinearExtension::rand(num_vars, &mut rng);
 
             let s_id = identity_permutation_mle::<Fr>(num_vars);
-            let s_perm = DenseMultilinearExtension::rand(num_vars, &mut rng);
+            let s_perm = random_permutation_mle(num_vars, &mut rng);
 
             let beta = Fr::rand(&mut rng);
             let gamma = Fr::rand(&mut rng);
@@ -339,7 +354,7 @@ mod test {
             let g = DenseMultilinearExtension::rand(num_vars, &mut rng);
 
             let s_id = identity_permutation_mle::<Fr>(num_vars);
-            let s_perm = DenseMultilinearExtension::rand(num_vars, &mut rng);
+            let s_perm = random_permutation_mle(num_vars, &mut rng);
 
             let alpha = Fr::rand(&mut rng);
             let beta = Fr::rand(&mut rng);

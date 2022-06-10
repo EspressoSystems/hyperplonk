@@ -185,6 +185,7 @@ mod test {
     use crate::{
         errors::PolyIOPErrors,
         perm_check::{prove_internal, util::identity_permutation_mle},
+        random_permutation_mle,
         virtual_poly::VPAuxInfo,
         PolyIOP,
     };
@@ -233,7 +234,7 @@ mod test {
             let w = DenseMultilinearExtension::rand(nv, &mut rng);
 
             // s_perm is a random map
-            let s_perm = DenseMultilinearExtension::rand(nv, &mut rng);
+            let s_perm = random_permutation_mle(nv, &mut rng);
 
             let alpha = Fr::rand(&mut rng);
 
