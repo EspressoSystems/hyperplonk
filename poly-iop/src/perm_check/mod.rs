@@ -3,23 +3,17 @@
 use crate::{
     errors::PolyIOPErrors,
     perm_check::util::{build_q_x, identity_permutation_mle},
-    structs::{IOPProof, SubClaim},
     transcript::IOPTranscript,
-    virtual_poly::VPAuxInfo,
     PolyIOP, ZeroCheck,
 };
 use ark_ff::PrimeField;
-use ark_poly::DenseMultilinearExtension;
 use ark_std::{end_timer, start_timer};
 
 mod util;
 
-pub trait PermutationCheck<F: PrimeField> {
-    type Proof;
-    type MultilinearExtension;
-    type MLEAuxInfo;
+/// A ZeroCheck is derived from ZeroCheck.
+pub trait PermutationCheck<F: PrimeField>: ZeroCheck<F> {
     type SubClaim;
-    type Transcript;
 
     /// Initialize the system with a transcript
     ///
@@ -42,37 +36,35 @@ pub trait PermutationCheck<F: PrimeField> {
     /// MLE f(x) over a permutation given by s_perm.
     fn verify(
         proof: &Self::Proof,
-        aux_info: &Self::MLEAuxInfo,
+        aux_info: &Self::VPAuxInfo,
         transcript: &mut Self::Transcript,
     ) -> Result<Self::SubClaim, PolyIOPErrors>;
 }
 
-/// A permutation proof consists of
-/// - A zero check IOP proof arguing Q(x) is 0. See `build_qx` for definition of
-///   Q(x).
-/// - A final query for `prod(1,...,1,0) = 1`.
+/// A permutation subclaim consists of
+/// - A zero check IOP subclaim for Q(x) is 0, consists of the following:
+///  (See `build_qx` for definition of Q(x).)
+///   - the SubClaim from the SumCheck
+///   - the initial challenge r which is used to build eq(x, r) in ZeroCheck
+/// - A final query for `prod(1, ..., 1, 0) = 1`.
 // Note that this final query is in fact a constant that
 // is independent from the proof. So we should avoid
 // (de)serialize it.
 #[derive(Clone, Debug, Default, PartialEq)]
-pub struct PermutationProof<F: PrimeField> {
-    // zero check proof
-    iop_proof: IOPProof<F>,
-    // the vector (1, ..., 1, 0)
-    final_query: Vec<F>,
-    // its evaluation: 1
-    final_eval: F,
+pub struct PermutationCheckSubClaim<F: PrimeField, ZC: ZeroCheck<F>> {
+    // the SubClaim from the ZeroCheck
+    zero_check_sub_claim: ZC::ZeroCheckSubClaim,
+    // final query which consists of
+    // - the vector `(1, ..., 1, 0)`
+    // - the evaluation `1`
+    final_query: (Vec<F>, F),
 }
 
 impl<F: PrimeField> PermutationCheck<F> for PolyIOP<F> {
-    type Proof = PermutationProof<F>;
-    type MultilinearExtension = DenseMultilinearExtension<F>;
-    type MLEAuxInfo = VPAuxInfo<F>;
     /// A Permutation SubClaim is indeed a ZeroCheck SubClaim that consists of
     /// - the SubClaim from the SumCheck
     /// - the initial challenge r which is used to build eq(x, r)
-    type SubClaim = (SubClaim<F>, Vec<F>);
-    type Transcript = IOPTranscript<F>;
+    type SubClaim = PermutationCheckSubClaim<F, Self>;
 
     /// Initialize the system with a transcript
     ///
@@ -121,52 +113,32 @@ impl<F: PrimeField> PermutationCheck<F> for PolyIOP<F> {
 
         let iop_proof = <Self as ZeroCheck<F>>::prove(&q_x, transcript)?;
 
-        // Additional query on prod(1, ..., 1, 0) = 1
-        let mut final_query = vec![F::one(); num_vars];
-        final_query[num_vars - 1] = F::zero();
-
         end_timer!(start);
-        Ok(Self::Proof {
-            iop_proof,
-            final_query,
-            final_eval: F::one(),
-        })
+        Ok(iop_proof)
     }
 
-    /// Verify that an MLE g(x) is a permutation of
+    /// Verify that an MLE g(x) is a permutation of an
     /// MLE f(x) over a permutation given by s_perm.
     fn verify(
         proof: &Self::Proof,
-        aux_info: &Self::MLEAuxInfo,
+        aux_info: &Self::VPAuxInfo,
         transcript: &mut Self::Transcript,
     ) -> Result<Self::SubClaim, PolyIOPErrors> {
         let start = start_timer!(|| "Permutation check verify");
 
         // invoke the zero check on the iop_proof
-        let subclaim = <Self as ZeroCheck<F>>::verify(&proof.iop_proof, aux_info, transcript)?;
+        let zero_check_sub_claim = <Self as ZeroCheck<F>>::verify(&proof, aux_info, transcript)?;
 
-        // check that the final query is prod(1, ..., 1, 0) = 1
-        for &e in proof.final_query.iter().take(aux_info.num_variables - 1) {
-            if !e.is_one() {
-                return Err(PolyIOPErrors::InvalidProof(
-                    "final query is invalid".to_string(),
-                ));
-            }
-        }
-        if !proof.final_query[aux_info.num_variables - 1].is_zero() {
-            return Err(PolyIOPErrors::InvalidProof(
-                "final query is invalid".to_string(),
-            ));
-        }
-        if !proof.final_eval.is_one() {
-            return Err(PolyIOPErrors::InvalidProof(
-                "final query is invalid".to_string(),
-            ));
-        }
+        let mut final_query = vec![F::one(); aux_info.num_variables];
+        final_query[aux_info.num_variables - 1] = F::zero();
+        let final_eval = F::one();
 
         end_timer!(start);
 
-        Ok(subclaim)
+        Ok(PermutationCheckSubClaim {
+            zero_check_sub_claim,
+            final_query: (final_query, final_eval),
+        })
     }
 }
 
@@ -184,7 +156,7 @@ mod test {
     use ark_std::test_rng;
     use std::marker::PhantomData;
 
-    fn test_permcheck(nv: usize) -> Result<(), PolyIOPErrors> {
+    fn test_permutation_check(nv: usize) -> Result<(), PolyIOPErrors> {
         let mut rng = test_rng();
 
         {
@@ -209,9 +181,10 @@ mod test {
             transcript.append_message(b"testing", b"initializing transcript for testing")?;
             let subclaim =
                 <PolyIOP<Fr> as PermutationCheck<Fr>>::verify(&proof, &poly_info, &mut transcript)?
-                    .0;
-            assert!(
-                w.evaluate(&subclaim.point).unwrap() == subclaim.expected_evaluation,
+                    .zero_check_sub_claim;
+            assert_eq!(
+                w.evaluate(&subclaim.sum_check_sub_claim.point).unwrap(),
+                subclaim.sum_check_sub_claim.expected_evaluation,
                 "wrong subclaim"
             );
         }
@@ -243,16 +216,16 @@ mod test {
 
     #[test]
     fn test_trivial_polynomial() -> Result<(), PolyIOPErrors> {
-        test_permcheck(1)
+        test_permutation_check(1)
     }
     #[test]
     fn test_normal_polynomial() -> Result<(), PolyIOPErrors> {
-        test_permcheck(5)
+        test_permutation_check(5)
     }
 
     #[test]
     fn zero_polynomial_should_error() -> Result<(), PolyIOPErrors> {
-        assert!(test_permcheck(0).is_err());
+        assert!(test_permutation_check(0).is_err());
         Ok(())
     }
 }

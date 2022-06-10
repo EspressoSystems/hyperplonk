@@ -1,9 +1,9 @@
 //! Verifier subroutines for a SumCheck protocol.
 
-use super::SumCheckVerifier;
+use super::{SumCheckSubClaim, SumCheckVerifier};
 use crate::{
     errors::PolyIOPErrors,
-    structs::{IOPProverMessage, IOPVerifierState, SubClaim},
+    structs::{IOPProverMessage, IOPVerifierState},
     transcript::IOPTranscript,
     virtual_poly::VPAuxInfo,
 };
@@ -18,7 +18,7 @@ impl<F: PrimeField> SumCheckVerifier<F> for IOPVerifierState<F> {
     type ProverMessage = IOPProverMessage<F>;
     type Challenge = F;
     type Transcript = IOPTranscript<F>;
-    type SubClaim = SubClaim<F>;
+    type SumCheckSubClaim = SumCheckSubClaim<F>;
 
     /// Initialize the verifier's state.
     fn verifier_init(index_info: &Self::VPAuxInfo) -> Self {
@@ -91,7 +91,7 @@ impl<F: PrimeField> SumCheckVerifier<F> for IOPVerifierState<F> {
     fn check_and_generate_subclaim(
         &self,
         asserted_sum: &F,
-    ) -> Result<Self::SubClaim, PolyIOPErrors> {
+    ) -> Result<Self::SumCheckSubClaim, PolyIOPErrors> {
         let start = start_timer!(|| "sum check check and generate subclaim");
         if !self.finished {
             return Err(PolyIOPErrors::InvalidVerifier(
@@ -161,7 +161,7 @@ impl<F: PrimeField> SumCheckVerifier<F> for IOPVerifierState<F> {
             }
         }
         end_timer!(start);
-        Ok(SubClaim {
+        Ok(SumCheckSubClaim {
             point: self.challenges.clone(),
             // the last expected value (not checked within this function) will be included in the
             // subclaim

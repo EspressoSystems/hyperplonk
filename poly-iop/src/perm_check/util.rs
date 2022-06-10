@@ -8,7 +8,8 @@ use std::rc::Rc;
 
 /// Compute `Q(x)` which a virtual polynomial of degree 2 defined as
 ///
-/// Q(x) := prod(1,x) - prod(x, 0) - prod(x, 1)
+/// Q(x) := prod(1,x)
+///       - prod(x, 0) * prod(x, 1)
 ///       + alpha * (
 ///             (g(x) + beta * s_perm(x) + gamma) * prod(0, x)
 ///           - (f(x) + beta * s_id(x)   + gamma))
@@ -37,6 +38,9 @@ pub(super) fn build_q_x<F: PrimeField>(
     // - numerator
     // - denominator
     let prod_0x = Rc::new(prods[1].clone());
+    let prod_1x = Rc::new(prods[2].clone());
+    let prod_x1 = Rc::new(prods[3].clone());
+    let prod_x0 = Rc::new(prods[4].clone());
     let numerator = Rc::new(prods[5].clone());
     let denominator = Rc::new(prods[6].clone());
 
@@ -49,13 +53,12 @@ pub(super) fn build_q_x<F: PrimeField>(
     // - (f(x) + beta * s_id(x)   + gamma) * alpha
     res.add_mle_list([numerator], -*alpha)?;
 
-    // Q(x) := prod(1,x) - prod(x, 0) - prod(x, 1)
+    // Q(x) := prod(1,x) - prod(x, 0) * prod(x, 1)
     //       + alpha * (
     //             (g(x) + beta * s_perm(x) + gamma) * prod(0, x)
     //           - (f(x) + beta * s_id(x)   + gamma))
-    let tmp = &(&prods[2] - &prods[3]) - &prods[4];
-    let tmp = Rc::new(tmp);
-    res.add_mle_list([tmp], F::one())?;
+    res.add_mle_list([prod_x0, prod_x1], -F::one())?;
+    res.add_mle_list([prod_1x], F::one())?;
 
     end_timer!(start);
     Ok(res)

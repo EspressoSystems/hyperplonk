@@ -105,7 +105,8 @@ fn bench_zero_check() -> Result<(), PolyIOPErrors> {
                 let mut transcript = <PolyIOP<Fr> as ZeroCheck<Fr>>::init_transcript();
                 transcript.append_message(b"testing", b"initializing transcript for testing")?;
                 let subclaim =
-                    <PolyIOP<Fr> as ZeroCheck<Fr>>::verify(&proof, &poly_info, &mut transcript)?.0;
+                    <PolyIOP<Fr> as ZeroCheck<Fr>>::verify(&proof, &poly_info, &mut transcript)?
+                        .sum_check_sub_claim;
                 assert!(
                     poly.evaluate(&subclaim.point)? == subclaim.expected_evaluation,
                     "wrong subclaim"
