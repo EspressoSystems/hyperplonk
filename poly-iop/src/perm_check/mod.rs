@@ -2,9 +2,10 @@
 
 use crate::{
     errors::PolyIOPErrors,
-    perm_check::util::{build_q_x, identity_permutation_mle},
+    perm_check::util::{build_q_x, compute_prod_0, identity_permutation_mle},
     structs::IOPProof,
     transcript::IOPTranscript,
+    utils::get_index,
     PolyIOP, VirtualPolynomial, ZeroCheck,
 };
 use ark_ff::PrimeField;
@@ -24,6 +25,41 @@ pub trait PermutationCheck<F: PrimeField>: ZeroCheck<F> {
     /// may be initialized by this complex protocol, and passed to the
     /// PermutationCheck prover/verifier.
     fn init_transcript() -> Self::Transcript;
+
+    /// Compute the following 5 polynomials
+    /// - prod(x)
+    /// - prod(0, x)
+    /// - prod(1, x)
+    /// - prod(x, 0)
+    /// - prod(x, 1)
+    /// - numerator
+    /// - denominator
+    ///
+    /// where
+    /// - `prod(0,x) := prod(0, x0, x1, …, xn)` which is the MLE over the
+    /// evaluations of the following polynomial on the boolean hypercube
+    /// {0,1}^n:
+    ///
+    ///  (f(x) + \beta s_id(x) + \gamma)/(g(x) + \beta s_perm(x) + \gamma)
+    ///
+    ///   where
+    ///   - beta and gamma are challenges
+    ///   - f(x), g(x), s_id(x), s_perm(x) are mle-s
+    ///
+    /// - `prod(1,x) := prod(x, 0) * prod(x, 1)`
+    /// - numerator is the MLE for `f(x) + \beta s_id(x) + \gamma`
+    /// - denominator is the MLE for `g(x) + \beta s_perm(x) + \gamma`
+    ///
+    /// The caller needs to check num_vars matches in f/g/s_id/s_perm
+    /// Cost: linear in N.
+    fn compute_products(
+        beta: &F,
+        gamma: &F,
+        fx: &DenseMultilinearExtension<F>,
+        gx: &DenseMultilinearExtension<F>,
+        s_id: &DenseMultilinearExtension<F>,
+        s_perm: &DenseMultilinearExtension<F>,
+    ) -> Result<[DenseMultilinearExtension<F>; 7], PolyIOPErrors>;
 
     /// Initialize the prover to argue that an MLE g(x) is a permutation of
     /// MLE f(x) over a permutation given by s_perm.
@@ -85,6 +121,122 @@ impl<F: PrimeField> PermutationCheck<F> for PolyIOP<F> {
     /// PermutationCheck prover/verifier.
     fn init_transcript() -> Self::Transcript {
         IOPTranscript::<F>::new(b"Initializing PermutationCheck transcript")
+    }
+
+    /// Compute the following 5 polynomials
+    /// - prod(x)
+    /// - prod(0, x)
+    /// - prod(1, x)
+    /// - prod(x, 0)
+    /// - prod(x, 1)
+    /// - numerator
+    /// - denominator
+    ///
+    /// where
+    /// - `prod(0,x) := prod(0, x0, x1, …, xn)` which is the MLE over the
+    /// evaluations of the following polynomial on the boolean hypercube
+    /// {0,1}^n:
+    ///
+    ///  (f(x) + \beta s_id(x) + \gamma)/(g(x) + \beta s_perm(x) + \gamma)
+    ///
+    ///   where
+    ///   - beta and gamma are challenges
+    ///   - f(x), g(x), s_id(x), s_perm(x) are mle-s
+    ///
+    /// - `prod(1,x) := prod(x, 0) * prod(x, 1)`
+    /// - numerator is the MLE for `f(x) + \beta s_id(x) + \gamma`
+    /// - denominator is the MLE for `g(x) + \beta s_perm(x) + \gamma`
+    ///
+    /// The caller needs to check num_vars matches in f/g/s_id/s_perm
+    /// Cost: linear in N.
+    fn compute_products(
+        beta: &F,
+        gamma: &F,
+        fx: &DenseMultilinearExtension<F>,
+        gx: &DenseMultilinearExtension<F>,
+        s_id: &DenseMultilinearExtension<F>,
+        s_perm: &DenseMultilinearExtension<F>,
+    ) -> Result<[DenseMultilinearExtension<F>; 7], PolyIOPErrors> {
+        let start = start_timer!(|| "compute all prod polynomial");
+
+        let num_vars = fx.num_vars;
+
+        // ===================================
+        // prod(0, x)
+        // ===================================
+        let (prod_0x, numerator, denominator) = compute_prod_0(beta, gamma, fx, gx, s_id, s_perm)?;
+
+        // ===================================
+        // prod(1, x)
+        // ===================================
+        //
+        // `prod(1, x)` can be computed via recursing the following formula for 2^n-1
+        // times
+        //
+        // `prod(1, x_1, ..., x_n) :=
+        //      prod(x_1, x_2, ..., x_n, 0) * prod(x_1, x_2, ..., x_n, 1)`
+        //
+        // At any given step, the right hand side of the equation
+        // is available via either eval_0x or the current view of eval_1x
+        let eval_0x = &prod_0x.evaluations;
+        let mut eval_1x = vec![];
+        for x in 0..(1 << num_vars) - 1 {
+            // sign will decide if the evaluation should be looked up from eval_0x or
+            // eval_1x; x_zero_index is the index for the evaluation (x_2, ..., x_n,
+            // 0); x_one_index is the index for the evaluation (x_2, ..., x_n, 1);
+            let (x_zero_index, x_one_index, sign) = get_index(x, num_vars);
+            if !sign {
+                eval_1x.push(eval_0x[x_zero_index] * eval_0x[x_one_index]);
+            } else {
+                // sanity check: if we are trying to look up from the eval_1x table,
+                // then the target index must already exist
+                if x_zero_index >= eval_1x.len() || x_one_index >= eval_1x.len() {
+                    return Err(PolyIOPErrors::ShouldNotArrive);
+                }
+                eval_1x.push(eval_1x[x_zero_index] * eval_1x[x_one_index]);
+            }
+        }
+        // prod(1, 1, ..., 1) := 0
+        eval_1x.push(F::zero());
+
+        // ===================================
+        // prod(x)
+        // ===================================
+        // prod(x)'s evaluation is indeed `e := [eval_0x[..], eval_1x[..]].concat()`
+        let eval = [eval_0x.as_slice(), eval_1x.as_slice()].concat();
+
+        // ===================================
+        // prod(x, 0) and prod(x, 1)
+        // ===================================
+        //
+        // now we compute eval_x0 and eval_x1
+        // eval_0x will be the odd coefficients of eval
+        // and eval_1x will be the even coefficients of eval
+        let mut eval_x0 = vec![];
+        let mut eval_x1 = vec![];
+        for (x, &prod_x) in eval.iter().enumerate() {
+            if x & 1 == 0 {
+                eval_x0.push(prod_x);
+            } else {
+                eval_x1.push(prod_x);
+            }
+        }
+
+        let prod_1x = DenseMultilinearExtension::from_evaluations_vec(num_vars, eval_1x);
+        let prod_x0 = DenseMultilinearExtension::from_evaluations_vec(num_vars, eval_x0);
+        let prod_x1 = DenseMultilinearExtension::from_evaluations_vec(num_vars, eval_x1);
+        let prod = DenseMultilinearExtension::from_evaluations_vec(num_vars + 1, eval);
+
+        end_timer!(start);
+        Ok([
+            prod,
+            prod_0x,
+            prod_1x,
+            prod_x0,
+            prod_x1,
+            numerator,
+            denominator,
+        ])
     }
 
     /// Initialize the prover to argue that an MLE g(x) is a permutation of
@@ -163,14 +315,14 @@ fn prove_internal<F: PrimeField>(
         ));
     }
 
-    // sample challenges := [alpha, beta, gamma]
-    let challenges = transcript.get_and_append_challenge_vectors(b"q(x) challenge", 2)?;
-
     // identity permutation
     let s_id = identity_permutation_mle::<F>(num_vars);
 
     // compute q(x)
-    let q_x = build_q_x(alpha, &challenges[0], &challenges[1], fx, gx, &s_id, s_perm)?;
+    let beta = transcript.get_and_append_challenge(b"beta")?;
+    let gamma = transcript.get_and_append_challenge(b"gamma")?;
+
+    let q_x = build_q_x(alpha, &beta, &gamma, fx, gx, &s_id, s_perm)?;
 
     let iop_proof = <PolyIOP<F> as ZeroCheck<F>>::prove(&q_x, transcript)?;
 
