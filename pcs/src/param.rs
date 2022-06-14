@@ -18,11 +18,8 @@ pub struct Evaluations<C: AffineCurve> {
 pub struct UniversalParams<E: PairingEngine> {
     /// prover parameters
     pub prover_param: ProverParam<E>,
-    /// g^randomness: g^t1, g^t2, ...
-    #[cfg(not(feature = "group-switched"))]
-    pub g_mask: Vec<E::G1Affine>,
-    #[cfg(feature = "group-switched")]
-    pub g_mask: Vec<E::G2Affine>,
+    /// h^randomness: h^t1, h^t2, ...
+    pub h_mask: Vec<E::G2Affine>,
 }
 
 /// Prover Parameters
@@ -69,14 +66,8 @@ pub struct VerifierParam<E: PairingEngine> {
     /// generator of G2
     #[cfg(not(feature = "group-switched"))]
     pub h: E::G2Affine,
-    #[cfg(feature = "group-switched")]
-    pub h: E::G1Affine,
-
-    /// g^t1, g^t2, ...
-    #[cfg(not(feature = "group-switched"))]
-    pub g_mask: Vec<E::G1Affine>,
-    #[cfg(feature = "group-switched")]
-    pub g_mask: Vec<E::G2Affine>,
+    /// h^t1, h^t2, ...
+    pub h_mask: Vec<E::G2Affine>,
 }
 
 impl<E: PairingEngine> UniversalParams<E> {
@@ -91,7 +82,7 @@ impl<E: PairingEngine> UniversalParams<E> {
             num_vars: self.prover_param.num_vars,
             g: self.prover_param.g,
             h: self.prover_param.h,
-            g_mask: self.g_mask.clone(),
+            h_mask: self.h_mask.clone(),
         }
     }
 
@@ -122,7 +113,7 @@ impl<E: PairingEngine> UniversalParams<E> {
             num_vars: supported_num_vars,
             g: self.prover_param.g,
             h: self.prover_param.h,
-            g_mask: self.g_mask[to_reduce..].to_vec(),
+            h_mask: self.h_mask[to_reduce..].to_vec(),
         };
         Ok((ck, vk))
     }
@@ -229,26 +220,21 @@ impl<E: PairingEngine> UniversalParams<E> {
         end_timer!(pp_generation_timer);
 
         let vp_generation_timer = start_timer!(|| "VP generation");
-        let g_mask = {
+        let h_mask = {
             let window_size = FixedBaseMSM::get_mul_window_size(num_vars);
-            let g_table = FixedBaseMSM::get_window_table(scalar_bits, window_size, g);
-
-            #[cfg(not(feature = "group-switched"))]
-            let res = E::G1Projective::batch_normalization_into_affine(
-                &FixedBaseMSM::multi_scalar_mul(scalar_bits, window_size, &g_table, &t),
-            );
-
-            #[cfg(feature = "group-switched")]
-            let res = E::G2Projective::batch_normalization_into_affine(
-                &FixedBaseMSM::multi_scalar_mul(scalar_bits, window_size, &g_table, &t),
-            );
-            res
+            let h_table = FixedBaseMSM::get_window_table(scalar_bits, window_size, h);
+            E::G2Projective::batch_normalization_into_affine(&FixedBaseMSM::multi_scalar_mul(
+                scalar_bits,
+                window_size,
+                &h_table,
+                &t,
+            ))
         };
         end_timer!(vp_generation_timer);
         end_timer!(total_timer);
         Ok(Self {
             prover_param: pp,
-            g_mask,
+            h_mask,
         })
     }
 }

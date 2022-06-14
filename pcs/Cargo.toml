@@ -24,9 +24,8 @@ path = "benches/bench.rs"
 harness = false
 
 [features]
-# by default we switch the groups
-# default = [ "parallel", "print-trace", "group-switched" ]
-default = [ "parallel", "group-switched" ]
+# default = [ "parallel", "print-trace" ]
+default = [ "parallel" ]
 parallel = [ 
     "ark-std/parallel", 
     "ark-ff/parallel",  

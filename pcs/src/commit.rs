@@ -28,9 +28,6 @@ pub struct Commitment<E: PairingEngine> {
 /// proof of opening
 pub struct Proof<E: PairingEngine> {
     /// Evaluation of quotients
-    #[cfg(not(feature = "group-switched"))]
-    pub proofs: Vec<E::G2Affine>,
-    #[cfg(feature = "group-switched")]
     pub proofs: Vec<E::G1Affine>,
 }
 
@@ -106,9 +103,9 @@ impl<E: PairingEngine> MultilinearCommitmentScheme<E> for KZGMultilinearPC<E> {
 
         let mut proofs = Vec::new();
 
-        for (i, (&point_at_k, hi)) in point
+        for (i, (&point_at_k, gi)) in point
             .iter()
-            .zip(prover_param.powers_of_h.iter())
+            .zip(prover_param.powers_of_g.iter())
             .take(nv)
             .enumerate()
         {
@@ -133,8 +130,8 @@ impl<E: PairingEngine> MultilinearCommitmentScheme<E> for KZGMultilinearPC<E> {
             q[k] = cur_q;
             r[k - 1] = cur_r;
 
-            // this is a MSM over G2 and is likely to be the bottleneck
-            proofs.push(VariableBaseMSM::multi_scalar_mul(&hi.evals, &scalars).into_affine());
+            // this is a MSM over G1 and is likely to be the bottleneck
+            proofs.push(VariableBaseMSM::multi_scalar_mul(&gi.evals, &scalars).into_affine());
             end_timer!(ith_round);
         }
 
@@ -161,38 +158,32 @@ impl<E: PairingEngine> MultilinearCommitmentScheme<E> for KZGMultilinearPC<E> {
         let scalar_size = E::Fr::size_in_bits();
         let window_size = FixedBaseMSM::get_mul_window_size(verifier_param.num_vars);
 
-        let g_table = FixedBaseMSM::get_window_table(
+        let h_table = FixedBaseMSM::get_window_table(
             scalar_size,
             window_size,
-            verifier_param.g.into_projective(),
+            verifier_param.h.into_projective(),
         );
-        #[cfg(not(feature = "group-switched"))]
-        let g_mul: Vec<E::G1Projective> =
-            FixedBaseMSM::multi_scalar_mul(scalar_size, window_size, &g_table, point);
-        #[cfg(feature = "group-switched")]
-        let g_mul: Vec<E::G2Projective> =
-            FixedBaseMSM::multi_scalar_mul(scalar_size, window_size, &g_table, point);
+        let h_mul: Vec<E::G2Projective> =
+            FixedBaseMSM::multi_scalar_mul(scalar_size, window_size, &h_table, point);
 
-        let mut g1_vec: Vec<_> = (0..verifier_param.num_vars)
-            .map(|i| verifier_param.g_mask[i].into_projective() - g_mul[i])
+        let g2_vec: Vec<_> = (0..verifier_param.num_vars)
+            .map(|i| verifier_param.h_mask[i].into_projective() - h_mul[i])
             .collect();
-        g1_vec.push(verifier_param.g.mul(value) - commitment.g_product.into_projective());
-
-        #[cfg(not(feature = "group-switched"))]
-        let g1_vec: Vec<E::G1Affine> = E::G1Projective::batch_normalization_into_affine(&g1_vec);
-        #[cfg(feature = "group-switched")]
-        let g1_vec: Vec<E::G2Affine> = E::G2Projective::batch_normalization_into_affine(&g1_vec);
-        let tmp = g1_vec[verifier_param.num_vars];
+        let g2_vec: Vec<E::G2Affine> = E::G2Projective::batch_normalization_into_affine(&g2_vec);
         end_timer!(prepare_inputs_timer);
 
         let pairing_product_timer = start_timer!(|| "pairing product");
 
-        #[cfg(not(feature = "group-switched"))]
-        let mut pairings: Vec<_> = g1_vec
-            .into_iter()
-            .take(verifier_param.num_vars)
-            .map(E::G1Prepared::from)
-            .zip(proof.proofs.iter().map(|&x| E::G2Prepared::from(x)))
+        let mut pairings: Vec<_> = proof
+            .proofs
+            .iter()
+            .map(|&x| E::G1Prepared::from(x))
+            .zip(
+                g2_vec
+                    .into_iter()
+                    .take(verifier_param.num_vars)
+                    .map(E::G2Prepared::from),
+            )
             .collect();
 
         #[cfg(feature = "group-switched")]
@@ -211,7 +202,10 @@ impl<E: PairingEngine> MultilinearCommitmentScheme<E> for KZGMultilinearPC<E> {
 
         #[cfg(not(feature = "group-switched"))]
         pairings.push((
-            E::G1Prepared::from(tmp),
+            E::G1Prepared::from(
+                (verifier_param.g.mul(value) - commitment.g_product.into_projective())
+                    .into_affine(),
+            ),
             E::G2Prepared::from(verifier_param.h),
         ));
 
