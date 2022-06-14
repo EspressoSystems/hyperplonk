@@ -11,8 +11,12 @@ mod virtual_poly;
 mod zero_check;
 
 pub use errors::PolyIOPErrors;
+pub use perm_check::{
+    util::{identity_permutation_mle, random_permutation_mle},
+    PermutationCheck,
+};
 pub use sum_check::SumCheck;
-pub use virtual_poly::VirtualPolynomial;
+pub use virtual_poly::{VPAuxInfo, VirtualPolynomial};
 pub use zero_check::ZeroCheck;
 
 #[derive(Clone, Debug, Default, Copy)]

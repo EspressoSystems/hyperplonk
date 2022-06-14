@@ -1,22 +1,23 @@
 //! Main module for the ZeroCheck protocol.
 
-use crate::{
-    errors::PolyIOPErrors,
-    structs::{IOPProof, SubClaim},
-    sum_check::SumCheck,
-    transcript::IOPTranscript,
-    virtual_poly::{VPAuxInfo, VirtualPolynomial},
-    PolyIOP,
-};
+use crate::{errors::PolyIOPErrors, sum_check::SumCheck, transcript::IOPTranscript, PolyIOP};
 use ark_ff::PrimeField;
 use ark_std::{end_timer, start_timer};
 
-pub trait ZeroCheck<F: PrimeField> {
-    type Proof;
-    type VirtualPolynomial;
-    type VPAuxInfo;
-    type SubClaim;
-    type Transcript;
+/// A zero check IOP subclaim for \hat f(x) is 0, consists of the following:
+///   - the SubClaim from the SumCheck
+///   - the initial challenge r which is used to build eq(x, r) in ZeroCheck
+#[derive(Clone, Debug, Default, PartialEq)]
+pub struct ZeroCheckSubClaim<F: PrimeField, SC: SumCheck<F>> {
+    // the SubClaim from the SumCheck
+    pub sum_check_sub_claim: SC::SumCheckSubClaim,
+    // the initial challenge r which is used to build eq(x, r)
+    pub init_challenge: Vec<F>,
+}
+
+/// A ZeroCheck is derived from SumCheck.
+pub trait ZeroCheck<F: PrimeField>: SumCheck<F> {
+    type ZeroCheckSubClaim;
 
     /// Initialize the system with a transcript
     ///
@@ -38,19 +39,14 @@ pub trait ZeroCheck<F: PrimeField> {
         proof: &Self::Proof,
         aux_info: &Self::VPAuxInfo,
         transcript: &mut Self::Transcript,
-    ) -> Result<Self::SubClaim, PolyIOPErrors>;
+    ) -> Result<Self::ZeroCheckSubClaim, PolyIOPErrors>;
 }
 
 impl<F: PrimeField> ZeroCheck<F> for PolyIOP<F> {
-    type Proof = IOPProof<F>;
-    type VirtualPolynomial = VirtualPolynomial<F>;
-    type VPAuxInfo = VPAuxInfo<F>;
-
     /// A ZeroCheck SubClaim consists of
-    /// - the SubClaim from the ZeroCheck
+    /// - the SubClaim from the SumCheck
     /// - the initial challenge r which is used to build eq(x, r)
-    type SubClaim = (SubClaim<F>, Vec<F>);
-    type Transcript = IOPTranscript<F>;
+    type ZeroCheckSubClaim = ZeroCheckSubClaim<F, Self>;
 
     /// Initialize the system with a transcript
     ///
@@ -98,7 +94,7 @@ impl<F: PrimeField> ZeroCheck<F> for PolyIOP<F> {
         proof: &Self::Proof,
         fx_aux_info: &Self::VPAuxInfo,
         transcript: &mut Self::Transcript,
-    ) -> Result<Self::SubClaim, PolyIOPErrors> {
+    ) -> Result<Self::ZeroCheckSubClaim, PolyIOPErrors> {
         let start = start_timer!(|| "zero check verify");
 
         // check that the sum is zero
@@ -120,7 +116,10 @@ impl<F: PrimeField> ZeroCheck<F> for PolyIOP<F> {
             <Self as SumCheck<F>>::verify(F::zero(), proof, &hat_fx_aux_info, transcript)?;
 
         end_timer!(start);
-        Ok((subclaim, r))
+        Ok(ZeroCheckSubClaim {
+            sum_check_sub_claim: subclaim,
+            init_challenge: r,
+        })
     }
 }
 
@@ -152,7 +151,8 @@ mod test {
             let mut transcript = <PolyIOP<Fr> as ZeroCheck<Fr>>::init_transcript();
             transcript.append_message(b"testing", b"initializing transcript for testing")?;
             let subclaim =
-                <PolyIOP<Fr> as ZeroCheck<Fr>>::verify(&proof, &poly_info, &mut transcript)?.0;
+                <PolyIOP<Fr> as ZeroCheck<Fr>>::verify(&proof, &poly_info, &mut transcript)?
+                    .sum_check_sub_claim;
             assert!(
                 poly.evaluate(&subclaim.point)? == subclaim.expected_evaluation,
                 "wrong subclaim"

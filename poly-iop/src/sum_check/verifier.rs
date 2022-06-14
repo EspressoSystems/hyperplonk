@@ -1,9 +1,9 @@
 //! Verifier subroutines for a SumCheck protocol.
 
-use super::SumCheckVerifier;
+use super::{SumCheckSubClaim, SumCheckVerifier};
 use crate::{
     errors::PolyIOPErrors,
-    structs::{IOPProverMessage, IOPVerifierState, SubClaim},
+    structs::{IOPProverMessage, IOPVerifierState},
     transcript::IOPTranscript,
     virtual_poly::VPAuxInfo,
 };
@@ -18,7 +18,7 @@ impl<F: PrimeField> SumCheckVerifier<F> for IOPVerifierState<F> {
     type ProverMessage = IOPProverMessage<F>;
     type Challenge = F;
     type Transcript = IOPTranscript<F>;
-    type SubClaim = SubClaim<F>;
+    type SumCheckSubClaim = SumCheckSubClaim<F>;
 
     /// Initialize the verifier's state.
     fn verifier_init(index_info: &Self::VPAuxInfo) -> Self {
@@ -91,7 +91,7 @@ impl<F: PrimeField> SumCheckVerifier<F> for IOPVerifierState<F> {
     fn check_and_generate_subclaim(
         &self,
         asserted_sum: &F,
-    ) -> Result<Self::SubClaim, PolyIOPErrors> {
+    ) -> Result<Self::SumCheckSubClaim, PolyIOPErrors> {
         let start = start_timer!(|| "sum check check and generate subclaim");
         if !self.finished {
             return Err(PolyIOPErrors::InvalidVerifier(
@@ -161,7 +161,7 @@ impl<F: PrimeField> SumCheckVerifier<F> for IOPVerifierState<F> {
             }
         }
         end_timer!(start);
-        Ok(SubClaim {
+        Ok(SumCheckSubClaim {
             point: self.challenges.clone(),
             // the last expected value (not checked within this function) will be included in the
             // subclaim
@@ -221,7 +221,7 @@ fn interpolate_uni_poly<F: PrimeField>(p_i: &[F], eval_at: F) -> Result<F, PolyI
     if p_i.len() <= 20 {
         let last_denominator = F::from(u64_factorial(len - 1));
         let mut ratio_numerator = 1i64;
-        let mut ratio_enumerator = 1u64;
+        let mut ratio_denominator = 1u64;
 
         for i in (0..len).rev() {
             let ratio_numerator_f = if ratio_numerator < 0 {
@@ -230,19 +230,19 @@ fn interpolate_uni_poly<F: PrimeField>(p_i: &[F], eval_at: F) -> Result<F, PolyI
                 F::from(ratio_numerator as u64)
             };
 
-            res += p_i[i] * prod * F::from(ratio_enumerator)
+            res += p_i[i] * prod * F::from(ratio_denominator)
                 / (last_denominator * ratio_numerator_f * evals[i]);
 
             // compute denom for the next step is current_denom * (len-i)/i
             if i != 0 {
                 ratio_numerator *= -(len as i64 - i as i64);
-                ratio_enumerator *= i as u64;
+                ratio_denominator *= i as u64;
             }
         }
     } else if p_i.len() <= 33 {
         let last_denominator = F::from(u128_factorial(len - 1));
         let mut ratio_numerator = 1i128;
-        let mut ratio_enumerator = 1u128;
+        let mut ratio_denominator = 1u128;
 
         for i in (0..len).rev() {
             let ratio_numerator_f = if ratio_numerator < 0 {
@@ -251,13 +251,13 @@ fn interpolate_uni_poly<F: PrimeField>(p_i: &[F], eval_at: F) -> Result<F, PolyI
                 F::from(ratio_numerator as u128)
             };
 
-            res += p_i[i] * prod * F::from(ratio_enumerator)
+            res += p_i[i] * prod * F::from(ratio_denominator)
                 / (last_denominator * ratio_numerator_f * evals[i]);
 
             // compute denom for the next step is current_denom * (len-i)/i
             if i != 0 {
                 ratio_numerator *= -(len as i128 - i as i128);
-                ratio_enumerator *= i as u128;
+                ratio_denominator *= i as u128;
             }
         }
     } else {
