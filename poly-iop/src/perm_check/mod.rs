@@ -194,7 +194,7 @@ impl<F: PrimeField> PermutationCheck<F> for PolyIOP<F> {
     ) -> Result<(), PolyIOPErrors> {
         if challenge.alpha.is_some() {
             return Err(PolyIOPErrors::InvalidTranscript(
-                "alpha is already sampled".to_string(),
+                "alpha should not be sampled at the current stage".to_string(),
             ));
         }
         transcript.append_field_element(b"prod(x)", prod_x_binding)?;
@@ -441,9 +441,10 @@ mod test {
         errors::PolyIOPErrors,
         perm_check::{prove_internal, util::identity_permutation_mle},
         random_permutation_mle,
+        structs::IOPProof,
         utils::bit_decompose,
         virtual_poly::VPAuxInfo,
-        PolyIOP,
+        PolyIOP, VirtualPolynomial,
     };
     use ark_bls12_381::Fr;
     use ark_ff::{PrimeField, Zero};
@@ -454,6 +455,32 @@ mod test {
     fn mock_commit<F: PrimeField>(_f: &DenseMultilinearExtension<F>) -> F {
         let mut rng = test_rng();
         F::rand(&mut rng)
+    }
+
+    fn test_permutation_check_helper(
+        f: &DenseMultilinearExtension<Fr>,
+        g: &DenseMultilinearExtension<Fr>,
+        s_perm: &DenseMultilinearExtension<Fr>,
+    ) -> Result<(IOPProof<Fr>, VirtualPolynomial<Fr>), PolyIOPErrors> {
+        let mut transcript = <PolyIOP<Fr> as PermutationCheck<Fr>>::init_transcript();
+        transcript.append_message(b"testing", b"initializing transcript for testing")?;
+
+        let mut challenge =
+            <PolyIOP<Fr> as PermutationCheck<Fr>>::generate_challenge(&mut transcript)?;
+
+        let prod_x_and_aux =
+            <PolyIOP<Fr> as PermutationCheck<Fr>>::compute_products(&challenge, f, g, s_perm)?;
+
+        let prod_x_binding = mock_commit(&prod_x_and_aux[0]);
+
+        <PolyIOP<Fr> as PermutationCheck<Fr>>::update_challenge(
+            &mut challenge,
+            &mut transcript,
+            &prod_x_binding,
+        )?;
+        let alpha = challenge.alpha.unwrap();
+
+        prove_internal(&prod_x_and_aux, &alpha, &mut transcript)
     }
 
     fn test_permutation_check(nv: usize) -> Result<(), PolyIOPErrors> {
@@ -472,26 +499,7 @@ mod test {
             // s_perm is the identity map
             let s_perm = identity_permutation_mle(nv);
 
-            let mut transcript = <PolyIOP<Fr> as PermutationCheck<Fr>>::init_transcript();
-            transcript.append_message(b"testing", b"initializing transcript for testing")?;
-
-            let mut challenge =
-                <PolyIOP<Fr> as PermutationCheck<Fr>>::generate_challenge(&mut transcript)?;
-
-            let prod_x_and_aux = <PolyIOP<Fr> as PermutationCheck<Fr>>::compute_products(
-                &challenge, &w, &w, &s_perm,
-            )?;
-
-            let prod_x_binding = mock_commit(&prod_x_and_aux[0]);
-
-            <PolyIOP<Fr> as PermutationCheck<Fr>>::update_challenge(
-                &mut challenge,
-                &mut transcript,
-                &prod_x_binding,
-            )?;
-            let alpha = challenge.alpha.unwrap();
-
-            let (proof, q_x) = prove_internal(&prod_x_and_aux, &alpha, &mut transcript)?;
+            let (proof, q_x) = test_permutation_check_helper(&w, &w, &s_perm)?;
 
             let mut transcript = <PolyIOP<Fr> as PermutationCheck<Fr>>::init_transcript();
             transcript.append_message(b"testing", b"initializing transcript for testing")?;
@@ -520,25 +528,7 @@ mod test {
             // s_perm is a random map
             let s_perm = random_permutation_mle(nv, &mut rng);
 
-            let mut transcript = <PolyIOP<Fr> as PermutationCheck<Fr>>::init_transcript();
-            transcript.append_message(b"testing", b"initializing transcript for testing")?;
-
-            let mut challenge =
-                <PolyIOP<Fr> as PermutationCheck<Fr>>::generate_challenge(&mut transcript)?;
-
-            let prod_x_and_aux = <PolyIOP<Fr> as PermutationCheck<Fr>>::compute_products(
-                &challenge, &w, &w, &s_perm,
-            )?;
-
-            let prod_x_binding = mock_commit(&prod_x_and_aux[0]);
-
-            <PolyIOP<Fr> as PermutationCheck<Fr>>::update_challenge(
-                &mut challenge,
-                &mut transcript,
-                &prod_x_binding,
-            )?;
-            let alpha = challenge.alpha.unwrap();
-            let (proof, q_x) = prove_internal(&prod_x_and_aux, &alpha, &mut transcript)?;
+            let (proof, q_x) = test_permutation_check_helper(&w, &w, &s_perm)?;
 
             let mut transcript = <PolyIOP<Fr> as PermutationCheck<Fr>>::init_transcript();
             transcript.append_message(b"testing", b"initializing transcript for testing")?;
@@ -577,26 +567,7 @@ mod test {
             // s_perm is the identity map
             let s_perm = identity_permutation_mle(nv);
 
-            let mut transcript = <PolyIOP<Fr> as PermutationCheck<Fr>>::init_transcript();
-            transcript.append_message(b"testing", b"initializing transcript for testing")?;
-
-            let mut challenge =
-                <PolyIOP<Fr> as PermutationCheck<Fr>>::generate_challenge(&mut transcript)?;
-
-            let prod_x_and_aux = <PolyIOP<Fr> as PermutationCheck<Fr>>::compute_products(
-                &challenge, &f, &g, &s_perm,
-            )?;
-
-            let prod_x_binding = mock_commit(&prod_x_and_aux[0]);
-
-            <PolyIOP<Fr> as PermutationCheck<Fr>>::update_challenge(
-                &mut challenge,
-                &mut transcript,
-                &prod_x_binding,
-            )?;
-            let alpha = challenge.alpha.unwrap();
-
-            let (proof, q_x) = prove_internal(&prod_x_and_aux, &alpha, &mut transcript)?;
+            let (proof, q_x) = test_permutation_check_helper(&f, &g, &s_perm)?;
 
             let mut transcript = <PolyIOP<Fr> as PermutationCheck<Fr>>::init_transcript();
             transcript.append_message(b"testing", b"initializing transcript for testing")?;
