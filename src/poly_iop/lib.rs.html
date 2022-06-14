@@ -38,6 +38,10 @@
 <span id="33">33</span>
 <span id="34">34</span>
 <span id="35">35</span>
+<span id="36">36</span>
+<span id="37">37</span>
+<span id="38">38</span>
+<span id="39">39</span>
 </pre><pre class="rust"><code><span class="kw">use</span> <span class="ident">ark_ff::PrimeField</span>;
 <span class="kw">use</span> <span class="ident">std::marker::PhantomData</span>;
 
@@ -51,8 +55,12 @@
 <span class="kw">mod</span> <span class="ident">zero_check</span>;
 
 <span class="kw">pub</span> <span class="kw">use</span> <span class="ident">errors::PolyIOPErrors</span>;
+<span class="kw">pub</span> <span class="kw">use</span> <span class="ident">perm_check</span>::{
+    <span class="ident">util</span>::{<span class="ident">identity_permutation_mle</span>, <span class="ident">random_permutation_mle</span>},
+    <span class="ident">PermutationCheck</span>,
+};
 <span class="kw">pub</span> <span class="kw">use</span> <span class="ident">sum_check::SumCheck</span>;
-<span class="kw">pub</span> <span class="kw">use</span> <span class="ident">virtual_poly::VirtualPolynomial</span>;
+<span class="kw">pub</span> <span class="kw">use</span> <span class="ident">virtual_poly</span>::{<span class="ident">VPAuxInfo</span>, <span class="ident">VirtualPolynomial</span>};
 <span class="kw">pub</span> <span class="kw">use</span> <span class="ident">zero_check::ZeroCheck</span>;
 
 <span class="attribute">#[<span class="ident">derive</span>(<span class="ident">Clone</span>, <span class="ident">Debug</span>, <span class="ident">Default</span>, <span class="ident">Copy</span>)]</span>

@@ -580,7 +580,7 @@
 <span class="doccomment">///</span>
 <span class="doccomment">/// The resulting polynomial is</span>
 <span class="doccomment">///</span>
-<span class="doccomment">/// $$\sum_{i=0}^{n} c_i \cdot \prod_{j=0}^{m_i} P_{ij} $$</span>
+<span class="doccomment">/// $$ \sum_{i=0}^{n} c_i \cdot \prod_{j=0}^{m_i} P_{ij} $$</span>
 <span class="doccomment">///</span>
 <span class="doccomment">/// Example:</span>
 <span class="doccomment">///  f = c0 * f0 * f1 * f2 + c1 * f3 * f4</span>
@@ -617,7 +617,7 @@
     <span class="kw">pub</span> <span class="ident">num_variables</span>: <span class="ident">usize</span>,
     <span class="doccomment">/// Associated field</span>
     <span class="attribute">#[<span class="ident">doc</span>(<span class="ident">hidden</span>)]</span>
-    <span class="kw">pub</span>(<span class="kw">crate</span>) <span class="ident">phantom</span>: <span class="ident">PhantomData</span><span class="op">&lt;</span><span class="ident">F</span><span class="op">&gt;</span>,
+    <span class="kw">pub</span> <span class="ident">phantom</span>: <span class="ident">PhantomData</span><span class="op">&lt;</span><span class="ident">F</span><span class="op">&gt;</span>,
 }
 
 <span class="kw">impl</span><span class="op">&lt;</span><span class="ident">F</span>: <span class="ident">PrimeField</span><span class="op">&gt;</span> <span class="ident">Add</span> <span class="kw">for</span> <span class="kw-2">&amp;</span><span class="ident">VirtualPolynomial</span><span class="op">&lt;</span><span class="ident">F</span><span class="op">&gt;</span> {
