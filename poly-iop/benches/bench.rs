@@ -147,16 +147,30 @@ fn bench_permutation_check() -> Result<(), PolyIOPErrors> {
 
         // s_perm is the identity map
         let s_perm = identity_permutation_mle(nv);
-        let alpha = Fr::rand(&mut rng);
+
         let proof = {
             let start = Instant::now();
             let mut transcript = <PolyIOP<Fr> as PermutationCheck<Fr>>::init_transcript();
             transcript.append_message(b"testing", b"initializing transcript for testing")?;
+
+            let mut challenge =
+                <PolyIOP<Fr> as PermutationCheck<Fr>>::generate_challenge(&mut transcript)?;
+
+            let prod_x_and_aux = <PolyIOP<Fr> as PermutationCheck<Fr>>::compute_products(
+                &challenge, &w, &w, &s_perm,
+            )?;
+
+            let prod_x_binding = mock_commit(&prod_x_and_aux[0]);
+
+            <PolyIOP<Fr> as PermutationCheck<Fr>>::update_challenge(
+                &mut challenge,
+                &mut transcript,
+                &prod_x_binding,
+            )?;
+
             let proof = <PolyIOP<Fr> as PermutationCheck<Fr>>::prove(
-                &w,
-                &w,
-                &s_perm,
-                &alpha,
+                &prod_x_and_aux,
+                &challenge,
                 &mut transcript,
             )?;
 
@@ -191,4 +205,9 @@ fn bench_permutation_check() -> Result<(), PolyIOPErrors> {
     }
 
     Ok(())
+}
+
+fn mock_commit(_f: &DenseMultilinearExtension<Fr>) -> Fr {
+    let mut rng = test_rng();
+    Fr::rand(&mut rng)
 }
