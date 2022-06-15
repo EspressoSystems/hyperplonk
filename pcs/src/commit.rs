@@ -18,14 +18,20 @@ pub struct Commitment<E: PairingEngine> {
     /// number of variables
     pub nv: usize,
     /// product of g as described by the vRAM paper
+    #[cfg(not(feature = "group-switched"))]
     pub g_product: E::G1Affine,
+    #[cfg(feature = "group-switched")]
+    pub g_product: E::G2Affine,
 }
 
 #[derive(CanonicalSerialize, CanonicalDeserialize, Clone, Debug)]
 /// proof of opening
 pub struct Proof<E: PairingEngine> {
     /// Evaluation of quotients
+    #[cfg(not(feature = "group-switched"))]
     pub proofs: Vec<E::G2Affine>,
+    #[cfg(feature = "group-switched")]
+    pub proofs: Vec<E::G1Affine>,
 }
 
 impl<E: PairingEngine> MultilinearCommitmentScheme<E> for KZGMultilinearPC<E> {
@@ -160,7 +166,11 @@ impl<E: PairingEngine> MultilinearCommitmentScheme<E> for KZGMultilinearPC<E> {
             window_size,
             verifier_param.g.into_projective(),
         );
+        #[cfg(not(feature = "group-switched"))]
         let g_mul: Vec<E::G1Projective> =
+            FixedBaseMSM::multi_scalar_mul(scalar_size, window_size, &g_table, point);
+        #[cfg(feature = "group-switched")]
+        let g_mul: Vec<E::G2Projective> =
             FixedBaseMSM::multi_scalar_mul(scalar_size, window_size, &g_table, point);
 
         let mut g1_vec: Vec<_> = (0..verifier_param.num_vars)
@@ -168,12 +178,16 @@ impl<E: PairingEngine> MultilinearCommitmentScheme<E> for KZGMultilinearPC<E> {
             .collect();
         g1_vec.push(verifier_param.g.mul(value) - commitment.g_product.into_projective());
 
+        #[cfg(not(feature = "group-switched"))]
         let g1_vec: Vec<E::G1Affine> = E::G1Projective::batch_normalization_into_affine(&g1_vec);
+        #[cfg(feature = "group-switched")]
+        let g1_vec: Vec<E::G2Affine> = E::G2Projective::batch_normalization_into_affine(&g1_vec);
         let tmp = g1_vec[verifier_param.num_vars];
         end_timer!(prepare_inputs_timer);
 
         let pairing_product_timer = start_timer!(|| "pairing product");
 
+        #[cfg(not(feature = "group-switched"))]
         let mut pairings: Vec<_> = g1_vec
             .into_iter()
             .take(verifier_param.num_vars)
@@ -181,9 +195,30 @@ impl<E: PairingEngine> MultilinearCommitmentScheme<E> for KZGMultilinearPC<E> {
             .zip(proof.proofs.iter().map(|&x| E::G2Prepared::from(x)))
             .collect();
 
+        #[cfg(feature = "group-switched")]
+        let mut pairings: Vec<_> = proof
+            .proofs
+            .iter()
+            .take(verifier_param.num_vars)
+            .map(|&x| E::G1Prepared::from(x))
+            .zip(
+                g1_vec
+                    .into_iter()
+                    .take(verifier_param.num_vars)
+                    .map(E::G2Prepared::from),
+            )
+            .collect();
+
+        #[cfg(not(feature = "group-switched"))]
         pairings.push((
             E::G1Prepared::from(tmp),
             E::G2Prepared::from(verifier_param.h),
+        ));
+
+        #[cfg(feature = "group-switched")]
+        pairings.push((
+            E::G1Prepared::from(verifier_param.h),
+            E::G2Prepared::from(tmp),
         ));
 
         let res = E::product_of_pairings(pairings.iter()) == E::Fqk::one();
