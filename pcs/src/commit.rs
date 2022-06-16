@@ -1,16 +1,15 @@
+use crate::{
+    KZGMultilinearPC, MultilinearCommitmentScheme, PCSErrors, ProverParam, UniversalParams,
+    VerifierParam,
+};
 use ark_ec::{
     msm::{FixedBaseMSM, VariableBaseMSM},
     AffineCurve, PairingEngine, ProjectiveCurve,
 };
 use ark_ff::PrimeField;
-use ark_poly::MultilinearExtension;
+use ark_poly::{DenseMultilinearExtension, MultilinearExtension};
 use ark_serialize::{CanonicalDeserialize, CanonicalSerialize, Read, SerializationError, Write};
-use ark_std::{end_timer, rand::RngCore, start_timer, vec::Vec, One, Zero};
-
-use crate::{
-    KZGMultilinearPC, MultilinearCommitmentScheme, PCSErrors, ProverParam, UniversalParams,
-    VerifierParam,
-};
+use ark_std::{end_timer, log2, rand::RngCore, start_timer, vec::Vec, One, Zero};
 
 #[derive(CanonicalSerialize, CanonicalDeserialize, Clone, Debug)]
 /// commitment
@@ -69,6 +68,36 @@ impl<E: PairingEngine> MultilinearCommitmentScheme<E> for KZGMultilinearPC<E> {
 
         end_timer!(commit_timer);
         Ok(Commitment { nv, g_product })
+    }
+
+    /// Generate a commitment for a list of polynomials.
+    ///
+    /// This function takes `\sum 2^num_vars[i]` number of scalar
+    /// multiplications over G1.
+    fn multi_commit(
+        prover_param: &Self::ProverParam,
+        polys: &[impl MultilinearExtension<E::Fr>],
+    ) -> Result<Self::Commitment, PCSErrors> {
+        let commit_timer = start_timer!(|| "commit");
+        let poly = merge_polynomials(polys);
+
+        let scalars: Vec<_> = poly
+            .to_evaluations()
+            .iter()
+            .map(|x| x.into_repr())
+            .collect();
+
+        let g_product = VariableBaseMSM::multi_scalar_mul(
+            &prover_param.powers_of_g[0].evals,
+            scalars.as_slice(),
+        )
+        .into_affine();
+
+        end_timer!(commit_timer);
+        Ok(Commitment {
+            nv: poly.num_vars,
+            g_product,
+        })
     }
 
     /// On input a polynomial `p` and a point `point`, outputs a proof for the
@@ -136,6 +165,30 @@ impl<E: PairingEngine> MultilinearCommitmentScheme<E> for KZGMultilinearPC<E> {
         Ok(Proof { proofs })
     }
 
+    /// On input a polynomial `p` and a point `point`, outputs a proof for the
+    /// same. This function does not need to take the evaluation value as an
+    /// input.
+    ///
+    /// This function takes 2^{num_var +1} number of scalar multiplications over
+    /// G2:
+    /// - it proceeds with `num_var` number of rounds,
+    /// - at round i, we compute an MSM for `2^{num_var - i + 1}` number of G2
+    ///   elements.
+    fn multi_open(
+        prover_param: &Self::ProverParam,
+        polynomials: &[impl MultilinearExtension<E::Fr>],
+        point: &[E::Fr],
+    ) -> Result<Self::Proof, PCSErrors> {
+        let open_timer = start_timer!(|| "open");
+
+        let poly = merge_polynomials(polynomials);
+
+        let proof = Self::open(prover_param, &poly, point)?;
+
+        end_timer!(open_timer);
+        Ok(proof)
+    }
+
     /// Verifies that `value` is the evaluation at `x` of the polynomial
     /// committed inside `comm`.
     ///
@@ -199,17 +252,50 @@ impl<E: PairingEngine> MultilinearCommitmentScheme<E> for KZGMultilinearPC<E> {
     }
 }
 
+/// Return the number of variables that one need for an MLE to
+/// batch the list of MLEs
+#[inline]
+fn get_nv<F: PrimeField>(polynomials: &[impl MultilinearExtension<F>]) -> usize {
+    polynomials.iter().map(|x| x.num_vars()).max().unwrap() + log2(polynomials.len()) as usize
+}
+
+fn merge_polynomials<F: PrimeField>(
+    polynomials: &[impl MultilinearExtension<F>],
+) -> DenseMultilinearExtension<F> {
+    let individual_max = polynomials.iter().map(|x| x.num_vars()).max()
+    // safe unwrap since polynomials is not empty
+    .unwrap();
+    let new_nv = get_nv(polynomials);
+    let mut scalars = vec![];
+    for poly in polynomials.iter() {
+        let mut scalar = poly.to_evaluations();
+
+        if poly.num_vars() < individual_max {
+            scalar
+                .extend_from_slice(vec![F::zero(); (1 << individual_max) - scalar.len()].as_ref());
+        }
+        scalars.extend_from_slice(scalar.as_slice());
+    }
+    scalars.extend_from_slice(vec![F::zero(); (1 << new_nv) - scalars.len()].as_ref());
+    DenseMultilinearExtension::from_evaluations_vec(new_nv, scalars)
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;
     use ark_bls12_381::Bls12_381;
     use ark_ec::PairingEngine;
-    use ark_poly::{DenseMultilinearExtension, MultilinearExtension, SparseMultilinearExtension};
-    use ark_std::{rand::RngCore, test_rng, vec::Vec, UniformRand};
+    use ark_poly::{DenseMultilinearExtension, MultilinearExtension};
+    use ark_std::{
+        rand::{Rng, RngCore},
+        test_rng,
+        vec::Vec,
+        UniformRand,
+    };
     type E = Bls12_381;
     type Fr = <E as PairingEngine>::Fr;
 
-    fn test_kzg_mlpc_helper<R: RngCore>(
+    fn test_single_helper<R: RngCore>(
         uni_params: &UniversalParams<E>,
         poly: &impl MultilinearExtension<Fr>,
         rng: &mut R,
@@ -231,24 +317,62 @@ mod tests {
     }
 
     #[test]
-    fn setup_commit_verify_correct_polynomials() -> Result<(), PCSErrors> {
+    fn test_single_commit() -> Result<(), PCSErrors> {
         let mut rng = test_rng();
 
         let uni_params = KZGMultilinearPC::<E>::setup(&mut rng, 10)?;
 
         // normal polynomials
         let poly1 = DenseMultilinearExtension::rand(8, &mut rng);
-        test_kzg_mlpc_helper(&uni_params, &poly1, &mut rng)?;
-
-        let poly2 = SparseMultilinearExtension::rand_with_config(9, 1 << 5, &mut rng);
-        test_kzg_mlpc_helper(&uni_params, &poly2, &mut rng)?;
+        test_single_helper(&uni_params, &poly1, &mut rng)?;
 
         // single-variate polynomials
-        let poly3 = DenseMultilinearExtension::rand(1, &mut rng);
-        test_kzg_mlpc_helper(&uni_params, &poly3, &mut rng)?;
+        let poly2 = DenseMultilinearExtension::rand(1, &mut rng);
+        test_single_helper(&uni_params, &poly2, &mut rng)?;
 
-        let poly4 = SparseMultilinearExtension::rand_with_config(1, 1 << 1, &mut rng);
-        test_kzg_mlpc_helper(&uni_params, &poly4, &mut rng)?;
+        Ok(())
+    }
+
+    fn test_multi_commit_helper<R: RngCore>(
+        uni_params: &UniversalParams<E>,
+        polys: &[impl MultilinearExtension<Fr>],
+        rng: &mut R,
+    ) -> Result<(), PCSErrors> {
+        let poly = merge_polynomials(polys);
+        let nv = poly.num_vars;
+
+        let (ck, vk) = uni_params.trim(nv)?;
+        let point: Vec<_> = (0..nv).map(|_| Fr::rand(rng)).collect();
+        let com = KZGMultilinearPC::multi_commit(&ck, polys)?;
+        let proof = KZGMultilinearPC::multi_open(&ck, polys, &point)?;
+
+        let value = poly.evaluate(&point).unwrap();
+        assert!(KZGMultilinearPC::verify(&vk, &com, &point, value, &proof)?);
+
+        let value = Fr::rand(rng);
+        assert!(!KZGMultilinearPC::verify(&vk, &com, &point, value, &proof)?);
+
+        Ok(())
+    }
+
+    #[test]
+    fn test_multi_commit() -> Result<(), PCSErrors> {
+        let mut rng = test_rng();
+
+        let uni_params = KZGMultilinearPC::<E>::setup(&mut rng, 20)?;
+
+        // normal polynomials
+        let polys1: Vec<_> = (0..5)
+            .map(|_| DenseMultilinearExtension::rand(rng.gen_range(5..9), &mut rng))
+            .collect();
+        test_multi_commit_helper(&uni_params, &polys1, &mut rng)?;
+
+        // single-variate polynomials
+        let polys1: Vec<_> = (0..5)
+            .map(|_| DenseMultilinearExtension::rand(1, &mut rng))
+            .collect();
+        test_multi_commit_helper(&uni_params, &polys1, &mut rng)?;
+
         Ok(())
     }
 

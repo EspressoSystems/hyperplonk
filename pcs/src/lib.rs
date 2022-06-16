@@ -33,11 +33,25 @@ pub trait MultilinearCommitmentScheme<E: PairingEngine> {
         poly: &impl MultilinearExtension<E::Fr>,
     ) -> Result<Self::Commitment, PCSErrors>;
 
+    /// Generate a commitment for a list of polynomials
+    fn multi_commit(
+        prover_param: &Self::ProverParam,
+        polys: &[impl MultilinearExtension<E::Fr>],
+    ) -> Result<Self::Commitment, PCSErrors>;
+
     /// On input a polynomial `p` and a point `point`, outputs a proof for the
     /// same.
     fn open(
         prover_param: &Self::ProverParam,
         polynomial: &impl MultilinearExtension<E::Fr>,
+        point: &[E::Fr],
+    ) -> Result<Self::Proof, PCSErrors>;
+
+    /// On input a polynomial `p` and a point `point`, outputs a proof for the
+    /// same.
+    fn multi_open(
+        prover_param: &Self::ProverParam,
+        polynomial: &[impl MultilinearExtension<E::Fr>],
         point: &[E::Fr],
     ) -> Result<Self::Proof, PCSErrors>;
 
