@@ -1,6 +1,7 @@
 mod commit;
 mod errors;
 mod param;
+mod util;
 
 use ark_ec::PairingEngine;
 use ark_poly::MultilinearExtension;
@@ -47,11 +48,11 @@ pub trait MultilinearCommitmentScheme<E: PairingEngine> {
         point: &[E::Fr],
     ) -> Result<Self::Proof, PCSErrors>;
 
-    /// On input a polynomial `p` and a point `point`, outputs a proof for the
-    /// same.
+    /// On input a list of polynomials and a point `point`, outputs a proof for
+    /// the same.
     fn multi_open(
         prover_param: &Self::ProverParam,
-        polynomial: &[impl MultilinearExtension<E::Fr>],
+        polynomials: &[impl MultilinearExtension<E::Fr>],
         point: &[E::Fr],
     ) -> Result<Self::Proof, PCSErrors>;
 

@@ -165,15 +165,7 @@ impl<E: PairingEngine> MultilinearCommitmentScheme<E> for KZGMultilinearPC<E> {
         Ok(Proof { proofs })
     }
 
-    /// On input a polynomial `p` and a point `point`, outputs a proof for the
-    /// same. This function does not need to take the evaluation value as an
-    /// input.
-    ///
-    /// This function takes 2^{num_var +1} number of scalar multiplications over
-    /// G2:
-    /// - it proceeds with `num_var` number of rounds,
-    /// - at round i, we compute an MSM for `2^{num_var - i + 1}` number of G2
-    ///   elements.
+    /// TODO
     fn multi_open(
         prover_param: &Self::ProverParam,
         polynomials: &[impl MultilinearExtension<E::Fr>],
@@ -181,12 +173,9 @@ impl<E: PairingEngine> MultilinearCommitmentScheme<E> for KZGMultilinearPC<E> {
     ) -> Result<Self::Proof, PCSErrors> {
         let open_timer = start_timer!(|| "open");
 
-        let poly = merge_polynomials(polynomials);
-
-        let proof = Self::open(prover_param, &poly, point)?;
-
         end_timer!(open_timer);
-        Ok(proof)
+
+        todo!()
     }
 
     /// Verifies that `value` is the evaluation at `x` of the polynomial
