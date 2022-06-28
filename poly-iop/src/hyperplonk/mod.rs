@@ -118,9 +118,9 @@ pub struct HyperPlonkParams {
 ///   - the preprocessed polynomials output by the indexer
 #[derive(Clone, Debug, Default, PartialEq)]
 pub struct HyperPlonkProvingKey<F: PrimeField> {
-    // hyperplonk instance parameters
+    /// hyperplonk instance parameters
     pub params: HyperPlonkParams,
-    // the preprocessed index polynomials
+    /// the preprocessed index polynomials
     pub index_oracles: Vec<Rc<DenseMultilinearExtension<F>>>,
 }
 
