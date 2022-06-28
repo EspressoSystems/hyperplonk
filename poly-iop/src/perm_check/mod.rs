@@ -35,8 +35,9 @@ pub trait PermutationCheck<F: PrimeField>: ZeroCheck<F> {
     ///
     /// The algorithm takes as input a permutation and outputs a merged
     /// multilinear polynomial s(X0, X1, ..., Xn) such that
-    /// - s(0, X1, ..., Xn) = sid(X1, ..., Xn) (identity permutation polynomial)
-    /// - s(1, X1, ..., Xn) = sperm(X1, ..., Xn) (permutation polynomial)
+    /// - s(0, X1, ..., Xn) = s_id(X1, ..., Xn) (identity permutation
+    ///   polynomial)
+    /// - s(1, X1, ..., Xn) = s_perm(X1, ..., Xn) (permutation polynomial)
     fn preprocess(
         permutation: &[F],
         aux_info: &Self::VPAuxInfo,

@@ -6,6 +6,7 @@ use crate::{
 };
 use ark_ff::PrimeField;
 use ark_poly::DenseMultilinearExtension;
+use std::rc::Rc;
 
 /// A trait for HyperPlonk Poly-IOPs
 pub trait HyperPlonkPIOP<F: PrimeField> {
@@ -14,12 +15,31 @@ pub trait HyperPlonkPIOP<F: PrimeField> {
     type Proof;
     type SubClaim;
 
+    /// Generate the preprocessed polynomials output by the indexer.
+    ///
+    /// Inputs:
+    /// - `params`: HyperPlonk instance parameters
+    /// - `permutation`: the permutation for the copy constraints
+    /// - `selectors`: the list of selector vectors for custom gates
+    /// Outputs:
+    /// - The HyperPlonk proving key, which includes the preprocessed
+    ///   polynomials.
     fn preprocess(
         params: &Self::Parameters,
         permutation: &[F],
         selectors: &[&[F]],
     ) -> Result<Self::ProvingKey, PolyIOPErrors>;
 
+    /// Generate HyperPlonk PIOP proof.
+    ///
+    /// Inputs:
+    /// - `pk`: circuit proving key
+    /// - `pub_input`: online public input
+    /// - `witness`: witness assignement
+    /// - `transcript`: the transcript used for generating pseudorandom
+    ///   challenges
+    /// Outputs:
+    /// - The HyperPlonk PIOP proof.
     fn prove(
         pk: &Self::ProvingKey,
         pub_input: &[F],
@@ -27,6 +47,18 @@ pub trait HyperPlonkPIOP<F: PrimeField> {
         transcript: &mut IOPTranscript<F>,
     ) -> Result<Self::Proof, PolyIOPErrors>;
 
+    /// Verify the HyperPlonk proof and generate the evaluation subclaims to be
+    /// checked later by the SNARK verifier.
+    ///
+    /// Inputs:
+    /// - `params`: instance parameter
+    /// - `pub_input`: online public input
+    /// - `proof`: HyperPlonk PIOP proof
+    /// - `transcript`: the transcript used for generating pseudorandom
+    ///   challenges
+    /// Outputs:
+    /// - Return error if the verification fails, otherwise return the
+    ///   evaluation subclaim
     fn verify(
         params: &Self::Parameters,
         pub_input: &[F],
@@ -41,11 +73,11 @@ pub trait HyperPlonkPIOP<F: PrimeField> {
 ///   - the SubClaim for public input consistency
 #[derive(Clone, Debug, Default, PartialEq)]
 pub struct HyperPlonkSubClaim<F: PrimeField, ZC: ZeroCheck<F>, PC: PermutationCheck<F>> {
-    // the SubClaim for the custom gate zerocheck
+    /// the SubClaim for the custom gate zerocheck
     pub zero_check_sub_claim: ZC::ZeroCheckSubClaim,
-    // the SubClaim for the permutation check
+    /// the SubClaim for the permutation check
     pub perm_check_sub_claim: PC::PermutationCheckSubClaim,
-    // the public input consistency check
+    /// the public input consistency check
     pub pub_input_sub_claim: (Vec<F>, F), // (point, expected_eval)
 }
 
@@ -54,9 +86,9 @@ pub struct HyperPlonkSubClaim<F: PrimeField, ZC: ZeroCheck<F>, PC: PermutationCh
 ///   - the permutation-check proof for checking the copy constraints
 #[derive(Clone, Debug, Default, PartialEq)]
 pub struct HyperPlonkProof<F: PrimeField, ZC: ZeroCheck<F>, PC: PermutationCheck<F>> {
-    // the custom gate zerocheck proof
+    /// the custom gate zerocheck proof
     pub zero_check_proof: ZC::Proof,
-    // the permutation check proof for copy constraints
+    /// the permutation check proof for copy constraints
     pub perm_check_proof: PC::Proof,
 }
 
@@ -68,15 +100,15 @@ pub struct HyperPlonkProof<F: PrimeField, ZC: ZeroCheck<F>, PC: PermutationCheck
 ///   - the customized gate function
 #[derive(Clone, Debug, Default, PartialEq)]
 pub struct HyperPlonkParams {
-    // the number of variables in polys
+    /// the number of variables in polys
     pub nv: usize,
-    // binary log of the public input length
-    pub pub_input_len: usize,
+    /// binary log of the public input length
+    pub log_pub_input_len: usize,
     // binary log of the number of selectors
-    pub n_selectors: usize,
-    // binary log of the number of witness wires
-    pub n_wires: usize,
-    // customized gate function
+    pub log_n_selectors: usize,
+    /// binary log of the number of witness wires
+    pub log_n_wires: usize,
+    /// customized gate function
     // TODO: define a struct for it.
     pub gate_func: Vec<Vec<usize>>,
 }
@@ -89,7 +121,7 @@ pub struct HyperPlonkProvingKey<F: PrimeField> {
     // hyperplonk instance parameters
     pub params: HyperPlonkParams,
     // the preprocessed index polynomials
-    pub index_oracles: Vec<DenseMultilinearExtension<F>>,
+    pub index_oracles: Vec<Rc<DenseMultilinearExtension<F>>>,
 }
 
 #[cfg(test)]
