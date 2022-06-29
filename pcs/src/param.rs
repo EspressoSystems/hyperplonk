@@ -30,9 +30,6 @@ pub struct ProverParam<E: PairingEngine> {
     /// `pp_{num_vars}`, `pp_{num_vars - 1}`, `pp_{num_vars - 2}`, ..., defined
     /// by XZZPD19
     pub powers_of_g: Vec<Evaluations<E::G1Affine>>,
-    /// `pp_{num_vars}`, `pp_{num_vars - 1}`, `pp_{num_vars - 2}`, ..., defined
-    /// by XZZPD19
-    pub powers_of_h: Vec<Evaluations<E::G2Affine>>,
     /// generator for G1
     pub g: E::G1Affine,
     /// generator for G2
@@ -88,7 +85,6 @@ impl<E: PairingEngine> UniversalParams<E> {
 
         let to_reduce = self.prover_param.num_vars - supported_num_vars;
         let ck = ProverParam {
-            powers_of_h: self.prover_param.powers_of_h[to_reduce..].to_vec(),
             powers_of_g: self.prover_param.powers_of_g[to_reduce..].to_vec(),
             g: self.prover_param.g,
             h: self.prover_param.h,
@@ -124,7 +120,7 @@ impl<E: PairingEngine> UniversalParams<E> {
         let h = E::G2Projective::rand(rng);
 
         let mut powers_of_g = Vec::new();
-        let mut powers_of_h = Vec::new();
+
         let t: Vec<_> = (0..num_vars).map(|_| E::Fr::rand(rng)).collect();
         let scalar_bits = E::Fr::size_in_bits();
 
@@ -155,14 +151,9 @@ impl<E: PairingEngine> UniversalParams<E> {
         }
         let window_size = FixedBaseMSM::get_mul_window_size(total_scalars);
         let g_table = FixedBaseMSM::get_window_table(scalar_bits, window_size, g);
-        let h_table = FixedBaseMSM::get_window_table(scalar_bits, window_size, h);
 
         let pp_g = E::G1Projective::batch_normalization_into_affine(
             &FixedBaseMSM::multi_scalar_mul(scalar_bits, window_size, &g_table, &pp_powers),
-        );
-
-        let pp_h = E::G2Projective::batch_normalization_into_affine(
-            &FixedBaseMSM::multi_scalar_mul(scalar_bits, window_size, &h_table, &pp_powers),
         );
 
         let mut start = 0;
@@ -171,11 +162,7 @@ impl<E: PairingEngine> UniversalParams<E> {
             let pp_k_g = Evaluations {
                 evals: pp_g[start..(start + size)].to_vec(),
             };
-            let pp_k_h = Evaluations {
-                evals: pp_h[start..(start + size)].to_vec(),
-            };
             powers_of_g.push(pp_k_g);
-            powers_of_h.push(pp_k_h);
             start += size;
         }
 
@@ -184,7 +171,6 @@ impl<E: PairingEngine> UniversalParams<E> {
             g: g.into_affine(),
             h: h.into_affine(),
             powers_of_g,
-            powers_of_h,
         };
 
         end_timer!(pp_generation_timer);
