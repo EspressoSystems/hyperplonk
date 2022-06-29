@@ -18,7 +18,7 @@ pub struct Evaluations<C: AffineCurve> {
 pub struct UniversalParams<E: PairingEngine> {
     /// prover parameters
     pub prover_param: ProverParam<E>,
-    /// h^randomness: h^t1, h^t2, ...
+    /// h^randomness: h^t1, h^t2, ..., **h^{t_nv}**
     pub h_mask: Vec<E::G2Affine>,
 }
 
@@ -48,7 +48,7 @@ pub struct VerifierParam<E: PairingEngine> {
     /// generator of G2
     pub h: E::G2Affine,
 
-    /// h^t1, h^t2, ...
+    /// h^randomness: h^t1, h^t2, ..., **h^{t_nv}**
     pub h_mask: Vec<E::G2Affine>,
 }
 

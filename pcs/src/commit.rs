@@ -163,10 +163,10 @@ impl<E: PairingEngine> MultilinearCommitmentScheme<E> for KZGMultilinearPC<E> {
         let h_mul: Vec<E::G2Projective> =
             FixedBaseMSM::multi_scalar_mul(scalar_size, window_size, &h_table, point);
 
-        let g2_vec: Vec<_> = (0..verifier_param.num_vars)
+        let h_vec: Vec<_> = (0..verifier_param.num_vars)
             .map(|i| verifier_param.h_mask[i].into_projective() - h_mul[i])
             .collect();
-        let g2_vec: Vec<E::G2Affine> = E::G2Projective::batch_normalization_into_affine(&g2_vec);
+        let h_vec: Vec<E::G2Affine> = E::G2Projective::batch_normalization_into_affine(&h_vec);
         end_timer!(prepare_inputs_timer);
 
         let pairing_product_timer = start_timer!(|| "pairing product");
@@ -176,7 +176,7 @@ impl<E: PairingEngine> MultilinearCommitmentScheme<E> for KZGMultilinearPC<E> {
             .iter()
             .map(|&x| E::G1Prepared::from(x))
             .zip(
-                g2_vec
+                h_vec
                     .into_iter()
                     .take(verifier_param.num_vars)
                     .map(E::G2Prepared::from),
