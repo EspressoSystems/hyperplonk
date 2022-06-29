@@ -6,7 +6,8 @@ use ark_poly::{
     univariate::DensePolynomial, DenseMultilinearExtension, EvaluationDomain, Evaluations,
     MultilinearExtension, Polynomial, Radix2EvaluationDomain,
 };
-use ark_std::{end_timer, start_timer};
+use ark_std::{end_timer, log2, start_timer};
+use poly_iop::bit_decompose;
 
 /// Compute W \circ l.
 ///
@@ -48,6 +49,74 @@ pub(crate) fn compute_w_circ_l<F: PrimeField>(
 
     end_timer!(timer);
     Ok(res)
+}
+
+/// Return the number of variables that one need for an MLE to
+/// batch the list of MLEs
+#[inline]
+pub(crate) fn get_batched_nv(num_var: usize, polynomials_len: usize) -> usize {
+    num_var + log2(polynomials_len) as usize
+}
+
+/// merge a set of polynomials. Returns an error if the
+/// polynomials do not share a same number of nvs.
+pub(crate) fn merge_polynomials<F: PrimeField>(
+    polynomials: &[impl MultilinearExtension<F>],
+) -> Result<DenseMultilinearExtension<F>, PCSErrors> {
+    let nv = polynomials[0].num_vars();
+    for poly in polynomials.iter() {
+        if nv != poly.num_vars() {
+            return Err(PCSErrors::InvalidParameters(
+                "num_vars do not match for polynomials".to_string(),
+            ));
+        }
+    }
+
+    let merged_nv = get_batched_nv(nv, polynomials.len());
+    let mut scalars = vec![];
+    for poly in polynomials.iter() {
+        scalars.extend_from_slice(poly.to_evaluations().as_slice());
+    }
+    scalars.extend_from_slice(vec![F::zero(); (1 << merged_nv) - scalars.len()].as_ref());
+    Ok(DenseMultilinearExtension::from_evaluations_vec(
+        merged_nv, scalars,
+    ))
+}
+
+/// Given a list of points, build `l(points)` which is a list of univariate
+/// polynomials that goes through the points
+pub(crate) fn build_l<F: PrimeField>(
+    num_var: usize,
+    points: &[&[F]],
+) -> Result<Vec<DensePolynomial<F>>, PCSErrors> {
+    let prefix_len = log2(points.len()) as usize;
+
+    let uni_degree = points.len();
+    let small_domain = match Radix2EvaluationDomain::<F>::new(uni_degree) {
+        Some(p) => p,
+        None => {
+            return Err(PCSErrors::InvalidParameters(
+                "failed to build radix 2 domain".to_string(),
+            ))
+        },
+    };
+
+    let mut uni_polys = Vec::new();
+    // 1.1 build the indexes and the univariate polys that go through the indexes
+    let indexes: Vec<Vec<bool>> = (0..num_var)
+        .map(|x| bit_decompose(x as u64, prefix_len))
+        .collect();
+    for i in 0..prefix_len {
+        let eval: Vec<F> = indexes.iter().map(|x| F::from(x[i])).collect();
+        uni_polys.push(Evaluations::from_vec_and_domain(eval, small_domain).interpolate())
+    }
+
+    // 1.2 build the actual univariate polys that go through the points
+    for i in 0..num_var {
+        let eval: Vec<F> = points.iter().map(|x| x[i]).collect();
+        uni_polys.push(Evaluations::from_vec_and_domain(eval, small_domain).interpolate())
+    }
+    Ok(uni_polys)
 }
 
 #[cfg(test)]

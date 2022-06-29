@@ -50,14 +50,16 @@ pub trait MultilinearCommitmentScheme<E: PairingEngine> {
         point: &[E::Fr],
     ) -> Result<Self::Proof, PCSErrors>;
 
-    /// On input a list of polynomials and a point `point`, outputs a proof for
-    /// the same.
+    /// Input a list of MLEs, and a same number of points, and a transcript,
+    /// compute a multi-opening for all the polynomials.
+    #[allow(clippy::type_complexity)]
+    // TODO: remove after we KZG-commit q(x)
     fn multi_open(
         prover_param: &Self::ProverParam,
         polynomials: &[impl MultilinearExtension<E::Fr>],
         point: &[&[E::Fr]],
         transcript: &mut IOPTranscript<E::Fr>,
-    ) -> Result<(Self::Proof, Vec<E::Fr>), PCSErrors>;
+    ) -> Result<(Self::Proof, Vec<E::Fr>, E::Fr), PCSErrors>;
 
     /// Verifies that `value` is the evaluation at `x` of the polynomial
     /// committed inside `comm`.
@@ -65,7 +67,19 @@ pub trait MultilinearCommitmentScheme<E: PairingEngine> {
         verifier_param: &Self::VerifierParam,
         commitment: &Self::Commitment,
         point: &[E::Fr],
-        value: E::Fr,
+        value: &E::Fr,
         proof: &Self::Proof,
+    ) -> Result<bool, PCSErrors>;
+
+    /// Verifies that `value_i` is the evaluation at `x_i` of the polynomial
+    /// `poly_i` committed inside `comm`.
+    fn batch_verify(
+        verifier_param: &Self::VerifierParam,
+        multi_commitment: &Self::Commitment,
+        points: &[&[E::Fr]],
+        values: &E::Fr,
+        proof: &Self::Proof,
+        q_x_coeff: &[E::Fr],
+        transcript: &mut IOPTranscript<E::Fr>,
     ) -> Result<bool, PCSErrors>;
 }

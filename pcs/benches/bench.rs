@@ -65,7 +65,7 @@ fn bench_pcs() -> Result<(), PCSErrors> {
         {
             let start = Instant::now();
             for _ in 0..repetition {
-                assert!(KZGMultilinearPC::verify(&vk, &com, &point, value, &proof)?);
+                assert!(KZGMultilinearPC::verify(&vk, &com, &point, &value, &proof)?);
             }
             println!(
                 "KZG verify for {} variables: {} ns",
