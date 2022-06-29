@@ -13,7 +13,7 @@ use ark_poly::{
 };
 use ark_serialize::{CanonicalDeserialize, CanonicalSerialize, Read, SerializationError, Write};
 use ark_std::{end_timer, log2, rand::RngCore, start_timer, vec::Vec, One, Zero};
-use poly_iop::IOPTranscript;
+use poly_iop::{bit_decompose, IOPTranscript};
 
 #[derive(CanonicalSerialize, CanonicalDeserialize, Clone, Debug)]
 /// commitment
@@ -169,6 +169,11 @@ impl<E: PairingEngine> MultilinearCommitmentScheme<E> for KZGMultilinearPC<E> {
         Ok(Proof { proofs })
     }
 
+    /// Input a list of MLEs, and a same number of points, and a transcript,
+    /// compute a multi-opening for all the polynomials
+    ///
+    /// Returns an error if the lengths do not match.
+    ///
     /// Steps:
     /// 1. build `l(points)` which is a list of univariate polynomials that goes
     /// through the points
@@ -193,6 +198,22 @@ impl<E: PairingEngine> MultilinearCommitmentScheme<E> for KZGMultilinearPC<E> {
             ));
         }
 
+        let num_var = polynomials[0].num_vars();
+        for poly in polynomials.iter().skip(1) {
+            if poly.num_vars() != num_var {
+                return Err(PCSErrors::InvalidParameters(
+                    "polynomials do not have same num_vars".to_string(),
+                ));
+            }
+        }
+        for &point in points.iter() {
+            if point.len() != num_var {
+                return Err(PCSErrors::InvalidParameters(
+                    "points do not have same num_vars".to_string(),
+                ));
+            }
+        }
+
         let uni_degree = points.len() + 1;
         let small_domain = match Radix2EvaluationDomain::<E::Fr>::new(uni_degree) {
             Some(p) => p,
@@ -202,7 +223,6 @@ impl<E: PairingEngine> MultilinearCommitmentScheme<E> for KZGMultilinearPC<E> {
                 ))
             },
         };
-        let num_var = polynomials[0].num_vars();
         let large_domain = match Radix2EvaluationDomain::<E::Fr>::new(1 << get_nv(polynomials)) {
             Some(p) => p,
             None => {
@@ -211,14 +231,27 @@ impl<E: PairingEngine> MultilinearCommitmentScheme<E> for KZGMultilinearPC<E> {
                 ))
             },
         };
+        let prefix_len = log2(polynomials.len()) as usize;
 
         // 1. build `l(points)` which is a list of univariate polynomials that goes
         // through the points
         let mut uni_polys = Vec::new();
-        for i in 0..1 << num_var {
+
+        // 1.1 build the indexes and the univariate polys that go through the indexes
+        let indexes: Vec<Vec<bool>> = (0..num_var)
+            .map(|x| bit_decompose(x as u64, prefix_len))
+            .collect();
+        for i in 0..prefix_len {
+            let eval: Vec<E::Fr> = indexes.iter().map(|x| E::Fr::from(x[i])).collect();
+            uni_polys.push(Evaluations::from_vec_and_domain(eval, small_domain).interpolate())
+        }
+
+        // 1.2 build the actual univariate polys that go through the points
+        for i in 0..num_var {
             let eval: Vec<E::Fr> = points.iter().map(|x| x[i]).collect();
             uni_polys.push(Evaluations::from_vec_and_domain(eval, small_domain).interpolate())
         }
+
         // 2. build MLE `w` which is the merge of all MLEs.
         let merge_poly = merge_polynomials(polynomials);
 
@@ -346,12 +379,7 @@ mod tests {
     use ark_bls12_381::Bls12_381;
     use ark_ec::PairingEngine;
     use ark_poly::{DenseMultilinearExtension, MultilinearExtension};
-    use ark_std::{
-        rand::{Rng, RngCore},
-        test_rng,
-        vec::Vec,
-        UniformRand,
-    };
+    use ark_std::{rand::RngCore, test_rng, vec::Vec, UniformRand};
     type E = Bls12_381;
     type Fr = <E as PairingEngine>::Fr;
 
@@ -426,7 +454,7 @@ mod tests {
 
         // normal polynomials
         let polys1: Vec<_> = (0..5)
-            .map(|_| DenseMultilinearExtension::rand(rng.gen_range(5..9), &mut rng))
+            .map(|_| DenseMultilinearExtension::rand(4, &mut rng))
             .collect();
         test_multi_commit_helper(&uni_params, &polys1, &mut rng)?;
 

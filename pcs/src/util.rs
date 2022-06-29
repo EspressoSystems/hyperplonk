@@ -20,9 +20,11 @@ pub(crate) fn compute_w_circ_l<F: PrimeField>(
     let timer = start_timer!(|| "compute W \\circ l");
 
     if w.num_vars != l.len() {
-        return Err(PCSErrors::InvalidParameters(
-            "l's length does not match num_variables".to_string(),
-        ));
+        return Err(PCSErrors::InvalidParameters(format!(
+            "l's length ({}) does not match num_variables ({})",
+            l.len(),
+            w.num_vars(),
+        )));
     }
 
     let mut res_eval: Vec<F> = vec![];

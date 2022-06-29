@@ -13,7 +13,7 @@ macro_rules! to_bytes {
 
 /// Decompose an integer into a binary vector in little endian.
 #[allow(dead_code)]
-pub(crate) fn bit_decompose(input: u64, num_var: usize) -> Vec<bool> {
+pub fn bit_decompose(input: u64, num_var: usize) -> Vec<bool> {
     let mut res = Vec::with_capacity(num_var);
     let mut i = input;
     for _ in 0..num_var {
