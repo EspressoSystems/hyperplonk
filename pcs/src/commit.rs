@@ -8,7 +8,7 @@ use ark_ec::{
     AffineCurve, PairingEngine, ProjectiveCurve,
 };
 use ark_ff::PrimeField;
-use ark_poly::{MultilinearExtension, Polynomial};
+use ark_poly::{univariate::DensePolynomial, MultilinearExtension, Polynomial, UVPolynomial};
 use ark_serialize::{CanonicalDeserialize, CanonicalSerialize, Read, SerializationError, Write};
 use ark_std::{end_timer, log2, rand::RngCore, start_timer, vec::Vec, One, Zero};
 use poly_iop::IOPTranscript;
@@ -29,12 +29,30 @@ pub struct Proof<E: PairingEngine> {
     pub proofs: Vec<E::G1Affine>,
 }
 
+#[derive(CanonicalSerialize, CanonicalDeserialize, Clone, Debug)]
+/// proof of batch opening
+pub struct BatchProof<E: PairingEngine> {
+    /// The actual proof
+    pub proof: Proof<E>,
+    /// The value which is `w` evaluated at `p:= l(r)`, where
+    /// - `w` is the merged MLE
+    /// - `l` is the list of univariate polys that goes through all points
+    /// - `r` is sampled from the transcript.
+    pub value: E::Fr,
+    /// Commitment to q(x)
+    // This is currently set to the entire coefficient list of q(x)
+    // TODO: replace me with a KZG commit
+    pub q_x_com: Vec<E::Fr>,
+}
+
 impl<E: PairingEngine> MultilinearCommitmentScheme<E> for KZGMultilinearPC<E> {
     type ProverParam = ProverParam<E>;
     type VerifierParam = VerifierParam<E>;
     type SRS = UniversalParams<E>;
     type Commitment = Commitment<E>;
     type Proof = Proof<E>;
+    type Transcript = IOPTranscript<E::Fr>;
+    type BatchProof = BatchProof<E>;
 
     /// Generate SRS from RNG.
     /// WARNING: THIS FUNCTION IS FOR TESTING PURPOSE ONLY.
@@ -80,7 +98,7 @@ impl<E: PairingEngine> MultilinearCommitmentScheme<E> for KZGMultilinearPC<E> {
         prover_param: &Self::ProverParam,
         polys: &[impl MultilinearExtension<E::Fr>],
     ) -> Result<Self::Commitment, PCSErrors> {
-        let commit_timer = start_timer!(|| "commit");
+        let commit_timer = start_timer!(|| "multi commit");
         let poly = merge_polynomials(polys)?;
 
         let scalars: Vec<_> = poly
@@ -167,15 +185,26 @@ impl<E: PairingEngine> MultilinearCommitmentScheme<E> for KZGMultilinearPC<E> {
         Ok(Proof { proofs })
     }
 
-    /// Input a list of MLEs, and a same number of points, and a transcript,
-    /// compute a multi-opening for all the polynomials
+    /// Input
+    /// - the prover parameters,
+    /// - a list of MLEs,
+    /// - and a same number of points,
+    /// - and a transcript,
+    /// compute a multi-opening for all the polynomials.
+    ///
+    /// For simplicity, this API requires each MLE to have only one point. If
+    /// the caller wish to use more than one points per MLE, it should be
+    /// handled at the caller layer.
     ///
     /// Returns an error if the lengths do not match.
     ///
-    /// Returns
+    /// Returns:
     /// - the proof,
-    /// - q(x),
-    /// - and a value which is merged MLE evaluated at the consolidated point.
+    /// - q(x), which is a univariate polynomial `w circ l` where `w` is the
+    ///   merged MLE, and `l` is a list of polynomials that go through all the
+    ///   points. TODO: change this field to a commitment to `q(x)`
+    /// - and a value which is `w` evaluated at `p:= l(r)` from some `r` from
+    ///   the transcript.
     ///
     /// Steps:
     /// 1. build `l(points)` which is a list of univariate polynomials that goes
@@ -187,15 +216,13 @@ impl<E: PairingEngine> MultilinearCommitmentScheme<E> for KZGMultilinearPC<E> {
     /// 6. get a point `p := l(r)`
     /// 7. output an opening of `w` over point `p`
     /// 8. output `w(p)`
-    #[allow(clippy::type_complexity)]
-    // TODO: remove after we KZG-commit q(x)
     fn multi_open(
         prover_param: &Self::ProverParam,
         polynomials: &[impl MultilinearExtension<E::Fr>],
         points: &[&[E::Fr]],
         transcript: &mut IOPTranscript<E::Fr>,
-    ) -> Result<(Self::Proof, Vec<E::Fr>, E::Fr), PCSErrors> {
-        let open_timer = start_timer!(|| "open");
+    ) -> Result<Self::BatchProof, PCSErrors> {
+        let open_timer = start_timer!(|| "multi open");
 
         if points.len() != polynomials.len() {
             return Err(PCSErrors::InvalidParameters(
@@ -250,7 +277,11 @@ impl<E: PairingEngine> MultilinearCommitmentScheme<E> for KZGMultilinearPC<E> {
         let value = merge_poly.evaluate(&point).unwrap();
         end_timer!(open_timer);
 
-        Ok((opening, q_x.coeffs, value))
+        Ok(Self::BatchProof {
+            proof: opening,
+            q_x_com: q_x.coeffs,
+            value,
+        })
     }
 
     /// Verifies that `value` is the evaluation at `x` of the polynomial
@@ -321,19 +352,19 @@ impl<E: PairingEngine> MultilinearCommitmentScheme<E> for KZGMultilinearPC<E> {
     ///
     /// 1. put `q(x)`'s evaluations over `(1, omega,...)` into transcript
     /// 2. sample `r` from transcript
-    /// 3. build `l(points)` which is a list of univariate polynomials that goes
+    /// 3. check `q(r) == value`
+    /// 4. build `l(points)` which is a list of univariate polynomials that goes
     /// through the points
-    /// 4. get a point `p := l(r)`
-    /// 5. verifies `p` is verifies against proof
+    /// 5. get a point `p := l(r)`
+    /// 6. verifies `p` is verifies against proof
     fn batch_verify(
         verifier_param: &Self::VerifierParam,
         multi_commitment: &Self::Commitment,
         points: &[&[E::Fr]],
-        value: &E::Fr,
-        proof: &Self::Proof,
-        q_x_coeff: &[E::Fr],
+        batch_proof: &Self::BatchProof,
         transcript: &mut IOPTranscript<E::Fr>,
     ) -> Result<bool, PCSErrors> {
+        let verify_timer = start_timer!(|| "batch verify");
         let num_var = points[0].len();
 
         for &point in points.iter().skip(1) {
@@ -357,22 +388,40 @@ impl<E: PairingEngine> MultilinearCommitmentScheme<E> for KZGMultilinearPC<E> {
 
         // 1. put `q(x)`'s evaluations over `(1, omega,...)` into transcript
         // TODO: unwrap
-        q_x_coeff
+        batch_proof
+            .q_x_com
             .iter()
             .for_each(|x| transcript.append_field_element(b"q(x)", x).unwrap());
 
         // 2. sample `r` from transcript
         let r = transcript.get_and_append_challenge(b"r")?;
 
-        // 3. build `l(points)` which is a list of univariate polynomials that goes
+        // 3. check `q(r) == value`
+        let q_x = DensePolynomial::from_coefficients_slice(&batch_proof.q_x_com);
+        let q_r = q_x.evaluate(&r);
+        if q_r != batch_proof.value {
+            println!("univariate failed");
+            return Ok(false);
+        }
+
+        // 4. build `l(points)` which is a list of univariate polynomials that goes
         // through the points
         let uni_polys = build_l(num_var, points)?;
 
-        // 4. get a point `p := l(r)`
+        // 5. get a point `p := l(r)`
         let point: Vec<E::Fr> = uni_polys.iter().map(|x| x.evaluate(&r)).collect();
 
-        // 5. verifies `p` is verifies against proof
-        Self::verify(verifier_param, multi_commitment, &point, value, proof)
+        // 6. verifies `p` is verifies against proof
+        let res = Self::verify(
+            verifier_param,
+            multi_commitment,
+            &point,
+            &batch_proof.value,
+            &batch_proof.proof,
+        );
+        end_timer!(verify_timer);
+
+        res
     }
 }
 
@@ -448,17 +497,14 @@ mod tests {
         let points_ref: Vec<&[Fr]> = points.iter().map(|x| x.as_ref()).collect();
 
         let com = KZGMultilinearPC::multi_commit(&ck, polys)?;
-        let (proof, q_x_coeff, value) =
-            KZGMultilinearPC::multi_open(&ck, polys, &points_ref, &mut transcript)?;
+        let batch_proof = KZGMultilinearPC::multi_open(&ck, polys, &points_ref, &mut transcript)?;
 
         let mut transcript = IOPTranscript::new(b"test");
         assert!(KZGMultilinearPC::batch_verify(
             &vk,
             &com,
             &points_ref,
-            &value,
-            &proof,
-            &q_x_coeff,
+            &batch_proof,
             &mut transcript
         )?);
 

@@ -11,7 +11,8 @@ use poly_iop::bit_decompose;
 
 /// Compute W \circ l.
 ///
-/// Given an MLE W, and a list of univariate polynomials l, evaluate W at l.
+/// Given an MLE W, and a list of univariate polynomials l, generate the
+/// univariate polynomial that composes W with l.
 ///
 /// Returns an error if l's length does not matches number of variables in W.
 pub(crate) fn compute_w_circ_l<F: PrimeField>(
@@ -103,7 +104,7 @@ pub(crate) fn build_l<F: PrimeField>(
 
     let mut uni_polys = Vec::new();
     // 1.1 build the indexes and the univariate polys that go through the indexes
-    let indexes: Vec<Vec<bool>> = (0..num_var)
+    let indexes: Vec<Vec<bool>> = (0..points.len())
         .map(|x| bit_decompose(x as u64, prefix_len))
         .collect();
     for i in 0..prefix_len {

@@ -24,6 +24,8 @@ pub trait MultilinearCommitmentScheme<E: PairingEngine> {
     type SRS;
     type Commitment;
     type Proof;
+    type BatchProof;
+    type Transcript;
 
     /// Generate SRS from RNG.
     /// WARNING: THIS FUNCTION IS FOR TESTING PURPOSE ONLY.
@@ -58,8 +60,8 @@ pub trait MultilinearCommitmentScheme<E: PairingEngine> {
         prover_param: &Self::ProverParam,
         polynomials: &[impl MultilinearExtension<E::Fr>],
         point: &[&[E::Fr]],
-        transcript: &mut IOPTranscript<E::Fr>,
-    ) -> Result<(Self::Proof, Vec<E::Fr>, E::Fr), PCSErrors>;
+        transcript: &mut Self::Transcript,
+    ) -> Result<Self::BatchProof, PCSErrors>;
 
     /// Verifies that `value` is the evaluation at `x` of the polynomial
     /// committed inside `comm`.
@@ -77,9 +79,7 @@ pub trait MultilinearCommitmentScheme<E: PairingEngine> {
         verifier_param: &Self::VerifierParam,
         multi_commitment: &Self::Commitment,
         points: &[&[E::Fr]],
-        values: &E::Fr,
-        proof: &Self::Proof,
-        q_x_coeff: &[E::Fr],
+        batch_proof: &Self::BatchProof,
         transcript: &mut IOPTranscript<E::Fr>,
     ) -> Result<bool, PCSErrors>;
 }
