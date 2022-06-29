@@ -24,9 +24,8 @@ path = "benches/bench.rs"
 harness = false
 
 [features]
-# by default we switch the groups
-# default = [ "parallel", "print-trace", "group-switched" ]
-default = [ "parallel", "group-switched" ]
+# default = [ "parallel", "print-trace" ]
+default = [ "parallel" ]
 parallel = [ 
     "ark-std/parallel", 
     "ark-ff/parallel",  
@@ -36,6 +35,3 @@ parallel = [
 print-trace = [ 
     "ark-std/print-trace" 
     ] 
-# With the flag, we switch the groups of G1 and G2 as in a normal KZG.
-# i.e., commitments are over G2 and openings are over G1 when this feature is turned on.
-group-switched = []
