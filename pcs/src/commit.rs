@@ -1,15 +1,19 @@
 use crate::{
-    KZGMultilinearPC, MultilinearCommitmentScheme, PCSErrors, ProverParam, UniversalParams,
-    VerifierParam,
+    util::compute_w_circ_l, KZGMultilinearPC, MultilinearCommitmentScheme, PCSErrors, ProverParam,
+    UniversalParams, VerifierParam,
 };
 use ark_ec::{
     msm::{FixedBaseMSM, VariableBaseMSM},
     AffineCurve, PairingEngine, ProjectiveCurve,
 };
 use ark_ff::PrimeField;
-use ark_poly::{DenseMultilinearExtension, MultilinearExtension};
+use ark_poly::{
+    DenseMultilinearExtension, EvaluationDomain, Evaluations, MultilinearExtension, Polynomial,
+    Radix2EvaluationDomain,
+};
 use ark_serialize::{CanonicalDeserialize, CanonicalSerialize, Read, SerializationError, Write};
 use ark_std::{end_timer, log2, rand::RngCore, start_timer, vec::Vec, One, Zero};
+use poly_iop::IOPTranscript;
 
 #[derive(CanonicalSerialize, CanonicalDeserialize, Clone, Debug)]
 /// commitment
@@ -72,7 +76,7 @@ impl<E: PairingEngine> MultilinearCommitmentScheme<E> for KZGMultilinearPC<E> {
 
     /// Generate a commitment for a list of polynomials.
     ///
-    /// This function takes `\sum 2^num_vars[i]` number of scalar
+    /// This function takes `2^(num_vars + log(polys.len())` number of scalar
     /// multiplications over G1.
     fn multi_commit(
         prover_param: &Self::ProverParam,
@@ -105,7 +109,7 @@ impl<E: PairingEngine> MultilinearCommitmentScheme<E> for KZGMultilinearPC<E> {
     /// input.
     ///
     /// This function takes 2^{num_var +1} number of scalar multiplications over
-    /// G2:
+    /// G1:
     /// - it proceeds with `num_var` number of rounds,
     /// - at round i, we compute an MSM for `2^{num_var - i + 1}` number of G2
     ///   elements.
@@ -165,17 +169,84 @@ impl<E: PairingEngine> MultilinearCommitmentScheme<E> for KZGMultilinearPC<E> {
         Ok(Proof { proofs })
     }
 
-    /// TODO
+    /// Steps:
+    /// 1. build `l(points)` which is a list of univariate polynomials that goes
+    /// through the points
+    /// 2. build MLE `w` which is the merge of all MLEs.
+    /// 3. build `q(x)` which is a univariate polynomial `W circ l`
+    /// 4. output `q(x)`'s evaluations over `(1, omega,...)`, and put it into
+    /// transcript
+    /// 5. sample `r` from transcript
+    /// 6. get a point `p := l(r)`
+    /// 7. output an opening of `w` over point `p`
     fn multi_open(
         prover_param: &Self::ProverParam,
         polynomials: &[impl MultilinearExtension<E::Fr>],
-        point: &[E::Fr],
-    ) -> Result<Self::Proof, PCSErrors> {
+        points: &[&[E::Fr]],
+        transcript: &mut IOPTranscript<E::Fr>,
+    ) -> Result<(Self::Proof, Vec<E::Fr>), PCSErrors> {
         let open_timer = start_timer!(|| "open");
+
+        if points.len() != polynomials.len() {
+            return Err(PCSErrors::InvalidParameters(
+                "polynomial length does not match point length".to_string(),
+            ));
+        }
+
+        let uni_degree = points.len() + 1;
+        let small_domain = match Radix2EvaluationDomain::<E::Fr>::new(uni_degree) {
+            Some(p) => p,
+            None => {
+                return Err(PCSErrors::InvalidParameters(
+                    "failed to build radix 2 domain".to_string(),
+                ))
+            },
+        };
+        let num_var = polynomials[0].num_vars();
+        let large_domain = match Radix2EvaluationDomain::<E::Fr>::new(1 << get_nv(polynomials)) {
+            Some(p) => p,
+            None => {
+                return Err(PCSErrors::InvalidParameters(
+                    "failed to build radix 2 domain".to_string(),
+                ))
+            },
+        };
+
+        // 1. build `l(points)` which is a list of univariate polynomials that goes
+        // through the points
+        let mut uni_polys = Vec::new();
+        for i in 0..1 << num_var {
+            let eval: Vec<E::Fr> = points.iter().map(|x| x[i]).collect();
+            uni_polys.push(Evaluations::from_vec_and_domain(eval, small_domain).interpolate())
+        }
+        // 2. build MLE `w` which is the merge of all MLEs.
+        let merge_poly = merge_polynomials(polynomials);
+
+        // 3. build `q(x)` which is a univariate polynomial `W circ l`
+        let q_x = compute_w_circ_l(&merge_poly, &uni_polys)?;
+
+        // 4. output `q(x)`'s evaluations over `(1, omega,...)`, and put it into
+        // transcript
+        //
+        // TODO: use KZG commit for q(x)
+        let evals = q_x.evaluate_over_domain(large_domain);
+        evals
+            .evals
+            .iter()
+            .for_each(|x| transcript.append_field_element(b"q(x)", x).unwrap());
+
+        // 5. sample `r` from transcript
+        let r = transcript.get_and_append_challenge(b"r")?;
+
+        // 6. get a point `p := l(r)`
+        let point: Vec<E::Fr> = uni_polys.iter().map(|poly| poly.evaluate(&r)).collect();
+
+        // 7. output an opening of `w` over point `p`
+        let opening = Self::open(prover_param, &merge_poly, &point)?;
 
         end_timer!(open_timer);
 
-        todo!()
+        Ok((opening, evals.evals))
     }
 
     /// Verifies that `value` is the evaluation at `x` of the polynomial
@@ -327,19 +398,22 @@ mod tests {
         polys: &[impl MultilinearExtension<Fr>],
         rng: &mut R,
     ) -> Result<(), PCSErrors> {
-        let poly = merge_polynomials(polys);
-        let nv = poly.num_vars;
+        let mut transcript = IOPTranscript::new(b"test");
 
-        let (ck, vk) = uni_params.trim(nv)?;
-        let point: Vec<_> = (0..nv).map(|_| Fr::rand(rng)).collect();
-        let com = KZGMultilinearPC::multi_commit(&ck, polys)?;
-        let proof = KZGMultilinearPC::multi_open(&ck, polys, &point)?;
+        let nv = get_nv(polys);
+        let (ck, _vk) = uni_params.trim(nv)?;
+        let mut points = Vec::new();
 
-        let value = poly.evaluate(&point).unwrap();
-        assert!(KZGMultilinearPC::verify(&vk, &com, &point, value, &proof)?);
+        for poly in polys.iter() {
+            let point = (0..poly.num_vars())
+                .map(|_| Fr::rand(rng))
+                .collect::<Vec<Fr>>();
+            points.push(point);
+        }
+        let points_ref: Vec<&[Fr]> = points.iter().map(|x| x.as_ref()).collect();
 
-        let value = Fr::rand(rng);
-        assert!(!KZGMultilinearPC::verify(&vk, &com, &point, value, &proof)?);
+        let _com = KZGMultilinearPC::multi_commit(&ck, polys)?;
+        let _proof = KZGMultilinearPC::multi_open(&ck, polys, &points_ref, &mut transcript)?;
 
         Ok(())
     }

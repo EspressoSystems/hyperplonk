@@ -16,6 +16,7 @@ pub use perm_check::{
     PermutationCheck,
 };
 pub use sum_check::SumCheck;
+pub use transcript::IOPTranscript;
 pub use virtual_poly::{VPAuxInfo, VirtualPolynomial};
 pub use zero_check::ZeroCheck;
 

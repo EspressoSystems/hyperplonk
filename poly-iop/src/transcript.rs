@@ -28,7 +28,7 @@ pub struct IOPTranscript<F: PrimeField> {
 
 impl<F: PrimeField> IOPTranscript<F> {
     /// Create a new IOP transcript.
-    pub(crate) fn new(label: &'static [u8]) -> Self {
+    pub fn new(label: &'static [u8]) -> Self {
         Self {
             transcript: Transcript::new(label),
             is_empty: true,
@@ -59,7 +59,7 @@ impl<F: PrimeField> IOPTranscript<F> {
     }
 
     // Append the message to the transcript.
-    pub(crate) fn append_field_element(
+    pub fn append_field_element(
         &mut self,
         label: &'static [u8],
         field_elem: &F,
@@ -83,10 +83,7 @@ impl<F: PrimeField> IOPTranscript<F> {
     //
     // The output field element is statistical uniform as long
     // as the field has a size less than 2^384.
-    pub(crate) fn get_and_append_challenge(
-        &mut self,
-        label: &'static [u8],
-    ) -> Result<F, PolyIOPErrors> {
+    pub fn get_and_append_challenge(&mut self, label: &'static [u8]) -> Result<F, PolyIOPErrors> {
         //  we need to reject when transcript is empty
         if self.is_empty {
             return Err(PolyIOPErrors::InvalidTranscript(

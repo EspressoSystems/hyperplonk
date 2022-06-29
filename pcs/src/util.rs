@@ -12,7 +12,7 @@ use ark_std::{end_timer, start_timer};
 ///
 /// Given an MLE W, and a list of univariate polynomials l, evaluate W at l.
 ///
-/// Returns an error is l's length does not matches number of variables in W.
+/// Returns an error if l's length does not matches number of variables in W.
 pub(crate) fn compute_w_circ_l<F: PrimeField>(
     w: &DenseMultilinearExtension<F>,
     l: &[DensePolynomial<F>],

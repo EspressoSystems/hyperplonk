@@ -10,6 +10,7 @@ use ark_std::{end_timer, rand::RngCore, start_timer, vec::Vec, UniformRand};
 /// Evaluations over {0,1}^n for G1 or G2
 #[derive(CanonicalSerialize, CanonicalDeserialize, Clone, Debug)]
 pub struct Evaluations<C: AffineCurve> {
+    /// The evaluations.
     pub evals: Vec<C>,
 }
 

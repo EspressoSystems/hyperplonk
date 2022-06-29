@@ -6,6 +6,7 @@ mod util;
 use ark_ec::PairingEngine;
 use ark_poly::MultilinearExtension;
 use ark_std::rand::RngCore;
+use poly_iop::IOPTranscript;
 use std::marker::PhantomData;
 
 pub use errors::PCSErrors;
@@ -13,6 +14,7 @@ pub use param::{ProverParam, UniversalParams, VerifierParam};
 
 /// KZG Polynomial Commitment Scheme on multilinear extensions.
 pub struct KZGMultilinearPC<E: PairingEngine> {
+    #[doc(hidden)]
     phantom: PhantomData<E>,
 }
 
@@ -53,8 +55,9 @@ pub trait MultilinearCommitmentScheme<E: PairingEngine> {
     fn multi_open(
         prover_param: &Self::ProverParam,
         polynomials: &[impl MultilinearExtension<E::Fr>],
-        point: &[E::Fr],
-    ) -> Result<Self::Proof, PCSErrors>;
+        point: &[&[E::Fr]],
+        transcript: &mut IOPTranscript<E::Fr>,
+    ) -> Result<(Self::Proof, Vec<E::Fr>), PCSErrors>;
 
     /// Verifies that `value` is the evaluation at `x` of the polynomial
     /// committed inside `comm`.
