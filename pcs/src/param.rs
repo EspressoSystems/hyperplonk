@@ -29,26 +29,14 @@ pub struct ProverParam<E: PairingEngine> {
     pub num_vars: usize,
     /// `pp_{num_vars}`, `pp_{num_vars - 1}`, `pp_{num_vars - 2}`, ..., defined
     /// by XZZPD19
-    #[cfg(not(feature = "group-switched"))]
     pub powers_of_g: Vec<Evaluations<E::G1Affine>>,
-    #[cfg(feature = "group-switched")]
-    pub powers_of_g: Vec<Evaluations<E::G2Affine>>,
     /// `pp_{num_vars}`, `pp_{num_vars - 1}`, `pp_{num_vars - 2}`, ..., defined
     /// by XZZPD19
-    #[cfg(not(feature = "group-switched"))]
     pub powers_of_h: Vec<Evaluations<E::G2Affine>>,
-    #[cfg(feature = "group-switched")]
-    pub powers_of_h: Vec<Evaluations<E::G1Affine>>,
     /// generator for G1
-    #[cfg(not(feature = "group-switched"))]
     pub g: E::G1Affine,
-    #[cfg(feature = "group-switched")]
-    pub g: E::G2Affine,
     /// generator for G2
-    #[cfg(not(feature = "group-switched"))]
     pub h: E::G2Affine,
-    #[cfg(feature = "group-switched")]
-    pub h: E::G1Affine,
 }
 
 /// Verifier Parameters
@@ -58,14 +46,11 @@ pub struct VerifierParam<E: PairingEngine> {
     pub num_vars: usize,
 
     /// generator of G1
-    #[cfg(not(feature = "group-switched"))]
     pub g: E::G1Affine,
-    #[cfg(feature = "group-switched")]
-    pub g: E::G2Affine,
 
     /// generator of G2
-    #[cfg(not(feature = "group-switched"))]
     pub h: E::G2Affine,
+
     /// h^t1, h^t2, ...
     pub h_mask: Vec<E::G2Affine>,
 }
@@ -135,15 +120,8 @@ impl<E: PairingEngine> UniversalParams<E> {
 
         let pp_generation_timer = start_timer!(|| "Prover Param generation");
 
-        #[cfg(not(feature = "group-switched"))]
         let g = E::G1Projective::rand(rng);
-        #[cfg(feature = "group-switched")]
-        let g = E::G2Projective::rand(rng);
-
-        #[cfg(not(feature = "group-switched"))]
         let h = E::G2Projective::rand(rng);
-        #[cfg(feature = "group-switched")]
-        let h = E::G1Projective::rand(rng);
 
         let mut powers_of_g = Vec::new();
         let mut powers_of_h = Vec::new();
@@ -179,22 +157,14 @@ impl<E: PairingEngine> UniversalParams<E> {
         let g_table = FixedBaseMSM::get_window_table(scalar_bits, window_size, g);
         let h_table = FixedBaseMSM::get_window_table(scalar_bits, window_size, h);
 
-        #[cfg(not(feature = "group-switched"))]
         let pp_g = E::G1Projective::batch_normalization_into_affine(
             &FixedBaseMSM::multi_scalar_mul(scalar_bits, window_size, &g_table, &pp_powers),
         );
-        #[cfg(feature = "group-switched")]
-        let pp_g = E::G2Projective::batch_normalization_into_affine(
-            &FixedBaseMSM::multi_scalar_mul(scalar_bits, window_size, &g_table, &pp_powers),
-        );
-        #[cfg(not(feature = "group-switched"))]
+
         let pp_h = E::G2Projective::batch_normalization_into_affine(
             &FixedBaseMSM::multi_scalar_mul(scalar_bits, window_size, &h_table, &pp_powers),
         );
-        #[cfg(feature = "group-switched")]
-        let pp_h = E::G1Projective::batch_normalization_into_affine(
-            &FixedBaseMSM::multi_scalar_mul(scalar_bits, window_size, &h_table, &pp_powers),
-        );
+
         let mut start = 0;
         for i in 0..num_vars {
             let size = 1 << (num_vars - i);

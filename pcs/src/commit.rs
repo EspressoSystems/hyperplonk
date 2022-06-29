@@ -18,10 +18,7 @@ pub struct Commitment<E: PairingEngine> {
     /// number of variables
     pub nv: usize,
     /// product of g as described by the vRAM paper
-    #[cfg(not(feature = "group-switched"))]
     pub g_product: E::G1Affine,
-    #[cfg(feature = "group-switched")]
-    pub g_product: E::G2Affine,
 }
 
 #[derive(CanonicalSerialize, CanonicalDeserialize, Clone, Debug)]
@@ -186,33 +183,12 @@ impl<E: PairingEngine> MultilinearCommitmentScheme<E> for KZGMultilinearPC<E> {
             )
             .collect();
 
-        #[cfg(feature = "group-switched")]
-        let mut pairings: Vec<_> = proof
-            .proofs
-            .iter()
-            .take(verifier_param.num_vars)
-            .map(|&x| E::G1Prepared::from(x))
-            .zip(
-                g1_vec
-                    .into_iter()
-                    .take(verifier_param.num_vars)
-                    .map(E::G2Prepared::from),
-            )
-            .collect();
-
-        #[cfg(not(feature = "group-switched"))]
         pairings.push((
             E::G1Prepared::from(
                 (verifier_param.g.mul(value) - commitment.g_product.into_projective())
                     .into_affine(),
             ),
             E::G2Prepared::from(verifier_param.h),
-        ));
-
-        #[cfg(feature = "group-switched")]
-        pairings.push((
-            E::G1Prepared::from(verifier_param.h),
-            E::G2Prepared::from(tmp),
         ));
 
         let res = E::product_of_pairings(pairings.iter()) == E::Fqk::one();
