@@ -28,10 +28,22 @@
 <span id="23">23</span>
 <span id="24">24</span>
 <span id="25">25</span>
+<span id="26">26</span>
+<span id="27">27</span>
+<span id="28">28</span>
+<span id="29">29</span>
+<span id="30">30</span>
+<span id="31">31</span>
+<span id="32">32</span>
+<span id="33">33</span>
+<span id="34">34</span>
+<span id="35">35</span>
 </pre><pre class="rust"><code><span class="doccomment">//! Error module.</span>
 
+<span class="kw">use</span> <span class="ident">ark_serialize::SerializationError</span>;
 <span class="kw">use</span> <span class="ident">ark_std::string::String</span>;
 <span class="kw">use</span> <span class="ident">displaydoc::Display</span>;
+<span class="kw">use</span> <span class="ident">poly_iop::PolyIOPErrors</span>;
 
 <span class="doccomment">/// A `enum` specifying the possible failure modes of the PCS.</span>
 <span class="attribute">#[<span class="ident">derive</span>(<span class="ident">Display</span>, <span class="ident">Debug</span>)]</span>
@@ -45,14 +57,22 @@
     <span class="doccomment">/// Invalid parameters: {0}</span>
     <span class="ident">InvalidParameters</span>(<span class="ident">String</span>),
     <span class="doccomment">/// An error during (de)serialization: {0}</span>
-    <span class="ident">SerializationError</span>(<span class="ident">ark_serialize::SerializationError</span>),
+    <span class="ident">SerializationError</span>(<span class="ident">SerializationError</span>),
+    <span class="doccomment">/// PolyIOP error {0}</span>
+    <span class="ident">PolyIOPErrors</span>(<span class="ident">PolyIOPErrors</span>),
 }
 
-<span class="kw">impl</span> <span class="ident">From</span><span class="op">&lt;</span><span class="ident">ark_serialize::SerializationError</span><span class="op">&gt;</span> <span class="kw">for</span> <span class="ident">PCSErrors</span> {
+<span class="kw">impl</span> <span class="ident">From</span><span class="op">&lt;</span><span class="ident">SerializationError</span><span class="op">&gt;</span> <span class="kw">for</span> <span class="ident">PCSErrors</span> {
     <span class="kw">fn</span> <span class="ident">from</span>(<span class="ident">e</span>: <span class="ident">ark_serialize::SerializationError</span>) -&gt; <span class="self">Self</span> {
         <span class="ident"><span class="self">Self</span>::SerializationError</span>(<span class="ident">e</span>)
     }
 }
+
+<span class="kw">impl</span> <span class="ident">From</span><span class="op">&lt;</span><span class="ident">PolyIOPErrors</span><span class="op">&gt;</span> <span class="kw">for</span> <span class="ident">PCSErrors</span> {
+    <span class="kw">fn</span> <span class="ident">from</span>(<span class="ident">e</span>: <span class="ident">PolyIOPErrors</span>) -&gt; <span class="self">Self</span> {
+        <span class="ident"><span class="self">Self</span>::PolyIOPErrors</span>(<span class="ident">e</span>)
+    }
+}
 </code></pre></div>
-</section><section id="search" class="content hidden"></section></div></main><div id="rustdoc-vars" data-root-path="../../" data-current-crate="pcs" data-themes="ayu,dark,light" data-resource-suffix="" data-rustdoc-version="1.61.0 (fe5b13d68 2022-05-18)" ></div>
+</section></div></main><div id="rustdoc-vars" data-root-path="../../" data-current-crate="pcs" data-themes="ayu,dark,light" data-resource-suffix="" data-rustdoc-version="1.62.0 (a8314ef7d 2022-06-27)" ></div>
 </body></html>
