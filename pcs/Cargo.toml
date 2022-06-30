@@ -17,6 +17,9 @@ ark-bls12-381 = { version = "0.3.0", default-features = false, features = [ "cur
 
 displaydoc = { version = "0.2.3", default-features = false }
 
+poly-iop = { path = "../poly-iop" }
+
+
 # Benchmarks
 [[bench]]
 name = "pcs-benches"
@@ -31,7 +34,9 @@ parallel = [
     "ark-ff/parallel",  
     "ark-poly/parallel", 
     "ark-ec/parallel",
+    "poly-iop/parallel"
     ]
 print-trace = [ 
-    "ark-std/print-trace" 
+    "ark-std/print-trace",
+    "poly-iop/print-trace"
     ] 
