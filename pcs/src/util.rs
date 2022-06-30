@@ -30,7 +30,11 @@ pub(crate) fn compute_w_circ_l<F: PrimeField>(
     }
 
     let mut res_eval: Vec<F> = vec![];
-    let uni_degree = l.len() + 1;
+
+    // TODO: consider to pass this in from caller
+    // uni_degree is (product of each prefix's) + (2 * MLEs)
+    // = (l.len() - (num_vars - log(l.len())) + 2) * l[0].degree
+    let uni_degree = (l.len() - w.num_vars + log2(l.len()) as usize + 2) * l[0].degree();
 
     let domain = match Radix2EvaluationDomain::<F>::new(uni_degree) {
         Some(p) => p,
@@ -40,9 +44,10 @@ pub(crate) fn compute_w_circ_l<F: PrimeField>(
             ))
         },
     };
-
     for point in domain.elements() {
-        let l_eval: Vec<F> = l.iter().map(|x| x.evaluate(&point)).collect();
+        // we reverse the order here because the coefficient vec are stored in
+        // bit-reversed order
+        let l_eval: Vec<F> = l.iter().rev().map(|x| x.evaluate(&point)).collect();
         res_eval.push(w.evaluate(l_eval.as_ref()).unwrap())
     }
     let evaluation = Evaluations::from_vec_and_domain(res_eval, domain);
@@ -102,21 +107,34 @@ pub(crate) fn build_l<F: PrimeField>(
         },
     };
 
+    // The following code print out the roots for testing
+    // println!("domain root0: {}", small_domain.element(0));
+    // println!("domain root1: {}", small_domain.element(1));
+    // println!("domain root2: {}", small_domain.element(2));
+    // println!("domain root3: {}", small_domain.element(3));
+
     let mut uni_polys = Vec::new();
+
     // 1.1 build the indexes and the univariate polys that go through the indexes
     let indexes: Vec<Vec<bool>> = (0..points.len())
         .map(|x| bit_decompose(x as u64, prefix_len))
         .collect();
     for i in 0..prefix_len {
-        let eval: Vec<F> = indexes.iter().map(|x| F::from(x[i])).collect();
-        uni_polys.push(Evaluations::from_vec_and_domain(eval, small_domain).interpolate())
+        let eval: Vec<F> = indexes
+            .iter()
+            .map(|x| F::from(x[prefix_len - i - 1]))
+            .collect();
+
+        uni_polys.push(Evaluations::from_vec_and_domain(eval.clone(), small_domain).interpolate());
     }
 
     // 1.2 build the actual univariate polys that go through the points
     for i in 0..num_var {
-        let eval: Vec<F> = points.iter().map(|x| x[i]).collect();
+        let mut eval: Vec<F> = points.iter().map(|x| x[i]).collect();
+        eval.extend_from_slice(vec![F::zero(); small_domain.size as usize - eval.len()].as_slice());
         uni_polys.push(Evaluations::from_vec_and_domain(eval, small_domain).interpolate())
     }
+
     Ok(uni_polys)
 }
 
@@ -124,7 +142,9 @@ pub(crate) fn build_l<F: PrimeField>(
 mod test {
     use super::*;
     use ark_bls12_381::Fr;
+    use ark_ff::field_new;
     use ark_poly::UVPolynomial;
+    use ark_std::{One, Zero};
 
     #[test]
     fn test_w_circ_l() -> Result<(), PCSErrors> {
@@ -148,7 +168,7 @@ mod test {
             let l1 = DensePolynomial::from_coefficients_vec(vec![F::from(4u64), -F::from(2u64)]);
 
             // res = -6t^2 - 4t + 32
-            let res = compute_w_circ_l(&w, [l1, l0].as_ref())?;
+            let res = compute_w_circ_l(&w, [l0, l1].as_ref())?;
             let res_rec = DensePolynomial::from_coefficients_vec(vec![
                 F::from(32u64),
                 -F::from(4u64),
@@ -185,7 +205,7 @@ mod test {
             let l0 = DensePolynomial::from_coefficients_vec(vec![F::from(2u64), F::one()]);
             let l1 = DensePolynomial::from_coefficients_vec(vec![-F::from(4u64), F::from(3u64)]);
             let l2 = DensePolynomial::from_coefficients_vec(vec![F::from(6u64), -F::from(5u64)]);
-            let res = compute_w_circ_l(&w, [l2, l1, l0].as_ref())?;
+            let res = compute_w_circ_l(&w, [l0, l1, l2].as_ref())?;
 
             // res = -15t^3 - 23t^2 + 130t - 76
             let res_rec = DensePolynomial::from_coefficients_vec(vec![
@@ -196,6 +216,394 @@ mod test {
             ]);
 
             assert_eq!(res, res_rec);
+        }
+        Ok(())
+    }
+
+    #[test]
+    fn test_merge_poly() -> Result<(), PCSErrors> {
+        test_merge_poly_helper::<Fr>()
+    }
+    fn test_merge_poly_helper<F: PrimeField>() -> Result<(), PCSErrors> {
+        // Example from page 53:
+        // W1 = 3x1x2 + 2x2 whose evaluations are
+        // 0, 0 |-> 0
+        // 0, 1 |-> 2
+        // 1, 0 |-> 0
+        // 1, 1 |-> 5
+        let w_eval = vec![F::zero(), F::from(2u64), F::zero(), F::from(5u64)];
+        let w1 = DenseMultilinearExtension::from_evaluations_vec(2, w_eval);
+
+        // W2 = x1x2 + x1 whose evaluations are
+        // 0, 0 |-> 0
+        // 0, 1 |-> 0
+        // 1, 0 |-> 1
+        // 1, 1 |-> 2
+        let w_eval = vec![F::zero(), F::zero(), F::from(1u64), F::from(2u64)];
+        let w2 = DenseMultilinearExtension::from_evaluations_vec(2, w_eval);
+
+        // W3 = x1 + x2 whose evaluations are
+        // 0, 0 |-> 0
+        // 0, 1 |-> 1
+        // 1, 0 |-> 1
+        // 1, 1 |-> 2
+        let w_eval = vec![F::zero(), F::one(), F::from(1u64), F::from(2u64)];
+        let w3 = DenseMultilinearExtension::from_evaluations_vec(2, w_eval);
+
+        {
+            // W = (3x1x2 + 2x2)(1-x0) + (x1x2 + x1)x0
+            //   = -2x0x1x2 + x0x1 - 2x0x2 + 3x1x2 + 2x2
+            // with evaluation map
+            //
+            // x0 x1 x2
+            // 0, 0, 0 |->  0
+            // 0, 0, 1 |->  2
+            // 0, 1, 0 |->  0
+            // 0, 1, 1 |->  5
+            // 1, 0, 0 |->  0
+            // 1, 0, 1 |->  0
+            // 1, 1, 0 |->  1
+            // 1, 1, 1 |->  2
+            //
+            let w = merge_polynomials(&[w1.clone(), w2.clone()])?;
+            // w is [0,2,0,5,0,0,1,2]
+            let w_eval = vec![
+                F::zero(),
+                F::from(2u64),
+                F::zero(),
+                F::from(5u64),
+                F::zero(),
+                F::zero(),
+                F::from(1u64),
+                F::from(2u64),
+            ];
+            let w_rec = DenseMultilinearExtension::from_evaluations_vec(3, w_eval);
+
+            assert_eq!(w, w_rec);
+        }
+
+        {
+            // W = (3x1x2 + 2x2)    * (1-y1)    * (1-y2)
+            //   + (x1x2 + x1)      * (1-y1)    * y2
+            //   + (x1 + x2)        * y1        * (1-y2)
+            //
+            // with evaluation map
+            //
+            // y1 y2 x1 x2
+            // 0, 0, 0, 0 |->  0
+            // 0, 0, 0, 1 |->  2
+            // 0, 0, 1, 0 |->  0
+            // 0, 0, 1, 1 |->  5
+            // 0, 1, 0, 0 |->  0
+            // 0, 1, 0, 1 |->  0
+            // 0, 1, 1, 0 |->  1
+            // 0, 1, 1, 1 |->  2
+            // 1, 0, 0, 0 |->  0
+            // 1, 0, 0, 1 |->  1
+            // 1, 0, 1, 0 |->  1
+            // 1, 0, 1, 1 |->  2
+            // 1, 1, 0, 0 |->  0
+            // 1, 1, 0, 1 |->  0
+            // 1, 1, 1, 0 |->  0
+            // 1, 1, 1, 1 |->  0
+            //
+            let w = merge_polynomials(&[w1, w2, w3])?;
+            // w is [0,2,0,5,0,0,1,2, 0,1,1,2]
+            let w_eval = vec![
+                F::zero(),
+                F::from(2u64),
+                F::zero(),
+                F::from(5u64),
+                F::zero(),
+                F::zero(),
+                F::from(1u64),
+                F::from(2u64),
+                F::zero(),
+                F::one(),
+                F::from(1u64),
+                F::from(2u64),
+                F::zero(),
+                F::zero(),
+                F::zero(),
+                F::zero(),
+            ];
+            let w_rec = DenseMultilinearExtension::from_evaluations_vec(4, w_eval);
+
+            assert_eq!(w, w_rec);
+        }
+        Ok(())
+    }
+
+    #[test]
+    fn test_build_l() -> Result<(), PCSErrors> {
+        test_build_l_helper::<Fr>()
+    }
+
+    fn test_build_l_helper<F: PrimeField>() -> Result<(), PCSErrors> {
+        // point 1 is [1, 2]
+        let point1 = [Fr::from(1u64), Fr::from(2u64)];
+
+        // point 2 is [3, 4]
+        let point2 = [Fr::from(3u64), Fr::from(4u64)];
+
+        // point 3 is [5, 6]
+        let point3 = [Fr::from(5u64), Fr::from(6u64)];
+
+        {
+            let l = build_l(2, &[&point1, &point2])?;
+
+            // roots: [1, -1]
+            // l0 = -1/2 * x + 1/2
+            // l1 = -x + 2
+            // l2 = -x + 3
+            let l0 = DensePolynomial::from_coefficients_vec(vec![
+                Fr::one() / Fr::from(2u64),
+                -Fr::one() / Fr::from(2u64),
+            ]);
+            let l1 = DensePolynomial::from_coefficients_vec(vec![Fr::from(2u64), -Fr::one()]);
+            let l2 = DensePolynomial::from_coefficients_vec(vec![Fr::from(3u64), -Fr::one()]);
+
+            assert_eq!(l0, l[0], "l0 not equal");
+            assert_eq!(l1, l[1], "l1 not equal");
+            assert_eq!(l2, l[2], "l2 not equal");
+        }
+
+        {
+            let l = build_l(2, &[&point1, &point2, &point3])?;
+
+            // sage: q = 52435875175126190479447740508185965837690552500527637822603658699938581184513
+            // sage: P.<x> = PolynomialRing(Zmod(q))
+            // sage: root1 = 1
+            // sage: root2 = 0x8D51CCCE760304D0EC030002760300000001000000000000
+            // sage: root3 = -1
+            // sage: root4 = -root2
+            // Arkwork's code is a bit wired: it also interpolate (root4, 0)
+            // which returns a degree 3 polynomial, instead of degree 2
+
+            // ========================
+            // l0: [0, 0, 1]
+            // ========================
+            // sage: points = [(root1, 0), (root2, 0), (root3, 1), (root4, 0)]
+            // sage: P.lagrange_polynomial(points)
+            // 13108968793781547619861935127046491459422638125131909455650914674984645296128*x^3 +
+            // 39326906381344642859585805381139474378267914375395728366952744024953935888385*x^2 +
+            // 13108968793781547619861935127046491459422638125131909455650914674984645296128*x +
+            // 39326906381344642859585805381139474378267914375395728366952744024953935888385
+            let l0 = DensePolynomial::from_coefficients_vec(vec![
+                field_new!(
+                    Fr,
+                    "39326906381344642859585805381139474378267914375395728366952744024953935888385"
+                ),
+                field_new!(
+                    Fr,
+                    "13108968793781547619861935127046491459422638125131909455650914674984645296128"
+                ),
+                field_new!(
+                    Fr,
+                    "39326906381344642859585805381139474378267914375395728366952744024953935888385"
+                ),
+                field_new!(
+                    Fr,
+                    "13108968793781547619861935127046491459422638125131909455650914674984645296128"
+                ),
+            ]);
+
+            // ========================
+            // l1: [0, 1, 0]
+            // ========================
+            // sage: points = [(root1, 0), (root2, 1), (root3, 0), (root4, 0)]
+            // sage: P.lagrange_polynomial(points)
+            // 866286206518413079694067382671935694567563117191340490752*x^3 +
+            // 13108968793781547619861935127046491459422638125131909455650914674984645296128*x^2 +
+            // 52435875175126190478581454301667552757996485117855702128036095582747240693761*x +
+            // 39326906381344642859585805381139474378267914375395728366952744024953935888385
+            let l1 = DensePolynomial::from_coefficients_vec(vec![
+                field_new!(
+                    Fr,
+                    "39326906381344642859585805381139474378267914375395728366952744024953935888385"
+                ),
+                field_new!(
+                    Fr,
+                    "52435875175126190478581454301667552757996485117855702128036095582747240693761"
+                ),
+                field_new!(
+                    Fr,
+                    "13108968793781547619861935127046491459422638125131909455650914674984645296128"
+                ),
+                field_new!(
+                    Fr,
+                    "866286206518413079694067382671935694567563117191340490752"
+                ),
+            ]);
+
+            // ========================
+            // l2: [1, 3, 5]
+            // ========================
+            // sage: points = [(root1, 1), (root2, 3), (root3, 5), (root4, 0)]
+            // sage: P.lagrange_polynomial(points)
+            // 2598858619555239239082202148015807083702689351574021472255*x^3 +
+            // 13108968793781547619861935127046491459422638125131909455650914674984645296129*x^2 +
+            // 52435875175126190476848881888630726598608350352511830738900969348364559712256*x +
+            // 39326906381344642859585805381139474378267914375395728366952744024953935888387
+            let l2 = DensePolynomial::from_coefficients_vec(vec![
+                field_new!(
+                    Fr,
+                    "39326906381344642859585805381139474378267914375395728366952744024953935888387"
+                ),
+                field_new!(
+                    Fr,
+                    "52435875175126190476848881888630726598608350352511830738900969348364559712256"
+                ),
+                field_new!(
+                    Fr,
+                    "13108968793781547619861935127046491459422638125131909455650914674984645296129"
+                ),
+                field_new!(
+                    Fr,
+                    "2598858619555239239082202148015807083702689351574021472255"
+                ),
+            ]);
+
+            // ========================
+            // l3: [2, 4, 6]
+            // ========================
+            // sage: points = [(root1, 2), (root2, 4), (root3, 6), (root4, 0)]
+            // sage: P.lagrange_polynomial(points)
+            // 3465144826073652318776269530687742778270252468765361963007*x^3 +
+            // x^2 +
+            // 52435875175126190475982595682112313518914282969839895044333406231173219221504*x +
+            // 3
+            let l3 = DensePolynomial::from_coefficients_vec(vec![
+                Fr::from(3u64),
+                field_new!(
+                    Fr,
+                    "52435875175126190475982595682112313518914282969839895044333406231173219221504"
+                ),
+                Fr::one(),
+                field_new!(
+                    Fr,
+                    "3465144826073652318776269530687742778270252468765361963007"
+                ),
+            ]);
+
+            assert_eq!(l0, l[0], "l0 not equal");
+            assert_eq!(l1, l[1], "l1 not equal");
+            assert_eq!(l2, l[2], "l2 not equal");
+            assert_eq!(l3, l[3], "l3 not equal");
+        }
+        Ok(())
+    }
+
+    #[test]
+    fn test_qx() -> Result<(), PCSErrors> {
+        // Example from page 53:
+        // W1 = 3x1x2 + 2x2
+        let w_eval = vec![Fr::zero(), Fr::from(2u64), Fr::zero(), Fr::from(5u64)];
+        let w1 = DenseMultilinearExtension::from_evaluations_vec(2, w_eval);
+
+        // W2 = x1x2 + x1
+        let w_eval = vec![Fr::zero(), Fr::zero(), Fr::from(1u64), Fr::from(2u64)];
+        let w2 = DenseMultilinearExtension::from_evaluations_vec(2, w_eval);
+
+        // W3 = x1 + x2
+        let w_eval = vec![Fr::zero(), Fr::one(), Fr::from(1u64), Fr::from(2u64)];
+        let w3 = DenseMultilinearExtension::from_evaluations_vec(2, w_eval);
+
+        let r = Fr::from(42u64);
+
+        // point 1 is [1, 2]
+        let point1 = [Fr::from(1u64), Fr::from(2u64)];
+
+        // point 2 is [3, 4]
+        let point2 = [Fr::from(3u64), Fr::from(4u64)];
+
+        // point 3 is [5, 6]
+        let point3 = [Fr::from(5u64), Fr::from(6u64)];
+
+        {
+            // w = (3x1x2 + 2x2)(1-x0) + (x1x2 + x1)x0
+            // with evaluations: [0,2,0,5,0,0,1,2]
+            let w = merge_polynomials(&[w1.clone(), w2.clone()])?;
+
+            let l = build_l(2, &[&point1, &point2])?;
+
+            // sage: P.<x> = PolynomialRing(ZZ)
+            // sage: l0 = -1/2 * x + 1/2
+            // sage: l1 = -x + 2
+            // sage: l2 = -x + 3
+            // sage: w = (3 * l1 * l2 + 2 * l2) * (1-l0) + (l1 * l2 + l1) * l0
+            // sage: w
+            // x^3 - 7/2*x^2 - 7/2*x + 16
+            //
+            // q(x) = x^3 - 7/2*x^2 - 7/2*x + 16
+            let q_x = compute_w_circ_l(&w, &l)?;
+
+            let point: Vec<Fr> = l.iter().rev().map(|poly| poly.evaluate(&r)).collect();
+
+            assert_eq!(
+                q_x.evaluate(&r),
+                w.evaluate(&point).unwrap(),
+                "q(r) != w(l(r))"
+            );
+        }
+
+        {
+            // W = (3x1x2 + 2x2)    * (1-y1)    * (1-y2)
+            //   + (x1x2 + x1)      * (1-y1)    * y2
+            //   + (x1 + x2)        * y1        * (1-y2)
+            let w = merge_polynomials(&[w1, w2, w3])?;
+
+            let l = build_l(2, &[&point1, &point2, &point3])?;
+
+            // l0 =
+            // 13108968793781547619861935127046491459422638125131909455650914674984645296128*x^3 +
+            // 39326906381344642859585805381139474378267914375395728366952744024953935888385*x^2 +
+            // 13108968793781547619861935127046491459422638125131909455650914674984645296128*x +
+            // 39326906381344642859585805381139474378267914375395728366952744024953935888385
+            //
+            // l1 =
+            // 866286206518413079694067382671935694567563117191340490752*x^3 +
+            // 13108968793781547619861935127046491459422638125131909455650914674984645296128*x^2 +
+            // 52435875175126190478581454301667552757996485117855702128036095582747240693761*x +
+            // 39326906381344642859585805381139474378267914375395728366952744024953935888385
+            //
+            // l2 =
+            // 2598858619555239239082202148015807083702689351574021472255*x^3 +
+            // 13108968793781547619861935127046491459422638125131909455650914674984645296129*x^2 +
+            // 52435875175126190476848881888630726598608350352511830738900969348364559712256*x +
+            // 39326906381344642859585805381139474378267914375395728366952744024953935888387
+            //
+            // l3 =
+            // 3465144826073652318776269530687742778270252468765361963007*x^3 +
+            // x^2 +
+            // 52435875175126190475982595682112313518914282969839895044333406231173219221504*x +
+            // 3
+            //
+            // q_x = (3*l2*l3 + 2*l3) * (1-l0) *(1-l1)
+            //     + (l2*l3+l2)*(1-l0)*l1
+            //     + (l2+l3)*l0*(1-l1)
+            // q_x(42) = 42675783400755005965526147011103024780845819057955866345013183657072368533932
+            let q_x = compute_w_circ_l(&w, &l)?;
+
+            let point: Vec<Fr> = vec![
+                l[3].evaluate(&r),
+                l[2].evaluate(&r),
+                l[1].evaluate(&r),
+                l[0].evaluate(&r),
+            ];
+
+            assert_eq!(
+                q_x.evaluate(&r),
+                field_new!(
+                    Fr,
+                    "42675783400755005965526147011103024780845819057955866345013183657072368533932"
+                ),
+            );
+            assert_eq!(
+                q_x.evaluate(&r),
+                w.evaluate(&point).unwrap(),
+                "q(r) != w(l(r))"
+            );
         }
         Ok(())
     }
