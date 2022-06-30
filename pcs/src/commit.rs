@@ -268,7 +268,11 @@ impl<E: PairingEngine> MultilinearCommitmentScheme<E> for KZGMultilinearPC<E> {
         let r = transcript.get_and_append_challenge(b"r")?;
 
         // 6. get a point `p := l(r)`
-        let point: Vec<E::Fr> = uni_polys.iter().map(|poly| poly.evaluate(&r)).collect();
+        let point: Vec<E::Fr> = uni_polys
+            .iter()
+            .rev()
+            .map(|poly| poly.evaluate(&r))
+            .collect();
 
         // 7. output an opening of `w` over point `p`
         let opening = Self::open(prover_param, &merge_poly, &point)?;
@@ -276,7 +280,12 @@ impl<E: PairingEngine> MultilinearCommitmentScheme<E> for KZGMultilinearPC<E> {
         // 8. output value that is `w` evaluated at `p` (which should match `q(r)`)
         let value = merge_poly.evaluate(&point).unwrap();
         let value2 = q_x.evaluate(&r);
-        println!("{} {}", value, value2);
+
+        if value != value2 {
+            return Err(PCSErrors::InvalidProver(
+                "Q(r) does not match W(l(r))".to_string(),
+            ));
+        }
 
         end_timer!(open_timer);
 
@@ -402,10 +411,7 @@ impl<E: PairingEngine> MultilinearCommitmentScheme<E> for KZGMultilinearPC<E> {
         // 3. check `q(r) == value`
         let q_x = DensePolynomial::from_coefficients_slice(&batch_proof.q_x_com);
         let q_r = q_x.evaluate(&r);
-
-        println!("{} {}", batch_proof.value, q_r);
         if q_r != batch_proof.value {
-            println!("univariate failed");
             return Ok(false);
         }
 
@@ -414,7 +420,7 @@ impl<E: PairingEngine> MultilinearCommitmentScheme<E> for KZGMultilinearPC<E> {
         let uni_polys = build_l(num_var, points)?;
 
         // 5. get a point `p := l(r)`
-        let point: Vec<E::Fr> = uni_polys.iter().map(|x| x.evaluate(&r)).collect();
+        let point: Vec<E::Fr> = uni_polys.iter().rev().map(|x| x.evaluate(&r)).collect();
 
         // 6. verifies `p` is verifies against proof
         let res = Self::verify(
@@ -424,6 +430,7 @@ impl<E: PairingEngine> MultilinearCommitmentScheme<E> for KZGMultilinearPC<E> {
             &batch_proof.value,
             &batch_proof.proof,
         );
+        println!("{:?}", res);
         end_timer!(verify_timer);
 
         res
