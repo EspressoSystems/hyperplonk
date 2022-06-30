@@ -430,7 +430,6 @@ impl<E: PairingEngine> MultilinearCommitmentScheme<E> for KZGMultilinearPC<E> {
             &batch_proof.value,
             &batch_proof.proof,
         );
-        println!("{:?}", res);
         end_timer!(verify_timer);
 
         res
@@ -511,6 +510,7 @@ mod tests {
         let com = KZGMultilinearPC::multi_commit(&ck, polys)?;
         let batch_proof = KZGMultilinearPC::multi_open(&ck, polys, &points_ref, &mut transcript)?;
 
+        // good path
         let mut transcript = IOPTranscript::new(b"test");
         assert!(KZGMultilinearPC::batch_verify(
             &vk,
@@ -519,6 +519,72 @@ mod tests {
             &batch_proof,
             &mut transcript
         )?);
+
+        // bad commitment
+        assert!(KZGMultilinearPC::batch_verify(
+            &vk,
+            &Commitment {
+                nv: 0,
+                g_product: <E as PairingEngine>::G1Affine::default()
+            },
+            &points_ref,
+            &batch_proof,
+            &mut transcript
+        )
+        .is_err());
+
+        // bad points
+        let points_ref: Vec<&[Fr]> = points.iter().skip(1).map(|x| x.as_ref()).collect();
+        assert!(KZGMultilinearPC::batch_verify(
+            &vk,
+            &com,
+            &points_ref,
+            &batch_proof,
+            &mut transcript
+        )
+        .is_err());
+
+        // bad proof
+        assert!(KZGMultilinearPC::batch_verify(
+            &vk,
+            &com,
+            &points_ref,
+            &BatchProof {
+                proof: Proof { proofs: Vec::new() },
+                value: batch_proof.value,
+                q_x_com: batch_proof.q_x_com.clone()
+            },
+            &mut transcript
+        )
+        .is_err());
+
+        // bad value
+        assert!(KZGMultilinearPC::batch_verify(
+            &vk,
+            &com,
+            &points_ref,
+            &BatchProof {
+                proof: batch_proof.proof.clone(),
+                value: Fr::one(),
+                q_x_com: batch_proof.q_x_com
+            },
+            &mut transcript
+        )
+        .is_err());
+
+        // bad q(x) commit
+        assert!(KZGMultilinearPC::batch_verify(
+            &vk,
+            &com,
+            &points_ref,
+            &BatchProof {
+                proof: batch_proof.proof,
+                value: batch_proof.value,
+                q_x_com: Vec::new()
+            },
+            &mut transcript
+        )
+        .is_err());
 
         Ok(())
     }
@@ -535,11 +601,11 @@ mod tests {
             .collect();
         test_multi_commit_helper(&uni_params, &polys1, &mut rng)?;
 
-        // // single-variate polynomials
-        // let polys1: Vec<_> = (0..5)
-        //     .map(|_| DenseMultilinearExtension::rand(1, &mut rng))
-        //     .collect();
-        // test_multi_commit_helper(&uni_params, &polys1, &mut rng)?;
+        // single-variate polynomials
+        let polys1: Vec<_> = (0..5)
+            .map(|_| DenseMultilinearExtension::rand(1, &mut rng))
+            .collect();
+        test_multi_commit_helper(&uni_params, &polys1, &mut rng)?;
 
         Ok(())
     }
