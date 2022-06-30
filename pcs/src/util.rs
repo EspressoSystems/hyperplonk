@@ -125,7 +125,7 @@ pub(crate) fn build_l<F: PrimeField>(
             .map(|x| F::from(x[prefix_len - i - 1]))
             .collect();
 
-        uni_polys.push(Evaluations::from_vec_and_domain(eval.clone(), small_domain).interpolate());
+        uni_polys.push(Evaluations::from_vec_and_domain(eval, small_domain).interpolate());
     }
 
     // 1.2 build the actual univariate polys that go through the points
