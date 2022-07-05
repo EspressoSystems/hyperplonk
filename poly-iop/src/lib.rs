@@ -2,6 +2,7 @@ use ark_ff::PrimeField;
 use std::marker::PhantomData;
 
 mod errors;
+mod hyperplonk;
 mod perm_check;
 mod structs;
 mod sum_check;
@@ -11,6 +12,7 @@ mod virtual_poly;
 mod zero_check;
 
 pub use errors::PolyIOPErrors;
+pub use hyperplonk::HyperPlonkPIOP;
 pub use perm_check::{
     util::{identity_permutation_mle, random_permutation_mle},
     PermutationCheck,

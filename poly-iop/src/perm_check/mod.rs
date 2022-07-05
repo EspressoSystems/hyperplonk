@@ -31,6 +31,18 @@ pub trait PermutationCheck<F: PrimeField>: ZeroCheck<F> {
     type PermutationCheckSubClaim;
     type PermutationChallenge;
 
+    /// Generate the preprocessed polynomial for the permutation check.
+    ///
+    /// The algorithm takes as input a permutation and outputs a merged
+    /// multilinear polynomial s(X0, X1, ..., Xn) such that
+    /// - s(0, X1, ..., Xn) = s_id(X1, ..., Xn) (identity permutation
+    ///   polynomial)
+    /// - s(1, X1, ..., Xn) = s_perm(X1, ..., Xn) (permutation polynomial)
+    fn preprocess(
+        permutation: &[F],
+        aux_info: &Self::VPAuxInfo,
+    ) -> Result<DenseMultilinearExtension<F>, PolyIOPErrors>;
+
     /// Initialize the system with a transcript
     ///
     /// This function is optional -- in the case where a PermutationCheck is
@@ -81,6 +93,8 @@ pub trait PermutationCheck<F: PrimeField>: ZeroCheck<F> {
     ///
     /// The caller needs to check num_vars matches in f/g/s_id/s_perm
     /// Cost: linear in N.
+    ///
+    /// TODO: replace argument `s_perm` with the merged polynomial `s`.
     fn compute_products(
         challenge: &Self::PermutationChallenge,
         fx: &DenseMultilinearExtension<F>,
@@ -162,6 +176,20 @@ impl<F: PrimeField> PermutationCheck<F> for PolyIOP<F> {
 
     type PermutationChallenge = PermutationChallenge<F>;
 
+    /// Generate the preprocessed polynomial for the permutation check.
+    ///
+    /// The algorithm takes as input a permutation and outputs a merged
+    /// multilinear polynomial s(X0, X1, ..., Xn) such that
+    /// - s(0, X1, ..., Xn) = s_id(X1, ..., Xn) (identity permutation
+    ///   polynomial)
+    /// - s(1, X1, ..., Xn) = s_perm(X1, ..., Xn) (permutation polynomial)
+    fn preprocess(
+        _permutation: &[F],
+        _aux_info: &Self::VPAuxInfo,
+    ) -> Result<DenseMultilinearExtension<F>, PolyIOPErrors> {
+        unimplemented!();
+    }
+
     /// Initialize the system with a transcript
     ///
     /// This function is optional -- in the case where a PermutationCheck is
@@ -229,6 +257,8 @@ impl<F: PrimeField> PermutationCheck<F> for PolyIOP<F> {
     ///
     /// The caller needs to check num_vars matches in f/g/s_id/s_perm
     /// Cost: linear in N.
+    ///
+    /// TODO: replace argument `s_perm` with the merged polynomial `s`.
     fn compute_products(
         challenge: &Self::PermutationChallenge,
         fx: &DenseMultilinearExtension<F>,
