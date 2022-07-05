@@ -29,7 +29,9 @@ use transcript::IOPTranscript;
 /// polynomial evaluations
 pub trait ProductCheck<F: PrimeField>: ZeroCheck<F> {
     type ProductCheckSubClaim;
-    type ProductCheckChallenge;
+    type ProductCheckChallenge;    
+    type ProductProof;
+
 
     /// Initialize the system with a transcript
     ///
@@ -73,12 +75,12 @@ pub trait ProductCheck<F: PrimeField>: ZeroCheck<F> {
         prod_x: &DenseMultilinearExtension<F>,
         transcript: &mut IOPTranscript<F>,
         claimed_product: F,
-    ) -> Result<Self::Proof, PolyIOPErrors>;
+    ) -> Result<Self::ProductProof, PolyIOPErrors>;
 
     /// Verify that for a witness virtual polynomial f(x),
     /// it holds that `s = \prod_{x \in {0,1}^n} f(x)`
     fn verify(
-        proof: &Self::Proof,
+        proof: &Self::ProductProof,
         aux_info: &Self::VPAuxInfo,
         transcript: &mut Self::Transcript,
         claimed_product: F,

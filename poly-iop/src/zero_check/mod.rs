@@ -19,6 +19,7 @@ pub struct ZeroCheckSubClaim<F: PrimeField, SC: SumCheck<F>> {
 /// A ZeroCheck is derived from SumCheck.
 pub trait ZeroCheck<F: PrimeField>: SumCheck<F> {
     type ZeroCheckSubClaim;
+    type ZeroCheckProof;
 
     /// Initialize the system with a transcript
     ///
@@ -33,11 +34,11 @@ pub trait ZeroCheck<F: PrimeField>: SumCheck<F> {
     fn prove(
         poly: &Self::VirtualPolynomial,
         transcript: &mut Self::Transcript,
-    ) -> Result<Self::Proof, PolyIOPErrors>;
+    ) -> Result<Self::ZeroCheckProof, PolyIOPErrors>;
 
     /// verify the claimed sum using the proof
     fn verify(
-        proof: &Self::Proof,
+        proof: &Self::ZeroCheckProof,
         aux_info: &Self::VPAuxInfo,
         transcript: &mut Self::Transcript,
     ) -> Result<Self::ZeroCheckSubClaim, PolyIOPErrors>;
@@ -48,6 +49,8 @@ impl<F: PrimeField> ZeroCheck<F> for PolyIOP<F> {
     /// - the SubClaim from the SumCheck
     /// - the initial challenge r which is used to build eq(x, r)
     type ZeroCheckSubClaim = ZeroCheckSubClaim<F, Self>;
+    /// A ZeroCheckProof is a SumCheckProof
+    type ZeroCheckProof = Self::SumCheckProof;
 
     /// Initialize the system with a transcript
     ///
@@ -70,7 +73,7 @@ impl<F: PrimeField> ZeroCheck<F> for PolyIOP<F> {
     fn prove(
         poly: &Self::VirtualPolynomial,
         transcript: &mut Self::Transcript,
-    ) -> Result<Self::Proof, PolyIOPErrors> {
+    ) -> Result<Self::ZeroCheckProof, PolyIOPErrors> {
         let start = start_timer!(|| "zero check prove");
 
         let length = poly.aux_info.num_variables;
@@ -92,7 +95,7 @@ impl<F: PrimeField> ZeroCheck<F> for PolyIOP<F> {
     /// `\hat f(x)` is build correctly. The caller needs to makes sure that
     /// `\hat f(x) = f(x) * eq(x, r)`
     fn verify(
-        proof: &Self::Proof,
+        proof: &Self::ZeroCheckProof,
         fx_aux_info: &Self::VPAuxInfo,
         transcript: &mut Self::Transcript,
     ) -> Result<Self::ZeroCheckSubClaim, PolyIOPErrors> {

@@ -3,12 +3,14 @@
 use ark_serialize::SerializationError;
 use ark_std::string::String;
 use displaydoc::Display;
-use transcript::TranscriptErrors;
+use pcs::prelude::PCSErrors;
 use poly_iop::prelude::PolyIOPErrors;
 
-/// A `enum` specifying the possible failure modes of the PCS.
+/// A `enum` specifying the possible failure modes of hyperplonk.
+#[allow(dead_code)]
+// todo: REMOVE
 #[derive(Display, Debug)]
-pub enum PCSErrors {
+pub enum HyperPlonkErrors {
     /// Invalid Prover: {0}
     InvalidProver(String),
     /// Invalid Verifier: {0}
@@ -19,18 +21,26 @@ pub enum PCSErrors {
     InvalidParameters(String),
     /// An error during (de)serialization: {0}
     SerializationError(SerializationError),
-    /// Transcript error {0}
-    TranscriptError(TranscriptErrors),
+    /// PolyIOP error {0}
+    PolyIOPErrors(PolyIOPErrors),
+    /// PCS error {0}
+    PCSErrors(PCSErrors),
 }
 
-impl From<SerializationError> for PCSErrors {
+impl From<SerializationError> for HyperPlonkErrors {
     fn from(e: ark_serialize::SerializationError) -> Self {
         Self::SerializationError(e)
     }
 }
 
-impl From<TranscriptErrors> for PCSErrors {
-    fn from(e: TranscriptErrors) -> Self {
-        Self::TranscriptError(e)
+impl From<PolyIOPErrors> for HyperPlonkErrors {
+    fn from(e: PolyIOPErrors) -> Self {
+        Self::PolyIOPErrors(e)
+    }
+}
+
+impl From<PCSErrors> for HyperPlonkErrors {
+    fn from(e: PCSErrors) -> Self {
+        Self::PCSErrors(e)
     }
 }

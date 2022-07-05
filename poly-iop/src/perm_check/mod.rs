@@ -31,6 +31,7 @@ pub mod util;
 pub trait PermutationCheck<F: PrimeField>: ZeroCheck<F> {
     type PermutationCheckSubClaim;
     type PermutationChallenge;
+    type PermutationProof;
 
     /// Generate the preprocessed polynomial for the permutation check.
     ///
@@ -117,12 +118,12 @@ pub trait PermutationCheck<F: PrimeField>: ZeroCheck<F> {
         prod_x_and_aux_info: &[DenseMultilinearExtension<F>; 7],
         challenge: &Self::PermutationChallenge,
         transcript: &mut IOPTranscript<F>,
-    ) -> Result<Self::Proof, PolyIOPErrors>;
+    ) -> Result<Self::PermutationProof, PolyIOPErrors>;
 
     /// Verify that an MLE g(x) is a permutation of
     /// MLE f(x) over a permutation given by s_perm.
     fn verify(
-        proof: &Self::Proof,
+        proof: &Self::PermutationProof,
         aux_info: &Self::VPAuxInfo,
         transcript: &mut Self::Transcript,
     ) -> Result<Self::PermutationCheckSubClaim, PolyIOPErrors>;
@@ -175,6 +176,7 @@ impl<F: PrimeField> PermutationCheck<F> for PolyIOP<F> {
     /// - the initial challenge r which is used to build eq(x, r)
     type PermutationCheckSubClaim = PermutationCheckSubClaim<F, Self>;
 
+    type PermutationProof = Self::SumCheckProof;
     type PermutationChallenge = PermutationChallenge<F>;
 
     /// Generate the preprocessed polynomial for the permutation check.
@@ -369,7 +371,7 @@ impl<F: PrimeField> PermutationCheck<F> for PolyIOP<F> {
         prod_x_and_aux_info: &[DenseMultilinearExtension<F>; 7],
         challenge: &Self::PermutationChallenge,
         transcript: &mut IOPTranscript<F>,
-    ) -> Result<Self::Proof, PolyIOPErrors> {
+    ) -> Result<Self::PermutationProof, PolyIOPErrors> {
         let alpha = match challenge.alpha {
             Some(p) => p,
             None => {
@@ -386,7 +388,7 @@ impl<F: PrimeField> PermutationCheck<F> for PolyIOP<F> {
     /// Verify that an MLE g(x) is a permutation of an
     /// MLE f(x) over a permutation given by s_perm.
     fn verify(
-        proof: &Self::Proof,
+        proof: &Self::PermutationProof,
         aux_info: &Self::VPAuxInfo,
         transcript: &mut Self::Transcript,
     ) -> Result<Self::PermutationCheckSubClaim, PolyIOPErrors> {
@@ -466,12 +468,11 @@ fn prove_internal<F: PrimeField>(
 
 #[cfg(test)]
 mod test {
-
     use super::PermutationCheck;
     use crate::{
         errors::PolyIOPErrors,
-        perm_check::{prove_internal, util::identity_permutation_mle},
-        random_permutation_mle,
+        perm_check::prove_internal,
+        prelude::{identity_permutation_mle, random_permutation_mle},
         structs::IOPProof,
         utils::bit_decompose,
         virtual_poly::VPAuxInfo,

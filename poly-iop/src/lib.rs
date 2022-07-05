@@ -2,9 +2,9 @@ use ark_ff::PrimeField;
 use std::marker::PhantomData;
 
 mod errors;
-mod hyperplonk;
 mod perm_check;
 mod prod_check;
+pub mod prelude;
 mod structs;
 mod sum_check;
 mod utils;
@@ -22,6 +22,9 @@ pub use sum_check::SumCheck;
 pub use utils::*;
 pub use virtual_poly::{VPAuxInfo, VirtualPolynomial};
 pub use zero_check::ZeroCheck;
+use errors::PolyIOPErrors;
+use virtual_poly::VirtualPolynomial;
+use zero_check::ZeroCheck;
 
 #[derive(Clone, Debug, Default, Copy)]
 /// Struct for PolyIOP protocol.

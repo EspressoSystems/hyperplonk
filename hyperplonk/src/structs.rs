@@ -3,67 +3,9 @@
 use crate::{errors::PolyIOPErrors, perm_check::PermutationCheck, zero_check::ZeroCheck};
 use ark_ff::PrimeField;
 use ark_poly::DenseMultilinearExtension;
+use poly_iop::prelude::{PermutationCheck, ZeroCheck};
 use std::rc::Rc;
 use transcript::IOPTranscript;
-
-/// A trait for HyperPlonk Poly-IOPs
-pub trait HyperPlonkPIOP<F: PrimeField> {
-    type Parameters;
-    type ProvingKey;
-    type Proof;
-    type SubClaim;
-
-    /// Generate the preprocessed polynomials output by the indexer.
-    ///
-    /// Inputs:
-    /// - `params`: HyperPlonk instance parameters
-    /// - `permutation`: the permutation for the copy constraints
-    /// - `selectors`: the list of selector vectors for custom gates
-    /// Outputs:
-    /// - The HyperPlonk proving key, which includes the preprocessed
-    ///   polynomials.
-    fn preprocess(
-        params: &Self::Parameters,
-        permutation: &[F],
-        selectors: &[&[F]],
-    ) -> Result<Self::ProvingKey, PolyIOPErrors>;
-
-    /// Generate HyperPlonk PIOP proof.
-    ///
-    /// Inputs:
-    /// - `pk`: circuit proving key
-    /// - `pub_input`: online public input
-    /// - `witness`: witness assignement
-    /// - `transcript`: the transcript used for generating pseudorandom
-    ///   challenges
-    /// Outputs:
-    /// - The HyperPlonk PIOP proof.
-    fn prove(
-        pk: &Self::ProvingKey,
-        pub_input: &[F],
-        witness: &[&[F]],
-        transcript: &mut IOPTranscript<F>,
-    ) -> Result<Self::Proof, PolyIOPErrors>;
-
-    /// Verify the HyperPlonk proof and generate the evaluation subclaims to be
-    /// checked later by the SNARK verifier.
-    ///
-    /// Inputs:
-    /// - `params`: instance parameter
-    /// - `pub_input`: online public input
-    /// - `proof`: HyperPlonk PIOP proof
-    /// - `transcript`: the transcript used for generating pseudorandom
-    ///   challenges
-    /// Outputs:
-    /// - Return error if the verification fails, otherwise return the
-    ///   evaluation subclaim
-    fn verify(
-        params: &Self::Parameters,
-        pub_input: &[F],
-        proof: &Self::Proof,
-        transcript: &mut IOPTranscript<F>,
-    ) -> Result<Self::SubClaim, PolyIOPErrors>;
-}
 
 /// The sub-claim for the HyperPlonk PolyIOP, consists of the following:
 ///   - the SubClaim for the zero-check PIOP
@@ -85,9 +27,9 @@ pub struct HyperPlonkSubClaim<F: PrimeField, ZC: ZeroCheck<F>, PC: PermutationCh
 #[derive(Clone, Debug, Default, PartialEq)]
 pub struct HyperPlonkProof<F: PrimeField, ZC: ZeroCheck<F>, PC: PermutationCheck<F>> {
     /// the custom gate zerocheck proof
-    pub zero_check_proof: ZC::Proof,
+    pub zero_check_proof: ZC::ZeroCheckProof,
     /// the permutation check proof for copy constraints
-    pub perm_check_proof: PC::Proof,
+    pub perm_check_proof: PC::PermutationProof,
 }
 
 /// The HyperPlonk instance parameters, consists of the following:
@@ -121,6 +63,3 @@ pub struct HyperPlonkProvingKey<F: PrimeField> {
     /// the preprocessed index polynomials
     pub index_oracles: Vec<Rc<DenseMultilinearExtension<F>>>,
 }
-
-#[cfg(test)]
-mod test {}
