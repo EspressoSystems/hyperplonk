@@ -17,6 +17,10 @@ ark-serialize = { version = "^0.3.0", default-features = false, features = [ "de
 
 displaydoc = { version = "0.2.3", default-features = false }
 
+[dev-dependencies]
+ark-bls12-381 = { version = "0.3.0", default-features = false, features = [ "curve" ] }
+
+
 [features]
 # default = [ "parallel", "print-trace" ]
 default = [ "parallel" ]

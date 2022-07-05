@@ -2,10 +2,16 @@
 
 use crate::{
     errors::PolyIOPErrors, perm_check::util::compute_prod_0, structs::IOPProof, utils::get_index,
+    errors::PolyIOPErrors,
+    perm_check::util::{build_prod_partial_eval, compute_prod_0},
+    structs::IOPProof,
+    transcript::IOPTranscript,
+    utils::get_index,
     PolyIOP, VirtualPolynomial, ZeroCheck,
 };
 use ark_ff::PrimeField;
 use ark_poly::DenseMultilinearExtension;
+use ark_serialize::CanonicalSerialize;
 use ark_std::{end_timer, start_timer};
 use std::rc::Rc;
 use transcript::IOPTranscript;
@@ -59,22 +65,14 @@ pub trait PermutationCheck<F: PrimeField>: ZeroCheck<F> {
         transcript: &mut Self::Transcript,
     ) -> Result<Self::PermutationChallenge, PolyIOPErrors>;
 
-    /// Step 4 of the IOP.
-    /// Update the challenge with alpha; returns an error if
-    /// alpha already exists.
-    fn update_challenge(
-        challenge: &mut Self::PermutationChallenge,
-        transcript: &mut Self::Transcript,
-        prod_x_binding: &F,
-    ) -> Result<(), PolyIOPErrors>;
-
     /// Step 2 of the IOP.
-    /// Compute the following 7 polynomials
+    ///
+    /// Input:
+    /// - f(x), g(x), s_perm(x) are mle-s
+    /// - challenges, consists of beta and gamma
+    ///
+    /// Output: the evaluations for the following 3 polynomials
     /// - prod(x)
-    /// - prod(0, x)
-    /// - prod(1, x)
-    /// - prod(x, 0)
-    /// - prod(x, 1)
     /// - numerator
     /// - denominator
     ///
@@ -85,11 +83,8 @@ pub trait PermutationCheck<F: PrimeField>: ZeroCheck<F> {
     ///
     ///  (f(x) + \beta s_id(x) + \gamma)/(g(x) + \beta s_perm(x) + \gamma)
     ///
-    ///   where
-    ///   - beta and gamma are challenges
-    ///   - f(x), g(x), s_id(x), s_perm(x) are mle-s
+    ///   where s_id(x) is an identity permutation
     ///
-    /// - `prod(1,x) := prod(x, 0) * prod(x, 1)`
     /// - numerator is the MLE for `f(x) + \beta s_id(x) + \gamma`
     /// - denominator is the MLE for `g(x) + \beta s_perm(x) + \gamma`
     ///
@@ -97,25 +92,41 @@ pub trait PermutationCheck<F: PrimeField>: ZeroCheck<F> {
     /// Cost: linear in N.
     ///
     /// TODO: replace argument `s_perm` with the merged polynomial `s`.
-    fn compute_products(
+    fn compute_prod_evals(
         challenge: &Self::PermutationChallenge,
         fx: &DenseMultilinearExtension<F>,
         gx: &DenseMultilinearExtension<F>,
         s_perm: &DenseMultilinearExtension<F>,
-    ) -> Result<[DenseMultilinearExtension<F>; 7], PolyIOPErrors>;
+    ) -> Result<[DenseMultilinearExtension<F>; 3], PolyIOPErrors>;
+
+    /// Step 3 of the IOP.
+    /// push a commitment of `prod(x)` to the transcript
+    /// IMPORTANT: this step is done by the snark caller
+    fn commit_prod_x() {
+        unimplemented!()
+    }
+
+    /// Step 4 of the IOP.
+    /// Update the challenge with alpha; returns an error if
+    /// alpha already exists.
+    fn update_challenge(
+        challenge: &mut Self::PermutationChallenge,
+        transcript: &mut Self::Transcript,
+        prod_x_binding: &impl CanonicalSerialize,
+    ) -> Result<(), PolyIOPErrors>;
 
     /// Step 5 of the IOP.
     ///
     /// Initialize the prover to argue that an MLE g(x) is a permutation of
     /// MLE f(x) over a permutation given by s_perm.
     /// Inputs:
-    /// - 7 MLEs from `Self::compute_products`
+    /// - 3 MLEs from the second step
     /// - challenge: `Self::Challenge` that has been updated
     /// - transcript: a transcript that is used to generate the challenges beta
     ///   and gamma
     /// Cost: O(N)
     fn prove(
-        prod_x_and_aux_info: &[DenseMultilinearExtension<F>; 7],
+        prod_x_and_aux_info: &[DenseMultilinearExtension<F>; 3],
         challenge: &Self::PermutationChallenge,
         transcript: &mut IOPTranscript<F>,
     ) -> Result<Self::PermutationProof, PolyIOPErrors>;
@@ -141,7 +152,7 @@ pub trait PermutationCheck<F: PrimeField>: ZeroCheck<F> {
 #[derive(Clone, Debug, Default, PartialEq)]
 pub struct PermutationCheckSubClaim<F: PrimeField, ZC: ZeroCheck<F>> {
     // the SubClaim from the ZeroCheck
-    zero_check_sub_claim: ZC::ZeroCheckSubClaim,
+    pub zero_check_sub_claim: ZC::ZeroCheckSubClaim,
     // final query which consists of
     // - the vector `(1, ..., 1, 0)`
     // - the evaluation `1`
@@ -215,31 +226,14 @@ impl<F: PrimeField> PermutationCheck<F> for PolyIOP<F> {
         })
     }
 
-    /// Step 4 of the IOP.
-    /// Update the challenge with alpha; returns an error if
-    /// alpha already exists.
-    fn update_challenge(
-        challenge: &mut Self::PermutationChallenge,
-        transcript: &mut Self::Transcript,
-        prod_x_binding: &F,
-    ) -> Result<(), PolyIOPErrors> {
-        if challenge.alpha.is_some() {
-            return Err(PolyIOPErrors::InvalidChallenge(
-                "alpha should not be sampled at the current stage".to_string(),
-            ));
-        }
-        transcript.append_field_element(b"prod(x)", prod_x_binding)?;
-        challenge.alpha = Some(transcript.get_and_append_challenge(b"alpha")?);
-        Ok(())
-    }
-
     /// Step 2 of the IOP.
-    /// Compute the following 7 polynomials
+    ///
+    /// Input:
+    /// - f(x), g(x), s_perm(x) are mle-s
+    /// - challenges, consists of beta and gamma
+    ///
+    /// Output: the evaluations for the following 3 polynomials
     /// - prod(x)
-    /// - prod(0, x)
-    /// - prod(1, x)
-    /// - prod(x, 0)
-    /// - prod(x, 1)
     /// - numerator
     /// - denominator
     ///
@@ -250,11 +244,8 @@ impl<F: PrimeField> PermutationCheck<F> for PolyIOP<F> {
     ///
     ///  (f(x) + \beta s_id(x) + \gamma)/(g(x) + \beta s_perm(x) + \gamma)
     ///
-    ///   where
-    ///   - beta and gamma are challenges
-    ///   - f(x), g(x), s_id(x), s_perm(x) are mle-s
+    ///   where s_id(x) is an identity permutation
     ///
-    /// - `prod(1,x) := prod(x, 0) * prod(x, 1)`
     /// - numerator is the MLE for `f(x) + \beta s_id(x) + \gamma`
     /// - denominator is the MLE for `g(x) + \beta s_perm(x) + \gamma`
     ///
@@ -262,13 +253,13 @@ impl<F: PrimeField> PermutationCheck<F> for PolyIOP<F> {
     /// Cost: linear in N.
     ///
     /// TODO: replace argument `s_perm` with the merged polynomial `s`.
-    fn compute_products(
+    fn compute_prod_evals(
         challenge: &Self::PermutationChallenge,
         fx: &DenseMultilinearExtension<F>,
         gx: &DenseMultilinearExtension<F>,
         s_perm: &DenseMultilinearExtension<F>,
-    ) -> Result<[DenseMultilinearExtension<F>; 7], PolyIOPErrors> {
-        let start = start_timer!(|| "compute all prod polynomial");
+    ) -> Result<[DenseMultilinearExtension<F>; 3], PolyIOPErrors> {
+        let start = start_timer!(|| "compute evaluations of prod polynomial");
 
         if challenge.alpha.is_some() {
             return Err(PolyIOPErrors::InvalidChallenge(
@@ -281,7 +272,7 @@ impl<F: PrimeField> PermutationCheck<F> for PolyIOP<F> {
         // ===================================
         // prod(0, x)
         // ===================================
-        let (prod_0x, numerator, denominator) =
+        let (prod_0x_eval, numerator_eval, denominator_eval) =
             compute_prod_0(&challenge.beta, &challenge.gamma, fx, gx, s_perm)?;
 
         // ===================================
@@ -296,79 +287,71 @@ impl<F: PrimeField> PermutationCheck<F> for PolyIOP<F> {
         //
         // At any given step, the right hand side of the equation
         // is available via either eval_0x or the current view of eval_1x
-        let eval_0x = &prod_0x.evaluations;
-        let mut eval_1x = vec![];
+        let mut prod_1x_eval = vec![];
         for x in 0..(1 << num_vars) - 1 {
             // sign will decide if the evaluation should be looked up from eval_0x or
             // eval_1x; x_zero_index is the index for the evaluation (x_2, ..., x_n,
             // 0); x_one_index is the index for the evaluation (x_2, ..., x_n, 1);
             let (x_zero_index, x_one_index, sign) = get_index(x, num_vars);
             if !sign {
-                eval_1x.push(eval_0x[x_zero_index] * eval_0x[x_one_index]);
+                prod_1x_eval.push(prod_0x_eval[x_zero_index] * prod_0x_eval[x_one_index]);
             } else {
                 // sanity check: if we are trying to look up from the eval_1x table,
                 // then the target index must already exist
-                if x_zero_index >= eval_1x.len() || x_one_index >= eval_1x.len() {
+                if x_zero_index >= prod_1x_eval.len() || x_one_index >= prod_1x_eval.len() {
                     return Err(PolyIOPErrors::ShouldNotArrive);
                 }
-                eval_1x.push(eval_1x[x_zero_index] * eval_1x[x_one_index]);
+                prod_1x_eval.push(prod_1x_eval[x_zero_index] * prod_1x_eval[x_one_index]);
             }
         }
         // prod(1, 1, ..., 1) := 0
-        eval_1x.push(F::zero());
+        prod_1x_eval.push(F::zero());
 
         // ===================================
         // prod(x)
         // ===================================
         // prod(x)'s evaluation is indeed `e := [eval_0x[..], eval_1x[..]].concat()`
-        let eval = [eval_0x.as_slice(), eval_1x.as_slice()].concat();
+        let eval = [prod_0x_eval.as_slice(), prod_1x_eval.as_slice()].concat();
 
-        // ===================================
-        // prod(x, 0) and prod(x, 1)
-        // ===================================
-        //
-        // now we compute eval_x0 and eval_x1
-        // eval_0x will be the odd coefficients of eval
-        // and eval_1x will be the even coefficients of eval
-        let mut eval_x0 = vec![];
-        let mut eval_x1 = vec![];
-        for (x, &prod_x) in eval.iter().enumerate() {
-            if x & 1 == 0 {
-                eval_x0.push(prod_x);
-            } else {
-                eval_x1.push(prod_x);
-            }
-        }
-
-        let prod_1x = DenseMultilinearExtension::from_evaluations_vec(num_vars, eval_1x);
-        let prod_x0 = DenseMultilinearExtension::from_evaluations_vec(num_vars, eval_x0);
-        let prod_x1 = DenseMultilinearExtension::from_evaluations_vec(num_vars, eval_x1);
-        let prod = DenseMultilinearExtension::from_evaluations_vec(num_vars + 1, eval);
+        let fx = DenseMultilinearExtension::from_evaluations_vec(num_vars + 1, eval);
+        let numerator = DenseMultilinearExtension::from_evaluations_vec(num_vars, numerator_eval);
+        let denominator =
+            DenseMultilinearExtension::from_evaluations_vec(num_vars, denominator_eval);
 
         end_timer!(start);
-        Ok([
-            prod,
-            prod_0x,
-            prod_1x,
-            prod_x0,
-            prod_x1,
-            numerator,
-            denominator,
-        ])
+        Ok([fx, numerator, denominator])
+    }
+
+    /// Step 4 of the IOP.
+    /// Update the challenge with alpha; returns an error if
+    /// alpha already exists.
+    fn update_challenge(
+        challenge: &mut Self::PermutationChallenge,
+        transcript: &mut Self::Transcript,
+        prod_x_binding: &impl CanonicalSerialize,
+    ) -> Result<(), PolyIOPErrors> {
+        if challenge.alpha.is_some() {
+            return Err(PolyIOPErrors::InvalidTranscript(
+                "alpha should not be sampled at the current stage".to_string(),
+            ));
+        }
+        transcript.append_serializable_element(b"prod(x)", prod_x_binding)?;
+        challenge.alpha = Some(transcript.get_and_append_challenge(b"alpha")?);
+        Ok(())
     }
 
     /// Step 5 of the IOP.
     ///
-    /// Generate a proof to argue that an MLE g(x) is a permutation of
+    /// Initialize the prover to argue that an MLE g(x) is a permutation of
     /// MLE f(x) over a permutation given by s_perm.
     /// Inputs:
-    /// - 7 MLEs from `Self::compute_products(*, f, g, s_perm)`
+    /// - 3 MLEs from the second step
     /// - challenge: `Self::Challenge` that has been updated
     /// - transcript: a transcript that is used to generate the challenges beta
     ///   and gamma
     /// Cost: O(N)
     fn prove(
-        prod_x_and_aux_info: &[DenseMultilinearExtension<F>; 7],
+        prod_x_and_aux_info: &[DenseMultilinearExtension<F>; 3],
         challenge: &Self::PermutationChallenge,
         transcript: &mut IOPTranscript<F>,
     ) -> Result<Self::PermutationProof, PolyIOPErrors> {
@@ -415,8 +398,8 @@ impl<F: PrimeField> PermutationCheck<F> for PolyIOP<F> {
 /// Generate a proof to argue that an MLE g(x) is a permutation of
 /// MLE f(x) over a permutation given by s_perm.
 /// Inputs:
-/// - 7 MLEs from `Self::compute_products(*, f, g, s_perm)`
-/// - challenge: `Self::Challenge` that has been updated
+/// - 3 MLEs from the second step
+/// - challenge alpha
 /// - transcript: a transcript that is used to generate the challenges beta and
 ///   gamma
 ///
@@ -424,26 +407,19 @@ impl<F: PrimeField> PermutationCheck<F> for PolyIOP<F> {
 ///
 /// Cost: O(N)
 fn prove_internal<F: PrimeField>(
-    prod_x_and_aux_info: &[DenseMultilinearExtension<F>; 7],
+    prod_x_and_aux_info: &[DenseMultilinearExtension<F>; 3],
     alpha: &F,
     transcript: &mut IOPTranscript<F>,
 ) -> Result<(IOPProof<F>, VirtualPolynomial<F>), PolyIOPErrors> {
     let start = start_timer!(|| "Permutation check prove");
 
-    // prods consists of the following:
-    // - prod(x)
-    // - prod(0, x)
-    // - prod(1, x)
-    // - prod(x, 0)
-    // - prod(x, 1)
-    // - numerator
-    // - denominator
-    let prod_0x = Rc::new(prod_x_and_aux_info[1].clone());
-    let prod_1x = Rc::new(prod_x_and_aux_info[2].clone());
-    let prod_x1 = Rc::new(prod_x_and_aux_info[3].clone());
-    let prod_x0 = Rc::new(prod_x_and_aux_info[4].clone());
-    let numerator = Rc::new(prod_x_and_aux_info[5].clone());
-    let denominator = Rc::new(prod_x_and_aux_info[6].clone());
+    let prod_partial_evals = build_prod_partial_eval(&prod_x_and_aux_info[0])?;
+    let prod_0x = Rc::new(prod_partial_evals[0].clone());
+    let prod_1x = Rc::new(prod_partial_evals[1].clone());
+    let prod_x0 = Rc::new(prod_partial_evals[2].clone());
+    let prod_x1 = Rc::new(prod_partial_evals[3].clone());
+    let numerator = Rc::new(prod_x_and_aux_info[1].clone());
+    let denominator = Rc::new(prod_x_and_aux_info[2].clone());
 
     // compute (g(x) + beta * s_perm(x) + gamma) * prod(0, x) * alpha
     // which is prods[6] * prod[1] * alpha
@@ -468,7 +444,7 @@ fn prove_internal<F: PrimeField>(
 
 #[cfg(test)]
 mod test {
-    use super::PermutationCheck;
+    use super::{util::build_prod_partial_eval, PermutationCheck};
     use crate::{
         errors::PolyIOPErrors,
         perm_check::prove_internal,
@@ -478,15 +454,17 @@ mod test {
         virtual_poly::VPAuxInfo,
         PolyIOP, VirtualPolynomial,
     };
-    use ark_bls12_381::Fr;
-    use ark_ff::{PrimeField, Zero};
+    use ark_bls12_381::{Fr, G1Affine};
+    use ark_ec::{AffineCurve, ProjectiveCurve};
+    use ark_ff::{UniformRand, Zero};
     use ark_poly::{DenseMultilinearExtension, MultilinearExtension};
     use ark_std::test_rng;
     use std::marker::PhantomData;
 
-    fn mock_commit<F: PrimeField>(_f: &DenseMultilinearExtension<F>) -> F {
+    /// This is a mock function to generate some commitment element for testing.
+    fn mock_commit<G: AffineCurve>(_f: &DenseMultilinearExtension<G::ScalarField>) -> G {
         let mut rng = test_rng();
-        F::rand(&mut rng)
+        G::Projective::rand(&mut rng).into_affine()
     }
 
     fn test_permutation_check_helper(
@@ -501,9 +479,9 @@ mod test {
             <PolyIOP<Fr> as PermutationCheck<Fr>>::generate_challenge(&mut transcript)?;
 
         let prod_x_and_aux =
-            <PolyIOP<Fr> as PermutationCheck<Fr>>::compute_products(&challenge, f, g, s_perm)?;
+            <PolyIOP<Fr> as PermutationCheck<Fr>>::compute_prod_evals(&challenge, f, g, s_perm)?;
 
-        let prod_x_binding = mock_commit(&prod_x_and_aux[0]);
+        let prod_x_binding: G1Affine = mock_commit(&prod_x_and_aux[0]);
 
         <PolyIOP<Fr> as PermutationCheck<Fr>>::update_challenge(
             &mut challenge,
@@ -664,9 +642,10 @@ mod test {
             let challenge =
                 <PolyIOP<Fr> as PermutationCheck<Fr>>::generate_challenge(&mut transcript)?;
 
-            let res = <PolyIOP<Fr> as PermutationCheck<Fr>>::compute_products(
+            let prod_and_aux = <PolyIOP<Fr> as PermutationCheck<Fr>>::compute_prod_evals(
                 &challenge, &f, &g, &s_perm,
             )?;
+            let prod_partial_eval = build_prod_partial_eval(&prod_and_aux[0])?;
 
             for i in 0..1 << num_vars {
                 let r: Vec<Fr> = bit_decompose(i, num_vars)
@@ -674,7 +653,7 @@ mod test {
                     .map(|&x| Fr::from(x))
                     .collect();
 
-                let eval = res[1].evaluate(&r).unwrap();
+                let eval = prod_partial_eval[0].evaluate(&r).unwrap();
 
                 let f_eval = f.evaluate(&r).unwrap();
                 let g_eval = g.evaluate(&r).unwrap();

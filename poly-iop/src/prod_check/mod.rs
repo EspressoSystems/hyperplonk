@@ -29,9 +29,8 @@ use transcript::IOPTranscript;
 /// polynomial evaluations
 pub trait ProductCheck<F: PrimeField>: ZeroCheck<F> {
     type ProductCheckSubClaim;
-    type ProductCheckChallenge;    
+    type ProductCheckChallenge;
     type ProductProof;
-
 
     /// Initialize the system with a transcript
     ///

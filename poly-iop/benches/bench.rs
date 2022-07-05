@@ -156,7 +156,7 @@ fn bench_permutation_check() -> Result<(), PolyIOPErrors> {
             let mut challenge =
                 <PolyIOP<Fr> as PermutationCheck<Fr>>::generate_challenge(&mut transcript)?;
 
-            let prod_x_and_aux = <PolyIOP<Fr> as PermutationCheck<Fr>>::compute_products(
+            let prod_x_and_aux = <PolyIOP<Fr> as PermutationCheck<Fr>>::compute_prod_evals(
                 &challenge, &w, &w, &s_perm,
             )?;
 

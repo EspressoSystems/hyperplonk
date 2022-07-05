@@ -18,7 +18,7 @@ use ark_ec::{
 use ark_ff::PrimeField;
 use ark_poly::{DenseMultilinearExtension, MultilinearExtension};
 use ark_serialize::{CanonicalDeserialize, CanonicalSerialize, Read, SerializationError, Write};
-use ark_std::{end_timer, rand::RngCore, start_timer, vec::Vec, One, Zero};
+use ark_std::{end_timer, rand::RngCore, rc::Rc, start_timer, vec::Vec, One, Zero};
 use batching::{batch_verify_internal, multi_open_internal};
 use srs::{MultilinearProverParam, MultilinearUniversalParams, MultilinearVerifierParam};
 use std::marker::PhantomData;
@@ -59,14 +59,14 @@ impl<E: PairingEngine> PolynomialCommitmentScheme<E> for KZGMultilinearPCS<E> {
     type VerifierParam = (MultilinearVerifierParam<E>, UnivariateVerifierParam<E>);
     type SRS = (MultilinearUniversalParams<E>, UnivariateUniversalParams<E>);
     // Polynomial and its associated types
-    type Polynomial = DenseMultilinearExtension<E::Fr>;
+    type Polynomial = Rc<DenseMultilinearExtension<E::Fr>>;
     type Point = Vec<E::Fr>;
     type Evaluation = E::Fr;
     // Commitments and proofs
     type Commitment = Commitment<E>;
+    type BatchCommitment = Commitment<E>;
     type Proof = Proof<E>;
     type BatchProof = BatchProof<E>;
-    type BatchCommitment = Commitment<E>;
 
     /// Build SRS for testing.
     ///
@@ -83,6 +83,28 @@ impl<E: PairingEngine> PolynomialCommitmentScheme<E> for KZGMultilinearPCS<E> {
             MultilinearUniversalParams::<E>::gen_srs_for_testing(rng, log_size)?,
             UnivariateUniversalParams::<E>::gen_srs_for_testing(rng, log_size)?,
         ))
+    }
+
+    /// Trim the universal parameters to specialize the public parameters.
+    /// Input both `supported_log_degree` for univariate and
+    /// `supported_num_vars` for multilinear.
+    fn trim(
+        srs: &Self::SRS,
+        supported_log_degree: usize,
+        supported_num_vars: Option<usize>,
+    ) -> Result<(Self::ProverParam, Self::VerifierParam), PCSErrors> {
+        let supported_num_vars = match supported_num_vars {
+            Some(p) => p,
+            None => {
+                return Err(PCSErrors::InvalidParameters(
+                    "multilinear should receive a num_var param".to_string(),
+                ))
+            },
+        };
+        let (uni_ck, uni_vk) = srs.1.trim(supported_log_degree)?;
+        let (ml_ck, ml_vk) = srs.0.trim(supported_num_vars)?;
+
+        Ok(((ml_ck, uni_ck), (ml_vk, uni_vk)))
     }
 
     /// Generate a commitment for a polynomial.
@@ -377,7 +399,6 @@ fn verify_internal<E: PairingEngine>(
 #[cfg(test)]
 mod tests {
     use super::*;
-    use crate::StructuredReferenceString;
     use ark_bls12_381::Bls12_381;
     use ark_ec::PairingEngine;
     use ark_poly::{DenseMultilinearExtension, MultilinearExtension};
@@ -387,17 +408,13 @@ mod tests {
 
     fn test_single_helper<R: RngCore>(
         params: &(MultilinearUniversalParams<E>, UnivariateUniversalParams<E>),
-        poly: &DenseMultilinearExtension<Fr>,
+        poly: &Rc<DenseMultilinearExtension<Fr>>,
         rng: &mut R,
     ) -> Result<(), PCSErrors> {
         let nv = poly.num_vars();
         assert_ne!(nv, 0);
         let uni_degree = 1;
-        let (uni_ck, uni_vk) = params.1.trim(uni_degree)?;
-        let (ml_ck, ml_vk) = params.0.trim(nv)?;
-        let ck = (ml_ck, uni_ck);
-        let vk = (ml_vk, uni_vk);
-
+        let (ck, vk) = KZGMultilinearPCS::trim(params, uni_degree, Some(nv))?;
         let point: Vec<_> = (0..nv).map(|_| Fr::rand(rng)).collect();
         let com = KZGMultilinearPCS::commit(&ck, poly)?;
         let (proof, value) = KZGMultilinearPCS::open(&ck, poly, &point)?;
@@ -421,11 +438,11 @@ mod tests {
         let params = KZGMultilinearPCS::<E>::gen_srs_for_testing(&mut rng, 10)?;
 
         // normal polynomials
-        let poly1 = DenseMultilinearExtension::rand(8, &mut rng);
+        let poly1 = Rc::new(DenseMultilinearExtension::rand(8, &mut rng));
         test_single_helper(&params, &poly1, &mut rng)?;
 
         // single-variate polynomials
-        let poly2 = DenseMultilinearExtension::rand(1, &mut rng);
+        let poly2 = Rc::new(DenseMultilinearExtension::rand(1, &mut rng));
         test_single_helper(&params, &poly2, &mut rng)?;
 
         Ok(())

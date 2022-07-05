@@ -15,10 +15,12 @@ ark-bls12-381 = { version = "0.3.0", default-features = false, features = [ "cur
 
 rand_chacha = { version = "0.3.0", default-features = false }
 displaydoc = { version = "0.2.3", default-features = false }
-
 rayon = { version = "1.5.2", default-features = false, optional = true }
 
 transcript = { path = "../transcript" }
+
+[dev-dependencies]
+ark-ec = { version = "^0.3.0", default-features = false }
 
 # Benchmarks
 [[bench]]

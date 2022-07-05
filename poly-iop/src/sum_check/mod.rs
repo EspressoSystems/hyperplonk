@@ -175,6 +175,7 @@ impl<F: PrimeField> SumCheck<F> for PolyIOP<F> {
 
         end_timer!(start);
         Ok(IOPProof {
+            point: prover_state.challenges,
             proofs: prover_msgs,
         })
     }

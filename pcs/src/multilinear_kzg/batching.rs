@@ -14,6 +14,8 @@ use ark_ec::PairingEngine;
 use ark_poly::{DenseMultilinearExtension, EvaluationDomain, MultilinearExtension, Polynomial};
 use ark_std::{end_timer, start_timer, vec::Vec};
 use transcript::IOPTranscript;
+use ark_std::{end_timer, rc::Rc, start_timer, vec::Vec};
+use poly_iop::prelude::IOPTranscript;
 
 /// Input
 /// - the prover parameters for univariate KZG,
@@ -49,7 +51,7 @@ use transcript::IOPTranscript;
 pub(super) fn multi_open_internal<E: PairingEngine>(
     uni_prover_param: &UnivariateProverParam<E::G1Affine>,
     ml_prover_param: &MultilinearProverParam<E>,
-    polynomials: &[DenseMultilinearExtension<E::Fr>],
+    polynomials: &[Rc<DenseMultilinearExtension<E::Fr>>],
     multi_commitment: &Commitment<E>,
     points: &[Vec<E::Fr>],
 ) -> Result<(BatchProof<E>, Vec<E::Fr>), PCSErrors> {
@@ -309,7 +311,7 @@ mod tests {
     fn test_multi_commit_helper<R: RngCore>(
         uni_params: &UnivariateUniversalParams<E>,
         ml_params: &MultilinearUniversalParams<E>,
-        polys: &[DenseMultilinearExtension<Fr>],
+        polys: &[Rc<DenseMultilinearExtension<Fr>>],
         rng: &mut R,
     ) -> Result<(), PCSErrors> {
         let merged_nv = get_batched_nv(polys[0].num_vars(), polys.len());
@@ -418,13 +420,13 @@ mod tests {
 
         // normal polynomials
         let polys1: Vec<_> = (0..5)
-            .map(|_| DenseMultilinearExtension::rand(4, &mut rng))
+            .map(|_| Rc::new(DenseMultilinearExtension::rand(4, &mut rng)))
             .collect();
         test_multi_commit_helper(&uni_params, &ml_params, &polys1, &mut rng)?;
 
         // single-variate polynomials
         let polys1: Vec<_> = (0..5)
-            .map(|_| DenseMultilinearExtension::rand(1, &mut rng))
+            .map(|_| Rc::new(DenseMultilinearExtension::rand(1, &mut rng)))
             .collect();
         test_multi_commit_helper(&uni_params, &ml_params, &polys1, &mut rng)?;
 

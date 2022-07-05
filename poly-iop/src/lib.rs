@@ -3,8 +3,8 @@ use std::marker::PhantomData;
 
 mod errors;
 mod perm_check;
-mod prod_check;
 pub mod prelude;
+mod prod_check;
 mod structs;
 mod sum_check;
 mod utils;

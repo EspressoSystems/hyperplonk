@@ -8,6 +8,8 @@ use ark_poly::{
 };
 use ark_std::{end_timer, log2, start_timer};
 use std::cmp::max;
+use ark_std::{end_timer, log2, rc::Rc, start_timer};
+use poly_iop::prelude::bit_decompose;
 
 /// Decompose an integer into a binary vector in little endian.
 #[allow(dead_code)]
@@ -29,8 +31,7 @@ pub(crate) fn bit_decompose(input: u64, num_var: usize) -> Vec<bool> {
 // - mle has degree one
 // - worst case is `\prod_{i=0}^{mle_num_vars-1} l_i(x) < point_len * mle_num_vars`
 #[inline]
-#[allow(dead_code)]
-pub(crate) fn compute_qx_degree(mle_num_vars: usize, point_len: usize) -> usize {
+pub fn compute_qx_degree(mle_num_vars: usize, point_len: usize) -> usize {
     mle_num_vars * point_len
 }
 
@@ -101,28 +102,14 @@ pub(crate) fn compute_w_circ_l<F: PrimeField>(
 /// Return the number of variables that one need for an MLE to
 /// batch the list of MLEs
 #[inline]
-pub(crate) fn get_batched_nv(num_var: usize, polynomials_len: usize) -> usize {
+pub fn get_batched_nv(num_var: usize, polynomials_len: usize) -> usize {
     num_var + log2(polynomials_len) as usize
 }
 
-/// Return the SRS size
-// We require an SRS that is the greater of the two:
-// - Multilinear srs is bounded by the merged MLS size which is `get_batched_nv(num_var,
-//   num_witnesses)`
-// - Univariate srs is bounded by q_x's degree which is `compute_uni_degree(num_vars,
-//   num_witnesses)`
-#[inline]
-#[allow(dead_code)]
-pub(crate) fn get_srs_size(num_var: usize, num_wires: usize) -> usize {
-    max(
-        num_var + log2(num_wires) as usize,
-        (log2(num_var) as usize + 2) * num_wires,
-    )
-}
 /// merge a set of polynomials. Returns an error if the
 /// polynomials do not share a same number of nvs.
 pub fn merge_polynomials<F: PrimeField>(
-    polynomials: &[impl MultilinearExtension<F>],
+    polynomials: &[Rc<DenseMultilinearExtension<F>>],
 ) -> Result<DenseMultilinearExtension<F>, PCSErrors> {
     let nv = polynomials[0].num_vars();
     for poly in polynomials.iter() {
@@ -184,7 +171,7 @@ pub(crate) fn build_l<F: PrimeField>(
 // are included in the `batch_proof`.
 #[cfg(test)]
 pub(crate) fn generate_evaluations<F: PrimeField>(
-    polynomials: &[DenseMultilinearExtension<F>],
+    polynomials: &[Rc<DenseMultilinearExtension<F>>],
     points: &[Vec<F>],
 ) -> Result<Vec<F>, PCSErrors> {
     if polynomials.len() != points.len() {
@@ -308,7 +295,7 @@ mod test {
         // 1, 0 |-> 0
         // 1, 1 |-> 5
         let w_eval = vec![F::zero(), F::from(2u64), F::zero(), F::from(5u64)];
-        let w1 = DenseMultilinearExtension::from_evaluations_vec(2, w_eval);
+        let w1 = Rc::new(DenseMultilinearExtension::from_evaluations_vec(2, w_eval));
 
         // W2 = x1x2 + x1 whose evaluations are
         // 0, 0 |-> 0
@@ -316,7 +303,7 @@ mod test {
         // 1, 0 |-> 1
         // 1, 1 |-> 2
         let w_eval = vec![F::zero(), F::zero(), F::from(1u64), F::from(2u64)];
-        let w2 = DenseMultilinearExtension::from_evaluations_vec(2, w_eval);
+        let w2 = Rc::new(DenseMultilinearExtension::from_evaluations_vec(2, w_eval));
 
         // W3 = x1 + x2 whose evaluations are
         // 0, 0 |-> 0
@@ -324,7 +311,7 @@ mod test {
         // 1, 0 |-> 1
         // 1, 1 |-> 2
         let w_eval = vec![F::zero(), F::one(), F::from(1u64), F::from(2u64)];
-        let w3 = DenseMultilinearExtension::from_evaluations_vec(2, w_eval);
+        let w3 = Rc::new(DenseMultilinearExtension::from_evaluations_vec(2, w_eval));
 
         {
             // W = (3x1x2 + 2x2)(1-x0) + (x1x2 + x1)x0
@@ -577,15 +564,15 @@ mod test {
         // Example from page 53:
         // W1 = 3x1x2 + 2x2
         let w_eval = vec![Fr::zero(), Fr::from(2u64), Fr::zero(), Fr::from(5u64)];
-        let w1 = DenseMultilinearExtension::from_evaluations_vec(2, w_eval);
+        let w1 = Rc::new(DenseMultilinearExtension::from_evaluations_vec(2, w_eval));
 
         // W2 = x1x2 + x1
         let w_eval = vec![Fr::zero(), Fr::zero(), Fr::from(1u64), Fr::from(2u64)];
-        let w2 = DenseMultilinearExtension::from_evaluations_vec(2, w_eval);
+        let w2 = Rc::new(DenseMultilinearExtension::from_evaluations_vec(2, w_eval));
 
         // W3 = x1 + x2
         let w_eval = vec![Fr::zero(), Fr::one(), Fr::from(1u64), Fr::from(2u64)];
-        let w3 = DenseMultilinearExtension::from_evaluations_vec(2, w_eval);
+        let w3 = Rc::new(DenseMultilinearExtension::from_evaluations_vec(2, w_eval));
 
         let r = Fr::from(42u64);
 
