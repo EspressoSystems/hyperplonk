@@ -4,6 +4,7 @@ use std::marker::PhantomData;
 mod errors;
 mod hyperplonk;
 mod perm_check;
+mod prod_check;
 mod structs;
 mod sum_check;
 mod transcript;
@@ -17,6 +18,7 @@ pub use perm_check::{
     util::{identity_permutation_mle, random_permutation_mle},
     PermutationCheck,
 };
+pub use prod_check::ProductCheck;
 pub use sum_check::SumCheck;
 pub use transcript::IOPTranscript;
 pub use utils::*;
