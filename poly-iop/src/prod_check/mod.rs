@@ -13,7 +13,8 @@ use ark_poly::DenseMultilinearExtension;
 ///
 /// Prover steps:
 /// 1. `compute_product_poly` to build `prod(x0, ..., x_n)` from virtual
-/// polynomial f 2. push commitments of `f(x)`, `prod(x)` to the transcript
+/// polynomial f
+/// 2. push commitments of `f(x)`, `prod(x)` to the transcript
 /// (done by the snark caller)
 /// 3. `generate_challenge` from current transcript (generate alpha)
 /// 4. `prove` to generate the zerocheck proof for the virtual polynomial
@@ -27,7 +28,7 @@ use ark_poly::DenseMultilinearExtension;
 /// polynomial evaluations
 pub trait ProductCheck<F: PrimeField>: ZeroCheck<F> {
     type ProductCheckSubClaim;
-    type ProductChallenge;
+    type ProductCheckChallenge;
 
     /// Initialize the system with a transcript
     ///
@@ -40,7 +41,7 @@ pub trait ProductCheck<F: PrimeField>: ZeroCheck<F> {
     /// Generate random challenge `alpha` from a transcript.
     fn generate_challenge(
         transcript: &mut Self::Transcript,
-    ) -> Result<Self::ProductChallenge, PolyIOPErrors>;
+    ) -> Result<Self::ProductCheckChallenge, PolyIOPErrors>;
 
     /// Compute the product polynomial `prod(x)` where
     ///
@@ -105,7 +106,7 @@ pub struct ProductCheckSubClaim<F: PrimeField, ZC: ZeroCheck<F>> {
 
 /// The random challenges in a product check protocol
 #[allow(dead_code)]
-pub struct ProductChallenge<F: PrimeField> {
+pub struct ProductCheckChallenge<F: PrimeField> {
     alpha: F,
 }
 
