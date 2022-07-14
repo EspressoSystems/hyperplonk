@@ -21,9 +21,10 @@ use ark_poly::DenseMultilinearExtension;
 ///
 /// Verifier steps:
 /// 1. Extract commitments of `f(x)`, `prod(x)` from the proof, push them to the
-/// transcript (done by the snark caller) 2. `generate_challenge` from current
-/// transcript (generate alpha) 3. `verify` to verify the zerocheck proof and
-/// generate the subclaim for polynomial evaluations
+/// transcript (done by the snark caller)
+/// 2. `generate_challenge` from current transcript (generate alpha)
+/// 3. `verify` to verify the zerocheck proof and generate the subclaim for
+/// polynomial evaluations
 pub trait ProductCheck<F: PrimeField>: ZeroCheck<F> {
     type ProductCheckSubClaim;
     type ProductChallenge;
