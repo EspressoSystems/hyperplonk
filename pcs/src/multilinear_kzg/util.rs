@@ -93,7 +93,7 @@ pub fn merge_polynomials<F: PrimeField>(
 /// polynomials that goes through the points
 pub(crate) fn build_l<F: PrimeField>(
     num_var: usize,
-    points: &[&[F]],
+    points: &[&Vec<F>],
 ) -> Result<Vec<DensePolynomial<F>>, PCSErrors> {
     let prefix_len = log2(points.len()) as usize;
 
@@ -341,13 +341,13 @@ mod test {
 
     fn test_build_l_helper<F: PrimeField>() -> Result<(), PCSErrors> {
         // point 1 is [1, 2]
-        let point1 = [Fr::from(1u64), Fr::from(2u64)];
+        let point1 = vec![Fr::from(1u64), Fr::from(2u64)];
 
         // point 2 is [3, 4]
-        let point2 = [Fr::from(3u64), Fr::from(4u64)];
+        let point2 = vec![Fr::from(3u64), Fr::from(4u64)];
 
         // point 3 is [5, 6]
-        let point3 = [Fr::from(5u64), Fr::from(6u64)];
+        let point3 = vec![Fr::from(5u64), Fr::from(6u64)];
 
         {
             let l = build_l(2, &[&point1, &point2])?;
@@ -512,13 +512,13 @@ mod test {
         let r = Fr::from(42u64);
 
         // point 1 is [1, 2]
-        let point1 = [Fr::from(1u64), Fr::from(2u64)];
+        let point1 = vec![Fr::from(1u64), Fr::from(2u64)];
 
         // point 2 is [3, 4]
-        let point2 = [Fr::from(3u64), Fr::from(4u64)];
+        let point2 = vec![Fr::from(3u64), Fr::from(4u64)];
 
         // point 3 is [5, 6]
-        let point3 = [Fr::from(5u64), Fr::from(6u64)];
+        let point3 = vec![Fr::from(5u64), Fr::from(6u64)];
 
         {
             // w = (3x1x2 + 2x2)(1-x0) + (x1x2 + x1)x0

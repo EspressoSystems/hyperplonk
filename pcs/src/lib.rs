@@ -1,11 +1,11 @@
 mod errors;
 mod multilinear_kzg;
 mod structs;
+// mod univariate_kzg;
 
 pub mod prelude;
 
 use ark_ec::PairingEngine;
-use ark_poly::MultilinearExtension;
 use ark_std::rand::RngCore;
 use errors::PCSErrors;
 use poly_iop::IOPTranscript;
@@ -14,6 +14,8 @@ pub trait PCSScheme<E: PairingEngine> {
     type ProverParam;
     type VerifierParam;
     type SRS;
+    type Polynomial;
+    type Point;
     type Commitment;
     type Proof;
     type BatchProof;
@@ -27,21 +29,21 @@ pub trait PCSScheme<E: PairingEngine> {
     /// Generate a commitment for a polynomial
     fn commit(
         prover_param: &Self::ProverParam,
-        poly: &impl MultilinearExtension<E::Fr>,
+        poly: &Self::Polynomial,
     ) -> Result<Self::Commitment, PCSErrors>;
 
     /// Generate a commitment for a list of polynomials
     fn multi_commit(
         prover_param: &Self::ProverParam,
-        polys: &[impl MultilinearExtension<E::Fr>],
+        polys: &[Self::Polynomial],
     ) -> Result<Self::Commitment, PCSErrors>;
 
     /// On input a polynomial `p` and a point `point`, outputs a proof for the
     /// same.
     fn open(
         prover_param: &Self::ProverParam,
-        polynomial: &impl MultilinearExtension<E::Fr>,
-        point: &[E::Fr],
+        polynomial: &Self::Polynomial,
+        point: &Self::Point,
     ) -> Result<Self::Proof, PCSErrors>;
 
     /// Input a list of MLEs, and a same number of points, and a transcript,
@@ -50,8 +52,8 @@ pub trait PCSScheme<E: PairingEngine> {
     // TODO: remove after we KZG-commit q(x)
     fn multi_open(
         prover_param: &Self::ProverParam,
-        polynomials: &[impl MultilinearExtension<E::Fr>],
-        point: &[&[E::Fr]],
+        polynomials: &[Self::Polynomial],
+        point: &[&Self::Point],
         transcript: &mut Self::Transcript,
     ) -> Result<Self::BatchProof, PCSErrors>;
 
@@ -60,7 +62,7 @@ pub trait PCSScheme<E: PairingEngine> {
     fn verify(
         verifier_param: &Self::VerifierParam,
         commitment: &Self::Commitment,
-        point: &[E::Fr],
+        point: &Self::Point,
         value: &E::Fr,
         proof: &Self::Proof,
     ) -> Result<bool, PCSErrors>;
@@ -70,7 +72,7 @@ pub trait PCSScheme<E: PairingEngine> {
     fn batch_verify(
         verifier_param: &Self::VerifierParam,
         multi_commitment: &Self::Commitment,
-        points: &[&[E::Fr]],
+        points: &[&Self::Point],
         batch_proof: &Self::BatchProof,
         transcript: &mut IOPTranscript<E::Fr>,
     ) -> Result<bool, PCSErrors>;

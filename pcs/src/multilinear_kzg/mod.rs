@@ -9,7 +9,10 @@ use ark_ec::{
     AffineCurve, PairingEngine, ProjectiveCurve,
 };
 use ark_ff::PrimeField;
-use ark_poly::{univariate::DensePolynomial, MultilinearExtension, Polynomial, UVPolynomial};
+use ark_poly::{
+    univariate::DensePolynomial, DenseMultilinearExtension, MultilinearExtension, Polynomial,
+    UVPolynomial,
+};
 use ark_serialize::{CanonicalDeserialize, CanonicalSerialize, Read, SerializationError, Write};
 use ark_std::{end_timer, log2, rand::RngCore, start_timer, vec::Vec, One, Zero};
 use poly_iop::IOPTranscript;
@@ -22,15 +25,6 @@ pub struct KZGMultilinearPC<E: PairingEngine> {
     #[doc(hidden)]
     phantom: PhantomData<E>,
 }
-
-// #[derive(CanonicalSerialize, CanonicalDeserialize, Clone, Debug)]
-// /// commitment
-// pub struct Commitment<E: PairingEngine> {
-//     /// number of variables
-//     pub nv: usize,
-//     /// product of g as described by the vRAM paper
-//     pub g_product: E::G1Affine,
-// }
 
 #[derive(CanonicalSerialize, CanonicalDeserialize, Clone, Debug)]
 /// proof of opening
@@ -59,6 +53,8 @@ impl<E: PairingEngine> PCSScheme<E> for KZGMultilinearPC<E> {
     type ProverParam = ProverParam<E>;
     type VerifierParam = VerifierParam<E>;
     type SRS = UniversalParams<E>;
+    type Polynomial = DenseMultilinearExtension<E::Fr>;
+    type Point = Vec<E::Fr>;
     type Commitment = Commitment<E, Self>;
     type Proof = Proof<E>;
     type Transcript = IOPTranscript<E::Fr>;
@@ -80,7 +76,7 @@ impl<E: PairingEngine> PCSScheme<E> for KZGMultilinearPC<E> {
     /// G1.
     fn commit(
         prover_param: &Self::ProverParam,
-        poly: &impl MultilinearExtension<E::Fr>,
+        poly: &Self::Polynomial,
     ) -> Result<Self::Commitment, PCSErrors> {
         let commit_timer = start_timer!(|| "commit");
 
@@ -110,7 +106,7 @@ impl<E: PairingEngine> PCSScheme<E> for KZGMultilinearPC<E> {
     /// multiplications over G1.
     fn multi_commit(
         prover_param: &Self::ProverParam,
-        polys: &[impl MultilinearExtension<E::Fr>],
+        polys: &[Self::Polynomial],
     ) -> Result<Self::Commitment, PCSErrors> {
         let commit_timer = start_timer!(|| "multi commit");
         let poly = merge_polynomials(polys)?;
@@ -146,8 +142,8 @@ impl<E: PairingEngine> PCSScheme<E> for KZGMultilinearPC<E> {
     ///   elements.
     fn open(
         prover_param: &Self::ProverParam,
-        polynomial: &impl MultilinearExtension<E::Fr>,
-        point: &[E::Fr],
+        polynomial: &Self::Polynomial,
+        point: &Self::Point,
     ) -> Result<Self::Proof, PCSErrors> {
         let open_timer = start_timer!(|| "open");
 
@@ -233,8 +229,8 @@ impl<E: PairingEngine> PCSScheme<E> for KZGMultilinearPC<E> {
     /// 8. output `w(p)`
     fn multi_open(
         prover_param: &Self::ProverParam,
-        polynomials: &[impl MultilinearExtension<E::Fr>],
-        points: &[&[E::Fr]],
+        polynomials: &[Self::Polynomial],
+        points: &[&Self::Point],
         transcript: &mut IOPTranscript<E::Fr>,
     ) -> Result<Self::BatchProof, PCSErrors> {
         let open_timer = start_timer!(|| "multi open");
@@ -320,7 +316,7 @@ impl<E: PairingEngine> PCSScheme<E> for KZGMultilinearPC<E> {
     fn verify(
         verifier_param: &Self::VerifierParam,
         commitment: &Self::Commitment,
-        point: &[E::Fr],
+        point: &Self::Point,
         value: &E::Fr,
         proof: &Self::Proof,
     ) -> Result<bool, PCSErrors> {
@@ -387,7 +383,7 @@ impl<E: PairingEngine> PCSScheme<E> for KZGMultilinearPC<E> {
     fn batch_verify(
         verifier_param: &Self::VerifierParam,
         multi_commitment: &Self::Commitment,
-        points: &[&[E::Fr]],
+        points: &[&Self::Point],
         batch_proof: &Self::BatchProof,
         transcript: &mut IOPTranscript<E::Fr>,
     ) -> Result<bool, PCSErrors> {
@@ -465,7 +461,7 @@ mod tests {
 
     fn test_single_helper<R: RngCore>(
         uni_params: &UniversalParams<E>,
-        poly: &impl MultilinearExtension<Fr>,
+        poly: &DenseMultilinearExtension<Fr>,
         rng: &mut R,
     ) -> Result<(), PCSErrors> {
         let nv = poly.num_vars();
@@ -505,7 +501,7 @@ mod tests {
 
     fn test_multi_commit_helper<R: RngCore>(
         uni_params: &UniversalParams<E>,
-        polys: &[impl MultilinearExtension<Fr>],
+        polys: &[DenseMultilinearExtension<Fr>],
         rng: &mut R,
     ) -> Result<(), PCSErrors> {
         let mut transcript = IOPTranscript::new(b"test");
@@ -520,7 +516,7 @@ mod tests {
                 .collect::<Vec<Fr>>();
             points.push(point);
         }
-        let points_ref: Vec<&[Fr]> = points.iter().map(|x| x.as_ref()).collect();
+        let points_ref: Vec<&Vec<Fr>> = points.iter().map(|x| x.as_ref()).collect();
 
         let com = KZGMultilinearPC::multi_commit(&ck, polys)?;
         let batch_proof = KZGMultilinearPC::multi_open(&ck, polys, &points_ref, &mut transcript)?;
@@ -551,7 +547,7 @@ mod tests {
         .is_err());
 
         // bad points
-        let points_ref: Vec<&[Fr]> = points.iter().skip(1).map(|x| x.as_ref()).collect();
+        let points_ref: Vec<&Vec<Fr>> = points.iter().skip(1).map(|x| x.as_ref()).collect();
         assert!(KZGMultilinearPC::batch_verify(
             &vk,
             &com,
