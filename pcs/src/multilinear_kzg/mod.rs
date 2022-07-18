@@ -1,8 +1,7 @@
-use crate::{
-    util::{build_l, compute_w_circ_l, merge_polynomials},
-    KZGMultilinearPC, MultilinearCommitmentScheme, PCSErrors, ProverParam, UniversalParams,
-    VerifierParam,
-};
+pub(crate) mod srs;
+pub(crate) mod util;
+
+use crate::{PCSErrors, PCSScheme, StructuredReferenceString};
 use ark_ec::{
     msm::{FixedBaseMSM, VariableBaseMSM},
     AffineCurve, PairingEngine, ProjectiveCurve,
@@ -12,6 +11,15 @@ use ark_poly::{univariate::DensePolynomial, MultilinearExtension, Polynomial, UV
 use ark_serialize::{CanonicalDeserialize, CanonicalSerialize, Read, SerializationError, Write};
 use ark_std::{end_timer, log2, rand::RngCore, start_timer, vec::Vec, One, Zero};
 use poly_iop::IOPTranscript;
+use srs::{ProverParam, UniversalParams, VerifierParam};
+use std::marker::PhantomData;
+use util::{build_l, compute_w_circ_l, merge_polynomials};
+
+/// KZG Polynomial Commitment Scheme on multilinear extensions.
+pub struct KZGMultilinearPC<E: PairingEngine> {
+    #[doc(hidden)]
+    phantom: PhantomData<E>,
+}
 
 #[derive(CanonicalSerialize, CanonicalDeserialize, Clone, Debug)]
 /// commitment
@@ -45,7 +53,7 @@ pub struct BatchProof<E: PairingEngine> {
     pub q_x_com: Vec<E::Fr>,
 }
 
-impl<E: PairingEngine> MultilinearCommitmentScheme<E> for KZGMultilinearPC<E> {
+impl<E: PairingEngine> PCSScheme<E> for KZGMultilinearPC<E> {
     type ProverParam = ProverParam<E>;
     type VerifierParam = VerifierParam<E>;
     type SRS = UniversalParams<E>;
@@ -438,7 +446,7 @@ impl<E: PairingEngine> MultilinearCommitmentScheme<E> for KZGMultilinearPC<E> {
 
 #[cfg(test)]
 mod tests {
-    use crate::util::get_batched_nv;
+    use super::util::get_batched_nv;
 
     use super::*;
     use ark_bls12_381::Bls12_381;

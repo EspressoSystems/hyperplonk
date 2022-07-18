@@ -66,7 +66,7 @@ pub(crate) fn get_batched_nv(num_var: usize, polynomials_len: usize) -> usize {
 
 /// merge a set of polynomials. Returns an error if the
 /// polynomials do not share a same number of nvs.
-pub(crate) fn merge_polynomials<F: PrimeField>(
+pub fn merge_polynomials<F: PrimeField>(
     polynomials: &[impl MultilinearExtension<F>],
 ) -> Result<DenseMultilinearExtension<F>, PCSErrors> {
     let nv = polynomials[0].num_vars();

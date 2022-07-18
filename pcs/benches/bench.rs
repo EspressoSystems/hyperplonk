@@ -2,7 +2,10 @@ use ark_bls12_381::{Bls12_381, Fr};
 use ark_ff::UniformRand;
 use ark_poly::{DenseMultilinearExtension, MultilinearExtension};
 use ark_std::test_rng;
-use pcs::{KZGMultilinearPC, MultilinearCommitmentScheme, PCSErrors};
+use pcs::{
+    prelude::{KZGMultilinearPC, PCSErrors, PCSScheme},
+    StructuredReferenceString,
+};
 use std::time::Instant;
 
 fn main() -> Result<(), PCSErrors> {

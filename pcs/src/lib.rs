@@ -1,24 +1,16 @@
-mod commit;
 mod errors;
-mod param;
-mod util;
+mod multilinear_kzg;
+// mod param;
+
+pub mod prelude;
 
 use ark_ec::PairingEngine;
 use ark_poly::MultilinearExtension;
 use ark_std::rand::RngCore;
+use errors::PCSErrors;
 use poly_iop::IOPTranscript;
-use std::marker::PhantomData;
 
-pub use errors::PCSErrors;
-pub use param::{ProverParam, UniversalParams, VerifierParam};
-
-/// KZG Polynomial Commitment Scheme on multilinear extensions.
-pub struct KZGMultilinearPC<E: PairingEngine> {
-    #[doc(hidden)]
-    phantom: PhantomData<E>,
-}
-
-pub trait MultilinearCommitmentScheme<E: PairingEngine> {
+pub trait PCSScheme<E: PairingEngine> {
     type ProverParam;
     type VerifierParam;
     type SRS;
@@ -82,4 +74,29 @@ pub trait MultilinearCommitmentScheme<E: PairingEngine> {
         batch_proof: &Self::BatchProof,
         transcript: &mut IOPTranscript<E::Fr>,
     ) -> Result<bool, PCSErrors>;
+}
+
+/// API definitions for structured reference string
+pub trait StructuredReferenceString<E: PairingEngine>: Sized {
+    type ProverParam;
+    type VerifierParam;
+
+    /// Extract the prover parameters from the public parameters.
+    fn extract_prover_param(&self) -> Self::ProverParam;
+    /// Extract the verifier parameters from the public parameters.
+    fn extract_verifier_param(&self) -> Self::VerifierParam;
+
+    /// Trim the universal parameters to specialize the public parameters
+    /// for multilinear polynomials to the given `supported_num_vars`, and
+    /// returns committer key and verifier key. `supported_num_vars` should
+    /// be in range `1..=params.num_vars`
+    fn trim(
+        &self,
+        supported_num_vars: usize,
+    ) -> Result<(Self::ProverParam, Self::VerifierParam), PCSErrors>;
+
+    /// Build SRS for testing.
+    /// WARNING: THIS FUNCTION IS FOR TESTING PURPOSE ONLY.
+    /// THE OUTPUT SRS SHOULD NOT BE USED IN PRODUCTION.
+    fn gen_srs_for_testing<R: RngCore>(rng: &mut R, num_vars: usize) -> Result<Self, PCSErrors>;
 }
