@@ -1,7 +1,9 @@
+//! Main module for multilinear KZG commitment scheme
+
 pub(crate) mod srs;
 pub(crate) mod util;
 
-use crate::{PCSErrors, PCSScheme, StructuredReferenceString};
+use crate::{prelude::Commitment, PCSErrors, PCSScheme, StructuredReferenceString};
 use ark_ec::{
     msm::{FixedBaseMSM, VariableBaseMSM},
     AffineCurve, PairingEngine, ProjectiveCurve,
@@ -21,14 +23,14 @@ pub struct KZGMultilinearPC<E: PairingEngine> {
     phantom: PhantomData<E>,
 }
 
-#[derive(CanonicalSerialize, CanonicalDeserialize, Clone, Debug)]
-/// commitment
-pub struct Commitment<E: PairingEngine> {
-    /// number of variables
-    pub nv: usize,
-    /// product of g as described by the vRAM paper
-    pub g_product: E::G1Affine,
-}
+// #[derive(CanonicalSerialize, CanonicalDeserialize, Clone, Debug)]
+// /// commitment
+// pub struct Commitment<E: PairingEngine> {
+//     /// number of variables
+//     pub nv: usize,
+//     /// product of g as described by the vRAM paper
+//     pub g_product: E::G1Affine,
+// }
 
 #[derive(CanonicalSerialize, CanonicalDeserialize, Clone, Debug)]
 /// proof of opening
@@ -57,7 +59,7 @@ impl<E: PairingEngine> PCSScheme<E> for KZGMultilinearPC<E> {
     type ProverParam = ProverParam<E>;
     type VerifierParam = VerifierParam<E>;
     type SRS = UniversalParams<E>;
-    type Commitment = Commitment<E>;
+    type Commitment = Commitment<E, Self>;
     type Proof = Proof<E>;
     type Transcript = IOPTranscript<E::Fr>;
     type BatchProof = BatchProof<E>;
@@ -95,7 +97,11 @@ impl<E: PairingEngine> PCSScheme<E> for KZGMultilinearPC<E> {
         .into_affine();
 
         end_timer!(commit_timer);
-        Ok(Commitment { nv, g_product })
+        Ok(Commitment {
+            num_vars: Some(nv),
+            g_product,
+            phantom: PhantomData::<Self>::default(),
+        })
     }
 
     /// Generate a commitment for a list of polynomials.
@@ -123,8 +129,9 @@ impl<E: PairingEngine> PCSScheme<E> for KZGMultilinearPC<E> {
 
         end_timer!(commit_timer);
         Ok(Commitment {
-            nv: poly.num_vars,
+            num_vars: Some(poly.num_vars),
             g_product,
+            phantom: PhantomData::<Self>::default(),
         })
     }
 
@@ -396,7 +403,7 @@ impl<E: PairingEngine> PCSScheme<E> for KZGMultilinearPC<E> {
                 )));
             }
         }
-        if num_var + log2(points.len()) as usize != multi_commitment.nv {
+        if num_var + log2(points.len()) as usize != multi_commitment.num_vars.unwrap() {
             return Err(PCSErrors::InvalidParameters(format!(
                 "points and multi_commitment do not have same num_vars ({} vs {})",
                 num_var + log2(points.len()) as usize,
@@ -532,8 +539,10 @@ mod tests {
         assert!(KZGMultilinearPC::batch_verify(
             &vk,
             &Commitment {
-                nv: 0,
-                g_product: <E as PairingEngine>::G1Affine::default()
+                num_vars: Some(0),
+                g_product: <E as PairingEngine>::G1Affine::default(),
+
+                phantom: PhantomData::<KZGMultilinearPC<E>>::default(),
             },
             &points_ref,
             &batch_proof,
