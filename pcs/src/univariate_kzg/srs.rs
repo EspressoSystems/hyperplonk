@@ -32,7 +32,7 @@ pub struct UniversalParams<E: PairingEngine> {
 /// Prover Parameters
 #[derive(CanonicalSerialize, CanonicalDeserialize, Clone, Debug)]
 pub struct ProverParam<C: AffineCurve> {
-    pub g_powers: Vec<C>,
+    pub powers_of_g: Vec<C>,
 }
 
 /// `VerifierKey` is used to check evaluation proofs for a given commitment.
@@ -73,7 +73,7 @@ impl<E: PairingEngine> StructuredReferenceString<E> for UniversalParams<E> {
     /// be in range `1..=params.num_vars`
     fn trim(
         &self,
-        supported_num_vars: usize,
+        _supported_num_vars: usize,
     ) -> Result<(Self::ProverParam, Self::VerifierParam), PCSErrors> {
         todo!()
     }

@@ -1,7 +1,7 @@
 mod errors;
 mod multilinear_kzg;
 mod structs;
-// mod univariate_kzg;
+mod univariate_kzg;
 
 pub mod prelude;
 
@@ -10,10 +10,10 @@ use ark_std::rand::RngCore;
 use errors::PCSErrors;
 use poly_iop::IOPTranscript;
 
-pub trait PCSScheme<E: PairingEngine> {
+pub trait PolynomialCommitmentScheme<E: PairingEngine> {
     type ProverParam;
     type VerifierParam;
-    type SRS;
+    type SRS: StructuredReferenceString<E>;
     type Polynomial;
     type Point;
     type Commitment;
@@ -21,10 +21,19 @@ pub trait PCSScheme<E: PairingEngine> {
     type BatchProof;
     type Transcript;
 
-    /// Generate SRS from RNG.
+    /// Build SRS for testing.
+    ///
+    /// - For univariate polynomials, `log_size` is the log of maximum degree.
+    /// - For multilinear polynomials, `log_size` is the number of variables.
+    ///
     /// WARNING: THIS FUNCTION IS FOR TESTING PURPOSE ONLY.
     /// THE OUTPUT SRS SHOULD NOT BE USED IN PRODUCTION.
-    fn setup<R: RngCore>(rng: &mut R, num_vars: usize) -> Result<Self::SRS, PCSErrors>;
+    fn gen_srs_for_testing<R: RngCore>(
+        rng: &mut R,
+        log_size: usize,
+    ) -> Result<Self::SRS, PCSErrors> {
+        Self::SRS::gen_srs_for_testing(rng, log_size)
+    }
 
     /// Generate a commitment for a polynomial
     fn commit(
@@ -48,8 +57,6 @@ pub trait PCSScheme<E: PairingEngine> {
 
     /// Input a list of MLEs, and a same number of points, and a transcript,
     /// compute a multi-opening for all the polynomials.
-    #[allow(clippy::type_complexity)]
-    // TODO: remove after we KZG-commit q(x)
     fn multi_open(
         prover_param: &Self::ProverParam,
         polynomials: &[Self::Polynomial],
@@ -89,16 +96,26 @@ pub trait StructuredReferenceString<E: PairingEngine>: Sized {
     fn extract_verifier_param(&self) -> Self::VerifierParam;
 
     /// Trim the universal parameters to specialize the public parameters
-    /// for multilinear polynomials to the given `supported_num_vars`, and
-    /// returns committer key and verifier key. `supported_num_vars` should
-    /// be in range `1..=params.num_vars`
+    /// for polynomials to the given `supported_log_size`, and
+    /// returns committer key and verifier key.
+    ///
+    /// - For univariate polynomials, `supported_log_size` is the log of maximum
+    ///   degree.
+    /// - For multilinear polynomials, `supported_log_size` is the number of
+    ///   variables.
+    ///
+    /// `supported_log_size` should be in range `1..=params.log_size`
     fn trim(
         &self,
-        supported_num_vars: usize,
+        supported_log_size: usize,
     ) -> Result<(Self::ProverParam, Self::VerifierParam), PCSErrors>;
 
     /// Build SRS for testing.
+    ///
+    /// - For univariate polynomials, `log_size` is the log of maximum degree.
+    /// - For multilinear polynomials, `log_size` is the number of variables.
+    ///
     /// WARNING: THIS FUNCTION IS FOR TESTING PURPOSE ONLY.
     /// THE OUTPUT SRS SHOULD NOT BE USED IN PRODUCTION.
-    fn gen_srs_for_testing<R: RngCore>(rng: &mut R, num_vars: usize) -> Result<Self, PCSErrors>;
+    fn gen_srs_for_testing<R: RngCore>(rng: &mut R, log_size: usize) -> Result<Self, PCSErrors>;
 }

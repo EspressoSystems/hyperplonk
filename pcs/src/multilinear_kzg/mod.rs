@@ -3,7 +3,9 @@
 pub(crate) mod srs;
 pub(crate) mod util;
 
-use crate::{prelude::Commitment, PCSErrors, PCSScheme, StructuredReferenceString};
+use crate::{
+    prelude::Commitment, PCSErrors, PolynomialCommitmentScheme, 
+};
 use ark_ec::{
     msm::{FixedBaseMSM, VariableBaseMSM},
     AffineCurve, PairingEngine, ProjectiveCurve,
@@ -14,7 +16,7 @@ use ark_poly::{
     UVPolynomial,
 };
 use ark_serialize::{CanonicalDeserialize, CanonicalSerialize, Read, SerializationError, Write};
-use ark_std::{end_timer, log2, rand::RngCore, start_timer, vec::Vec, One, Zero};
+use ark_std::{end_timer,  start_timer, vec::Vec, One, Zero};
 use poly_iop::IOPTranscript;
 use srs::{ProverParam, UniversalParams, VerifierParam};
 use std::marker::PhantomData;
@@ -49,7 +51,7 @@ pub struct BatchProof<E: PairingEngine> {
     pub q_x_com: Vec<E::Fr>,
 }
 
-impl<E: PairingEngine> PCSScheme<E> for KZGMultilinearPC<E> {
+impl<E: PairingEngine> PolynomialCommitmentScheme<E> for KZGMultilinearPC<E> {
     type ProverParam = ProverParam<E>;
     type VerifierParam = VerifierParam<E>;
     type SRS = UniversalParams<E>;
@@ -59,16 +61,6 @@ impl<E: PairingEngine> PCSScheme<E> for KZGMultilinearPC<E> {
     type Proof = Proof<E>;
     type Transcript = IOPTranscript<E::Fr>;
     type BatchProof = BatchProof<E>;
-
-    /// Generate SRS from RNG.
-    /// WARNING: THIS FUNCTION IS FOR TESTING PURPOSE ONLY.
-    /// THE OUTPUT SRS SHOULD NOT BE USED IN PRODUCTION.
-    fn setup<R: RngCore>(rng: &mut R, num_vars: usize) -> Result<Self::SRS, PCSErrors> {
-        let setup_timer = start_timer!(|| format!("SRS setup for dim {}", num_vars));
-        let res = Self::SRS::gen_srs_for_testing(rng, num_vars);
-        end_timer!(setup_timer);
-        res
-    }
 
     /// Generate a commitment for a polynomial.
     ///
@@ -80,13 +72,12 @@ impl<E: PairingEngine> PCSScheme<E> for KZGMultilinearPC<E> {
     ) -> Result<Self::Commitment, PCSErrors> {
         let commit_timer = start_timer!(|| "commit");
 
-        let nv = poly.num_vars();
         let scalars: Vec<_> = poly
             .to_evaluations()
             .into_iter()
             .map(|x| x.into_repr())
             .collect();
-        let g_product = VariableBaseMSM::multi_scalar_mul(
+        let commitment = VariableBaseMSM::multi_scalar_mul(
             &prover_param.powers_of_g[0].evals,
             scalars.as_slice(),
         )
@@ -94,8 +85,7 @@ impl<E: PairingEngine> PCSScheme<E> for KZGMultilinearPC<E> {
 
         end_timer!(commit_timer);
         Ok(Commitment {
-            num_vars: Some(nv),
-            g_product,
+            commitment,
             phantom: PhantomData::<Self>::default(),
         })
     }
@@ -117,7 +107,7 @@ impl<E: PairingEngine> PCSScheme<E> for KZGMultilinearPC<E> {
             .map(|x| x.into_repr())
             .collect();
 
-        let g_product = VariableBaseMSM::multi_scalar_mul(
+        let commitment = VariableBaseMSM::multi_scalar_mul(
             &prover_param.powers_of_g[0].evals,
             scalars.as_slice(),
         )
@@ -125,8 +115,7 @@ impl<E: PairingEngine> PCSScheme<E> for KZGMultilinearPC<E> {
 
         end_timer!(commit_timer);
         Ok(Commitment {
-            num_vars: Some(poly.num_vars),
-            g_product,
+            commitment,
             phantom: PhantomData::<Self>::default(),
         })
     }
@@ -356,7 +345,7 @@ impl<E: PairingEngine> PCSScheme<E> for KZGMultilinearPC<E> {
 
         pairings.push((
             E::G1Prepared::from(
-                (verifier_param.g.mul(*value) - commitment.g_product.into_projective())
+                (verifier_param.g.mul(*value) - commitment.commitment.into_projective())
                     .into_affine(),
             ),
             E::G2Prepared::from(verifier_param.h),
@@ -399,13 +388,14 @@ impl<E: PairingEngine> PCSScheme<E> for KZGMultilinearPC<E> {
                 )));
             }
         }
-        if num_var + log2(points.len()) as usize != multi_commitment.num_vars.unwrap() {
-            return Err(PCSErrors::InvalidParameters(format!(
-                "points and multi_commitment do not have same num_vars ({} vs {})",
-                num_var + log2(points.len()) as usize,
-                num_var,
-            )));
-        }
+        // if num_var + log2(points.len()) as usize !=
+        // multi_commitment.num_vars.unwrap() {     return
+        // Err(PCSErrors::InvalidParameters(format!(         "points and
+        // multi_commitment do not have same num_vars ({} vs {})",
+        //         num_var + log2(points.len()) as usize,
+        //         num_var,
+        //     )));
+        // }
 
         // TODO: verify commitment of `q(x)` instead of receiving full `q(x)`
 
@@ -450,7 +440,7 @@ impl<E: PairingEngine> PCSScheme<E> for KZGMultilinearPC<E> {
 #[cfg(test)]
 mod tests {
     use super::util::get_batched_nv;
-
+    use crate::StructuredReferenceString;
     use super::*;
     use ark_bls12_381::Bls12_381;
     use ark_ec::PairingEngine;
@@ -486,7 +476,7 @@ mod tests {
     fn test_single_commit() -> Result<(), PCSErrors> {
         let mut rng = test_rng();
 
-        let uni_params = KZGMultilinearPC::<E>::setup(&mut rng, 10)?;
+        let uni_params = KZGMultilinearPC::<E>::gen_srs_for_testing(&mut rng, 10)?;
 
         // normal polynomials
         let poly1 = DenseMultilinearExtension::rand(8, &mut rng);
@@ -532,33 +522,29 @@ mod tests {
         )?);
 
         // bad commitment
-        assert!(KZGMultilinearPC::batch_verify(
+        assert!(!KZGMultilinearPC::batch_verify(
             &vk,
             &Commitment {
-                num_vars: Some(0),
-                g_product: <E as PairingEngine>::G1Affine::default(),
-
+                commitment: <E as PairingEngine>::G1Affine::default(),
                 phantom: PhantomData::<KZGMultilinearPC<E>>::default(),
             },
             &points_ref,
             &batch_proof,
             &mut transcript
-        )
-        .is_err());
+        )?);
 
         // bad points
         let points_ref: Vec<&Vec<Fr>> = points.iter().skip(1).map(|x| x.as_ref()).collect();
-        assert!(KZGMultilinearPC::batch_verify(
+        assert!(!KZGMultilinearPC::batch_verify(
             &vk,
             &com,
             &points_ref,
             &batch_proof,
             &mut transcript
-        )
-        .is_err());
+        )?);
 
         // bad proof
-        assert!(KZGMultilinearPC::batch_verify(
+        assert!(!KZGMultilinearPC::batch_verify(
             &vk,
             &com,
             &points_ref,
@@ -568,11 +554,10 @@ mod tests {
                 q_x_com: batch_proof.q_x_com.clone()
             },
             &mut transcript
-        )
-        .is_err());
+        )?);
 
         // bad value
-        assert!(KZGMultilinearPC::batch_verify(
+        assert!(!KZGMultilinearPC::batch_verify(
             &vk,
             &com,
             &points_ref,
@@ -582,11 +567,10 @@ mod tests {
                 q_x_com: batch_proof.q_x_com
             },
             &mut transcript
-        )
-        .is_err());
+        )?);
 
         // bad q(x) commit
-        assert!(KZGMultilinearPC::batch_verify(
+        assert!(!KZGMultilinearPC::batch_verify(
             &vk,
             &com,
             &points_ref,
@@ -596,8 +580,7 @@ mod tests {
                 q_x_com: Vec::new()
             },
             &mut transcript
-        )
-        .is_err());
+        )?);
 
         Ok(())
     }
@@ -606,7 +589,7 @@ mod tests {
     fn test_multi_commit() -> Result<(), PCSErrors> {
         let mut rng = test_rng();
 
-        let uni_params = KZGMultilinearPC::<E>::setup(&mut rng, 15)?;
+        let uni_params = KZGMultilinearPC::<E>::gen_srs_for_testing(&mut rng, 15)?;
 
         // normal polynomials
         let polys1: Vec<_> = (0..2)
@@ -628,6 +611,6 @@ mod tests {
         let mut rng = test_rng();
 
         // normal polynomials
-        assert!(KZGMultilinearPC::<E>::setup(&mut rng, 0).is_err());
+        assert!(KZGMultilinearPC::<E>::gen_srs_for_testing(&mut rng, 0).is_err());
     }
 }
