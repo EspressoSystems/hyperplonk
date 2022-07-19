@@ -108,10 +108,11 @@ impl<E: PairingEngine> PolynomialCommitmentScheme<E> for KZGUnivariatePCS<E> {
     /// Input a list of MLEs, and a same number of points, and a transcript,
     /// compute a multi-opening for all the polynomials.
     fn multi_open(
-        _prover_param: &Self::ProverParam,
-        _polynomials: &[Self::Polynomial],
-        _point: &[&Self::Point],
-        _transcript: &mut Self::Transcript,
+        prover_param: &Self::ProverParam,
+        multi_commitment: &Self::Commitment,
+        polynomials: &[Self::Polynomial],
+        points: &[&Self::Point],
+        values: &[E::Fr],
     ) -> Result<Self::BatchProof, PCSErrors> {
         todo!()
     }
@@ -151,11 +152,11 @@ impl<E: PairingEngine> PolynomialCommitmentScheme<E> for KZGUnivariatePCS<E> {
     /// Verifies that `value_i` is the evaluation at `x_i` of the polynomial
     /// `poly_i` committed inside `comm`.
     fn batch_verify(
-        _verifier_param: &Self::VerifierParam,
-        _multi_commitment: &Self::Commitment,
-        _points: &[&Self::Point],
-        _batch_proof: &Self::BatchProof,
-        _transcript: &mut IOPTranscript<E::Fr>,
+        verifier_param: &Self::VerifierParam,
+        multi_commitment: &Self::Commitment,
+        points: &[&Self::Point],
+        values: &[E::Fr],
+        batch_proof: &Self::BatchProof,
     ) -> Result<bool, PCSErrors> {
         todo!()
     }

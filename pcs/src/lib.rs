@@ -61,9 +61,10 @@ pub trait PolynomialCommitmentScheme<E: PairingEngine> {
     /// compute a multi-opening for all the polynomials.
     fn multi_open(
         prover_param: &Self::ProverParam,
+        multi_commitment: &Self::Commitment,
         polynomials: &[Self::Polynomial],
-        point: &[&Self::Point],
-        transcript: &mut Self::Transcript,
+        points: &[&Self::Point],
+        values: &[E::Fr],
     ) -> Result<Self::BatchProof, PCSErrors>;
 
     /// Verifies that `value` is the evaluation at `x` of the polynomial
@@ -82,8 +83,8 @@ pub trait PolynomialCommitmentScheme<E: PairingEngine> {
         verifier_param: &Self::VerifierParam,
         multi_commitment: &Self::Commitment,
         points: &[&Self::Point],
+        values: &[E::Fr],
         batch_proof: &Self::BatchProof,
-        transcript: &mut IOPTranscript<E::Fr>,
     ) -> Result<bool, PCSErrors>;
 }
 

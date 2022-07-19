@@ -203,18 +203,25 @@ impl<E: PairingEngine> PolynomialCommitmentScheme<E> for KZGMultilinearPC<E> {
     /// through the points
     /// 2. build MLE `w` which is the merge of all MLEs.
     /// 3. build `q(x)` which is a univariate polynomial `W circ l`
-    /// 4. output `q(x)`' and put it into transcript
+    /// 4. output `q(x)`'
+    /// transcript contains: w commitment, points, q(x)'s commitment
     /// 5. sample `r` from transcript
     /// 6. get a point `p := l(r)`
     /// 7. output an opening of `w` over point `p`
     /// 8. output `w(p)`
     fn multi_open(
         prover_param: &Self::ProverParam,
+        multi_commitment: &Self::Commitment,
         polynomials: &[Self::Polynomial],
         points: &[&Self::Point],
-        transcript: &mut IOPTranscript<E::Fr>,
+        values: &[E::Fr],
     ) -> Result<Self::BatchProof, PCSErrors> {
         let open_timer = start_timer!(|| "multi open");
+        let mut transcript = IOPTranscript::new(b"ml kzg");
+        transcript.append_serializable_element(b"w", multi_commitment)?;
+        for &point in points {
+            transcript.append_serializable_element(b"w", point)?;
+        }
 
         if points.len() != polynomials.len() {
             return Err(PCSErrors::InvalidParameters(
@@ -365,10 +372,17 @@ impl<E: PairingEngine> PolynomialCommitmentScheme<E> for KZGMultilinearPC<E> {
         verifier_param: &Self::VerifierParam,
         multi_commitment: &Self::Commitment,
         points: &[&Self::Point],
+        values: &[E::Fr],
         batch_proof: &Self::BatchProof,
-        transcript: &mut IOPTranscript<E::Fr>,
     ) -> Result<bool, PCSErrors> {
         let verify_timer = start_timer!(|| "batch verify");
+
+        let mut transcript = IOPTranscript::new(b"ml kzg");
+        transcript.append_serializable_element(b"w", multi_commitment)?;
+        for &point in points {
+            transcript.append_serializable_element(b"w", point)?;
+        }
+
         let num_var = points[0].len();
 
         for &point in points.iter().skip(1) {
@@ -380,14 +394,6 @@ impl<E: PairingEngine> PolynomialCommitmentScheme<E> for KZGMultilinearPC<E> {
                 )));
             }
         }
-        // if num_var + log2(points.len()) as usize !=
-        // multi_commitment.num_vars.unwrap() {     return
-        // Err(PCSErrors::InvalidParameters(format!(         "points and
-        // multi_commitment do not have same num_vars ({} vs {})",
-        //         num_var + log2(points.len()) as usize,
-        //         num_var,
-        //     )));
-        // }
 
         // TODO: verify commitment of `q(x)` instead of receiving full `q(x)`
 
@@ -485,8 +491,6 @@ mod tests {
         polys: &[DenseMultilinearExtension<Fr>],
         rng: &mut R,
     ) -> Result<(), PCSErrors> {
-        let mut transcript = IOPTranscript::new(b"test");
-
         let nv = get_batched_nv(polys[0].num_vars(), polys.len());
         let (ck, vk) = uni_params.trim(nv)?;
         let mut points = Vec::new();
@@ -500,16 +504,15 @@ mod tests {
         let points_ref: Vec<&Vec<Fr>> = points.iter().map(|x| x.as_ref()).collect();
 
         let com = KZGMultilinearPC::multi_commit(&ck, polys)?;
-        let batch_proof = KZGMultilinearPC::multi_open(&ck, polys, &points_ref, &mut transcript)?;
+        let batch_proof = KZGMultilinearPC::multi_open(&ck, &com, polys, &points_ref, &[])?;
 
         // good path
-        let mut transcript = IOPTranscript::new(b"test");
         assert!(KZGMultilinearPC::batch_verify(
             &vk,
             &com,
             &points_ref,
+            &[],
             &batch_proof,
-            &mut transcript
         )?);
 
         // bad commitment
@@ -519,8 +522,8 @@ mod tests {
                 commitment: <E as PairingEngine>::G1Affine::default()
             },
             &points_ref,
+            &[],
             &batch_proof,
-            &mut transcript
         )?);
 
         // bad points
@@ -529,8 +532,8 @@ mod tests {
             &vk,
             &com,
             &points_ref,
+            &[],
             &batch_proof,
-            &mut transcript
         )?);
 
         // bad proof
@@ -538,12 +541,12 @@ mod tests {
             &vk,
             &com,
             &points_ref,
+            &[],
             &BatchProof {
                 proof: Proof { proofs: Vec::new() },
                 value: batch_proof.value,
                 q_x_com: batch_proof.q_x_com.clone()
             },
-            &mut transcript
         )?);
 
         // bad value
@@ -551,12 +554,12 @@ mod tests {
             &vk,
             &com,
             &points_ref,
+            &[],
             &BatchProof {
                 proof: batch_proof.proof.clone(),
                 value: Fr::one(),
                 q_x_com: batch_proof.q_x_com
-            },
-            &mut transcript
+            }
         )?);
 
         // bad q(x) commit
@@ -564,12 +567,12 @@ mod tests {
             &vk,
             &com,
             &points_ref,
+            &[],
             &BatchProof {
                 proof: batch_proof.proof,
                 value: batch_proof.value,
                 q_x_com: Vec::new()
             },
-            &mut transcript
         )?);
 
         Ok(())

@@ -4,6 +4,7 @@
 //! TODO(ZZ): decide which APIs need to be public.
 
 use ark_ff::PrimeField;
+use ark_serialize::CanonicalSerialize;
 use merlin::Transcript;
 use std::marker::PhantomData;
 
@@ -65,6 +66,15 @@ impl<F: PrimeField> IOPTranscript<F> {
         field_elem: &F,
     ) -> Result<(), PolyIOPErrors> {
         self.append_message(label, &to_bytes!(field_elem)?)
+    }
+
+    // Append the message to the transcript.
+    pub fn append_serializable_element<S: CanonicalSerialize>(
+        &mut self,
+        label: &'static [u8],
+        group_elem: &S,
+    ) -> Result<(), PolyIOPErrors> {
+        self.append_message(label, &to_bytes!(group_elem)?)
     }
 
     // Append a prover message to the transcript.
