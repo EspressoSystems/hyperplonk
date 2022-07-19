@@ -10,6 +10,8 @@ use ark_std::rand::RngCore;
 use errors::PCSErrors;
 use poly_iop::IOPTranscript;
 
+/// This trait defines APIs for polynomial commitment schemes.
+/// Note that for our usage of PCS, we do not require the hiding property.
 pub trait PolynomialCommitmentScheme<E: PairingEngine> {
     type ProverParam;
     type VerifierParam;
@@ -91,9 +93,9 @@ pub trait StructuredReferenceString<E: PairingEngine>: Sized {
     type VerifierParam;
 
     /// Extract the prover parameters from the public parameters.
-    fn extract_prover_param(&self) -> Self::ProverParam;
+    fn extract_prover_param(&self, supported_log_size: usize) -> Self::ProverParam;
     /// Extract the verifier parameters from the public parameters.
-    fn extract_verifier_param(&self) -> Self::VerifierParam;
+    fn extract_verifier_param(&self, supported_log_size: usize) -> Self::VerifierParam;
 
     /// Trim the universal parameters to specialize the public parameters
     /// for polynomials to the given `supported_log_size`, and

@@ -1,3 +1,5 @@
+//! Implementing Structured Reference Strings for multilinear polynomial KZG
+
 use crate::{prelude::PCSErrors, StructuredReferenceString};
 use ark_ec::{msm::FixedBaseMSM, AffineCurve, PairingEngine, ProjectiveCurve};
 use ark_ff::{Field, PrimeField};
@@ -54,17 +56,25 @@ impl<E: PairingEngine> StructuredReferenceString<E> for UniversalParams<E> {
     type VerifierParam = VerifierParam<E>;
 
     /// Extract the prover parameters from the public parameters.
-    fn extract_prover_param(&self) -> ProverParam<E> {
-        self.prover_param.clone()
+    fn extract_prover_param(&self, supported_num_vars: usize) -> ProverParam<E> {
+        let to_reduce = self.prover_param.num_vars - supported_num_vars;
+
+        ProverParam {
+            powers_of_g: self.prover_param.powers_of_g[to_reduce..].to_vec(),
+            g: self.prover_param.g,
+            h: self.prover_param.h,
+            num_vars: supported_num_vars,
+        }
     }
 
     /// Extract the verifier parameters from the public parameters.
-    fn extract_verifier_param(&self) -> VerifierParam<E> {
+    fn extract_verifier_param(&self, supported_num_vars: usize) -> VerifierParam<E> {
+        let to_reduce = self.prover_param.num_vars - supported_num_vars;
         VerifierParam {
-            num_vars: self.prover_param.num_vars,
+            num_vars: supported_num_vars,
             g: self.prover_param.g,
             h: self.prover_param.h,
-            h_mask: self.h_mask.clone(),
+            h_mask: self.h_mask[to_reduce..].to_vec(),
         }
     }
 

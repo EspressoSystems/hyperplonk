@@ -1,9 +1,10 @@
+//! Implementing Structured Reference Strings for univariate polynomial KZG
+
 use crate::{prelude::PCSErrors, StructuredReferenceString};
 use ark_ec::{msm::FixedBaseMSM, AffineCurve, PairingEngine, ProjectiveCurve};
 use ark_ff::PrimeField;
 use ark_serialize::{CanonicalDeserialize, CanonicalSerialize, Read, SerializationError, Write};
 use ark_std::{end_timer, rand::RngCore, start_timer, One, UniformRand};
-use std::collections::BTreeMap;
 
 /// `UniversalParams` are the universal parameters for the KZG10 scheme.
 /// Adapted from
@@ -13,20 +14,10 @@ pub struct UniversalParams<E: PairingEngine> {
     /// Group elements of the form `{ \beta^i G }`, where `i` ranges from 0 to
     /// `degree`.
     pub powers_of_g: Vec<E::G1Affine>,
-    /// Group elements of the form `{ \beta^i \gamma G }`, where `i` ranges from
-    /// 0 to `degree`.
-    pub powers_of_gamma_g: BTreeMap<usize, E::G1Affine>,
     /// The generator of G2.
     pub h: E::G2Affine,
     /// \beta times the above generator of G2.
     pub beta_h: E::G2Affine,
-    // /// Group elements of the form `{ \beta^i G2 }`, where `i` ranges from `0`
-    // /// to `-degree`.
-    // pub neg_powers_of_h: BTreeMap<usize, E::G2Affine>,
-    /// The generator of G2, prepared for use in pairings.
-    pub prepared_h: E::G2Prepared,
-    /// \beta times the above generator of G2, prepared for use in pairings.
-    pub prepared_beta_h: E::G2Prepared,
 }
 
 /// Prover Parameters
@@ -41,16 +32,10 @@ pub struct ProverParam<C: AffineCurve> {
 pub struct VerifierParam<E: PairingEngine> {
     /// The generator of G1.
     pub g: E::G1Affine,
-    /// The generator of G1 that is used for making a commitment hiding.
-    pub gamma_g: E::G1Affine,
     /// The generator of G2.
     pub h: E::G2Affine,
     /// \beta times the above generator of G2.
     pub beta_h: E::G2Affine,
-    /// The generator of G2, prepared for use in pairings.
-    pub prepared_h: E::G2Prepared,
-    /// \beta times the above generator of G2, prepared for use in pairings.
-    pub prepared_beta_h: E::G2Prepared,
 }
 
 impl<E: PairingEngine> StructuredReferenceString<E> for UniversalParams<E> {
@@ -58,13 +43,20 @@ impl<E: PairingEngine> StructuredReferenceString<E> for UniversalParams<E> {
     type VerifierParam = VerifierParam<E>;
 
     /// Extract the prover parameters from the public parameters.
-    fn extract_prover_param(&self) -> Self::ProverParam {
-        todo!()
+    fn extract_prover_param(&self, supported_log_size: usize) -> Self::ProverParam {
+        let support_size = 1usize << supported_log_size;
+        let powers_of_g = self.powers_of_g[..=support_size].to_vec();
+
+        ProverParam { powers_of_g }
     }
 
     /// Extract the verifier parameters from the public parameters.
-    fn extract_verifier_param(&self) -> Self::VerifierParam {
-        todo!()
+    fn extract_verifier_param(&self, _supported_log_size: usize) -> Self::VerifierParam {
+        VerifierParam {
+            g: self.powers_of_g[0],
+            h: self.h,
+            beta_h: self.beta_h,
+        }
     }
 
     /// Trim the universal parameters to specialize the public parameters
@@ -73,9 +65,18 @@ impl<E: PairingEngine> StructuredReferenceString<E> for UniversalParams<E> {
     /// be in range `1..=params.num_vars`
     fn trim(
         &self,
-        _supported_num_vars: usize,
+        supported_log_size: usize,
     ) -> Result<(Self::ProverParam, Self::VerifierParam), PCSErrors> {
-        todo!()
+        let support_size = 1usize << supported_log_size;
+        let powers_of_g = self.powers_of_g[..=support_size].to_vec();
+
+        let pk = ProverParam { powers_of_g };
+        let vk = VerifierParam {
+            g: self.powers_of_g[0],
+            h: self.h,
+            beta_h: self.beta_h,
+        };
+        Ok((pk, vk))
     }
 
     /// Build SRS for testing.
@@ -86,7 +87,6 @@ impl<E: PairingEngine> StructuredReferenceString<E> for UniversalParams<E> {
         let setup_time = start_timer!(|| format!("KZG10::Setup with degree {}", max_degree));
         let beta = E::Fr::rand(rng);
         let g = E::G1Projective::rand(rng);
-        let gamma_g = E::G1Projective::rand(rng);
         let h = E::G2Projective::rand(rng);
 
         let mut powers_of_beta = vec![E::Fr::one()];
@@ -101,6 +101,7 @@ impl<E: PairingEngine> StructuredReferenceString<E> for UniversalParams<E> {
 
         let scalar_bits = E::Fr::size_in_bits();
         let g_time = start_timer!(|| "Generating powers of G");
+        // TODO: parallelization
         let g_table = FixedBaseMSM::get_window_table(scalar_bits, window_size, g);
         let powers_of_g = FixedBaseMSM::multi_scalar_mul::<E::G1Projective>(
             scalar_bits,
@@ -109,38 +110,16 @@ impl<E: PairingEngine> StructuredReferenceString<E> for UniversalParams<E> {
             &powers_of_beta,
         );
         end_timer!(g_time);
-        let gamma_g_time = start_timer!(|| "Generating powers of gamma * G");
-        let gamma_g_table = FixedBaseMSM::get_window_table(scalar_bits, window_size, gamma_g);
-        let mut powers_of_gamma_g = FixedBaseMSM::multi_scalar_mul::<E::G1Projective>(
-            scalar_bits,
-            window_size,
-            &gamma_g_table,
-            &powers_of_beta,
-        );
-        // Add an additional power of gamma_g, because we want to be able to support
-        // up to D queries.
-        powers_of_gamma_g.push(powers_of_gamma_g.last().unwrap().mul(beta.into_repr()));
-        end_timer!(gamma_g_time);
 
         let powers_of_g = E::G1Projective::batch_normalization_into_affine(&powers_of_g);
-        let powers_of_gamma_g =
-            E::G1Projective::batch_normalization_into_affine(&powers_of_gamma_g)
-                .into_iter()
-                .enumerate()
-                .collect();
 
         let h = h.into_affine();
         let beta_h = h.mul(beta).into_affine();
-        let prepared_h = h.into();
-        let prepared_beta_h = beta_h.into();
 
         let pp = UniversalParams {
             powers_of_g,
-            powers_of_gamma_g,
             h,
             beta_h,
-            prepared_h,
-            prepared_beta_h,
         };
         end_timer!(setup_time);
         Ok(pp)

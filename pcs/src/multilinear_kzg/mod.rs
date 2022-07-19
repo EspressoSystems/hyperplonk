@@ -3,9 +3,7 @@
 pub(crate) mod srs;
 pub(crate) mod util;
 
-use crate::{
-    prelude::Commitment, PCSErrors, PolynomialCommitmentScheme, 
-};
+use crate::{prelude::Commitment, PCSErrors, PolynomialCommitmentScheme};
 use ark_ec::{
     msm::{FixedBaseMSM, VariableBaseMSM},
     AffineCurve, PairingEngine, ProjectiveCurve,
@@ -16,7 +14,7 @@ use ark_poly::{
     UVPolynomial,
 };
 use ark_serialize::{CanonicalDeserialize, CanonicalSerialize, Read, SerializationError, Write};
-use ark_std::{end_timer,  start_timer, vec::Vec, One, Zero};
+use ark_std::{end_timer, start_timer, vec::Vec, One, Zero};
 use poly_iop::IOPTranscript;
 use srs::{ProverParam, UniversalParams, VerifierParam};
 use std::marker::PhantomData;
@@ -57,7 +55,7 @@ impl<E: PairingEngine> PolynomialCommitmentScheme<E> for KZGMultilinearPC<E> {
     type SRS = UniversalParams<E>;
     type Polynomial = DenseMultilinearExtension<E::Fr>;
     type Point = Vec<E::Fr>;
-    type Commitment = Commitment<E, Self>;
+    type Commitment = Commitment<E>;
     type Proof = Proof<E>;
     type Transcript = IOPTranscript<E::Fr>;
     type BatchProof = BatchProof<E>;
@@ -84,10 +82,7 @@ impl<E: PairingEngine> PolynomialCommitmentScheme<E> for KZGMultilinearPC<E> {
         .into_affine();
 
         end_timer!(commit_timer);
-        Ok(Commitment {
-            commitment,
-            phantom: PhantomData::<Self>::default(),
-        })
+        Ok(Commitment { commitment })
     }
 
     /// Generate a commitment for a list of polynomials.
@@ -114,10 +109,7 @@ impl<E: PairingEngine> PolynomialCommitmentScheme<E> for KZGMultilinearPC<E> {
         .into_affine();
 
         end_timer!(commit_timer);
-        Ok(Commitment {
-            commitment,
-            phantom: PhantomData::<Self>::default(),
-        })
+        Ok(Commitment { commitment })
     }
 
     /// On input a polynomial `p` and a point `point`, outputs a proof for the
@@ -439,9 +431,8 @@ impl<E: PairingEngine> PolynomialCommitmentScheme<E> for KZGMultilinearPC<E> {
 
 #[cfg(test)]
 mod tests {
-    use super::util::get_batched_nv;
+    use super::{util::get_batched_nv, *};
     use crate::StructuredReferenceString;
-    use super::*;
     use ark_bls12_381::Bls12_381;
     use ark_ec::PairingEngine;
     use ark_poly::{DenseMultilinearExtension, MultilinearExtension};
@@ -525,8 +516,7 @@ mod tests {
         assert!(!KZGMultilinearPC::batch_verify(
             &vk,
             &Commitment {
-                commitment: <E as PairingEngine>::G1Affine::default(),
-                phantom: PhantomData::<KZGMultilinearPC<E>>::default(),
+                commitment: <E as PairingEngine>::G1Affine::default()
             },
             &points_ref,
             &batch_proof,
