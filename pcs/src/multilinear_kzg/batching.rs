@@ -39,7 +39,7 @@ use poly_iop::IOPTranscript;
 /// through the points
 /// 2. build MLE `w` which is the merge of all MLEs.
 /// 3. build `q(x)` which is a univariate polynomial `W circ l`
-// 4. commit to q(x) and sample r from transcript
+/// 4. commit to q(x) and sample r from transcript
 /// transcript contains: w commitment, points, q(x)'s commitment
 /// 5. build q(omega^i) and their openings
 /// 6. build q(r) and its opening
@@ -58,12 +58,12 @@ pub(super) fn multi_open_internal<E: PairingEngine>(
     // ===================================
     // Sanity checks on inputs
     // ===================================
-    let uni_poly_degree = points.len();
-    if uni_poly_degree == 0 {
+    let points_len = points.len();
+    if points_len == 0 {
         return Err(PCSErrors::InvalidParameters("points is empty".to_string()));
     }
 
-    if uni_poly_degree != polynomials.len() {
+    if points_len != polynomials.len() {
         return Err(PCSErrors::InvalidParameters(
             "polynomial length does not match point length".to_string(),
         ));
@@ -85,7 +85,7 @@ pub(super) fn multi_open_internal<E: PairingEngine>(
         }
     }
 
-    let domain = get_uni_domain::<E::Fr>(uni_poly_degree)?;
+    let domain = get_uni_domain::<E::Fr>(points_len)?;
 
     // 1. build `l(points)` which is a list of univariate polynomials that goes
     // through the points
@@ -112,7 +112,7 @@ pub(super) fn multi_open_internal<E: PairingEngine>(
     // 5. build q(omega^i) and their openings
     let mut q_x_opens = vec![];
     let mut q_x_evals = vec![];
-    for i in 0..uni_poly_degree {
+    for i in 0..points_len {
         let q_x_eval = q_x.evaluate(&domain.element(i));
         let q_x_open = KZGUnivariatePCS::<E>::open(uni_prover_param, &q_x, &domain.element(i))?;
         q_x_opens.push(q_x_open);
@@ -146,7 +146,7 @@ pub(super) fn multi_open_internal<E: PairingEngine>(
         .collect();
 
     // 8. output an opening of `w` over point `p`
-    let opening = open_internal(ml_prover_param, &merge_poly, &point)?;
+    let mle_opening = open_internal(ml_prover_param, &merge_poly, &point)?;
 
     // 9. output value that is `w` evaluated at `p` (which should match `q(r)`)
     let merge_poly_value = merge_poly.evaluate(&point).unwrap();
@@ -159,7 +159,7 @@ pub(super) fn multi_open_internal<E: PairingEngine>(
     end_timer!(open_timer);
 
     Ok(BatchProof {
-        proof: opening,
+        proof: mle_opening,
         q_x_commit,
         q_x_opens,
         q_x_evals,
@@ -174,8 +174,9 @@ pub(super) fn multi_open_internal<E: PairingEngine>(
 ///
 /// 1. push w, points and q_com into transcript
 /// 2. sample `r` from transcript
-/// 3. check `q(r) == batch_proof.q_x_value.last` and `q(omega^i) =
-/// batch_proof.q_x_value[i]` 4. build `l(points)` which is a list of univariate
+/// 3. check `q(r) == batch_proof.q_x_value.last` and
+/// `q(omega^i) == batch_proof.q_x_value[i]`
+/// 4. build `l(points)` which is a list of univariate
 /// polynomials that goes through the points
 /// 5. get a point `p := l(r)`
 /// 6. verifies `p` is valid against multilinear KZG proof
@@ -192,19 +193,19 @@ pub(super) fn batch_verify_internal<E: PairingEngine>(
     // ===================================
     // Sanity checks on inputs
     // ===================================
-    let uni_poly_degree = points.len();
-    if uni_poly_degree == 0 {
+    let points_len = points.len();
+    if points_len == 0 {
         return Err(PCSErrors::InvalidParameters("points is empty".to_string()));
     }
 
     // add one here because we also have q(r) and its opening
-    if uni_poly_degree + 1 != batch_proof.q_x_opens.len() {
+    if points_len + 1 != batch_proof.q_x_opens.len() {
         return Err(PCSErrors::InvalidParameters(
             "openings length does not match point length".to_string(),
         ));
     }
 
-    if uni_poly_degree + 1 != batch_proof.q_x_evals.len() {
+    if points_len + 1 != batch_proof.q_x_evals.len() {
         return Err(PCSErrors::InvalidParameters(
             "values length does not match point length".to_string(),
         ));
@@ -221,7 +222,7 @@ pub(super) fn batch_verify_internal<E: PairingEngine>(
         }
     }
 
-    let domain = get_uni_domain::<E::Fr>(uni_poly_degree)?;
+    let domain = get_uni_domain::<E::Fr>(points_len)?;
 
     // 1. push w, points and q_com into transcript
     let mut transcript = IOPTranscript::new(b"ml kzg");
@@ -237,7 +238,7 @@ pub(super) fn batch_verify_internal<E: PairingEngine>(
 
     // 3. check `q(r) == batch_proof.q_x_value.last` and `q(omega^i) =
     // batch_proof.q_x_value[i]`
-    for i in 0..uni_poly_degree {
+    for i in 0..points_len {
         if !KZGUnivariatePCS::verify(
             uni_verifier_param,
             &batch_proof.q_x_commit,
@@ -255,8 +256,8 @@ pub(super) fn batch_verify_internal<E: PairingEngine>(
         uni_verifier_param,
         &batch_proof.q_x_commit,
         &r,
-        &batch_proof.q_x_evals[uni_poly_degree],
-        &batch_proof.q_x_opens[uni_poly_degree],
+        &batch_proof.q_x_evals[points_len],
+        &batch_proof.q_x_opens[points_len],
     )? {
         #[cfg(debug_assertion)]
         println!("q(r) verification failed");
@@ -275,7 +276,7 @@ pub(super) fn batch_verify_internal<E: PairingEngine>(
         ml_verifier_param,
         multi_commitment,
         &point,
-        &batch_proof.q_x_evals[uni_poly_degree],
+        &batch_proof.q_x_evals[points_len],
         &batch_proof.proof,
     )?;
 
@@ -296,9 +297,8 @@ mod tests {
         *,
     };
     use crate::{
-        multilinear_kzg::util::{compute_uni_degree, generate_values},
+        multilinear_kzg::util::{compute_qx_degree, generate_evaluations},
         prelude::UnivariateUniversalParams,
-        univariate_kzg::KZGUnivariatePCS,
         StructuredReferenceString,
     };
     use ark_bls12_381::Bls12_381 as E;
@@ -314,7 +314,7 @@ mod tests {
         rng: &mut R,
     ) -> Result<(), PCSErrors> {
         let nv = get_batched_nv(polys[0].num_vars(), polys.len());
-        let uni_degree = compute_uni_degree(polys[0].num_vars(), polys.len());
+        let uni_degree = compute_qx_degree(polys.len());
 
         let (uni_ck, uni_vk) = uni_params.trim(uni_degree)?;
         let (ml_ck, ml_vk) = ml_params.trim(nv)?;
@@ -327,7 +327,7 @@ mod tests {
             points.push(point);
         }
 
-        let evals = generate_values(polys, &points)?;
+        let evals = generate_evaluations(polys, &points)?;
 
         let com = KZGMultilinearPCS::multi_commit(&(ml_ck.clone(), uni_ck.clone()), polys)?;
         let batch_proof = multi_open_internal(&uni_ck, &ml_ck, polys, &com, &points)?;

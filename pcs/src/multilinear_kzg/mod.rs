@@ -24,7 +24,7 @@ use srs::{MultilinearProverParam, MultilinearUniversalParams, MultilinearVerifie
 use std::marker::PhantomData;
 use util::merge_polynomials;
 
-/// KZG Polynomial Commitment Scheme on multilinear extensions.
+/// KZG Polynomial Commitment Scheme on multilinear polynomials.
 pub struct KZGMultilinearPCS<E: PairingEngine> {
     #[doc(hidden)]
     phantom: PhantomData<E>,
@@ -178,7 +178,7 @@ impl<E: PairingEngine> PolynomialCommitmentScheme<E> for KZGMultilinearPCS<E> {
     /// through the points
     /// 2. build MLE `w` which is the merge of all MLEs.
     /// 3. build `q(x)` which is a univariate polynomial `W circ l`
-    // 4. commit to q(x) and sample r from transcript
+    /// 4. commit to q(x) and sample r from transcript
     /// transcript contains: w commitment, points, q(x)'s commitment
     /// 5. build q(omega^i) and their openings
     /// 6. build q(r) and its opening
@@ -374,7 +374,7 @@ fn verify_internal<E: PairingEngine>(
 
 #[cfg(test)]
 mod tests {
-    use super::{util::get_batched_nv, *};
+    use super::*;
     use crate::StructuredReferenceString;
     use ark_bls12_381::Bls12_381;
     use ark_ec::PairingEngine;
@@ -429,139 +429,6 @@ mod tests {
 
         Ok(())
     }
-
-    // fn test_multi_commit_helper<R: RngCore>(
-    //     uni_params: &MultilinearUniversalParams<E>,
-    //     polys: &[DenseMultilinearExtension<Fr>],
-    //     rng: &mut R,
-    // ) -> Result<(), PCSErrors> {
-    //     let nv = get_batched_nv(polys[0].num_vars(), polys.len());
-    //     let (ck, vk) = uni_params.trim(nv)?;
-    //     let mut points = Vec::new();
-
-    //     for poly in polys.iter() {
-    //         let point = (0..poly.num_vars())
-    //             .map(|_| Fr::rand(rng))
-    //             .collect::<Vec<Fr>>();
-    //         points.push(point);
-    //     }
-    //     // let points_ref: Vec<&Vec<Fr>> = points.iter().map(|x|
-    // x.as_ref()).collect();
-
-    //     let com = KZGMultilinearPCS::multi_commit(&ck, polys)?;
-    //     let batch_proof = KZGMultilinearPCS::multi_open(&ck, &com, polys,
-    // &points)?;
-
-    //     // good path
-    //     assert!(KZGMultilinearPCS::batch_verify(
-    //         &vk,
-    //         &com,
-    //         &points,
-    //         &[],
-    //         &batch_proof,
-    //         rng
-    //     )?);
-
-    //     // bad commitment
-    //     assert!(!KZGMultilinearPCS::batch_verify(
-    //         &vk,
-    //         &Commitment {
-    //             commitment: <E as PairingEngine>::G1Affine::default()
-    //         },
-    //         &points,
-    //         &[],
-    //         &batch_proof,
-    //         rng
-    //     )?);
-
-    //     // bad points
-    //     assert!(!KZGMultilinearPCS::batch_verify(
-    //         &vk,
-    //         &com,
-    //         &points[1..],
-    //         &[],
-    //         &batch_proof,
-    //         rng
-    //     )?);
-
-    //     // bad proof
-    //     assert!(!KZGMultilinearPCS::batch_verify(
-    //         &vk,
-    //         &com,
-    //         &points,
-    //         &[],
-    //         &BatchProof {
-    //             proof: Proof { proofs: Vec::new() },
-    //             value: batch_proof.value,
-    //             q_x_com: batch_proof.q_x_com.clone(),
-    //             q_x_commit: Commitment{
-    //                 commitment:G1Affine::default()
-    //             },
-    //             q_x_opens: vec![],
-    //         },
-    //         rng
-    //     )?);
-
-    //     // bad value
-    //     assert!(!KZGMultilinearPCS::batch_verify(
-    //         &vk,
-    //         &com,
-    //         &points,
-    //         &[],
-    //         &BatchProof {
-    //             proof: batch_proof.proof.clone(),
-    //             value: Fr::one(),
-    //             q_x_com: batch_proof.q_x_com,
-    //             q_x_commit: Commitment{
-    //                 commitment:G1Affine::default()
-    //             },
-    //             q_x_opens: vec![],
-    //         },
-    //         rng
-    //     )?);
-
-    //     // bad q(x) commit
-    //     assert!(!KZGMultilinearPCS::batch_verify(
-    //         &vk,
-    //         &com,
-    //         &points,
-    //         &[],
-    //         &BatchProof {
-    //             proof: batch_proof.proof,
-    //             value: batch_proof.value,
-    //             q_x_com: Vec::new(),
-    //             q_x_commit: Commitment{
-    //                 commitment:G1Affine::default()
-    //             },
-    //             q_x_opens: vec![],
-    //         },
-    //         rng
-    //     )?);
-
-    //     Ok(())
-    // }
-
-    // #[test]
-    // fn test_multi_commit() -> Result<(), PCSErrors> {
-    //     let mut rng = test_rng();
-
-    //     let uni_params = KZGMultilinearPCS::<E>::gen_srs_for_testing(&mut rng,
-    // 15)?;
-
-    //     // normal polynomials
-    //     let polys1: Vec<_> = (0..2)
-    //         .map(|_| DenseMultilinearExtension::rand(4, &mut rng))
-    //         .collect();
-    //     test_multi_commit_helper(&uni_params, &polys1, &mut rng)?;
-
-    //     // single-variate polynomials
-    //     let polys1: Vec<_> = (0..5)
-    //         .map(|_| DenseMultilinearExtension::rand(1, &mut rng))
-    //         .collect();
-    //     test_multi_commit_helper(&uni_params, &polys1, &mut rng)?;
-
-    //     Ok(())
-    // }
 
     #[test]
     fn setup_commit_verify_constant_polynomial() {

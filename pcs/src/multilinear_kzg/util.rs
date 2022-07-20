@@ -10,16 +10,16 @@ use ark_std::{end_timer, log2, start_timer};
 use poly_iop::bit_decompose;
 use std::cmp::max;
 
-/// compute the degree of the univariate polynomial
-// uni_degree is
-// (product of each prefix's) + (2 * MLEs)
-//   = (l.len() - (num_vars - log(l.len())) + 2) * l[0].degree
-//
-// where l.len() := num_vars
+/// For an MLE w, and point_len number of points,
+/// compute the degree of the univariate polynomial `q(x):= w(l(x))`
+/// where l(x) is a list of polynomials that go through all points.
+// uni_degree is computed as `2 * point_len`:
+// - each l(x) is of degree `point_len`
+// - mle has degree two
 #[inline]
 #[allow(dead_code)]
-pub(crate) fn compute_uni_degree(mle_num_vars: usize, uni_poly_degree: usize) -> usize {
-    (log2(mle_num_vars) as usize + 2) * uni_poly_degree
+pub(crate) fn compute_qx_degree(point_len: usize) -> usize {
+    2 * point_len
 }
 
 /// get the domain for the univariate polynomial
@@ -165,13 +165,13 @@ pub(crate) fn build_l<F: PrimeField>(
     Ok(uni_polys)
 }
 
-/// Input a list of polynomials and a list of points,
+/// Input a list of multilinear polynomials and a list of points,
 /// generate a list of evaluations.
 // Note that this function is only used for testing verifications.
 // In practice verifier does not see polynomials, and the `mle_values`
 // are included in the `batch_proof`.
 #[cfg(test)]
-pub(crate) fn generate_values<F: PrimeField>(
+pub(crate) fn generate_evaluations<F: PrimeField>(
     polynomials: &[DenseMultilinearExtension<F>],
     points: &[Vec<F>],
 ) -> Result<Vec<F>, PCSErrors> {

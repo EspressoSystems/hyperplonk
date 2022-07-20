@@ -128,6 +128,9 @@ impl<E: PairingEngine> PolynomialCommitmentScheme<E> for KZGUnivariatePCS<E> {
 
     /// Input a list of polynomials, and a same number of points,
     /// compute a multi-opening for all the polynomials.
+    // This is a naive approach
+    // TODO: to implement the more efficient batch opening algorithm
+    // (e.g., the appendix C.4 in https://eprint.iacr.org/2020/1536.pdf)
     fn multi_open(
         prover_param: &Self::ProverParam,
         _multi_commitment: &Self::Commitment,
@@ -184,6 +187,9 @@ impl<E: PairingEngine> PolynomialCommitmentScheme<E> for KZGUnivariatePCS<E> {
 
     /// Verifies that `value_i` is the evaluation at `x_i` of the polynomial
     /// `poly_i` committed inside `comm`.
+    // This is a naive approach
+    // TODO: to implement the more efficient batch verification algorithm
+    // (e.g., the appendix C.4 in https://eprint.iacr.org/2020/1536.pdf)
     fn batch_verify<R: RngCore>(
         verifier_param: &Self::VerifierParam,
         multi_commitment: &Self::BatchCommitment,
