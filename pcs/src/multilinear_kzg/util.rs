@@ -8,6 +8,36 @@ use ark_poly::{
 };
 use ark_std::{end_timer, log2, start_timer};
 use poly_iop::bit_decompose;
+use std::cmp::max;
+
+/// compute the degree of the univariate polynomial
+// uni_degree is
+// (product of each prefix's) + (2 * MLEs)
+//   = (l.len() - (num_vars - log(l.len())) + 2) * l[0].degree
+//
+// where l.len() := num_vars
+#[inline]
+pub(crate) fn compute_uni_degree(mle_num_vars: usize, uni_poly_degree: usize) -> usize {
+    (log2(mle_num_vars) as usize + 2) * uni_poly_degree
+}
+
+/// get the domain for the univariate polynomial
+#[inline]
+pub(crate) fn get_uni_domain<F: PrimeField>(
+    mle_num_vars: usize,
+    uni_poly_degree: usize,
+) -> Result<Radix2EvaluationDomain<F>, PCSErrors> {
+    let uni_degree = compute_uni_degree(mle_num_vars, uni_poly_degree);
+    let domain = match Radix2EvaluationDomain::<F>::new(uni_degree) {
+        Some(p) => p,
+        None => {
+            return Err(PCSErrors::InvalidParameters(
+                "failed to build radix 2 domain".to_string(),
+            ))
+        },
+    };
+    Ok(domain)
+}
 
 /// Compute W \circ l.
 ///
@@ -64,6 +94,19 @@ pub(crate) fn get_batched_nv(num_var: usize, polynomials_len: usize) -> usize {
     num_var + log2(polynomials_len) as usize
 }
 
+/// Return the SRS size
+// We require an SRS that is the greater of the two:
+// - Multilinear srs is bounded by the merged MLS size which is `get_batched_nv(num_var,
+//   num_witnesses)`
+// - Univariate srs is bounded by q_x's degree which is `compute_uni_degree(num_vars,
+//   num_witnesses)`
+#[inline]
+pub(crate) fn get_srs_size(num_var: usize, num_wires: usize) -> usize {
+    max(
+        num_var + log2(num_wires) as usize,
+        (log2(num_var) as usize + 2) * num_wires,
+    )
+}
 /// merge a set of polynomials. Returns an error if the
 /// polynomials do not share a same number of nvs.
 pub fn merge_polynomials<F: PrimeField>(

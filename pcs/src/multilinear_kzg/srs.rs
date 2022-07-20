@@ -17,16 +17,16 @@ pub struct Evaluations<C: AffineCurve> {
 
 /// Universal Parameter
 #[derive(CanonicalSerialize, CanonicalDeserialize, Clone, Debug)]
-pub struct UniversalParams<E: PairingEngine> {
+pub struct MultilinearUniversalParams<E: PairingEngine> {
     /// prover parameters
-    pub prover_param: ProverParam<E>,
+    pub prover_param: MultilinearProverParam<E>,
     /// h^randomness: h^t1, h^t2, ..., **h^{t_nv}**
     pub h_mask: Vec<E::G2Affine>,
 }
 
 /// Prover Parameters
 #[derive(CanonicalSerialize, CanonicalDeserialize, Clone, Debug)]
-pub struct ProverParam<E: PairingEngine> {
+pub struct MultilinearProverParam<E: PairingEngine> {
     /// number of variables
     pub num_vars: usize,
     /// `pp_{num_vars}`, `pp_{num_vars - 1}`, `pp_{num_vars - 2}`, ..., defined
@@ -40,7 +40,7 @@ pub struct ProverParam<E: PairingEngine> {
 
 /// Verifier Parameters
 #[derive(CanonicalSerialize, CanonicalDeserialize, Clone, Debug)]
-pub struct VerifierParam<E: PairingEngine> {
+pub struct MultilinearVerifierParam<E: PairingEngine> {
     /// number of variables
     pub num_vars: usize,
     /// generator of G1
@@ -51,15 +51,15 @@ pub struct VerifierParam<E: PairingEngine> {
     pub h_mask: Vec<E::G2Affine>,
 }
 
-impl<E: PairingEngine> StructuredReferenceString<E> for UniversalParams<E> {
-    type ProverParam = ProverParam<E>;
-    type VerifierParam = VerifierParam<E>;
+impl<E: PairingEngine> StructuredReferenceString<E> for MultilinearUniversalParams<E> {
+    type ProverParam = MultilinearProverParam<E>;
+    type VerifierParam = MultilinearVerifierParam<E>;
 
     /// Extract the prover parameters from the public parameters.
-    fn extract_prover_param(&self, supported_num_vars: usize) -> ProverParam<E> {
+    fn extract_prover_param(&self, supported_num_vars: usize) -> Self::ProverParam {
         let to_reduce = self.prover_param.num_vars - supported_num_vars;
 
-        ProverParam {
+        Self::ProverParam {
             powers_of_g: self.prover_param.powers_of_g[to_reduce..].to_vec(),
             g: self.prover_param.g,
             h: self.prover_param.h,
@@ -68,9 +68,9 @@ impl<E: PairingEngine> StructuredReferenceString<E> for UniversalParams<E> {
     }
 
     /// Extract the verifier parameters from the public parameters.
-    fn extract_verifier_param(&self, supported_num_vars: usize) -> VerifierParam<E> {
+    fn extract_verifier_param(&self, supported_num_vars: usize) -> Self::VerifierParam {
         let to_reduce = self.prover_param.num_vars - supported_num_vars;
-        VerifierParam {
+        Self::VerifierParam {
             num_vars: supported_num_vars,
             g: self.prover_param.g,
             h: self.prover_param.h,
@@ -85,7 +85,7 @@ impl<E: PairingEngine> StructuredReferenceString<E> for UniversalParams<E> {
     fn trim(
         &self,
         supported_num_vars: usize,
-    ) -> Result<(ProverParam<E>, VerifierParam<E>), PCSErrors> {
+    ) -> Result<(Self::ProverParam, Self::VerifierParam), PCSErrors> {
         if supported_num_vars > self.prover_param.num_vars {
             return Err(PCSErrors::InvalidParameters(format!(
                 "SRS does not support target number of vars {}",
@@ -94,13 +94,13 @@ impl<E: PairingEngine> StructuredReferenceString<E> for UniversalParams<E> {
         }
 
         let to_reduce = self.prover_param.num_vars - supported_num_vars;
-        let ck = ProverParam {
+        let ck = Self::ProverParam {
             powers_of_g: self.prover_param.powers_of_g[to_reduce..].to_vec(),
             g: self.prover_param.g,
             h: self.prover_param.h,
             num_vars: supported_num_vars,
         };
-        let vk = VerifierParam {
+        let vk = Self::VerifierParam {
             num_vars: supported_num_vars,
             g: self.prover_param.g,
             h: self.prover_param.h,
@@ -173,7 +173,7 @@ impl<E: PairingEngine> StructuredReferenceString<E> for UniversalParams<E> {
             start += size;
         }
 
-        let pp = ProverParam {
+        let pp = Self::ProverParam {
             num_vars,
             g: g.into_affine(),
             h: h.into_affine(),
@@ -250,7 +250,7 @@ mod tests {
     fn test_srs_gen() -> Result<(), PCSErrors> {
         let mut rng = test_rng();
         for nv in 4..10 {
-            let _ = UniversalParams::<E>::gen_srs_for_testing(&mut rng, nv)?;
+            let _ = MultilinearUniversalParams::<E>::gen_srs_for_testing(&mut rng, nv)?;
         }
 
         Ok(())

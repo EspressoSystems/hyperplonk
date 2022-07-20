@@ -9,10 +9,10 @@ use ark_ff::PrimeField;
 use ark_poly::{univariate::DensePolynomial, Polynomial, UVPolynomial};
 use ark_serialize::{CanonicalDeserialize, CanonicalSerialize, Read, SerializationError, Write};
 use ark_std::{end_timer, rand::RngCore, start_timer, One, UniformRand, Zero};
-use srs::{ProverParam, UniversalParams, VerifierParam};
+use srs::{UnivariateProverParam, UnivariateUniversalParams, UnivariateVerifierParam};
 use std::marker::PhantomData;
 
-mod srs;
+pub(crate) mod srs;
 
 /// KZG Polynomial Commitment Scheme on univariate polynomial.
 pub struct KZGUnivariatePCS<E: PairingEngine> {
@@ -28,9 +28,9 @@ pub struct KZGUnivariateOpening<E: PairingEngine> {
 }
 
 impl<E: PairingEngine> PolynomialCommitmentScheme<E> for KZGUnivariatePCS<E> {
-    type ProverParam = ProverParam<E::G1Affine>;
-    type VerifierParam = VerifierParam<E>;
-    type SRS = UniversalParams<E>;
+    type ProverParam = UnivariateProverParam<E::G1Affine>;
+    type VerifierParam = UnivariateVerifierParam<E>;
+    type SRS = UnivariateUniversalParams<E>;
     type Polynomial = DensePolynomial<E::Fr>;
     type Point = E::Fr;
     type Commitment = Commitment<E>;

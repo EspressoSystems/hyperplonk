@@ -10,7 +10,7 @@ use ark_std::{end_timer, rand::RngCore, start_timer, One, UniformRand};
 /// Adapted from
 /// https://github.com/arkworks-rs/poly-commit/blob/master/src/kzg10/data_structures.rs#L20
 #[derive(Clone, Debug)]
-pub struct UniversalParams<E: PairingEngine> {
+pub struct UnivariateUniversalParams<E: PairingEngine> {
     /// Group elements of the form `{ \beta^i G }`, where `i` ranges from 0 to
     /// `degree`.
     pub powers_of_g: Vec<E::G1Affine>,
@@ -22,14 +22,14 @@ pub struct UniversalParams<E: PairingEngine> {
 
 /// Prover Parameters
 #[derive(CanonicalSerialize, CanonicalDeserialize, Clone, Debug)]
-pub struct ProverParam<C: AffineCurve> {
+pub struct UnivariateProverParam<C: AffineCurve> {
     pub powers_of_g: Vec<C>,
 }
 
 /// `VerifierKey` is used to check evaluation proofs for a given commitment.
 /// https://github.com/arkworks-rs/poly-commit/blob/master/src/kzg10/data_structures.rs#L236
 #[derive(Clone, Debug)]
-pub struct VerifierParam<E: PairingEngine> {
+pub struct UnivariateVerifierParam<E: PairingEngine> {
     /// The generator of G1.
     pub g: E::G1Affine,
     /// The generator of G2.
@@ -38,21 +38,21 @@ pub struct VerifierParam<E: PairingEngine> {
     pub beta_h: E::G2Affine,
 }
 
-impl<E: PairingEngine> StructuredReferenceString<E> for UniversalParams<E> {
-    type ProverParam = ProverParam<E::G1Affine>;
-    type VerifierParam = VerifierParam<E>;
+impl<E: PairingEngine> StructuredReferenceString<E> for UnivariateUniversalParams<E> {
+    type ProverParam = UnivariateProverParam<E::G1Affine>;
+    type VerifierParam = UnivariateVerifierParam<E>;
 
     /// Extract the prover parameters from the public parameters.
     fn extract_prover_param(&self, supported_log_size: usize) -> Self::ProverParam {
         let support_size = 1usize << supported_log_size;
         let powers_of_g = self.powers_of_g[..=support_size].to_vec();
 
-        ProverParam { powers_of_g }
+        Self::ProverParam { powers_of_g }
     }
 
     /// Extract the verifier parameters from the public parameters.
     fn extract_verifier_param(&self, _supported_log_size: usize) -> Self::VerifierParam {
-        VerifierParam {
+        Self::VerifierParam {
             g: self.powers_of_g[0],
             h: self.h,
             beta_h: self.beta_h,
@@ -70,8 +70,8 @@ impl<E: PairingEngine> StructuredReferenceString<E> for UniversalParams<E> {
         let support_size = 1usize << supported_log_size;
         let powers_of_g = self.powers_of_g[..=support_size].to_vec();
 
-        let pk = ProverParam { powers_of_g };
-        let vk = VerifierParam {
+        let pk = Self::ProverParam { powers_of_g };
+        let vk = Self::VerifierParam {
             g: self.powers_of_g[0],
             h: self.h,
             beta_h: self.beta_h,
@@ -116,7 +116,7 @@ impl<E: PairingEngine> StructuredReferenceString<E> for UniversalParams<E> {
         let h = h.into_affine();
         let beta_h = h.mul(beta).into_affine();
 
-        let pp = UniversalParams {
+        let pp = Self {
             powers_of_g,
             h,
             beta_h,

@@ -1,9 +1,13 @@
 //! Main module for multilinear KZG commitment scheme
 
+mod batching;
 pub(crate) mod srs;
 pub(crate) mod util;
 
-use crate::{prelude::Commitment, PCSErrors, PolynomialCommitmentScheme};
+use crate::{
+    prelude::Commitment, univariate_kzg::KZGUnivariateOpening, PCSErrors,
+    PolynomialCommitmentScheme,
+};
 use ark_ec::{
     msm::{FixedBaseMSM, VariableBaseMSM},
     AffineCurve, PairingEngine, ProjectiveCurve,
@@ -16,12 +20,12 @@ use ark_poly::{
 use ark_serialize::{CanonicalDeserialize, CanonicalSerialize, Read, SerializationError, Write};
 use ark_std::{end_timer, rand::RngCore, start_timer, vec::Vec, One, Zero};
 use poly_iop::IOPTranscript;
-use srs::{ProverParam, UniversalParams, VerifierParam};
+use srs::{MultilinearProverParam, MultilinearUniversalParams, MultilinearVerifierParam};
 use std::marker::PhantomData;
 use util::{build_l, compute_w_circ_l, merge_polynomials};
 
 /// KZG Polynomial Commitment Scheme on multilinear extensions.
-pub struct KZGMultilinearPC<E: PairingEngine> {
+pub struct KZGMultilinearPCS<E: PairingEngine> {
     #[doc(hidden)]
     phantom: PhantomData<E>,
 }
@@ -47,12 +51,14 @@ pub struct BatchProof<E: PairingEngine> {
     // This is currently set to the entire coefficient list of q(x)
     // TODO: replace me with a KZG commit
     pub q_x_com: Vec<E::Fr>,
+    pub q_x_commit: Commitment<E>,
+    pub q_x_opens: Vec<KZGUnivariateOpening<E>>,
 }
 
-impl<E: PairingEngine> PolynomialCommitmentScheme<E> for KZGMultilinearPC<E> {
-    type ProverParam = ProverParam<E>;
-    type VerifierParam = VerifierParam<E>;
-    type SRS = UniversalParams<E>;
+impl<E: PairingEngine> PolynomialCommitmentScheme<E> for KZGMultilinearPCS<E> {
+    type ProverParam = MultilinearProverParam<E>;
+    type VerifierParam = MultilinearVerifierParam<E>;
+    type SRS = MultilinearUniversalParams<E>;
     type Polynomial = DenseMultilinearExtension<E::Fr>;
     type Point = Vec<E::Fr>;
     type Commitment = Commitment<E>;
@@ -291,6 +297,10 @@ impl<E: PairingEngine> PolynomialCommitmentScheme<E> for KZGMultilinearPC<E> {
             proof: opening,
             q_x_com: q_x.coeffs,
             value,
+            q_x_commit: Commitment{
+                commitment:E::G1Affine::default()
+            },
+            q_x_opens: vec![],
         })
     }
 
@@ -439,7 +449,7 @@ impl<E: PairingEngine> PolynomialCommitmentScheme<E> for KZGMultilinearPC<E> {
 mod tests {
     use super::{util::get_batched_nv, *};
     use crate::StructuredReferenceString;
-    use ark_bls12_381::Bls12_381;
+    use ark_bls12_381::{Bls12_381, G1Affine};
     use ark_ec::PairingEngine;
     use ark_poly::{DenseMultilinearExtension, MultilinearExtension};
     use ark_std::{rand::RngCore, test_rng, vec::Vec, UniformRand};
@@ -447,7 +457,7 @@ mod tests {
     type Fr = <E as PairingEngine>::Fr;
 
     fn test_single_helper<R: RngCore>(
-        uni_params: &UniversalParams<E>,
+        uni_params: &MultilinearUniversalParams<E>,
         poly: &DenseMultilinearExtension<Fr>,
         rng: &mut R,
     ) -> Result<(), PCSErrors> {
@@ -455,14 +465,16 @@ mod tests {
         assert_ne!(nv, 0);
         let (ck, vk) = uni_params.trim(nv)?;
         let point: Vec<_> = (0..nv).map(|_| Fr::rand(rng)).collect();
-        let com = KZGMultilinearPC::commit(&ck, poly)?;
-        let proof = KZGMultilinearPC::open(&ck, poly, &point)?;
+        let com = KZGMultilinearPCS::commit(&ck, poly)?;
+        let proof = KZGMultilinearPCS::open(&ck, poly, &point)?;
 
         let value = poly.evaluate(&point).unwrap();
-        assert!(KZGMultilinearPC::verify(&vk, &com, &point, &value, &proof)?);
+        assert!(KZGMultilinearPCS::verify(
+            &vk, &com, &point, &value, &proof
+        )?);
 
         let value = Fr::rand(rng);
-        assert!(!KZGMultilinearPC::verify(
+        assert!(!KZGMultilinearPCS::verify(
             &vk, &com, &point, &value, &proof
         )?);
 
@@ -473,7 +485,7 @@ mod tests {
     fn test_single_commit() -> Result<(), PCSErrors> {
         let mut rng = test_rng();
 
-        let uni_params = KZGMultilinearPC::<E>::gen_srs_for_testing(&mut rng, 10)?;
+        let uni_params = KZGMultilinearPCS::<E>::gen_srs_for_testing(&mut rng, 10)?;
 
         // normal polynomials
         let poly1 = DenseMultilinearExtension::rand(8, &mut rng);
@@ -487,7 +499,7 @@ mod tests {
     }
 
     fn test_multi_commit_helper<R: RngCore>(
-        uni_params: &UniversalParams<E>,
+        uni_params: &MultilinearUniversalParams<E>,
         polys: &[DenseMultilinearExtension<Fr>],
         rng: &mut R,
     ) -> Result<(), PCSErrors> {
@@ -503,11 +515,11 @@ mod tests {
         }
         // let points_ref: Vec<&Vec<Fr>> = points.iter().map(|x| x.as_ref()).collect();
 
-        let com = KZGMultilinearPC::multi_commit(&ck, polys)?;
-        let batch_proof = KZGMultilinearPC::multi_open(&ck, &com, polys, &points)?;
+        let com = KZGMultilinearPCS::multi_commit(&ck, polys)?;
+        let batch_proof = KZGMultilinearPCS::multi_open(&ck, &com, polys, &points)?;
 
         // good path
-        assert!(KZGMultilinearPC::batch_verify(
+        assert!(KZGMultilinearPCS::batch_verify(
             &vk,
             &com,
             &points,
@@ -517,7 +529,7 @@ mod tests {
         )?);
 
         // bad commitment
-        assert!(!KZGMultilinearPC::batch_verify(
+        assert!(!KZGMultilinearPCS::batch_verify(
             &vk,
             &Commitment {
                 commitment: <E as PairingEngine>::G1Affine::default()
@@ -529,7 +541,7 @@ mod tests {
         )?);
 
         // bad points
-        assert!(!KZGMultilinearPC::batch_verify(
+        assert!(!KZGMultilinearPCS::batch_verify(
             &vk,
             &com,
             &points[1..],
@@ -539,7 +551,7 @@ mod tests {
         )?);
 
         // bad proof
-        assert!(!KZGMultilinearPC::batch_verify(
+        assert!(!KZGMultilinearPCS::batch_verify(
             &vk,
             &com,
             &points,
@@ -547,13 +559,17 @@ mod tests {
             &BatchProof {
                 proof: Proof { proofs: Vec::new() },
                 value: batch_proof.value,
-                q_x_com: batch_proof.q_x_com.clone()
+                q_x_com: batch_proof.q_x_com.clone(),
+                q_x_commit: Commitment{
+                    commitment:G1Affine::default()
+                },
+                q_x_opens: vec![],
             },
             rng
         )?);
 
         // bad value
-        assert!(!KZGMultilinearPC::batch_verify(
+        assert!(!KZGMultilinearPCS::batch_verify(
             &vk,
             &com,
             &points,
@@ -561,13 +577,17 @@ mod tests {
             &BatchProof {
                 proof: batch_proof.proof.clone(),
                 value: Fr::one(),
-                q_x_com: batch_proof.q_x_com
+                q_x_com: batch_proof.q_x_com,
+                q_x_commit: Commitment{
+                    commitment:G1Affine::default()
+                },
+                q_x_opens: vec![],
             },
             rng
         )?);
 
         // bad q(x) commit
-        assert!(!KZGMultilinearPC::batch_verify(
+        assert!(!KZGMultilinearPCS::batch_verify(
             &vk,
             &com,
             &points,
@@ -575,7 +595,11 @@ mod tests {
             &BatchProof {
                 proof: batch_proof.proof,
                 value: batch_proof.value,
-                q_x_com: Vec::new()
+                q_x_com: Vec::new(),
+                q_x_commit: Commitment{
+                    commitment:G1Affine::default()
+                },
+                q_x_opens: vec![],
             },
             rng
         )?);
@@ -587,7 +611,7 @@ mod tests {
     fn test_multi_commit() -> Result<(), PCSErrors> {
         let mut rng = test_rng();
 
-        let uni_params = KZGMultilinearPC::<E>::gen_srs_for_testing(&mut rng, 15)?;
+        let uni_params = KZGMultilinearPCS::<E>::gen_srs_for_testing(&mut rng, 15)?;
 
         // normal polynomials
         let polys1: Vec<_> = (0..2)
@@ -609,6 +633,6 @@ mod tests {
         let mut rng = test_rng();
 
         // normal polynomials
-        assert!(KZGMultilinearPC::<E>::gen_srs_for_testing(&mut rng, 0).is_err());
+        assert!(KZGMultilinearPCS::<E>::gen_srs_for_testing(&mut rng, 0).is_err());
     }
 }
