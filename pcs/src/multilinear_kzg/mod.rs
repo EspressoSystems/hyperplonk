@@ -57,8 +57,8 @@ impl<E: PairingEngine> PolynomialCommitmentScheme<E> for KZGMultilinearPC<E> {
     type Point = Vec<E::Fr>;
     type Commitment = Commitment<E>;
     type Proof = Proof<E>;
-    type Transcript = IOPTranscript<E::Fr>;
     type BatchProof = BatchProof<E>;
+    type BatchCommitment = Commitment<E>;
 
     /// Generate a commitment for a polynomial.
     ///
@@ -213,13 +213,12 @@ impl<E: PairingEngine> PolynomialCommitmentScheme<E> for KZGMultilinearPC<E> {
         prover_param: &Self::ProverParam,
         multi_commitment: &Self::Commitment,
         polynomials: &[Self::Polynomial],
-        points: &[&Self::Point],
-        values: &[E::Fr],
+        points: &[Self::Point],
     ) -> Result<Self::BatchProof, PCSErrors> {
         let open_timer = start_timer!(|| "multi open");
         let mut transcript = IOPTranscript::new(b"ml kzg");
         transcript.append_serializable_element(b"w", multi_commitment)?;
-        for &point in points {
+        for point in points {
             transcript.append_serializable_element(b"w", point)?;
         }
 
@@ -237,7 +236,7 @@ impl<E: PairingEngine> PolynomialCommitmentScheme<E> for KZGMultilinearPC<E> {
                 ));
             }
         }
-        for &point in points.iter() {
+        for point in points.iter() {
             if point.len() != num_var {
                 return Err(PCSErrors::InvalidParameters(
                     "points do not have same num_vars".to_string(),
@@ -371,7 +370,7 @@ impl<E: PairingEngine> PolynomialCommitmentScheme<E> for KZGMultilinearPC<E> {
     fn batch_verify(
         verifier_param: &Self::VerifierParam,
         multi_commitment: &Self::Commitment,
-        points: &[&Self::Point],
+        points: &[Self::Point],
         values: &[E::Fr],
         batch_proof: &Self::BatchProof,
     ) -> Result<bool, PCSErrors> {
@@ -379,13 +378,13 @@ impl<E: PairingEngine> PolynomialCommitmentScheme<E> for KZGMultilinearPC<E> {
 
         let mut transcript = IOPTranscript::new(b"ml kzg");
         transcript.append_serializable_element(b"w", multi_commitment)?;
-        for &point in points {
+        for point in points {
             transcript.append_serializable_element(b"w", point)?;
         }
 
         let num_var = points[0].len();
 
-        for &point in points.iter().skip(1) {
+        for point in points.iter().skip(1) {
             if point.len() != num_var {
                 return Err(PCSErrors::InvalidParameters(format!(
                     "points do not have same num_vars ({} vs {})",
@@ -501,16 +500,16 @@ mod tests {
                 .collect::<Vec<Fr>>();
             points.push(point);
         }
-        let points_ref: Vec<&Vec<Fr>> = points.iter().map(|x| x.as_ref()).collect();
+        // let points_ref: Vec<&Vec<Fr>> = points.iter().map(|x| x.as_ref()).collect();
 
         let com = KZGMultilinearPC::multi_commit(&ck, polys)?;
-        let batch_proof = KZGMultilinearPC::multi_open(&ck, &com, polys, &points_ref, &[])?;
+        let batch_proof = KZGMultilinearPC::multi_open(&ck, &com, polys, &points)?;
 
         // good path
         assert!(KZGMultilinearPC::batch_verify(
             &vk,
             &com,
-            &points_ref,
+            &points,
             &[],
             &batch_proof,
         )?);
@@ -521,17 +520,16 @@ mod tests {
             &Commitment {
                 commitment: <E as PairingEngine>::G1Affine::default()
             },
-            &points_ref,
+            &points,
             &[],
             &batch_proof,
         )?);
 
         // bad points
-        let points_ref: Vec<&Vec<Fr>> = points.iter().skip(1).map(|x| x.as_ref()).collect();
         assert!(!KZGMultilinearPC::batch_verify(
             &vk,
             &com,
-            &points_ref,
+            &points[1..],
             &[],
             &batch_proof,
         )?);
@@ -540,7 +538,7 @@ mod tests {
         assert!(!KZGMultilinearPC::batch_verify(
             &vk,
             &com,
-            &points_ref,
+            &points,
             &[],
             &BatchProof {
                 proof: Proof { proofs: Vec::new() },
@@ -553,7 +551,7 @@ mod tests {
         assert!(!KZGMultilinearPC::batch_verify(
             &vk,
             &com,
-            &points_ref,
+            &points,
             &[],
             &BatchProof {
                 proof: batch_proof.proof.clone(),
@@ -566,7 +564,7 @@ mod tests {
         assert!(!KZGMultilinearPC::batch_verify(
             &vk,
             &com,
-            &points_ref,
+            &points,
             &[],
             &BatchProof {
                 proof: batch_proof.proof,

@@ -93,7 +93,7 @@ pub fn merge_polynomials<F: PrimeField>(
 /// polynomials that goes through the points
 pub(crate) fn build_l<F: PrimeField>(
     num_var: usize,
-    points: &[&Vec<F>],
+    points: &[Vec<F>],
 ) -> Result<Vec<DensePolynomial<F>>, PCSErrors> {
     let prefix_len = log2(points.len()) as usize;
 
@@ -350,7 +350,7 @@ mod test {
         let point3 = vec![Fr::from(5u64), Fr::from(6u64)];
 
         {
-            let l = build_l(2, &[&point1, &point2])?;
+            let l = build_l(2, &[point1.clone(), point2.clone()])?;
 
             // roots: [1, -1]
             // l0 = -1/2 * x + 1/2
@@ -369,7 +369,7 @@ mod test {
         }
 
         {
-            let l = build_l(2, &[&point1, &point2, &point3])?;
+            let l = build_l(2, &[point1, point2, point3])?;
 
             // sage: q = 52435875175126190479447740508185965837690552500527637822603658699938581184513
             // sage: P.<x> = PolynomialRing(Zmod(q))
@@ -525,7 +525,7 @@ mod test {
             // with evaluations: [0,2,0,5,0,0,1,2]
             let w = merge_polynomials(&[w1.clone(), w2.clone()])?;
 
-            let l = build_l(2, &[&point1, &point2])?;
+            let l = build_l(2, &[point1.clone(), point2.clone()])?;
 
             // sage: P.<x> = PolynomialRing(ZZ)
             // sage: l0 = -1/2 * x + 1/2
@@ -553,7 +553,7 @@ mod test {
             //   + (x1 + x2)        * y1        * (1-y2)
             let w = merge_polynomials(&[w1, w2, w3])?;
 
-            let l = build_l(2, &[&point1, &point2, &point3])?;
+            let l = build_l(2, &[point1, point2, point3])?;
 
             // l0 =
             // 13108968793781547619861935127046491459422638125131909455650914674984645296128*x^3 +

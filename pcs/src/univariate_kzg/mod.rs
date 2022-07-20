@@ -36,8 +36,8 @@ impl<E: PairingEngine> PolynomialCommitmentScheme<E> for KZGUnivariatePCS<E> {
     type Point = E::Fr;
     type Commitment = Commitment<E>;
     type Proof = KZGUnivariateOpening<E>;
-    type BatchProof = ();
-    type Transcript = ();
+    type BatchProof = Vec<Self::Proof>;
+    type BatchCommitment = Vec<Self::Commitment>;
 
     /// Generate a commitment for a polynomial
     /// Note that the scheme is not hidding
@@ -72,10 +72,18 @@ impl<E: PairingEngine> PolynomialCommitmentScheme<E> for KZGUnivariatePCS<E> {
 
     /// Generate a commitment for a list of polynomials
     fn multi_commit(
-        _prover_param: &Self::ProverParam,
-        _polys: &[Self::Polynomial],
-    ) -> Result<Self::Commitment, PCSErrors> {
-        todo!()
+        prover_param: &Self::ProverParam,
+        polys: &[Self::Polynomial],
+    ) -> Result<Self::BatchCommitment, PCSErrors> {
+        let commit_time =
+            start_timer!(|| format!("batch commit {} polynomials", polynomials.degree()));
+        let res = polys
+            .iter()
+            .map(|poly| Self::commit(prover_param, poly))
+            .collect::<Result<Vec<Self::Commitment>, PCSErrors>>()?;
+
+        end_timer!(commit_time);
+        Ok(res)
     }
 
     /// On input a polynomial `p` and a point `point`, outputs a proof for the
@@ -105,18 +113,31 @@ impl<E: PairingEngine> PolynomialCommitmentScheme<E> for KZGUnivariatePCS<E> {
         Ok(Self::Proof { proof })
     }
 
-    /// Input a list of MLEs, and a same number of points, and a transcript,
+/// Input a list of polynomials, and a same number of points,
     /// compute a multi-opening for all the polynomials.
     fn multi_open(
         prover_param: &Self::ProverParam,
-        multi_commitment: &Self::Commitment,
+        _multi_commitment: &Self::Commitment,
         polynomials: &[Self::Polynomial],
-        points: &[&Self::Point],
-        values: &[E::Fr],
+        points: &[Self::Point],
     ) -> Result<Self::BatchProof, PCSErrors> {
-        todo!()
+        let open_time =
+        start_timer!(|| format!("batch opening {} polynomials", polynomials.degree()));
+    if polynomials.len() != points.len() {
+        return Err(PCSErrors::InvalidParameters(format!(
+            "poly length {} is different from points length {}",
+            polynomials.len(),
+            points.len()
+        )));
     }
-
+    let batch_proof = polynomials
+        .iter()
+        .zip(points.iter())
+        .map(|(poly, point)| Self::open(prover_param, poly, point))
+        .collect::<Result<Self::BatchProof, PCSErrors>>()?;
+    end_timer!(open_time);
+    Ok(batch_proof)
+}
     /// Verifies that `value` is the evaluation at `x` of the polynomial
     /// committed inside `comm`.
     fn verify(
@@ -154,7 +175,7 @@ impl<E: PairingEngine> PolynomialCommitmentScheme<E> for KZGUnivariatePCS<E> {
     fn batch_verify(
         verifier_param: &Self::VerifierParam,
         multi_commitment: &Self::Commitment,
-        points: &[&Self::Point],
+        points: &[Self::Point],
         values: &[E::Fr],
         batch_proof: &Self::BatchProof,
     ) -> Result<bool, PCSErrors> {

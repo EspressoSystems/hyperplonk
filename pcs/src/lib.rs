@@ -8,7 +8,6 @@ pub mod prelude;
 use ark_ec::PairingEngine;
 use ark_std::rand::RngCore;
 use errors::PCSErrors;
-use poly_iop::IOPTranscript;
 
 /// This trait defines APIs for polynomial commitment schemes.
 /// Note that for our usage of PCS, we do not require the hiding property.
@@ -21,7 +20,7 @@ pub trait PolynomialCommitmentScheme<E: PairingEngine> {
     type Commitment;
     type Proof;
     type BatchProof;
-    type Transcript;
+    type BatchCommitment;
 
     /// Build SRS for testing.
     ///
@@ -47,7 +46,7 @@ pub trait PolynomialCommitmentScheme<E: PairingEngine> {
     fn multi_commit(
         prover_param: &Self::ProverParam,
         polys: &[Self::Polynomial],
-    ) -> Result<Self::Commitment, PCSErrors>;
+    ) -> Result<Self::BatchCommitment, PCSErrors> ;
 
     /// On input a polynomial `p` and a point `point`, outputs a proof for the
     /// same.
@@ -61,10 +60,9 @@ pub trait PolynomialCommitmentScheme<E: PairingEngine> {
     /// compute a multi-opening for all the polynomials.
     fn multi_open(
         prover_param: &Self::ProverParam,
-        multi_commitment: &Self::Commitment,
+        _multi_commitment: &Self::Commitment,
         polynomials: &[Self::Polynomial],
-        points: &[&Self::Point],
-        values: &[E::Fr],
+        points: &[Self::Point],
     ) -> Result<Self::BatchProof, PCSErrors>;
 
     /// Verifies that `value` is the evaluation at `x` of the polynomial
@@ -82,7 +80,7 @@ pub trait PolynomialCommitmentScheme<E: PairingEngine> {
     fn batch_verify(
         verifier_param: &Self::VerifierParam,
         multi_commitment: &Self::Commitment,
-        points: &[&Self::Point],
+        points: &[Self::Point],
         values: &[E::Fr],
         batch_proof: &Self::BatchProof,
     ) -> Result<bool, PCSErrors>;
