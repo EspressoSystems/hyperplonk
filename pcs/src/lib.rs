@@ -14,7 +14,7 @@ use errors::PCSErrors;
 pub trait PolynomialCommitmentScheme<E: PairingEngine> {
     type ProverParam;
     type VerifierParam;
-    type SRS: StructuredReferenceString<E>;
+    type SRS;
     type Polynomial;
     type Point;
     type Commitment;
@@ -32,9 +32,7 @@ pub trait PolynomialCommitmentScheme<E: PairingEngine> {
     fn gen_srs_for_testing<R: RngCore>(
         rng: &mut R,
         log_size: usize,
-    ) -> Result<Self::SRS, PCSErrors> {
-        Self::SRS::gen_srs_for_testing(rng, log_size)
-    }
+    ) -> Result<Self::SRS, PCSErrors>;
 
     /// Generate a commitment for a polynomial
     fn commit(

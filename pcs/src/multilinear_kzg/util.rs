@@ -17,6 +17,7 @@ use std::cmp::max;
 //
 // where l.len() := num_vars
 #[inline]
+#[allow(dead_code)]
 pub(crate) fn compute_uni_degree(mle_num_vars: usize, uni_poly_degree: usize) -> usize {
     (log2(mle_num_vars) as usize + 2) * uni_poly_degree
 }
@@ -99,6 +100,7 @@ pub(crate) fn get_batched_nv(num_var: usize, polynomials_len: usize) -> usize {
 // - Univariate srs is bounded by q_x's degree which is `compute_uni_degree(num_vars,
 //   num_witnesses)`
 #[inline]
+#[allow(dead_code)]
 pub(crate) fn get_srs_size(num_var: usize, num_wires: usize) -> usize {
     max(
         num_var + log2(num_wires) as usize,

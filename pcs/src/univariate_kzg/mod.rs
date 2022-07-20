@@ -1,5 +1,6 @@
 //! Main module for univariate KZG commitment scheme
 
+use crate::StructuredReferenceString;
 use crate::{
     prelude::{Commitment, PCSErrors},
     PolynomialCommitmentScheme,
@@ -37,6 +38,20 @@ impl<E: PairingEngine> PolynomialCommitmentScheme<E> for KZGUnivariatePCS<E> {
     type Proof = KZGUnivariateOpening<E>;
     type BatchProof = Vec<Self::Proof>;
     type BatchCommitment = Vec<Self::Commitment>;
+
+    /// Build SRS for testing.
+    ///
+    /// - For univariate polynomials, `log_size` is the log of maximum degree.
+    /// - For multilinear polynomials, `log_size` is the number of variables.
+    ///
+    /// WARNING: THIS FUNCTION IS FOR TESTING PURPOSE ONLY.
+    /// THE OUTPUT SRS SHOULD NOT BE USED IN PRODUCTION.
+    fn gen_srs_for_testing<R: RngCore>(
+        rng: &mut R,
+        log_size: usize,
+    ) -> Result<Self::SRS, PCSErrors> {
+        Self::SRS::gen_srs_for_testing(rng, log_size)
+    }
 
     /// Generate a commitment for a polynomial
     /// Note that the scheme is not hidding
@@ -149,8 +164,7 @@ impl<E: PairingEngine> PolynomialCommitmentScheme<E> for KZGUnivariatePCS<E> {
         let check_time = start_timer!(|| "Checking evaluation");
         let pairing_inputs: Vec<(E::G1Prepared, E::G2Prepared)> = vec![
             (
-                (commitment.commitment.into_projective()
-                    - &verifier_param.g.mul(value.into_repr()))
+                (commitment.commitment.into_projective() - verifier_param.g.mul(value.into_repr()))
                     .into_affine()
                     .into(),
                 verifier_param.h.into(),
