@@ -1,9 +1,8 @@
 //! Main module for univariate KZG commitment scheme
 
-use crate::StructuredReferenceString;
 use crate::{
     prelude::{Commitment, PCSErrors},
-    PolynomialCommitmentScheme,
+    PolynomialCommitmentScheme, StructuredReferenceString,
 };
 use ark_ec::{msm::VariableBaseMSM, AffineCurve, PairingEngine, ProjectiveCurve};
 use ark_ff::PrimeField;

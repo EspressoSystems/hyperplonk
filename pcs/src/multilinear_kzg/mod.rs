@@ -4,13 +4,12 @@ mod batching;
 pub(crate) mod srs;
 pub(crate) mod util;
 
-use crate::prelude::UnivariateProverParam;
-use crate::prelude::UnivariateUniversalParams;
-use crate::prelude::UnivariateVerifierParam;
-use crate::StructuredReferenceString;
 use crate::{
-    prelude::Commitment, univariate_kzg::KZGUnivariateOpening, PCSErrors,
-    PolynomialCommitmentScheme,
+    prelude::{
+        Commitment, UnivariateProverParam, UnivariateUniversalParams, UnivariateVerifierParam,
+    },
+    univariate_kzg::KZGUnivariateOpening,
+    PCSErrors, PolynomialCommitmentScheme, StructuredReferenceString,
 };
 use ark_ec::{
     msm::{FixedBaseMSM, VariableBaseMSM},
@@ -20,8 +19,7 @@ use ark_ff::PrimeField;
 use ark_poly::{DenseMultilinearExtension, MultilinearExtension};
 use ark_serialize::{CanonicalDeserialize, CanonicalSerialize, Read, SerializationError, Write};
 use ark_std::{end_timer, rand::RngCore, start_timer, vec::Vec, One, Zero};
-use batching::batch_verify_internal;
-use batching::multi_open_internal;
+use batching::{batch_verify_internal, multi_open_internal};
 use srs::{MultilinearProverParam, MultilinearUniversalParams, MultilinearVerifierParam};
 use std::marker::PhantomData;
 use util::merge_polynomials;

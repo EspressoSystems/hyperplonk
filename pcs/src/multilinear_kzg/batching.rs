@@ -1,9 +1,8 @@
-use super::open_internal;
-use super::verify_internal;
 use super::{
+    open_internal,
     srs::{MultilinearProverParam, MultilinearVerifierParam},
     util::{build_l, compute_w_circ_l, merge_polynomials},
-    BatchProof,
+    verify_internal, BatchProof,
 };
 use crate::{
     multilinear_kzg::util::get_uni_domain,
@@ -175,9 +174,9 @@ pub(super) fn multi_open_internal<E: PairingEngine>(
 ///
 /// 1. push w, points and q_com into transcript
 /// 2. sample `r` from transcript
-/// 3. check `q(r) == batch_proof.q_x_value.last` and `q(omega^i) = batch_proof.q_x_value[i]`
-/// 4. build `l(points)` which is a list of univariate polynomials that goes
-/// through the points
+/// 3. check `q(r) == batch_proof.q_x_value.last` and `q(omega^i) =
+/// batch_proof.q_x_value[i]` 4. build `l(points)` which is a list of univariate
+/// polynomials that goes through the points
 /// 5. get a point `p := l(r)`
 /// 6. verifies `p` is valid against multilinear KZG proof
 pub(super) fn batch_verify_internal<E: PairingEngine>(
@@ -236,7 +235,8 @@ pub(super) fn batch_verify_internal<E: PairingEngine>(
     // 2. sample `r` from transcript
     let r = transcript.get_and_append_challenge(b"r")?;
 
-    // 3. check `q(r) == batch_proof.q_x_value.last` and `q(omega^i) = batch_proof.q_x_value[i]`
+    // 3. check `q(r) == batch_proof.q_x_value.last` and `q(omega^i) =
+    // batch_proof.q_x_value[i]`
     for i in 0..uni_poly_degree {
         if !KZGUnivariatePCS::verify(
             uni_verifier_param,
