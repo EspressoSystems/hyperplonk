@@ -42,17 +42,16 @@ pub struct Proof<E: PairingEngine> {
 pub struct BatchProof<E: PairingEngine> {
     /// The actual proof
     pub proof: Proof<E>,
-    /// The value which is `w` evaluated at `p:= l(r)`, where
+    /// Commitment to q(x)
+    pub q_x_commit: Commitment<E>,
+    /// openings of q(x) at 1, omega, ..., and r
+    pub q_x_opens: Vec<KZGUnivariateOpening<E>>,
+    /// values of q(x) at 1, omega, ..., and r
+    /// The last value which is `w` evaluated at `p:= l(r)`, where
     /// - `w` is the merged MLE
     /// - `l` is the list of univariate polys that goes through all points
     /// - `r` is sampled from the transcript.
-    pub value: E::Fr,
-    /// Commitment to q(x)
-    // This is currently set to the entire coefficient list of q(x)
-    // TODO: replace me with a KZG commit
-    pub q_x_com: Vec<E::Fr>,
-    pub q_x_commit: Commitment<E>,
-    pub q_x_opens: Vec<KZGUnivariateOpening<E>>,
+    pub q_x_evals: Vec<E::Fr>,
 }
 
 impl<E: PairingEngine> PolynomialCommitmentScheme<E> for KZGMultilinearPCS<E> {

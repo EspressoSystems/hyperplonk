@@ -24,10 +24,8 @@ pub(crate) fn compute_uni_degree(mle_num_vars: usize, uni_poly_degree: usize) ->
 /// get the domain for the univariate polynomial
 #[inline]
 pub(crate) fn get_uni_domain<F: PrimeField>(
-    // mle_num_vars: usize,
     uni_poly_degree: usize,
 ) -> Result<Radix2EvaluationDomain<F>, PCSErrors> {
-    // let uni_degree = compute_uni_degree(mle_num_vars, uni_poly_degree);
     let domain = match Radix2EvaluationDomain::<F>::new(uni_poly_degree) {
         Some(p) => p,
         None => {
@@ -137,25 +135,9 @@ pub fn merge_polynomials<F: PrimeField>(
 pub(crate) fn build_l<F: PrimeField>(
     num_var: usize,
     points: &[Vec<F>],
+    domain: &Radix2EvaluationDomain<F>,
 ) -> Result<Vec<DensePolynomial<F>>, PCSErrors> {
     let prefix_len = log2(points.len()) as usize;
-
-    let uni_degree = points.len();
-    let small_domain = match Radix2EvaluationDomain::<F>::new(uni_degree) {
-        Some(p) => p,
-        None => {
-            return Err(PCSErrors::InvalidParameters(
-                "failed to build radix 2 domain".to_string(),
-            ))
-        },
-    };
-
-    // The following code print out the roots for testing
-    // println!("domain root0: {}", small_domain.element(0));
-    // println!("domain root1: {}", small_domain.element(1));
-    // println!("domain root2: {}", small_domain.element(2));
-    // println!("domain root3: {}", small_domain.element(3));
-
     let mut uni_polys = Vec::new();
 
     // 1.1 build the indexes and the univariate polys that go through the indexes
@@ -168,17 +150,54 @@ pub(crate) fn build_l<F: PrimeField>(
             .map(|x| F::from(x[prefix_len - i - 1]))
             .collect();
 
-        uni_polys.push(Evaluations::from_vec_and_domain(eval, small_domain).interpolate());
+        uni_polys.push(Evaluations::from_vec_and_domain(eval, *domain).interpolate());
     }
 
     // 1.2 build the actual univariate polys that go through the points
     for i in 0..num_var {
         let mut eval: Vec<F> = points.iter().map(|x| x[i]).collect();
-        eval.extend_from_slice(vec![F::zero(); small_domain.size as usize - eval.len()].as_slice());
-        uni_polys.push(Evaluations::from_vec_and_domain(eval, small_domain).interpolate())
+        eval.extend_from_slice(vec![F::zero(); domain.size as usize - eval.len()].as_slice());
+        uni_polys.push(Evaluations::from_vec_and_domain(eval, *domain).interpolate())
     }
 
     Ok(uni_polys)
+}
+
+/// Input a list of polynomials and a list of points,
+/// generate a list of evaluations.
+// Note that this function is only used for testing verifications.
+// In practice verifier does not see polynomials, and the `mle_values`
+// are included in the `batch_proof`.
+#[cfg(test)]
+pub(crate) fn generate_values<F: PrimeField>(
+    polynomials: &[DenseMultilinearExtension<F>],
+    points: &[Vec<F>],
+) -> Result<Vec<F>, PCSErrors> {
+    if polynomials.len() != points.len() {
+        return Err(PCSErrors::InvalidParameters(
+            "polynomial length does not match point length".to_string(),
+        ));
+    }
+
+    let num_var = polynomials[0].num_vars;
+    let uni_poly_degree = points.len();
+    let merge_poly = merge_polynomials(polynomials)?;
+
+    let domain = get_uni_domain::<F>(uni_poly_degree)?;
+    let uni_polys = build_l(num_var, points, &domain)?;
+    let mut mle_values = vec![];
+
+    for i in 0..uni_poly_degree {
+        let point: Vec<F> = uni_polys
+            .iter()
+            .rev()
+            .map(|poly| poly.evaluate(&domain.element(i)))
+            .collect();
+
+        let mle_value = merge_poly.evaluate(&point).unwrap();
+        mle_values.push(mle_value)
+    }
+    Ok(mle_values)
 }
 
 #[cfg(test)]
@@ -393,7 +412,8 @@ mod test {
         let point3 = vec![Fr::from(5u64), Fr::from(6u64)];
 
         {
-            let l = build_l(2, &[point1.clone(), point2.clone()])?;
+            let domain = get_uni_domain::<Fr>(2)?;
+            let l = build_l(2, &[point1.clone(), point2.clone()], &domain)?;
 
             // roots: [1, -1]
             // l0 = -1/2 * x + 1/2
@@ -412,7 +432,8 @@ mod test {
         }
 
         {
-            let l = build_l(2, &[point1, point2, point3])?;
+            let domain = get_uni_domain::<Fr>(3)?;
+            let l = build_l(2, &[point1, point2, point3], &domain)?;
 
             // sage: q = 52435875175126190479447740508185965837690552500527637822603658699938581184513
             // sage: P.<x> = PolynomialRing(Zmod(q))
@@ -564,11 +585,12 @@ mod test {
         let point3 = vec![Fr::from(5u64), Fr::from(6u64)];
 
         {
+            let domain = get_uni_domain::<Fr>(2)?;
             // w = (3x1x2 + 2x2)(1-x0) + (x1x2 + x1)x0
             // with evaluations: [0,2,0,5,0,0,1,2]
             let w = merge_polynomials(&[w1.clone(), w2.clone()])?;
 
-            let l = build_l(2, &[point1.clone(), point2.clone()])?;
+            let l = build_l(2, &[point1.clone(), point2.clone()], &domain)?;
 
             // sage: P.<x> = PolynomialRing(ZZ)
             // sage: l0 = -1/2 * x + 1/2
@@ -591,12 +613,13 @@ mod test {
         }
 
         {
+            let domain = get_uni_domain::<Fr>(3)?;
             // W = (3x1x2 + 2x2)    * (1-y1)    * (1-y2)
             //   + (x1x2 + x1)      * (1-y1)    * y2
             //   + (x1 + x2)        * y1        * (1-y2)
             let w = merge_polynomials(&[w1, w2, w3])?;
 
-            let l = build_l(2, &[point1, point2, point3])?;
+            let l = build_l(2, &[point1, point2, point3], &domain)?;
 
             // l0 =
             // 13108968793781547619861935127046491459422638125131909455650914674984645296128*x^3 +
