@@ -221,87 +221,88 @@ impl<E: PairingEngine> PolynomialCommitmentScheme<E> for KZGMultilinearPCS<E> {
         polynomials: &[Self::Polynomial],
         points: &[Self::Point],
     ) -> Result<Self::BatchProof, PCSErrors> {
-        let open_timer = start_timer!(|| "multi open");
-        let mut transcript = IOPTranscript::new(b"ml kzg");
-        transcript.append_serializable_element(b"w", multi_commitment)?;
-        for point in points {
-            transcript.append_serializable_element(b"w", point)?;
-        }
+        // let open_timer = start_timer!(|| "multi open");
+        // let mut transcript = IOPTranscript::new(b"ml kzg");
+        // transcript.append_serializable_element(b"w", multi_commitment)?;
+        // for point in points {
+        //     transcript.append_serializable_element(b"w", point)?;
+        // }
 
-        if points.len() != polynomials.len() {
-            return Err(PCSErrors::InvalidParameters(
-                "polynomial length does not match point length".to_string(),
-            ));
-        }
+        // if points.len() != polynomials.len() {
+        //     return Err(PCSErrors::InvalidParameters(
+        //         "polynomial length does not match point length".to_string(),
+        //     ));
+        // }
 
-        let num_var = polynomials[0].num_vars();
-        for poly in polynomials.iter().skip(1) {
-            if poly.num_vars() != num_var {
-                return Err(PCSErrors::InvalidParameters(
-                    "polynomials do not have same num_vars".to_string(),
-                ));
-            }
-        }
-        for point in points.iter() {
-            if point.len() != num_var {
-                return Err(PCSErrors::InvalidParameters(
-                    "points do not have same num_vars".to_string(),
-                ));
-            }
-        }
+        // let num_var = polynomials[0].num_vars();
+        // for poly in polynomials.iter().skip(1) {
+        //     if poly.num_vars() != num_var {
+        //         return Err(PCSErrors::InvalidParameters(
+        //             "polynomials do not have same num_vars".to_string(),
+        //         ));
+        //     }
+        // }
+        // for point in points.iter() {
+        //     if point.len() != num_var {
+        //         return Err(PCSErrors::InvalidParameters(
+        //             "points do not have same num_vars".to_string(),
+        //         ));
+        //     }
+        // }
 
-        // 1. build `l(points)` which is a list of univariate polynomials that goes
-        // through the points
-        let uni_polys = build_l(num_var, points)?;
+        // // 1. build `l(points)` which is a list of univariate polynomials that goes
+        // // through the points
+        // let uni_polys = build_l(num_var, points)?;
 
-        // 2. build MLE `w` which is the merge of all MLEs.
-        let merge_poly = merge_polynomials(polynomials)?;
+        // // 2. build MLE `w` which is the merge of all MLEs.
+        // let merge_poly = merge_polynomials(polynomials)?;
 
-        // 3. build `q(x)` which is a univariate polynomial `W circ l`
-        let q_x = compute_w_circ_l(&merge_poly, &uni_polys)?;
+        // // 3. build `q(x)` which is a univariate polynomial `W circ l`
+        // let q_x = compute_w_circ_l(&merge_poly, &uni_polys)?;
 
-        // 4. output `q(x)`' and put it into transcript
-        //
-        // TODO: use KZG commit for q(x)
-        // TODO: unwrap
-        q_x.coeffs
-            .iter()
-            .for_each(|x| transcript.append_field_element(b"q(x)", x).unwrap());
+        // // 4. output `q(x)`' and put it into transcript
+        // //
+        // // TODO: use KZG commit for q(x)
+        // // TODO: unwrap
+        // q_x.coeffs
+        //     .iter()
+        //     .for_each(|x| transcript.append_field_element(b"q(x)", x).unwrap());
 
-        // 5. sample `r` from transcript
-        let r = transcript.get_and_append_challenge(b"r")?;
+        // // 5. sample `r` from transcript
+        // let r = transcript.get_and_append_challenge(b"r")?;
 
-        // 6. get a point `p := l(r)`
-        let point: Vec<E::Fr> = uni_polys
-            .iter()
-            .rev()
-            .map(|poly| poly.evaluate(&r))
-            .collect();
+        // // 6. get a point `p := l(r)`
+        // let point: Vec<E::Fr> = uni_polys
+        //     .iter()
+        //     .rev()
+        //     .map(|poly| poly.evaluate(&r))
+        //     .collect();
 
-        // 7. output an opening of `w` over point `p`
-        let opening = Self::open(prover_param, &merge_poly, &point)?;
+        // // 7. output an opening of `w` over point `p`
+        // let opening = Self::open(prover_param, &merge_poly, &point)?;
 
-        // 8. output value that is `w` evaluated at `p` (which should match `q(r)`)
-        let value = merge_poly.evaluate(&point).unwrap();
-        let value2 = q_x.evaluate(&r);
+        // // 8. output value that is `w` evaluated at `p` (which should match `q(r)`)
+        // let value = merge_poly.evaluate(&point).unwrap();
+        // let value2 = q_x.evaluate(&r);
 
-        if value != value2 {
-            return Err(PCSErrors::InvalidProver(
-                "Q(r) does not match W(l(r))".to_string(),
-            ));
-        }
+        // if value != value2 {
+        //     return Err(PCSErrors::InvalidProver(
+        //         "Q(r) does not match W(l(r))".to_string(),
+        //     ));
+        // }
 
-        end_timer!(open_timer);
+        // end_timer!(open_timer);
 
-        Ok(Self::BatchProof {
-            proof: opening,
-            q_x_com: q_x.coeffs,
-            value,
-            q_x_commit: Commitment{
-                commitment:E::G1Affine::default()
-            },
-            q_x_opens: vec![],
-        })
+        // Ok(Self::BatchProof {
+        //     proof: opening,
+        //     q_x_com: q_x.coeffs,
+        //     value,
+        //     q_x_commit: Commitment{
+        //         commitment:E::G1Affine::default()
+        //     },
+        //     q_x_opens: vec![],
+        // })
+        todo!()
     }
 
     /// Verifies that `value` is the evaluation at `x` of the polynomial
@@ -385,63 +386,65 @@ impl<E: PairingEngine> PolynomialCommitmentScheme<E> for KZGMultilinearPCS<E> {
         batch_proof: &Self::BatchProof,
         rng: &mut R,
     ) -> Result<bool, PCSErrors> {
-        let verify_timer = start_timer!(|| "batch verify");
+        // let verify_timer = start_timer!(|| "batch verify");
 
-        let mut transcript = IOPTranscript::new(b"ml kzg");
-        transcript.append_serializable_element(b"w", multi_commitment)?;
-        for point in points {
-            transcript.append_serializable_element(b"w", point)?;
-        }
+        // let mut transcript = IOPTranscript::new(b"ml kzg");
+        // transcript.append_serializable_element(b"w", multi_commitment)?;
+        // for point in points {
+        //     transcript.append_serializable_element(b"w", point)?;
+        // }
 
-        let num_var = points[0].len();
+        // let num_var = points[0].len();
 
-        for point in points.iter().skip(1) {
-            if point.len() != num_var {
-                return Err(PCSErrors::InvalidParameters(format!(
-                    "points do not have same num_vars ({} vs {})",
-                    point.len(),
-                    num_var,
-                )));
-            }
-        }
+        // for point in points.iter().skip(1) {
+        //     if point.len() != num_var {
+        //         return Err(PCSErrors::InvalidParameters(format!(
+        //             "points do not have same num_vars ({} vs {})",
+        //             point.len(),
+        //             num_var,
+        //         )));
+        //     }
+        // }
 
-        // TODO: verify commitment of `q(x)` instead of receiving full `q(x)`
+        // // TODO: verify commitment of `q(x)` instead of receiving full `q(x)`
 
-        // 1. put `q(x)`'s evaluations over `(1, omega,...)` into transcript
-        // TODO: unwrap
-        batch_proof
-            .q_x_com
-            .iter()
-            .for_each(|x| transcript.append_field_element(b"q(x)", x).unwrap());
+        // // 1. put `q(x)`'s evaluations over `(1, omega,...)` into transcript
+        // // TODO: unwrap
+        // batch_proof
+        //     .q_x_com
+        //     .iter()
+        //     .for_each(|x| transcript.append_field_element(b"q(x)", x).unwrap());
 
-        // 2. sample `r` from transcript
-        let r = transcript.get_and_append_challenge(b"r")?;
+        // // 2. sample `r` from transcript
+        // let r = transcript.get_and_append_challenge(b"r")?;
 
-        // 3. check `q(r) == value`
-        let q_x = DensePolynomial::from_coefficients_slice(&batch_proof.q_x_com);
-        let q_r = q_x.evaluate(&r);
-        if q_r != batch_proof.value {
-            return Ok(false);
-        }
+        // // 3. check `q(r) == value`
+        // let q_x = DensePolynomial::from_coefficients_slice(&batch_proof.q_x_com);
+        // let q_r = q_x.evaluate(&r);
+        // if q_r != batch_proof.value {
+        //     return Ok(false);
+        // }
 
-        // 4. build `l(points)` which is a list of univariate polynomials that goes
-        // through the points
-        let uni_polys = build_l(num_var, points)?;
+        // // 4. build `l(points)` which is a list of univariate polynomials that goes
+        // // through the points
+        // let uni_polys = build_l(num_var, points)?;
 
-        // 5. get a point `p := l(r)`
-        let point: Vec<E::Fr> = uni_polys.iter().rev().map(|x| x.evaluate(&r)).collect();
+        // // 5. get a point `p := l(r)`
+        // let point: Vec<E::Fr> = uni_polys.iter().rev().map(|x|
+        // x.evaluate(&r)).collect();
 
-        // 6. verifies `p` is verifies against proof
-        let res = Self::verify(
-            verifier_param,
-            multi_commitment,
-            &point,
-            &batch_proof.value,
-            &batch_proof.proof,
-        );
-        end_timer!(verify_timer);
+        // // 6. verifies `p` is verifies against proof
+        // let res = Self::verify(
+        //     verifier_param,
+        //     multi_commitment,
+        //     &point,
+        //     &batch_proof.value,
+        //     &batch_proof.proof,
+        // );
+        // end_timer!(verify_timer);
 
-        res
+        // res
+        todo!()
     }
 }
 
@@ -498,135 +501,138 @@ mod tests {
         Ok(())
     }
 
-    fn test_multi_commit_helper<R: RngCore>(
-        uni_params: &MultilinearUniversalParams<E>,
-        polys: &[DenseMultilinearExtension<Fr>],
-        rng: &mut R,
-    ) -> Result<(), PCSErrors> {
-        let nv = get_batched_nv(polys[0].num_vars(), polys.len());
-        let (ck, vk) = uni_params.trim(nv)?;
-        let mut points = Vec::new();
+    // fn test_multi_commit_helper<R: RngCore>(
+    //     uni_params: &MultilinearUniversalParams<E>,
+    //     polys: &[DenseMultilinearExtension<Fr>],
+    //     rng: &mut R,
+    // ) -> Result<(), PCSErrors> {
+    //     let nv = get_batched_nv(polys[0].num_vars(), polys.len());
+    //     let (ck, vk) = uni_params.trim(nv)?;
+    //     let mut points = Vec::new();
 
-        for poly in polys.iter() {
-            let point = (0..poly.num_vars())
-                .map(|_| Fr::rand(rng))
-                .collect::<Vec<Fr>>();
-            points.push(point);
-        }
-        // let points_ref: Vec<&Vec<Fr>> = points.iter().map(|x| x.as_ref()).collect();
+    //     for poly in polys.iter() {
+    //         let point = (0..poly.num_vars())
+    //             .map(|_| Fr::rand(rng))
+    //             .collect::<Vec<Fr>>();
+    //         points.push(point);
+    //     }
+    //     // let points_ref: Vec<&Vec<Fr>> = points.iter().map(|x|
+    // x.as_ref()).collect();
 
-        let com = KZGMultilinearPCS::multi_commit(&ck, polys)?;
-        let batch_proof = KZGMultilinearPCS::multi_open(&ck, &com, polys, &points)?;
+    //     let com = KZGMultilinearPCS::multi_commit(&ck, polys)?;
+    //     let batch_proof = KZGMultilinearPCS::multi_open(&ck, &com, polys,
+    // &points)?;
 
-        // good path
-        assert!(KZGMultilinearPCS::batch_verify(
-            &vk,
-            &com,
-            &points,
-            &[],
-            &batch_proof,
-            rng
-        )?);
+    //     // good path
+    //     assert!(KZGMultilinearPCS::batch_verify(
+    //         &vk,
+    //         &com,
+    //         &points,
+    //         &[],
+    //         &batch_proof,
+    //         rng
+    //     )?);
 
-        // bad commitment
-        assert!(!KZGMultilinearPCS::batch_verify(
-            &vk,
-            &Commitment {
-                commitment: <E as PairingEngine>::G1Affine::default()
-            },
-            &points,
-            &[],
-            &batch_proof,
-            rng
-        )?);
+    //     // bad commitment
+    //     assert!(!KZGMultilinearPCS::batch_verify(
+    //         &vk,
+    //         &Commitment {
+    //             commitment: <E as PairingEngine>::G1Affine::default()
+    //         },
+    //         &points,
+    //         &[],
+    //         &batch_proof,
+    //         rng
+    //     )?);
 
-        // bad points
-        assert!(!KZGMultilinearPCS::batch_verify(
-            &vk,
-            &com,
-            &points[1..],
-            &[],
-            &batch_proof,
-            rng
-        )?);
+    //     // bad points
+    //     assert!(!KZGMultilinearPCS::batch_verify(
+    //         &vk,
+    //         &com,
+    //         &points[1..],
+    //         &[],
+    //         &batch_proof,
+    //         rng
+    //     )?);
 
-        // bad proof
-        assert!(!KZGMultilinearPCS::batch_verify(
-            &vk,
-            &com,
-            &points,
-            &[],
-            &BatchProof {
-                proof: Proof { proofs: Vec::new() },
-                value: batch_proof.value,
-                q_x_com: batch_proof.q_x_com.clone(),
-                q_x_commit: Commitment{
-                    commitment:G1Affine::default()
-                },
-                q_x_opens: vec![],
-            },
-            rng
-        )?);
+    //     // bad proof
+    //     assert!(!KZGMultilinearPCS::batch_verify(
+    //         &vk,
+    //         &com,
+    //         &points,
+    //         &[],
+    //         &BatchProof {
+    //             proof: Proof { proofs: Vec::new() },
+    //             value: batch_proof.value,
+    //             q_x_com: batch_proof.q_x_com.clone(),
+    //             q_x_commit: Commitment{
+    //                 commitment:G1Affine::default()
+    //             },
+    //             q_x_opens: vec![],
+    //         },
+    //         rng
+    //     )?);
 
-        // bad value
-        assert!(!KZGMultilinearPCS::batch_verify(
-            &vk,
-            &com,
-            &points,
-            &[],
-            &BatchProof {
-                proof: batch_proof.proof.clone(),
-                value: Fr::one(),
-                q_x_com: batch_proof.q_x_com,
-                q_x_commit: Commitment{
-                    commitment:G1Affine::default()
-                },
-                q_x_opens: vec![],
-            },
-            rng
-        )?);
+    //     // bad value
+    //     assert!(!KZGMultilinearPCS::batch_verify(
+    //         &vk,
+    //         &com,
+    //         &points,
+    //         &[],
+    //         &BatchProof {
+    //             proof: batch_proof.proof.clone(),
+    //             value: Fr::one(),
+    //             q_x_com: batch_proof.q_x_com,
+    //             q_x_commit: Commitment{
+    //                 commitment:G1Affine::default()
+    //             },
+    //             q_x_opens: vec![],
+    //         },
+    //         rng
+    //     )?);
 
-        // bad q(x) commit
-        assert!(!KZGMultilinearPCS::batch_verify(
-            &vk,
-            &com,
-            &points,
-            &[],
-            &BatchProof {
-                proof: batch_proof.proof,
-                value: batch_proof.value,
-                q_x_com: Vec::new(),
-                q_x_commit: Commitment{
-                    commitment:G1Affine::default()
-                },
-                q_x_opens: vec![],
-            },
-            rng
-        )?);
+    //     // bad q(x) commit
+    //     assert!(!KZGMultilinearPCS::batch_verify(
+    //         &vk,
+    //         &com,
+    //         &points,
+    //         &[],
+    //         &BatchProof {
+    //             proof: batch_proof.proof,
+    //             value: batch_proof.value,
+    //             q_x_com: Vec::new(),
+    //             q_x_commit: Commitment{
+    //                 commitment:G1Affine::default()
+    //             },
+    //             q_x_opens: vec![],
+    //         },
+    //         rng
+    //     )?);
 
-        Ok(())
-    }
+    //     Ok(())
+    // }
 
-    #[test]
-    fn test_multi_commit() -> Result<(), PCSErrors> {
-        let mut rng = test_rng();
+    // #[test]
+    // fn test_multi_commit() -> Result<(), PCSErrors> {
+    //     let mut rng = test_rng();
 
-        let uni_params = KZGMultilinearPCS::<E>::gen_srs_for_testing(&mut rng, 15)?;
+    //     let uni_params = KZGMultilinearPCS::<E>::gen_srs_for_testing(&mut rng,
+    // 15)?;
 
-        // normal polynomials
-        let polys1: Vec<_> = (0..2)
-            .map(|_| DenseMultilinearExtension::rand(4, &mut rng))
-            .collect();
-        test_multi_commit_helper(&uni_params, &polys1, &mut rng)?;
+    //     // normal polynomials
+    //     let polys1: Vec<_> = (0..2)
+    //         .map(|_| DenseMultilinearExtension::rand(4, &mut rng))
+    //         .collect();
+    //     test_multi_commit_helper(&uni_params, &polys1, &mut rng)?;
 
-        // single-variate polynomials
-        let polys1: Vec<_> = (0..5)
-            .map(|_| DenseMultilinearExtension::rand(1, &mut rng))
-            .collect();
-        test_multi_commit_helper(&uni_params, &polys1, &mut rng)?;
+    //     // single-variate polynomials
+    //     let polys1: Vec<_> = (0..5)
+    //         .map(|_| DenseMultilinearExtension::rand(1, &mut rng))
+    //         .collect();
+    //     test_multi_commit_helper(&uni_params, &polys1, &mut rng)?;
 
-        Ok(())
-    }
+    //     Ok(())
+    // }
 
     #[test]
     fn setup_commit_verify_constant_polynomial() {

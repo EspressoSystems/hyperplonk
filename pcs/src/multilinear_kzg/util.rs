@@ -24,11 +24,11 @@ pub(crate) fn compute_uni_degree(mle_num_vars: usize, uni_poly_degree: usize) ->
 /// get the domain for the univariate polynomial
 #[inline]
 pub(crate) fn get_uni_domain<F: PrimeField>(
-    mle_num_vars: usize,
+    // mle_num_vars: usize,
     uni_poly_degree: usize,
 ) -> Result<Radix2EvaluationDomain<F>, PCSErrors> {
-    let uni_degree = compute_uni_degree(mle_num_vars, uni_poly_degree);
-    let domain = match Radix2EvaluationDomain::<F>::new(uni_degree) {
+    // let uni_degree = compute_uni_degree(mle_num_vars, uni_poly_degree);
+    let domain = match Radix2EvaluationDomain::<F>::new(uni_poly_degree) {
         Some(p) => p,
         None => {
             return Err(PCSErrors::InvalidParameters(

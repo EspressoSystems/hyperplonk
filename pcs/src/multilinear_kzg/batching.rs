@@ -4,9 +4,10 @@ use super::{
     BatchProof,
 };
 use crate::{
+    multilinear_kzg::util::get_uni_domain,
     prelude::{Commitment, KZGMultilinearPCS, UnivariateProverParam, UnivariateVerifierParam},
     univariate_kzg::KZGUnivariatePCS,
-    PCSErrors, PolynomialCommitmentScheme, multilinear_kzg::util::get_uni_domain,
+    PCSErrors, PolynomialCommitmentScheme,
 };
 use ark_ec::{
     msm::{FixedBaseMSM, VariableBaseMSM},
@@ -14,8 +15,8 @@ use ark_ec::{
 };
 use ark_ff::PrimeField;
 use ark_poly::{
-    univariate::DensePolynomial, DenseMultilinearExtension, MultilinearExtension, Polynomial,
-    UVPolynomial,
+    univariate::DensePolynomial, DenseMultilinearExtension, EvaluationDomain, MultilinearExtension,
+    Polynomial, UVPolynomial,
 };
 use ark_serialize::{CanonicalDeserialize, CanonicalSerialize, Read, SerializationError, Write};
 use ark_std::{end_timer, rand::RngCore, start_timer, vec::Vec, One, Zero};
@@ -93,9 +94,13 @@ fn multi_open_internal<E: PairingEngine>(
     let num_vars = points[0].len();
     let uni_poly_degree = points.len();
     let domain = get_uni_domain::<E::Fr>(
-        num_vars, uni_poly_degree
+        // num_vars,
+        uni_poly_degree,
     )?;
-
+    println!("domain root0: {}", domain.element(0));
+    println!("domain root1: {}", domain.element(1));
+    println!("domain root2: {}", domain.element(2));
+    println!("domain root3: {}", domain.element(3));
     // 1. build `l(points)` which is a list of univariate polynomials that goes
     // through the points
     let uni_polys = build_l(num_var, points)?;
@@ -111,13 +116,31 @@ fn multi_open_internal<E: PairingEngine>(
     // TODO: use KZG commit for q(x)
     // TODO: unwrap
     let mut q_x_opens = vec![];
-    let q_x_eval = q_x.clone().evaluate_over_domain(domain);
-    for i in 0..uni_poly_degree{
+    // let q_x_eval = q_x.clone().evaluate_over_domain(domain);
+    for i in 0..uni_poly_degree {
         // assert_eq!(q_x_eval[i], polynomials[i].evaluate(&points[i]).unwrap());
+        // println!("{} {}", i, q_x.evaluate(&domain.element(i)));
 
+        // sanity check
+        let point: Vec<E::Fr> = uni_polys
+            .iter()
+            .rev()
+            .map(|poly| poly.evaluate(&domain.element(i)))
+            .collect();
+        let mle_value = merge_poly.evaluate(&point).unwrap();
+        println!("here: {} {}", i, mle_value);
 
+        let q_x_value = q_x.evaluate(&domain.element(i));
+        println!("here: {} {}", i, q_x_value);
+        if mle_value != q_x_value {
+            return Err(PCSErrors::InvalidProver(
+                "Q(omega) does not match W(l(omega))".to_string(),
+            ));
+        }
+
+        let q_x_open = KZGUnivariatePCS::<E>::open(uni_prover_param, &q_x, &domain.element(i))?;
+        q_x_opens.push(q_x_open)
     }
-
 
     q_x.coeffs
         .iter()
@@ -129,7 +152,6 @@ fn multi_open_internal<E: PairingEngine>(
     let r = transcript.get_and_append_challenge(b"r")?;
     let q_x_open = KZGUnivariatePCS::<E>::open(uni_prover_param, &q_x, &r)?;
     q_x_opens.push(q_x_open);
-
 
     // 6. get a point `p := l(r)`
     let point: Vec<E::Fr> = uni_polys
@@ -183,6 +205,16 @@ fn batch_verify_internal<E: PairingEngine>(
 ) -> Result<bool, PCSErrors> {
     let verify_timer = start_timer!(|| "batch verify");
 
+    let uni_poly_degree = points.len();
+    let domain = get_uni_domain::<E::Fr>(
+        // num_vars,
+        uni_poly_degree,
+    )?;
+    println!("domain root0: {}", domain.element(0));
+    println!("domain root1: {}", domain.element(1));
+    println!("domain root2: {}", domain.element(2));
+    println!("domain root3: {}", domain.element(3));
+
     let mut transcript = IOPTranscript::new(b"ml kzg");
     transcript.append_serializable_element(b"w", multi_commitment)?;
     for point in points {
@@ -219,12 +251,26 @@ fn batch_verify_internal<E: PairingEngine>(
     if q_r != batch_proof.value {
         return Ok(false);
     }
+
+    for i in 0..uni_poly_degree {
+        if !KZGUnivariatePCS::verify(
+            uni_verifier_param,
+            &batch_proof.q_x_commit,
+            &domain.element(i),
+            &values[i],
+            &batch_proof.q_x_opens[i],
+        )? {
+            println!("{}-th verification failed", i);
+            return Ok(false);
+        }
+    }
+
     if !KZGUnivariatePCS::verify(
         uni_verifier_param,
         &batch_proof.q_x_commit,
         &r,
         &q_r,
-        &batch_proof.q_x_opens[0],
+        &batch_proof.q_x_opens[uni_poly_degree],
     )? {
         return Ok(false);
     }
@@ -247,6 +293,34 @@ fn batch_verify_internal<E: PairingEngine>(
     end_timer!(verify_timer);
 
     res
+}
+
+fn generate_values<F: PrimeField>(
+    polynomials: &[DenseMultilinearExtension<F>],
+    points: &[Vec<F>],
+) -> Result<Vec<F>, PCSErrors> {
+    let num_var = polynomials[0].num_vars;
+    let uni_poly_degree = points.len();
+    let merge_poly = merge_polynomials(polynomials)?;
+
+    let domain = get_uni_domain::<F>(
+        // num_vars,
+        uni_poly_degree,
+    )?;
+    let uni_polys = build_l(num_var, points)?;
+    let mut mle_values = vec![];
+
+    for i in 0..uni_poly_degree {
+        let point: Vec<F> = uni_polys
+            .iter()
+            .rev()
+            .map(|poly| poly.evaluate(&domain.element(i)))
+            .collect();
+
+        let mle_value = merge_poly.evaluate(&point).unwrap();
+        mle_values.push(mle_value)
+    }
+    Ok(mle_values)
 }
 
 #[cfg(test)]
@@ -280,13 +354,20 @@ mod tests {
         let (ml_ck, ml_vk) = ml_params.trim(nv)?;
 
         let mut points = Vec::new();
-
+        // let mut evals = Vec::new();
         for poly in polys.iter() {
             let point = (0..poly.num_vars())
                 .map(|_| Fr::rand(rng))
                 .collect::<Vec<Fr>>();
+            // evals.push(poly.evaluate(&point).unwrap());
             points.push(point);
         }
+        // for (i,e) in evals.iter().enumerate(){
+        //     println!("{}: {}", i, e)
+        // }
+
+        let evals = generate_values(polys, &points)?;
+
         // let points_ref: Vec<&Vec<Fr>> = points.iter().map(|x| x.as_ref()).collect();
 
         let com = KZGMultilinearPCS::multi_commit(&ml_ck, polys)?;
@@ -298,7 +379,7 @@ mod tests {
             &ml_vk,
             &com,
             &points,
-            &[],
+            &evals,
             &batch_proof,
         )?);
 
