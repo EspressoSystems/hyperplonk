@@ -46,7 +46,7 @@ pub trait PolynomialCommitmentScheme<E: PairingEngine> {
     fn multi_commit(
         prover_param: &Self::ProverParam,
         polys: &[Self::Polynomial],
-    ) -> Result<Self::BatchCommitment, PCSErrors> ;
+    ) -> Result<Self::BatchCommitment, PCSErrors>;
 
     /// On input a polynomial `p` and a point `point`, outputs a proof for the
     /// same.
@@ -77,12 +77,13 @@ pub trait PolynomialCommitmentScheme<E: PairingEngine> {
 
     /// Verifies that `value_i` is the evaluation at `x_i` of the polynomial
     /// `poly_i` committed inside `comm`.
-    fn batch_verify(
+    fn batch_verify<R: RngCore>(
         verifier_param: &Self::VerifierParam,
-        multi_commitment: &Self::Commitment,
+        multi_commitment: &Self::BatchCommitment,
         points: &[Self::Point],
         values: &[E::Fr],
         batch_proof: &Self::BatchProof,
+        rng: &mut R,
     ) -> Result<bool, PCSErrors>;
 }
 

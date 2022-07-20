@@ -8,8 +8,7 @@ use ark_ec::{msm::VariableBaseMSM, AffineCurve, PairingEngine, ProjectiveCurve};
 use ark_ff::PrimeField;
 use ark_poly::{univariate::DensePolynomial, Polynomial, UVPolynomial};
 use ark_serialize::{CanonicalDeserialize, CanonicalSerialize, Read, SerializationError, Write};
-use ark_std::{end_timer, start_timer, One};
-use poly_iop::IOPTranscript;
+use ark_std::{end_timer, rand::RngCore, start_timer, One, UniformRand, Zero};
 use srs::{ProverParam, UniversalParams, VerifierParam};
 use std::marker::PhantomData;
 
@@ -113,7 +112,7 @@ impl<E: PairingEngine> PolynomialCommitmentScheme<E> for KZGUnivariatePCS<E> {
         Ok(Self::Proof { proof })
     }
 
-/// Input a list of polynomials, and a same number of points,
+    /// Input a list of polynomials, and a same number of points,
     /// compute a multi-opening for all the polynomials.
     fn multi_open(
         prover_param: &Self::ProverParam,
@@ -122,22 +121,22 @@ impl<E: PairingEngine> PolynomialCommitmentScheme<E> for KZGUnivariatePCS<E> {
         points: &[Self::Point],
     ) -> Result<Self::BatchProof, PCSErrors> {
         let open_time =
-        start_timer!(|| format!("batch opening {} polynomials", polynomials.degree()));
-    if polynomials.len() != points.len() {
-        return Err(PCSErrors::InvalidParameters(format!(
-            "poly length {} is different from points length {}",
-            polynomials.len(),
-            points.len()
-        )));
+            start_timer!(|| format!("batch opening {} polynomials", polynomials.degree()));
+        if polynomials.len() != points.len() {
+            return Err(PCSErrors::InvalidParameters(format!(
+                "poly length {} is different from points length {}",
+                polynomials.len(),
+                points.len()
+            )));
+        }
+        let batch_proof = polynomials
+            .iter()
+            .zip(points.iter())
+            .map(|(poly, point)| Self::open(prover_param, poly, point))
+            .collect::<Result<Self::BatchProof, PCSErrors>>()?;
+        end_timer!(open_time);
+        Ok(batch_proof)
     }
-    let batch_proof = polynomials
-        .iter()
-        .zip(points.iter())
-        .map(|(poly, point)| Self::open(prover_param, poly, point))
-        .collect::<Result<Self::BatchProof, PCSErrors>>()?;
-    end_timer!(open_time);
-    Ok(batch_proof)
-}
     /// Verifies that `value` is the evaluation at `x` of the polynomial
     /// committed inside `comm`.
     fn verify(
@@ -172,14 +171,59 @@ impl<E: PairingEngine> PolynomialCommitmentScheme<E> for KZGUnivariatePCS<E> {
 
     /// Verifies that `value_i` is the evaluation at `x_i` of the polynomial
     /// `poly_i` committed inside `comm`.
-    fn batch_verify(
+    fn batch_verify<R: RngCore>(
         verifier_param: &Self::VerifierParam,
-        multi_commitment: &Self::Commitment,
+        multi_commitment: &Self::BatchCommitment,
         points: &[Self::Point],
         values: &[E::Fr],
         batch_proof: &Self::BatchProof,
+        rng: &mut R,
     ) -> Result<bool, PCSErrors> {
-        todo!()
+        let check_time =
+            start_timer!(|| format!("Checking {} evaluation proofs", commitments.len()));
+
+        let mut total_c = <E::G1Projective>::zero();
+        let mut total_w = <E::G1Projective>::zero();
+
+        let combination_time = start_timer!(|| "Combining commitments and proofs");
+        let mut randomizer = E::Fr::one();
+        // Instead of multiplying g and gamma_g in each turn, we simply accumulate
+        // their coefficients and perform a final multiplication at the end.
+        let mut g_multiplier = E::Fr::zero();
+        for (((c, z), v), proof) in multi_commitment
+            .iter()
+            .zip(points)
+            .zip(values)
+            .zip(batch_proof)
+        {
+            let w = proof.proof;
+            let mut temp = w.mul(*z);
+            temp.add_assign_mixed(&c.commitment);
+            let c = temp;
+            g_multiplier += &(randomizer * v);
+            total_c += &c.mul(randomizer.into_repr());
+            total_w += &w.mul(randomizer.into_repr());
+            // We don't need to sample randomizers from the full field,
+            // only from 128-bit strings.
+            randomizer = u128::rand(rng).into();
+        }
+        total_c -= &verifier_param.g.mul(g_multiplier);
+        end_timer!(combination_time);
+
+        let to_affine_time = start_timer!(|| "Converting results to affine for pairing");
+        let affine_points = E::G1Projective::batch_normalization_into_affine(&[-total_w, total_c]);
+        let (total_w, total_c) = (affine_points[0], affine_points[1]);
+        end_timer!(to_affine_time);
+
+        let pairing_time = start_timer!(|| "Performing product of pairings");
+        let result = E::product_of_pairings(&[
+            (total_w.into(), verifier_param.beta_h.into()),
+            (total_c.into(), verifier_param.h.into()),
+        ])
+        .is_one();
+        end_timer!(pairing_time);
+        end_timer!(check_time, || format!("Result: {}", result));
+        Ok(result)
     }
 }
 

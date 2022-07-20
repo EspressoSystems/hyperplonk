@@ -14,7 +14,7 @@ use ark_poly::{
     UVPolynomial,
 };
 use ark_serialize::{CanonicalDeserialize, CanonicalSerialize, Read, SerializationError, Write};
-use ark_std::{end_timer, start_timer, vec::Vec, One, Zero};
+use ark_std::{end_timer, rand::RngCore, start_timer, vec::Vec, One, Zero};
 use poly_iop::IOPTranscript;
 use srs::{ProverParam, UniversalParams, VerifierParam};
 use std::marker::PhantomData;
@@ -367,12 +367,13 @@ impl<E: PairingEngine> PolynomialCommitmentScheme<E> for KZGMultilinearPC<E> {
     /// through the points
     /// 5. get a point `p := l(r)`
     /// 6. verifies `p` is verifies against proof
-    fn batch_verify(
+    fn batch_verify<R: RngCore>(
         verifier_param: &Self::VerifierParam,
-        multi_commitment: &Self::Commitment,
+        multi_commitment: &Self::BatchCommitment,
         points: &[Self::Point],
         values: &[E::Fr],
         batch_proof: &Self::BatchProof,
+        rng: &mut R,
     ) -> Result<bool, PCSErrors> {
         let verify_timer = start_timer!(|| "batch verify");
 
@@ -512,6 +513,7 @@ mod tests {
             &points,
             &[],
             &batch_proof,
+            rng
         )?);
 
         // bad commitment
@@ -523,6 +525,7 @@ mod tests {
             &points,
             &[],
             &batch_proof,
+            rng
         )?);
 
         // bad points
@@ -532,6 +535,7 @@ mod tests {
             &points[1..],
             &[],
             &batch_proof,
+            rng
         )?);
 
         // bad proof
@@ -545,6 +549,7 @@ mod tests {
                 value: batch_proof.value,
                 q_x_com: batch_proof.q_x_com.clone()
             },
+            rng
         )?);
 
         // bad value
@@ -557,7 +562,8 @@ mod tests {
                 proof: batch_proof.proof.clone(),
                 value: Fr::one(),
                 q_x_com: batch_proof.q_x_com
-            }
+            },
+            rng
         )?);
 
         // bad q(x) commit
@@ -571,6 +577,7 @@ mod tests {
                 value: batch_proof.value,
                 q_x_com: Vec::new()
             },
+            rng
         )?);
 
         Ok(())
