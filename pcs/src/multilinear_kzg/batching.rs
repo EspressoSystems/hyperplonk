@@ -314,6 +314,7 @@ mod tests {
     ) -> Result<(), PCSErrors> {
         let nv = get_batched_nv(polys[0].num_vars(), polys.len());
         let qx_degree = compute_qx_degree(polys.len());
+        println!("qx degree: {}", qx_degree);
 
         let (uni_ck, uni_vk) = uni_params.trim(qx_degree)?;
         let (ml_ck, ml_vk) = ml_params.trim(nv)?;

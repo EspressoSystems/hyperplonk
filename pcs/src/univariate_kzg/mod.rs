@@ -92,8 +92,7 @@ impl<E: PairingEngine> PolynomialCommitmentScheme<E> for KZGUnivariatePCS<E> {
         prover_param: &Self::ProverParam,
         polys: &[Self::Polynomial],
     ) -> Result<Self::BatchCommitment, PCSErrors> {
-        let commit_time =
-            start_timer!(|| format!("batch commit {} polynomials", polynomials.degree()));
+        let commit_time = start_timer!(|| format!("batch commit {} polynomials", polys.len()));
         let res = polys
             .iter()
             .map(|poly| Self::commit(prover_param, poly))
@@ -110,7 +109,8 @@ impl<E: PairingEngine> PolynomialCommitmentScheme<E> for KZGUnivariatePCS<E> {
         polynomial: &Self::Polynomial,
         point: &Self::Point,
     ) -> Result<(Self::Proof, Self::Evaluation), PCSErrors> {
-        let open_time = start_timer!(|| format!("Opening polynomial of degree {}", p.degree()));
+        let open_time =
+            start_timer!(|| format!("Opening polynomial of degree {}", polynomial.degree()));
         let divisor = Self::Polynomial::from_coefficients_vec(vec![-*point, E::Fr::one()]);
 
         let witness_time = start_timer!(|| "Computing witness polynomial");
@@ -143,8 +143,7 @@ impl<E: PairingEngine> PolynomialCommitmentScheme<E> for KZGUnivariatePCS<E> {
         polynomials: &[Self::Polynomial],
         points: &[Self::Point],
     ) -> Result<(Self::BatchProof, Vec<Self::Evaluation>), PCSErrors> {
-        let open_time =
-            start_timer!(|| format!("batch opening {} polynomials", polynomials.degree()));
+        let open_time = start_timer!(|| format!("batch opening {} polynomials", polynomials.len()));
         if polynomials.len() != points.len() {
             return Err(PCSErrors::InvalidParameters(format!(
                 "poly length {} is different from points length {}",
@@ -208,7 +207,7 @@ impl<E: PairingEngine> PolynomialCommitmentScheme<E> for KZGUnivariatePCS<E> {
         rng: &mut R,
     ) -> Result<bool, PCSErrors> {
         let check_time =
-            start_timer!(|| format!("Checking {} evaluation proofs", commitments.len()));
+            start_timer!(|| format!("Checking {} evaluation proofs", multi_commitment.len()));
 
         let mut total_c = <E::G1Projective>::zero();
         let mut total_w = <E::G1Projective>::zero();

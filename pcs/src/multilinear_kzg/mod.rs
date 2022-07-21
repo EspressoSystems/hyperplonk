@@ -260,7 +260,7 @@ fn open_internal<E: PairingEngine>(
     polynomial: &DenseMultilinearExtension<E::Fr>,
     point: &[E::Fr],
 ) -> Result<(Proof<E>, E::Fr), PCSErrors> {
-    let open_timer = start_timer!(|| "open");
+    let open_timer = start_timer!(|| format!("open mle with {} variable", polynomial.num_vars));
 
     assert_eq!(
         polynomial.num_vars(),
@@ -306,11 +306,9 @@ fn open_internal<E: PairingEngine>(
         proofs.push(VariableBaseMSM::multi_scalar_mul(&gi.evals, &scalars).into_affine());
         end_timer!(ith_round);
     }
-    let eval = polynomial
-        .evaluate(point)
-        .ok_or(PCSErrors::InvalidParameters(
-            "fail to evaluate the polynomial".to_string(),
-        ))?;
+    let eval = polynomial.evaluate(point).ok_or_else(|| {
+        PCSErrors::InvalidParameters("fail to evaluate the polynomial".to_string())
+    })?;
     end_timer!(open_timer);
     Ok((Proof { proofs }, eval))
 }
