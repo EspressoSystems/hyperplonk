@@ -60,9 +60,9 @@ impl<E: PairingEngine> StructuredReferenceString<E> for UnivariateUniversalParam
     }
 
     /// Trim the universal parameters to specialize the public parameters
-    /// for multilinear polynomials to the given `supported_num_vars`, and
-    /// returns committer key and verifier key. `supported_num_vars` should
-    /// be in range `1..=params.num_vars`
+    /// for univariate polynomials to the given `supported_log_size`, and
+    /// returns committer key and verifier key. `supported_log_size` should
+    /// be in range `1..log(params.len())`
     fn trim(
         &self,
         supported_log_size: usize,

@@ -174,23 +174,20 @@ impl<E: PairingEngine> PolynomialCommitmentScheme<E> for KZGUnivariatePCS<E> {
         let check_time = start_timer!(|| "Checking evaluation");
         let pairing_inputs: Vec<(E::G1Prepared, E::G2Prepared)> = vec![
             (
-                (commitment.commitment.into_projective() - verifier_param.g.mul(value.into_repr()))
-                    .into_affine()
-                    .into(),
+                (verifier_param.g.mul(value.into_repr())
+                    - proof.proof.mul(point.into_repr())
+                    - commitment.commitment.into_projective())
+                .into_affine()
+                .into(),
                 verifier_param.h.into(),
             ),
-            (
-                proof.proof.into(),
-                (verifier_param.h.mul(point.into_repr()) - verifier_param.beta_h.into_projective())
-                    .into_affine()
-                    .into(),
-            ),
+            (proof.proof.into(), verifier_param.beta_h.into()),
         ];
 
-        let res = E::product_of_pairings(pairing_inputs.iter());
+        let res = E::product_of_pairings(pairing_inputs.iter()).is_one();
 
         end_timer!(check_time, || format!("Result: {}", res));
-        Ok(res.is_one())
+        Ok(res)
     }
 
     /// Verifies that `value_i` is the evaluation at `x_i` of the polynomial
