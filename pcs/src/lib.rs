@@ -12,11 +12,15 @@ use errors::PCSErrors;
 /// This trait defines APIs for polynomial commitment schemes.
 /// Note that for our usage of PCS, we do not require the hiding property.
 pub trait PolynomialCommitmentScheme<E: PairingEngine> {
+    // Parameters
     type ProverParam;
     type VerifierParam;
     type SRS;
+    // Polynomial and its associated types
     type Polynomial;
     type Point;
+    type Evaluation;
+    // Commitments and proofs
     type Commitment;
     type Proof;
     type BatchProof;
@@ -52,16 +56,16 @@ pub trait PolynomialCommitmentScheme<E: PairingEngine> {
         prover_param: &Self::ProverParam,
         polynomial: &Self::Polynomial,
         point: &Self::Point,
-    ) -> Result<Self::Proof, PCSErrors>;
+    ) -> Result<(Self::Proof, Self::Evaluation), PCSErrors>;
 
     /// Input a list of MLEs, and a same number of points, and a transcript,
     /// compute a multi-opening for all the polynomials.
     fn multi_open(
         prover_param: &Self::ProverParam,
-        _multi_commitment: &Self::Commitment,
+        multi_commitment: &Self::Commitment,
         polynomials: &[Self::Polynomial],
         points: &[Self::Point],
-    ) -> Result<Self::BatchProof, PCSErrors>;
+    ) -> Result<(Self::BatchProof, Vec<Self::Evaluation>), PCSErrors>;
 
     /// Verifies that `value` is the evaluation at `x` of the polynomial
     /// committed inside `comm`.

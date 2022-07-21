@@ -28,11 +28,15 @@ pub struct KZGUnivariateOpening<E: PairingEngine> {
 }
 
 impl<E: PairingEngine> PolynomialCommitmentScheme<E> for KZGUnivariatePCS<E> {
+    // Parameters
     type ProverParam = UnivariateProverParam<E::G1Affine>;
     type VerifierParam = UnivariateVerifierParam<E>;
     type SRS = UnivariateUniversalParams<E>;
+    // Polynomial and its associated types
     type Polynomial = DensePolynomial<E::Fr>;
     type Point = E::Fr;
+    type Evaluation = E::Fr;
+    // Polynomial and its associated types
     type Commitment = Commitment<E>;
     type Proof = KZGUnivariateOpening<E>;
     type BatchProof = Vec<Self::Proof>;
@@ -105,7 +109,7 @@ impl<E: PairingEngine> PolynomialCommitmentScheme<E> for KZGUnivariatePCS<E> {
         prover_param: &Self::ProverParam,
         polynomial: &Self::Polynomial,
         point: &Self::Point,
-    ) -> Result<Self::Proof, PCSErrors> {
+    ) -> Result<(Self::Proof, Self::Evaluation), PCSErrors> {
         let open_time = start_timer!(|| format!("Opening polynomial of degree {}", p.degree()));
         let divisor = Self::Polynomial::from_coefficients_vec(vec![-*point, E::Fr::one()]);
 
@@ -122,8 +126,10 @@ impl<E: PairingEngine> PolynomialCommitmentScheme<E> for KZGUnivariatePCS<E> {
         )
         .into_affine();
 
+        let eval = polynomial.evaluate(point);
+
         end_timer!(open_time);
-        Ok(Self::Proof { proof })
+        Ok((Self::Proof { proof }, eval))
     }
 
     /// Input a list of polynomials, and a same number of points,
@@ -136,7 +142,7 @@ impl<E: PairingEngine> PolynomialCommitmentScheme<E> for KZGUnivariatePCS<E> {
         _multi_commitment: &Self::Commitment,
         polynomials: &[Self::Polynomial],
         points: &[Self::Point],
-    ) -> Result<Self::BatchProof, PCSErrors> {
+    ) -> Result<(Self::BatchProof, Vec<Self::Evaluation>), PCSErrors> {
         let open_time =
             start_timer!(|| format!("batch opening {} polynomials", polynomials.degree()));
         if polynomials.len() != points.len() {
@@ -146,13 +152,16 @@ impl<E: PairingEngine> PolynomialCommitmentScheme<E> for KZGUnivariatePCS<E> {
                 points.len()
             )));
         }
-        let batch_proof = polynomials
-            .iter()
-            .zip(points.iter())
-            .map(|(poly, point)| Self::open(prover_param, poly, point))
-            .collect::<Result<Self::BatchProof, PCSErrors>>()?;
+        let mut batch_proof = vec![];
+        let mut evals = vec![];
+        for (poly, point) in polynomials.iter().zip(points.iter()) {
+            let (proof, eval) = Self::open(prover_param, poly, point)?;
+            batch_proof.push(proof);
+            evals.push(eval);
+        }
+
         end_timer!(open_time);
-        Ok(batch_proof)
+        Ok((batch_proof, evals))
     }
     /// Verifies that `value` is the evaluation at `x` of the polynomial
     /// committed inside `comm`.
@@ -289,8 +298,7 @@ mod tests {
             let p = <DensePolynomial<E::Fr> as UVPolynomial<E::Fr>>::rand(degree, rng);
             let comm = KZGUnivariatePCS::<E>::commit(&ck, &p)?;
             let point = E::Fr::rand(rng);
-            let value = p.evaluate(&point);
-            let proof = KZGUnivariatePCS::<E>::open(&ck, &p, &point)?;
+            let (proof, value) = KZGUnivariatePCS::<E>::open(&ck, &p, &point)?;
             assert!(
                 KZGUnivariatePCS::<E>::verify(&vk, &comm, &point, &value, &proof)?,
                 "proof was incorrect for max_degree = {}, polynomial_degree = {}",
@@ -315,8 +323,7 @@ mod tests {
             let p = <DensePolynomial<E::Fr> as UVPolynomial<E::Fr>>::rand(degree, rng);
             let comm = KZGUnivariatePCS::<E>::commit(&ck, &p)?;
             let point = E::Fr::rand(rng);
-            let value = p.evaluate(&point);
-            let proof = KZGUnivariatePCS::<E>::open(&ck, &p, &point)?;
+            let (proof, value) = KZGUnivariatePCS::<E>::open(&ck, &p, &point)?;
             assert!(
                 KZGUnivariatePCS::<E>::verify(&vk, &comm, &point, &value, &proof)?,
                 "proof was incorrect for max_degree = {}, polynomial_degree = {}",
@@ -348,8 +355,7 @@ mod tests {
                 let p = <DensePolynomial<E::Fr> as UVPolynomial<E::Fr>>::rand(degree, rng);
                 let comm = KZGUnivariatePCS::<E>::commit(&ck, &p)?;
                 let point = E::Fr::rand(rng);
-                let value = p.evaluate(&point);
-                let proof = KZGUnivariatePCS::<E>::open(&ck, &p, &point)?;
+                let (proof, value) = KZGUnivariatePCS::<E>::open(&ck, &p, &point)?;
 
                 assert!(KZGUnivariatePCS::<E>::verify(
                     &vk, &comm, &point, &value, &proof
@@ -359,9 +365,9 @@ mod tests {
                 points.push(point);
                 proofs.push(proof);
             }
-            // assert!(KZGUnivariatePCS::<E>::batch_verify(
-            //     &vk, &comms, &points, &values, &proofs, rng
-            // )?);
+            assert!(KZGUnivariatePCS::<E>::batch_verify(
+                &vk, &comms, &points, &values, &proofs, rng
+            )?);
         }
         Ok(())
     }

@@ -42,27 +42,27 @@ pub struct Proof<E: PairingEngine> {
 pub struct BatchProof<E: PairingEngine> {
     /// The actual proof
     pub proof: Proof<E>,
-    /// Commitment to q(x)
+    /// Commitment to q(x):= w(l(x)) where
+    /// - `w` is the merged MLE
+    /// - `l` is the list of univariate polys that goes through all points
     pub q_x_commit: Commitment<E>,
     /// openings of q(x) at 1, omega, ..., and r
     pub q_x_opens: Vec<KZGUnivariateOpening<E>>,
-    /// values of q(x) at 1, omega, ..., and r
-    /// The last value which is `w` evaluated at `p:= l(r)`, where
-    /// - `w` is the merged MLE
-    /// - `l` is the list of univariate polys that goes through all points
-    /// - `r` is sampled from the transcript.
-    pub q_x_evals: Vec<E::Fr>,
 }
 
 impl<E: PairingEngine> PolynomialCommitmentScheme<E> for KZGMultilinearPCS<E> {
+    // Parameters
     type ProverParam = (
         MultilinearProverParam<E>,
         UnivariateProverParam<E::G1Affine>,
     );
     type VerifierParam = (MultilinearVerifierParam<E>, UnivariateVerifierParam<E>);
     type SRS = (MultilinearUniversalParams<E>, UnivariateUniversalParams<E>);
+    // Polynomial and its associated types
     type Polynomial = DenseMultilinearExtension<E::Fr>;
     type Point = Vec<E::Fr>;
+    type Evaluation = E::Fr;
+    // Commitments and proofs
     type Commitment = Commitment<E>;
     type Proof = Proof<E>;
     type BatchProof = BatchProof<E>;
@@ -143,14 +143,14 @@ impl<E: PairingEngine> PolynomialCommitmentScheme<E> for KZGMultilinearPCS<E> {
     ///
     /// This function takes 2^{num_var +1} number of scalar multiplications over
     /// G1:
-    /// - it proceeds with `num_var` number of rounds,
+    /// - it prodceeds with `num_var` number of rounds,
     /// - at round i, we compute an MSM for `2^{num_var - i + 1}` number of G2
     ///   elements.
     fn open(
         prover_param: &Self::ProverParam,
         polynomial: &Self::Polynomial,
         point: &Self::Point,
-    ) -> Result<Self::Proof, PCSErrors> {
+    ) -> Result<(Self::Proof, Self::Evaluation), PCSErrors> {
         open_internal(&prover_param.0, polynomial, point)
     }
 
@@ -190,7 +190,7 @@ impl<E: PairingEngine> PolynomialCommitmentScheme<E> for KZGMultilinearPCS<E> {
         multi_commitment: &Self::Commitment,
         polynomials: &[Self::Polynomial],
         points: &[Self::Point],
-    ) -> Result<Self::BatchProof, PCSErrors> {
+    ) -> Result<(Self::BatchProof, Vec<Self::Evaluation>), PCSErrors> {
         multi_open_internal::<E>(
             &prover_param.1,
             &prover_param.0,
@@ -259,7 +259,7 @@ fn open_internal<E: PairingEngine>(
     prover_param: &MultilinearProverParam<E>,
     polynomial: &DenseMultilinearExtension<E::Fr>,
     point: &[E::Fr],
-) -> Result<Proof<E>, PCSErrors> {
+) -> Result<(Proof<E>, E::Fr), PCSErrors> {
     let open_timer = start_timer!(|| "open");
 
     assert_eq!(
@@ -306,9 +306,13 @@ fn open_internal<E: PairingEngine>(
         proofs.push(VariableBaseMSM::multi_scalar_mul(&gi.evals, &scalars).into_affine());
         end_timer!(ith_round);
     }
-
+    let eval = polynomial
+        .evaluate(point)
+        .ok_or(PCSErrors::InvalidParameters(
+            "fail to evaluate the polynomial".to_string(),
+        ))?;
     end_timer!(open_timer);
-    Ok(Proof { proofs })
+    Ok((Proof { proofs }, eval))
 }
 
 /// Verifies that `value` is the evaluation at `x` of the polynomial
@@ -398,9 +402,8 @@ mod tests {
 
         let point: Vec<_> = (0..nv).map(|_| Fr::rand(rng)).collect();
         let com = KZGMultilinearPCS::commit(&ck, poly)?;
-        let proof = KZGMultilinearPCS::open(&ck, poly, &point)?;
+        let (proof, value) = KZGMultilinearPCS::open(&ck, poly, &point)?;
 
-        let value = poly.evaluate(&point).unwrap();
         assert!(KZGMultilinearPCS::verify(
             &vk, &com, &point, &value, &proof
         )?);

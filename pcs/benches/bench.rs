@@ -52,7 +52,7 @@ fn bench_pcs() -> Result<(), PCSErrors> {
         };
 
         // open
-        let proof = {
+        let (proof, value) = {
             let start = Instant::now();
             for _ in 0..repetition {
                 let _open = KZGMultilinearPCS::open(&ck, &poly, &point)?;
@@ -65,10 +65,8 @@ fn bench_pcs() -> Result<(), PCSErrors> {
             );
             KZGMultilinearPCS::open(&ck, &poly, &point)?
         };
-        let value = poly.evaluate(&point).unwrap();
 
         // verify
-
         {
             let start = Instant::now();
             for _ in 0..repetition {

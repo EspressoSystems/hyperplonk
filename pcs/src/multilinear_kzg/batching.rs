@@ -52,7 +52,7 @@ pub(super) fn multi_open_internal<E: PairingEngine>(
     polynomials: &[DenseMultilinearExtension<E::Fr>],
     multi_commitment: &Commitment<E>,
     points: &[Vec<E::Fr>],
-) -> Result<BatchProof<E>, PCSErrors> {
+) -> Result<(BatchProof<E>, Vec<E::Fr>), PCSErrors> {
     let open_timer = start_timer!(|| "multi open");
 
     // ===================================
@@ -113,8 +113,8 @@ pub(super) fn multi_open_internal<E: PairingEngine>(
     let mut q_x_opens = vec![];
     let mut q_x_evals = vec![];
     for i in 0..points_len {
-        let q_x_eval = q_x.evaluate(&domain.element(i));
-        let q_x_open = KZGUnivariatePCS::<E>::open(uni_prover_param, &q_x, &domain.element(i))?;
+        let (q_x_open, q_x_eval) =
+            KZGUnivariatePCS::<E>::open(uni_prover_param, &q_x, &domain.element(i))?;
         q_x_opens.push(q_x_open);
         q_x_evals.push(q_x_eval);
 
@@ -133,9 +133,8 @@ pub(super) fn multi_open_internal<E: PairingEngine>(
     }
 
     // 6. build q(r) and its opening
-    let q_x_open = KZGUnivariatePCS::<E>::open(uni_prover_param, &q_x, &r)?;
+    let (q_x_open, q_r_value) = KZGUnivariatePCS::<E>::open(uni_prover_param, &q_x, &r)?;
     q_x_opens.push(q_x_open);
-    let q_r_value = q_x.evaluate(&r);
     q_x_evals.push(q_r_value);
 
     // 7. get a point `p := l(r)`
@@ -146,24 +145,24 @@ pub(super) fn multi_open_internal<E: PairingEngine>(
         .collect();
 
     // 8. output an opening of `w` over point `p`
-    let mle_opening = open_internal(ml_prover_param, &merge_poly, &point)?;
+    let (mle_opening, mle_eval) = open_internal(ml_prover_param, &merge_poly, &point)?;
 
     // 9. output value that is `w` evaluated at `p` (which should match `q(r)`)
-    let merge_poly_value = merge_poly.evaluate(&point).unwrap();
-
-    if merge_poly_value != q_r_value {
+    if mle_eval != q_r_value {
         return Err(PCSErrors::InvalidProver(
             "Q(r) does not match W(l(r))".to_string(),
         ));
     }
     end_timer!(open_timer);
 
-    Ok(BatchProof {
-        proof: mle_opening,
-        q_x_commit,
-        q_x_opens,
+    Ok((
+        BatchProof {
+            proof: mle_opening,
+            q_x_commit,
+            q_x_opens,
+        },
         q_x_evals,
-    })
+    ))
 }
 
 /// Verifies that the `multi_commitment` is a valid commitment
@@ -185,7 +184,7 @@ pub(super) fn batch_verify_internal<E: PairingEngine>(
     ml_verifier_param: &MultilinearVerifierParam<E>,
     multi_commitment: &Commitment<E>,
     points: &[Vec<E::Fr>],
-    _values: &[E::Fr],
+    values: &[E::Fr],
     batch_proof: &BatchProof<E>,
 ) -> Result<bool, PCSErrors> {
     let verify_timer = start_timer!(|| "batch verify");
@@ -205,7 +204,7 @@ pub(super) fn batch_verify_internal<E: PairingEngine>(
         ));
     }
 
-    if points_len + 1 != batch_proof.q_x_evals.len() {
+    if points_len + 1 != values.len() {
         return Err(PCSErrors::InvalidParameters(
             "values length does not match point length".to_string(),
         ));
@@ -243,7 +242,7 @@ pub(super) fn batch_verify_internal<E: PairingEngine>(
             uni_verifier_param,
             &batch_proof.q_x_commit,
             &domain.element(i),
-            &batch_proof.q_x_evals[i],
+            &values[i],
             &batch_proof.q_x_opens[i],
         )? {
             #[cfg(debug_assertion)]
@@ -256,7 +255,7 @@ pub(super) fn batch_verify_internal<E: PairingEngine>(
         uni_verifier_param,
         &batch_proof.q_x_commit,
         &r,
-        &batch_proof.q_x_evals[points_len],
+        &values[points_len],
         &batch_proof.q_x_opens[points_len],
     )? {
         #[cfg(debug_assertion)]
@@ -276,7 +275,7 @@ pub(super) fn batch_verify_internal<E: PairingEngine>(
         ml_verifier_param,
         multi_commitment,
         &point,
-        &batch_proof.q_x_evals[points_len],
+        &values[points_len],
         &batch_proof.proof,
     )?;
 
@@ -314,9 +313,9 @@ mod tests {
         rng: &mut R,
     ) -> Result<(), PCSErrors> {
         let nv = get_batched_nv(polys[0].num_vars(), polys.len());
-        let uni_degree = compute_qx_degree(polys.len());
+        let qx_degree = compute_qx_degree(polys.len());
 
-        let (uni_ck, uni_vk) = uni_params.trim(uni_degree)?;
+        let (uni_ck, uni_vk) = uni_params.trim(qx_degree)?;
         let (ml_ck, ml_vk) = ml_params.trim(nv)?;
 
         let mut points = Vec::new();
@@ -330,9 +329,10 @@ mod tests {
         let evals = generate_evaluations(polys, &points)?;
 
         let com = KZGMultilinearPCS::multi_commit(&(ml_ck.clone(), uni_ck.clone()), polys)?;
-        let batch_proof = multi_open_internal(&uni_ck, &ml_ck, polys, &com, &points)?;
+        let (batch_proof, evaluations) =
+            multi_open_internal(&uni_ck, &ml_ck, polys, &com, &points)?;
 
-        for (a, b) in evals.iter().zip(batch_proof.q_x_evals.iter()) {
+        for (a, b) in evals.iter().zip(evaluations.iter()) {
             assert_eq!(a, b)
         }
 
@@ -342,7 +342,7 @@ mod tests {
             &ml_vk,
             &com,
             &points,
-            &[],
+            &evaluations,
             &batch_proof,
         )?);
 
@@ -354,7 +354,7 @@ mod tests {
                 commitment: <E as PairingEngine>::G1Affine::default()
             },
             &points,
-            &[],
+            &evaluations,
             &batch_proof,
         )?);
 
@@ -369,28 +369,27 @@ mod tests {
             &ml_vk,
             &com,
             &points,
-            &[],
+            &evaluations,
             &BatchProof {
                 proof: Proof { proofs: Vec::new() },
                 q_x_commit: Commitment {
                     commitment: <E as PairingEngine>::G1Affine::default()
                 },
                 q_x_opens: vec![],
-                q_x_evals: vec![],
             },
         )
         .is_err());
 
         // bad value
-        let mut wrong_proof = batch_proof.clone();
-        wrong_proof.q_x_evals[0] = Fr::default();
+        let mut wrong_evals = evaluations.clone();
+        wrong_evals[0] = Fr::default();
         assert!(!batch_verify_internal(
             &uni_vk,
             &ml_vk,
             &com,
             &points,
-            &[],
-            &wrong_proof
+            &wrong_evals,
+            &batch_proof
         )?);
 
         // bad q(x) commit
@@ -403,7 +402,7 @@ mod tests {
             &ml_vk,
             &com,
             &points,
-            &[],
+            &evaluations,
             &wrong_proof,
         )?);
         Ok(())
