@@ -303,7 +303,7 @@ mod tests {
     use ark_bls12_381::Bls12_381 as E;
     use ark_ec::PairingEngine;
     use ark_poly::{DenseMultilinearExtension, MultilinearExtension};
-    use ark_std::{rand::RngCore, test_rng, vec::Vec, UniformRand};
+    use ark_std::{log2, rand::RngCore, test_rng, vec::Vec, UniformRand};
     type Fr = <E as PairingEngine>::Fr;
 
     fn test_multi_commit_helper<R: RngCore>(
@@ -312,12 +312,12 @@ mod tests {
         polys: &[DenseMultilinearExtension<Fr>],
         rng: &mut R,
     ) -> Result<(), PCSErrors> {
-        let nv = get_batched_nv(polys[0].num_vars(), polys.len());
-        let qx_degree = compute_qx_degree(polys.len());
-        println!("qx degree: {}", qx_degree);
+        let merged_nv = get_batched_nv(polys[0].num_vars(), polys.len());
+        let qx_degree = compute_qx_degree(merged_nv, polys.len());
+        let log_qx_degree = log2(qx_degree) as usize;
 
-        let (uni_ck, uni_vk) = uni_params.trim(qx_degree)?;
-        let (ml_ck, ml_vk) = ml_params.trim(nv)?;
+        let (uni_ck, uni_vk) = uni_params.trim(log_qx_degree)?;
+        let (ml_ck, ml_vk) = ml_params.trim(merged_nv)?;
 
         let mut points = Vec::new();
         for poly in polys.iter() {
@@ -417,7 +417,7 @@ mod tests {
         let ml_params = MultilinearUniversalParams::<E>::gen_srs_for_testing(&mut rng, 15)?;
 
         // normal polynomials
-        let polys1: Vec<_> = (0..2)
+        let polys1: Vec<_> = (0..5)
             .map(|_| DenseMultilinearExtension::rand(4, &mut rng))
             .collect();
         test_multi_commit_helper(&uni_params, &ml_params, &polys1, &mut rng)?;

@@ -10,16 +10,17 @@ use ark_std::{end_timer, log2, start_timer};
 use poly_iop::bit_decompose;
 use std::cmp::max;
 
-/// For an MLE w, and point_len number of points,
-/// compute the degree of the univariate polynomial `q(x):= w(l(x))`
+/// For an MLE w with `mle_num_vars` variables, and `point_len` number of
+/// points, compute the degree of the univariate polynomial `q(x):= w(l(x))`
 /// where l(x) is a list of polynomials that go through all points.
-// uni_degree is computed as `2 * point_len`:
+// uni_degree is computed as `mle_num_vars * point_len`:
 // - each l(x) is of degree `point_len`
-// - mle has degree two
+// - mle has degree one
+// - worst case is `\prod_{i=0}^{mle_num_vars-1} l_i(x) < point_len * mle_num_vars`
 #[inline]
 #[allow(dead_code)]
-pub(crate) fn compute_qx_degree(point_len: usize) -> usize {
-    2 * point_len
+pub(crate) fn compute_qx_degree(mle_num_vars: usize, point_len: usize) -> usize {
+    mle_num_vars * point_len
 }
 
 /// get the domain for the univariate polynomial
