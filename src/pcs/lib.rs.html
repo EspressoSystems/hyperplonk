@@ -88,91 +88,171 @@
 <span id="83">83</span>
 <span id="84">84</span>
 <span id="85">85</span>
-</pre><pre class="rust"><code><span class="kw">mod</span> <span class="ident">commit</span>;
-<span class="kw">mod</span> <span class="ident">errors</span>;
-<span class="kw">mod</span> <span class="ident">param</span>;
-<span class="kw">mod</span> <span class="ident">util</span>;
+<span id="86">86</span>
+<span id="87">87</span>
+<span id="88">88</span>
+<span id="89">89</span>
+<span id="90">90</span>
+<span id="91">91</span>
+<span id="92">92</span>
+<span id="93">93</span>
+<span id="94">94</span>
+<span id="95">95</span>
+<span id="96">96</span>
+<span id="97">97</span>
+<span id="98">98</span>
+<span id="99">99</span>
+<span id="100">100</span>
+<span id="101">101</span>
+<span id="102">102</span>
+<span id="103">103</span>
+<span id="104">104</span>
+<span id="105">105</span>
+<span id="106">106</span>
+<span id="107">107</span>
+<span id="108">108</span>
+<span id="109">109</span>
+<span id="110">110</span>
+<span id="111">111</span>
+<span id="112">112</span>
+<span id="113">113</span>
+<span id="114">114</span>
+<span id="115">115</span>
+<span id="116">116</span>
+<span id="117">117</span>
+<span id="118">118</span>
+<span id="119">119</span>
+<span id="120">120</span>
+<span id="121">121</span>
+<span id="122">122</span>
+<span id="123">123</span>
+<span id="124">124</span>
+<span id="125">125</span>
+</pre><pre class="rust"><code><span class="kw">mod</span> <span class="ident">errors</span>;
+<span class="kw">mod</span> <span class="ident">multilinear_kzg</span>;
+<span class="kw">mod</span> <span class="ident">structs</span>;
+<span class="kw">mod</span> <span class="ident">univariate_kzg</span>;
+
+<span class="kw">pub</span> <span class="kw">mod</span> <span class="ident">prelude</span>;
 
 <span class="kw">use</span> <span class="ident">ark_ec::PairingEngine</span>;
-<span class="kw">use</span> <span class="ident">ark_poly::MultilinearExtension</span>;
 <span class="kw">use</span> <span class="ident">ark_std::rand::RngCore</span>;
-<span class="kw">use</span> <span class="ident">poly_iop::IOPTranscript</span>;
-<span class="kw">use</span> <span class="ident">std::marker::PhantomData</span>;
+<span class="kw">use</span> <span class="ident">errors::PCSErrors</span>;
 
-<span class="kw">pub</span> <span class="kw">use</span> <span class="ident">errors::PCSErrors</span>;
-<span class="kw">pub</span> <span class="kw">use</span> <span class="ident">param</span>::{<span class="ident">ProverParam</span>, <span class="ident">UniversalParams</span>, <span class="ident">VerifierParam</span>};
-
-<span class="doccomment">/// KZG Polynomial Commitment Scheme on multilinear extensions.</span>
-<span class="kw">pub</span> <span class="kw">struct</span> <span class="ident">KZGMultilinearPC</span><span class="op">&lt;</span><span class="ident">E</span>: <span class="ident">PairingEngine</span><span class="op">&gt;</span> {
-    <span class="attribute">#[<span class="ident">doc</span>(<span class="ident">hidden</span>)]</span>
-    <span class="ident">phantom</span>: <span class="ident">PhantomData</span><span class="op">&lt;</span><span class="ident">E</span><span class="op">&gt;</span>,
-}
-
-<span class="kw">pub</span> <span class="kw">trait</span> <span class="ident">MultilinearCommitmentScheme</span><span class="op">&lt;</span><span class="ident">E</span>: <span class="ident">PairingEngine</span><span class="op">&gt;</span> {
+<span class="doccomment">/// This trait defines APIs for polynomial commitment schemes.</span>
+<span class="doccomment">/// Note that for our usage of PCS, we do not require the hiding property.</span>
+<span class="kw">pub</span> <span class="kw">trait</span> <span class="ident">PolynomialCommitmentScheme</span><span class="op">&lt;</span><span class="ident">E</span>: <span class="ident">PairingEngine</span><span class="op">&gt;</span> {
+    <span class="comment">// Parameters</span>
     <span class="kw">type</span> <span class="ident">ProverParam</span>;
     <span class="kw">type</span> <span class="ident">VerifierParam</span>;
     <span class="kw">type</span> <span class="ident">SRS</span>;
+    <span class="comment">// Polynomial and its associated types</span>
+    <span class="kw">type</span> <span class="ident">Polynomial</span>;
+    <span class="kw">type</span> <span class="ident">Point</span>;
+    <span class="kw">type</span> <span class="ident">Evaluation</span>;
+    <span class="comment">// Commitments and proofs</span>
     <span class="kw">type</span> <span class="ident">Commitment</span>;
     <span class="kw">type</span> <span class="ident">Proof</span>;
     <span class="kw">type</span> <span class="ident">BatchProof</span>;
-    <span class="kw">type</span> <span class="ident">Transcript</span>;
+    <span class="kw">type</span> <span class="ident">BatchCommitment</span>;
 
-    <span class="doccomment">/// Generate SRS from RNG.</span>
+    <span class="doccomment">/// Build SRS for testing.</span>
+    <span class="doccomment">///</span>
+    <span class="doccomment">/// - For univariate polynomials, `log_size` is the log of maximum degree.</span>
+    <span class="doccomment">/// - For multilinear polynomials, `log_size` is the number of variables.</span>
+    <span class="doccomment">///</span>
     <span class="doccomment">/// WARNING: THIS FUNCTION IS FOR TESTING PURPOSE ONLY.</span>
     <span class="doccomment">/// THE OUTPUT SRS SHOULD NOT BE USED IN PRODUCTION.</span>
-    <span class="kw">fn</span> <span class="ident">setup</span><span class="op">&lt;</span><span class="ident">R</span>: <span class="ident">RngCore</span><span class="op">&gt;</span>(<span class="ident">rng</span>: <span class="kw-2">&amp;mut</span> <span class="ident">R</span>, <span class="ident">num_vars</span>: <span class="ident">usize</span>) -&gt; <span class="prelude-ty">Result</span><span class="op">&lt;</span><span class="ident"><span class="self">Self</span>::SRS</span>, <span class="ident">PCSErrors</span><span class="op">&gt;</span>;
+    <span class="kw">fn</span> <span class="ident">gen_srs_for_testing</span><span class="op">&lt;</span><span class="ident">R</span>: <span class="ident">RngCore</span><span class="op">&gt;</span>(
+        <span class="ident">rng</span>: <span class="kw-2">&amp;mut</span> <span class="ident">R</span>,
+        <span class="ident">log_size</span>: <span class="ident">usize</span>,
+    ) -&gt; <span class="prelude-ty">Result</span><span class="op">&lt;</span><span class="ident"><span class="self">Self</span>::SRS</span>, <span class="ident">PCSErrors</span><span class="op">&gt;</span>;
 
     <span class="doccomment">/// Generate a commitment for a polynomial</span>
     <span class="kw">fn</span> <span class="ident">commit</span>(
         <span class="ident">prover_param</span>: <span class="kw-2">&amp;</span><span class="ident"><span class="self">Self</span>::ProverParam</span>,
-        <span class="ident">poly</span>: <span class="kw-2">&amp;</span><span class="kw">impl</span> <span class="ident">MultilinearExtension</span><span class="op">&lt;</span><span class="ident">E::Fr</span><span class="op">&gt;</span>,
+        <span class="ident">poly</span>: <span class="kw-2">&amp;</span><span class="ident"><span class="self">Self</span>::Polynomial</span>,
     ) -&gt; <span class="prelude-ty">Result</span><span class="op">&lt;</span><span class="ident"><span class="self">Self</span>::Commitment</span>, <span class="ident">PCSErrors</span><span class="op">&gt;</span>;
 
     <span class="doccomment">/// Generate a commitment for a list of polynomials</span>
     <span class="kw">fn</span> <span class="ident">multi_commit</span>(
         <span class="ident">prover_param</span>: <span class="kw-2">&amp;</span><span class="ident"><span class="self">Self</span>::ProverParam</span>,
-        <span class="ident">polys</span>: <span class="kw-2">&amp;</span>[<span class="kw">impl</span> <span class="ident">MultilinearExtension</span><span class="op">&lt;</span><span class="ident">E::Fr</span><span class="op">&gt;</span>],
-    ) -&gt; <span class="prelude-ty">Result</span><span class="op">&lt;</span><span class="ident"><span class="self">Self</span>::Commitment</span>, <span class="ident">PCSErrors</span><span class="op">&gt;</span>;
+        <span class="ident">polys</span>: <span class="kw-2">&amp;</span>[<span class="ident"><span class="self">Self</span>::Polynomial</span>],
+    ) -&gt; <span class="prelude-ty">Result</span><span class="op">&lt;</span><span class="ident"><span class="self">Self</span>::BatchCommitment</span>, <span class="ident">PCSErrors</span><span class="op">&gt;</span>;
 
     <span class="doccomment">/// On input a polynomial `p` and a point `point`, outputs a proof for the</span>
     <span class="doccomment">/// same.</span>
     <span class="kw">fn</span> <span class="ident">open</span>(
         <span class="ident">prover_param</span>: <span class="kw-2">&amp;</span><span class="ident"><span class="self">Self</span>::ProverParam</span>,
-        <span class="ident">polynomial</span>: <span class="kw-2">&amp;</span><span class="kw">impl</span> <span class="ident">MultilinearExtension</span><span class="op">&lt;</span><span class="ident">E::Fr</span><span class="op">&gt;</span>,
-        <span class="ident">point</span>: <span class="kw-2">&amp;</span>[<span class="ident">E::Fr</span>],
-    ) -&gt; <span class="prelude-ty">Result</span><span class="op">&lt;</span><span class="ident"><span class="self">Self</span>::Proof</span>, <span class="ident">PCSErrors</span><span class="op">&gt;</span>;
+        <span class="ident">polynomial</span>: <span class="kw-2">&amp;</span><span class="ident"><span class="self">Self</span>::Polynomial</span>,
+        <span class="ident">point</span>: <span class="kw-2">&amp;</span><span class="ident"><span class="self">Self</span>::Point</span>,
+    ) -&gt; <span class="prelude-ty">Result</span><span class="op">&lt;</span>(<span class="ident"><span class="self">Self</span>::Proof</span>, <span class="ident"><span class="self">Self</span>::Evaluation</span>), <span class="ident">PCSErrors</span><span class="op">&gt;</span>;
 
     <span class="doccomment">/// Input a list of MLEs, and a same number of points, and a transcript,</span>
     <span class="doccomment">/// compute a multi-opening for all the polynomials.</span>
-    <span class="attribute">#[<span class="ident">allow</span>(<span class="ident">clippy::type_complexity</span>)]</span>
-    <span class="comment">// TODO: remove after we KZG-commit q(x)</span>
     <span class="kw">fn</span> <span class="ident">multi_open</span>(
         <span class="ident">prover_param</span>: <span class="kw-2">&amp;</span><span class="ident"><span class="self">Self</span>::ProverParam</span>,
-        <span class="ident">polynomials</span>: <span class="kw-2">&amp;</span>[<span class="kw">impl</span> <span class="ident">MultilinearExtension</span><span class="op">&lt;</span><span class="ident">E::Fr</span><span class="op">&gt;</span>],
-        <span class="ident">point</span>: <span class="kw-2">&amp;</span>[<span class="kw-2">&amp;</span>[<span class="ident">E::Fr</span>]],
-        <span class="ident">transcript</span>: <span class="kw-2">&amp;mut</span> <span class="ident"><span class="self">Self</span>::Transcript</span>,
-    ) -&gt; <span class="prelude-ty">Result</span><span class="op">&lt;</span><span class="ident"><span class="self">Self</span>::BatchProof</span>, <span class="ident">PCSErrors</span><span class="op">&gt;</span>;
+        <span class="ident">multi_commitment</span>: <span class="kw-2">&amp;</span><span class="ident"><span class="self">Self</span>::Commitment</span>,
+        <span class="ident">polynomials</span>: <span class="kw-2">&amp;</span>[<span class="ident"><span class="self">Self</span>::Polynomial</span>],
+        <span class="ident">points</span>: <span class="kw-2">&amp;</span>[<span class="ident"><span class="self">Self</span>::Point</span>],
+    ) -&gt; <span class="prelude-ty">Result</span><span class="op">&lt;</span>(<span class="ident"><span class="self">Self</span>::BatchProof</span>, <span class="ident">Vec</span><span class="op">&lt;</span><span class="ident"><span class="self">Self</span>::Evaluation</span><span class="op">&gt;</span>), <span class="ident">PCSErrors</span><span class="op">&gt;</span>;
 
     <span class="doccomment">/// Verifies that `value` is the evaluation at `x` of the polynomial</span>
     <span class="doccomment">/// committed inside `comm`.</span>
     <span class="kw">fn</span> <span class="ident">verify</span>(
         <span class="ident">verifier_param</span>: <span class="kw-2">&amp;</span><span class="ident"><span class="self">Self</span>::VerifierParam</span>,
         <span class="ident">commitment</span>: <span class="kw-2">&amp;</span><span class="ident"><span class="self">Self</span>::Commitment</span>,
-        <span class="ident">point</span>: <span class="kw-2">&amp;</span>[<span class="ident">E::Fr</span>],
+        <span class="ident">point</span>: <span class="kw-2">&amp;</span><span class="ident"><span class="self">Self</span>::Point</span>,
         <span class="ident">value</span>: <span class="kw-2">&amp;</span><span class="ident">E::Fr</span>,
         <span class="ident">proof</span>: <span class="kw-2">&amp;</span><span class="ident"><span class="self">Self</span>::Proof</span>,
     ) -&gt; <span class="prelude-ty">Result</span><span class="op">&lt;</span><span class="ident">bool</span>, <span class="ident">PCSErrors</span><span class="op">&gt;</span>;
 
     <span class="doccomment">/// Verifies that `value_i` is the evaluation at `x_i` of the polynomial</span>
     <span class="doccomment">/// `poly_i` committed inside `comm`.</span>
-    <span class="kw">fn</span> <span class="ident">batch_verify</span>(
+    <span class="kw">fn</span> <span class="ident">batch_verify</span><span class="op">&lt;</span><span class="ident">R</span>: <span class="ident">RngCore</span><span class="op">&gt;</span>(
         <span class="ident">verifier_param</span>: <span class="kw-2">&amp;</span><span class="ident"><span class="self">Self</span>::VerifierParam</span>,
-        <span class="ident">multi_commitment</span>: <span class="kw-2">&amp;</span><span class="ident"><span class="self">Self</span>::Commitment</span>,
-        <span class="ident">points</span>: <span class="kw-2">&amp;</span>[<span class="kw-2">&amp;</span>[<span class="ident">E::Fr</span>]],
+        <span class="ident">multi_commitment</span>: <span class="kw-2">&amp;</span><span class="ident"><span class="self">Self</span>::BatchCommitment</span>,
+        <span class="ident">points</span>: <span class="kw-2">&amp;</span>[<span class="ident"><span class="self">Self</span>::Point</span>],
+        <span class="ident">values</span>: <span class="kw-2">&amp;</span>[<span class="ident">E::Fr</span>],
         <span class="ident">batch_proof</span>: <span class="kw-2">&amp;</span><span class="ident"><span class="self">Self</span>::BatchProof</span>,
-        <span class="ident">transcript</span>: <span class="kw-2">&amp;mut</span> <span class="ident">IOPTranscript</span><span class="op">&lt;</span><span class="ident">E::Fr</span><span class="op">&gt;</span>,
+        <span class="ident">rng</span>: <span class="kw-2">&amp;mut</span> <span class="ident">R</span>,
     ) -&gt; <span class="prelude-ty">Result</span><span class="op">&lt;</span><span class="ident">bool</span>, <span class="ident">PCSErrors</span><span class="op">&gt;</span>;
 }
+
+<span class="doccomment">/// API definitions for structured reference string</span>
+<span class="kw">pub</span> <span class="kw">trait</span> <span class="ident">StructuredReferenceString</span><span class="op">&lt;</span><span class="ident">E</span>: <span class="ident">PairingEngine</span><span class="op">&gt;</span>: <span class="ident">Sized</span> {
+    <span class="kw">type</span> <span class="ident">ProverParam</span>;
+    <span class="kw">type</span> <span class="ident">VerifierParam</span>;
+
+    <span class="doccomment">/// Extract the prover parameters from the public parameters.</span>
+    <span class="kw">fn</span> <span class="ident">extract_prover_param</span>(<span class="kw-2">&amp;</span><span class="self">self</span>, <span class="ident">supported_log_size</span>: <span class="ident">usize</span>) -&gt; <span class="ident"><span class="self">Self</span>::ProverParam</span>;
+    <span class="doccomment">/// Extract the verifier parameters from the public parameters.</span>
+    <span class="kw">fn</span> <span class="ident">extract_verifier_param</span>(<span class="kw-2">&amp;</span><span class="self">self</span>, <span class="ident">supported_log_size</span>: <span class="ident">usize</span>) -&gt; <span class="ident"><span class="self">Self</span>::VerifierParam</span>;
+
+    <span class="doccomment">/// Trim the universal parameters to specialize the public parameters</span>
+    <span class="doccomment">/// for polynomials to the given `supported_log_size`, and</span>
+    <span class="doccomment">/// returns committer key and verifier key.</span>
+    <span class="doccomment">///</span>
+    <span class="doccomment">/// - For univariate polynomials, `supported_log_size` is the log of maximum</span>
+    <span class="doccomment">///   degree.</span>
+    <span class="doccomment">/// - For multilinear polynomials, `supported_log_size` is the number of</span>
+    <span class="doccomment">///   variables.</span>
+    <span class="doccomment">///</span>
+    <span class="doccomment">/// `supported_log_size` should be in range `1..=params.log_size`</span>
+    <span class="kw">fn</span> <span class="ident">trim</span>(
+        <span class="kw-2">&amp;</span><span class="self">self</span>,
+        <span class="ident">supported_log_size</span>: <span class="ident">usize</span>,
+    ) -&gt; <span class="prelude-ty">Result</span><span class="op">&lt;</span>(<span class="ident"><span class="self">Self</span>::ProverParam</span>, <span class="ident"><span class="self">Self</span>::VerifierParam</span>), <span class="ident">PCSErrors</span><span class="op">&gt;</span>;
+
+    <span class="doccomment">/// Build SRS for testing.</span>
+    <span class="doccomment">///</span>
+    <span class="doccomment">/// - For univariate polynomials, `log_size` is the log of maximum degree.</span>
+    <span class="doccomment">/// - For multilinear polynomials, `log_size` is the number of variables.</span>
+    <span class="doccomment">///</span>
+    <span class="doccomment">/// WARNING: THIS FUNCTION IS FOR TESTING PURPOSE ONLY.</span>
+    <span class="doccomment">/// THE OUTPUT SRS SHOULD NOT BE USED IN PRODUCTION.</span>
+    <span class="kw">fn</span> <span class="ident">gen_srs_for_testing</span><span class="op">&lt;</span><span class="ident">R</span>: <span class="ident">RngCore</span><span class="op">&gt;</span>(<span class="ident">rng</span>: <span class="kw-2">&amp;mut</span> <span class="ident">R</span>, <span class="ident">log_size</span>: <span class="ident">usize</span>) -&gt; <span class="prelude-ty">Result</span><span class="op">&lt;</span><span class="self">Self</span>, <span class="ident">PCSErrors</span><span class="op">&gt;</span>;
+}
 </code></pre></div>
-</section></div></main><div id="rustdoc-vars" data-root-path="../../" data-current-crate="pcs" data-themes="ayu,dark,light" data-resource-suffix="" data-rustdoc-version="1.62.0 (a8314ef7d 2022-06-27)" ></div>
+</section></div></main><div id="rustdoc-vars" data-root-path="../../" data-current-crate="pcs" data-themes="ayu,dark,light" data-resource-suffix="" data-rustdoc-version="1.62.1 (e092d0b6b 2022-07-16)" ></div>
 </body></html>

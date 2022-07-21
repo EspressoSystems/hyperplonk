@@ -1,9 +1,9 @@
-<!DOCTYPE html><html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1.0"><meta name="generator" content="rustdoc"><meta name="description" content="Source of the Rust file `pcs/src/param.rs`."><meta name="keywords" content="rust, rustlang, rust-lang"><title>param.rs - source</title><link rel="preload" as="font" type="font/woff2" crossorigin href="../../SourceSerif4-Regular.ttf.woff2"><link rel="preload" as="font" type="font/woff2" crossorigin href="../../FiraSans-Regular.woff2"><link rel="preload" as="font" type="font/woff2" crossorigin href="../../FiraSans-Medium.woff2"><link rel="preload" as="font" type="font/woff2" crossorigin href="../../SourceCodePro-Regular.ttf.woff2"><link rel="preload" as="font" type="font/woff2" crossorigin href="../../SourceSerif4-Bold.ttf.woff2"><link rel="preload" as="font" type="font/woff2" crossorigin href="../../SourceCodePro-Semibold.ttf.woff2"><link rel="stylesheet" type="text/css" href="../../normalize.css"><link rel="stylesheet" type="text/css" href="../../rustdoc.css" id="mainThemeStyle"><link rel="stylesheet" type="text/css" href="../../ayu.css" disabled><link rel="stylesheet" type="text/css" href="../../dark.css" disabled><link rel="stylesheet" type="text/css" href="../../light.css" id="themeStyle"><script id="default-settings" ></script><script src="../../storage.js"></script><script src="../../crates.js"></script><script defer src="../../main.js"></script><script defer src="../../source-script.js"></script><script defer src="../../source-files.js"></script>
-    <noscript><link rel="stylesheet" href="../../noscript.css"></noscript><link rel="alternate icon" type="image/png" href="../../favicon-16x16.png"><link rel="alternate icon" type="image/png" href="../../favicon-32x32.png"><link rel="icon" type="image/svg+xml" href="../../favicon.svg"></head><body class="rustdoc source"><!--[if lte IE 11]><div class="warning">This old browser is unsupported and will most likely display funky things.</div><![endif]--><nav class="mobile-topbar"><button class="sidebar-menu-toggle">&#9776;</button><a class="sidebar-logo" href="../../pcs/index.html"><div class="logo-container"><img class="rust-logo" src="../../rust-logo.svg" alt="logo"></div>
+<!DOCTYPE html><html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1.0"><meta name="generator" content="rustdoc"><meta name="description" content="Source of the Rust file `pcs/src/multilinear_kzg/srs.rs`."><meta name="keywords" content="rust, rustlang, rust-lang"><title>srs.rs - source</title><link rel="preload" as="font" type="font/woff2" crossorigin href="../../../SourceSerif4-Regular.ttf.woff2"><link rel="preload" as="font" type="font/woff2" crossorigin href="../../../FiraSans-Regular.woff2"><link rel="preload" as="font" type="font/woff2" crossorigin href="../../../FiraSans-Medium.woff2"><link rel="preload" as="font" type="font/woff2" crossorigin href="../../../SourceCodePro-Regular.ttf.woff2"><link rel="preload" as="font" type="font/woff2" crossorigin href="../../../SourceSerif4-Bold.ttf.woff2"><link rel="preload" as="font" type="font/woff2" crossorigin href="../../../SourceCodePro-Semibold.ttf.woff2"><link rel="stylesheet" type="text/css" href="../../../normalize.css"><link rel="stylesheet" type="text/css" href="../../../rustdoc.css" id="mainThemeStyle"><link rel="stylesheet" type="text/css" href="../../../ayu.css" disabled><link rel="stylesheet" type="text/css" href="../../../dark.css" disabled><link rel="stylesheet" type="text/css" href="../../../light.css" id="themeStyle"><script id="default-settings" ></script><script src="../../../storage.js"></script><script src="../../../crates.js"></script><script defer src="../../../main.js"></script><script defer src="../../../source-script.js"></script><script defer src="../../../source-files.js"></script>
+    <noscript><link rel="stylesheet" href="../../../noscript.css"></noscript><link rel="alternate icon" type="image/png" href="../../../favicon-16x16.png"><link rel="alternate icon" type="image/png" href="../../../favicon-32x32.png"><link rel="icon" type="image/svg+xml" href="../../../favicon.svg"></head><body class="rustdoc source"><!--[if lte IE 11]><div class="warning">This old browser is unsupported and will most likely display funky things.</div><![endif]--><nav class="mobile-topbar"><button class="sidebar-menu-toggle">&#9776;</button><a class="sidebar-logo" href="../../../pcs/index.html"><div class="logo-container"><img class="rust-logo" src="../../../rust-logo.svg" alt="logo"></div>
         </a><h2 class="location"></h2>
     </nav>
-    <nav class="sidebar"><a class="sidebar-logo" href="../../pcs/index.html"><div class="logo-container"><img class="rust-logo" src="../../rust-logo.svg" alt="logo"></div>
-        </a></nav><main><div class="width-limiter"><div class="sub-container"><a class="sub-logo-container" href="../../pcs/index.html"><img class="rust-logo" src="../../rust-logo.svg" alt="logo"></a><nav class="sub"><div class="theme-picker hidden"><button id="theme-picker" aria-label="Pick another theme!" aria-haspopup="menu" title="themes"><img width="22" height="22" alt="Pick another theme!" src="../../brush.svg"></button><div id="theme-choices" role="menu"></div></div><form class="search-form"><div class="search-container"><span></span><input class="search-input" name="search" autocomplete="off" spellcheck="false" placeholder="Click or press ‘S’ to search, ‘?’ for more options…" type="search"><button type="button" id="help-button" title="help">?</button><a id="settings-menu" href="../../settings.html" title="settings"><img width="22" height="22" alt="Change settings" src="../../wheel.svg"></a></div></form></nav></div><section id="main-content" class="content"><div class="example-wrap"><pre class="line-numbers"><span id="1">1</span>
+    <nav class="sidebar"><a class="sidebar-logo" href="../../../pcs/index.html"><div class="logo-container"><img class="rust-logo" src="../../../rust-logo.svg" alt="logo"></div>
+        </a></nav><main><div class="width-limiter"><div class="sub-container"><a class="sub-logo-container" href="../../../pcs/index.html"><img class="rust-logo" src="../../../rust-logo.svg" alt="logo"></a><nav class="sub"><div class="theme-picker hidden"><button id="theme-picker" aria-label="Pick another theme!" aria-haspopup="menu" title="themes"><img width="22" height="22" alt="Pick another theme!" src="../../../brush.svg"></button><div id="theme-choices" role="menu"></div></div><form class="search-form"><div class="search-container"><span></span><input class="search-input" name="search" autocomplete="off" spellcheck="false" placeholder="Click or press ‘S’ to search, ‘?’ for more options…" type="search"><button type="button" id="help-button" title="help">?</button><a id="settings-menu" href="../../../settings.html" title="settings"><img width="22" height="22" alt="Change settings" src="../../../wheel.svg"></a></div></form></nav></div><section id="main-content" class="content"><div class="example-wrap"><pre class="line-numbers"><span id="1">1</span>
 <span id="2">2</span>
 <span id="3">3</span>
 <span id="4">4</span>
@@ -255,14 +255,21 @@
 <span id="250">250</span>
 <span id="251">251</span>
 <span id="252">252</span>
-</pre><pre class="rust"><code><span class="kw">use</span> <span class="ident">std::collections::LinkedList</span>;
+<span id="253">253</span>
+<span id="254">254</span>
+<span id="255">255</span>
+<span id="256">256</span>
+<span id="257">257</span>
+<span id="258">258</span>
+</pre><pre class="rust"><code><span class="doccomment">//! Implementing Structured Reference Strings for multilinear polynomial KZG</span>
 
-<span class="kw">use</span> <span class="ident"><span class="kw">crate</span>::PCSErrors</span>;
+<span class="kw">use</span> <span class="kw">crate</span>::{<span class="ident">prelude::PCSErrors</span>, <span class="ident">StructuredReferenceString</span>};
 <span class="kw">use</span> <span class="ident">ark_ec</span>::{<span class="ident">msm::FixedBaseMSM</span>, <span class="ident">AffineCurve</span>, <span class="ident">PairingEngine</span>, <span class="ident">ProjectiveCurve</span>};
 <span class="kw">use</span> <span class="ident">ark_ff</span>::{<span class="ident">Field</span>, <span class="ident">PrimeField</span>};
 <span class="kw">use</span> <span class="ident">ark_poly::DenseMultilinearExtension</span>;
 <span class="kw">use</span> <span class="ident">ark_serialize</span>::{<span class="ident">CanonicalDeserialize</span>, <span class="ident">CanonicalSerialize</span>, <span class="ident">Read</span>, <span class="ident">SerializationError</span>, <span class="ident">Write</span>};
 <span class="kw">use</span> <span class="ident">ark_std</span>::{<span class="ident">end_timer</span>, <span class="ident">rand::RngCore</span>, <span class="ident">start_timer</span>, <span class="ident">vec::Vec</span>, <span class="ident">UniformRand</span>};
+<span class="kw">use</span> <span class="ident">std::collections::LinkedList</span>;
 
 <span class="doccomment">/// Evaluations over {0,1}^n for G1 or G2</span>
 <span class="attribute">#[<span class="ident">derive</span>(<span class="ident">CanonicalSerialize</span>, <span class="ident">CanonicalDeserialize</span>, <span class="ident">Clone</span>, <span class="ident">Debug</span>)]</span>
@@ -273,16 +280,16 @@
 
 <span class="doccomment">/// Universal Parameter</span>
 <span class="attribute">#[<span class="ident">derive</span>(<span class="ident">CanonicalSerialize</span>, <span class="ident">CanonicalDeserialize</span>, <span class="ident">Clone</span>, <span class="ident">Debug</span>)]</span>
-<span class="kw">pub</span> <span class="kw">struct</span> <span class="ident">UniversalParams</span><span class="op">&lt;</span><span class="ident">E</span>: <span class="ident">PairingEngine</span><span class="op">&gt;</span> {
+<span class="kw">pub</span> <span class="kw">struct</span> <span class="ident">MultilinearUniversalParams</span><span class="op">&lt;</span><span class="ident">E</span>: <span class="ident">PairingEngine</span><span class="op">&gt;</span> {
     <span class="doccomment">/// prover parameters</span>
-    <span class="kw">pub</span> <span class="ident">prover_param</span>: <span class="ident">ProverParam</span><span class="op">&lt;</span><span class="ident">E</span><span class="op">&gt;</span>,
+    <span class="kw">pub</span> <span class="ident">prover_param</span>: <span class="ident">MultilinearProverParam</span><span class="op">&lt;</span><span class="ident">E</span><span class="op">&gt;</span>,
     <span class="doccomment">/// h^randomness: h^t1, h^t2, ..., **h^{t_nv}**</span>
     <span class="kw">pub</span> <span class="ident">h_mask</span>: <span class="ident">Vec</span><span class="op">&lt;</span><span class="ident">E::G2Affine</span><span class="op">&gt;</span>,
 }
 
 <span class="doccomment">/// Prover Parameters</span>
 <span class="attribute">#[<span class="ident">derive</span>(<span class="ident">CanonicalSerialize</span>, <span class="ident">CanonicalDeserialize</span>, <span class="ident">Clone</span>, <span class="ident">Debug</span>)]</span>
-<span class="kw">pub</span> <span class="kw">struct</span> <span class="ident">ProverParam</span><span class="op">&lt;</span><span class="ident">E</span>: <span class="ident">PairingEngine</span><span class="op">&gt;</span> {
+<span class="kw">pub</span> <span class="kw">struct</span> <span class="ident">MultilinearProverParam</span><span class="op">&lt;</span><span class="ident">E</span>: <span class="ident">PairingEngine</span><span class="op">&gt;</span> {
     <span class="doccomment">/// number of variables</span>
     <span class="kw">pub</span> <span class="ident">num_vars</span>: <span class="ident">usize</span>,
     <span class="doccomment">/// `pp_{num_vars}`, `pp_{num_vars - 1}`, `pp_{num_vars - 2}`, ..., defined</span>
@@ -296,33 +303,41 @@
 
 <span class="doccomment">/// Verifier Parameters</span>
 <span class="attribute">#[<span class="ident">derive</span>(<span class="ident">CanonicalSerialize</span>, <span class="ident">CanonicalDeserialize</span>, <span class="ident">Clone</span>, <span class="ident">Debug</span>)]</span>
-<span class="kw">pub</span> <span class="kw">struct</span> <span class="ident">VerifierParam</span><span class="op">&lt;</span><span class="ident">E</span>: <span class="ident">PairingEngine</span><span class="op">&gt;</span> {
+<span class="kw">pub</span> <span class="kw">struct</span> <span class="ident">MultilinearVerifierParam</span><span class="op">&lt;</span><span class="ident">E</span>: <span class="ident">PairingEngine</span><span class="op">&gt;</span> {
     <span class="doccomment">/// number of variables</span>
     <span class="kw">pub</span> <span class="ident">num_vars</span>: <span class="ident">usize</span>,
-
     <span class="doccomment">/// generator of G1</span>
     <span class="kw">pub</span> <span class="ident">g</span>: <span class="ident">E::G1Affine</span>,
-
     <span class="doccomment">/// generator of G2</span>
     <span class="kw">pub</span> <span class="ident">h</span>: <span class="ident">E::G2Affine</span>,
-
     <span class="doccomment">/// h^randomness: h^t1, h^t2, ..., **h^{t_nv}**</span>
     <span class="kw">pub</span> <span class="ident">h_mask</span>: <span class="ident">Vec</span><span class="op">&lt;</span><span class="ident">E::G2Affine</span><span class="op">&gt;</span>,
 }
 
-<span class="kw">impl</span><span class="op">&lt;</span><span class="ident">E</span>: <span class="ident">PairingEngine</span><span class="op">&gt;</span> <span class="ident">UniversalParams</span><span class="op">&lt;</span><span class="ident">E</span><span class="op">&gt;</span> {
+<span class="kw">impl</span><span class="op">&lt;</span><span class="ident">E</span>: <span class="ident">PairingEngine</span><span class="op">&gt;</span> <span class="ident">StructuredReferenceString</span><span class="op">&lt;</span><span class="ident">E</span><span class="op">&gt;</span> <span class="kw">for</span> <span class="ident">MultilinearUniversalParams</span><span class="op">&lt;</span><span class="ident">E</span><span class="op">&gt;</span> {
+    <span class="kw">type</span> <span class="ident">ProverParam</span> <span class="op">=</span> <span class="ident">MultilinearProverParam</span><span class="op">&lt;</span><span class="ident">E</span><span class="op">&gt;</span>;
+    <span class="kw">type</span> <span class="ident">VerifierParam</span> <span class="op">=</span> <span class="ident">MultilinearVerifierParam</span><span class="op">&lt;</span><span class="ident">E</span><span class="op">&gt;</span>;
+
     <span class="doccomment">/// Extract the prover parameters from the public parameters.</span>
-    <span class="kw">pub</span> <span class="kw">fn</span> <span class="ident">extract_prover_param</span>(<span class="kw-2">&amp;</span><span class="self">self</span>) -&gt; <span class="ident">ProverParam</span><span class="op">&lt;</span><span class="ident">E</span><span class="op">&gt;</span> {
-        <span class="self">self</span>.<span class="ident">prover_param</span>.<span class="ident">clone</span>()
+    <span class="kw">fn</span> <span class="ident">extract_prover_param</span>(<span class="kw-2">&amp;</span><span class="self">self</span>, <span class="ident">supported_num_vars</span>: <span class="ident">usize</span>) -&gt; <span class="ident"><span class="self">Self</span>::ProverParam</span> {
+        <span class="kw">let</span> <span class="ident">to_reduce</span> <span class="op">=</span> <span class="self">self</span>.<span class="ident">prover_param</span>.<span class="ident">num_vars</span> <span class="op">-</span> <span class="ident">supported_num_vars</span>;
+
+        <span class="ident"><span class="self">Self</span>::ProverParam</span> {
+            <span class="ident">powers_of_g</span>: <span class="self">self</span>.<span class="ident">prover_param</span>.<span class="ident">powers_of_g</span>[<span class="ident">to_reduce</span>..].<span class="ident">to_vec</span>(),
+            <span class="ident">g</span>: <span class="self">self</span>.<span class="ident">prover_param</span>.<span class="ident">g</span>,
+            <span class="ident">h</span>: <span class="self">self</span>.<span class="ident">prover_param</span>.<span class="ident">h</span>,
+            <span class="ident">num_vars</span>: <span class="ident">supported_num_vars</span>,
+        }
     }
 
     <span class="doccomment">/// Extract the verifier parameters from the public parameters.</span>
-    <span class="kw">pub</span> <span class="kw">fn</span> <span class="ident">extract_verifier_param</span>(<span class="kw-2">&amp;</span><span class="self">self</span>) -&gt; <span class="ident">VerifierParam</span><span class="op">&lt;</span><span class="ident">E</span><span class="op">&gt;</span> {
-        <span class="ident">VerifierParam</span> {
-            <span class="ident">num_vars</span>: <span class="self">self</span>.<span class="ident">prover_param</span>.<span class="ident">num_vars</span>,
+    <span class="kw">fn</span> <span class="ident">extract_verifier_param</span>(<span class="kw-2">&amp;</span><span class="self">self</span>, <span class="ident">supported_num_vars</span>: <span class="ident">usize</span>) -&gt; <span class="ident"><span class="self">Self</span>::VerifierParam</span> {
+        <span class="kw">let</span> <span class="ident">to_reduce</span> <span class="op">=</span> <span class="self">self</span>.<span class="ident">prover_param</span>.<span class="ident">num_vars</span> <span class="op">-</span> <span class="ident">supported_num_vars</span>;
+        <span class="ident"><span class="self">Self</span>::VerifierParam</span> {
+            <span class="ident">num_vars</span>: <span class="ident">supported_num_vars</span>,
             <span class="ident">g</span>: <span class="self">self</span>.<span class="ident">prover_param</span>.<span class="ident">g</span>,
             <span class="ident">h</span>: <span class="self">self</span>.<span class="ident">prover_param</span>.<span class="ident">h</span>,
-            <span class="ident">h_mask</span>: <span class="self">self</span>.<span class="ident">h_mask</span>.<span class="ident">clone</span>(),
+            <span class="ident">h_mask</span>: <span class="self">self</span>.<span class="ident">h_mask</span>[<span class="ident">to_reduce</span>..].<span class="ident">to_vec</span>(),
         }
     }
 
@@ -330,10 +345,10 @@
     <span class="doccomment">/// for multilinear polynomials to the given `supported_num_vars`, and</span>
     <span class="doccomment">/// returns committer key and verifier key. `supported_num_vars` should</span>
     <span class="doccomment">/// be in range `1..=params.num_vars`</span>
-    <span class="kw">pub</span> <span class="kw">fn</span> <span class="ident">trim</span>(
+    <span class="kw">fn</span> <span class="ident">trim</span>(
         <span class="kw-2">&amp;</span><span class="self">self</span>,
         <span class="ident">supported_num_vars</span>: <span class="ident">usize</span>,
-    ) -&gt; <span class="prelude-ty">Result</span><span class="op">&lt;</span>(<span class="ident">ProverParam</span><span class="op">&lt;</span><span class="ident">E</span><span class="op">&gt;</span>, <span class="ident">VerifierParam</span><span class="op">&lt;</span><span class="ident">E</span><span class="op">&gt;</span>), <span class="ident">PCSErrors</span><span class="op">&gt;</span> {
+    ) -&gt; <span class="prelude-ty">Result</span><span class="op">&lt;</span>(<span class="ident"><span class="self">Self</span>::ProverParam</span>, <span class="ident"><span class="self">Self</span>::VerifierParam</span>), <span class="ident">PCSErrors</span><span class="op">&gt;</span> {
         <span class="kw">if</span> <span class="ident">supported_num_vars</span> <span class="op">&gt;</span> <span class="self">self</span>.<span class="ident">prover_param</span>.<span class="ident">num_vars</span> {
             <span class="kw">return</span> <span class="prelude-val">Err</span>(<span class="ident">PCSErrors::InvalidParameters</span>(<span class="macro">format!</span>(
                 <span class="string">&quot;SRS does not support target number of vars {}&quot;</span>,
@@ -342,13 +357,13 @@
         }
 
         <span class="kw">let</span> <span class="ident">to_reduce</span> <span class="op">=</span> <span class="self">self</span>.<span class="ident">prover_param</span>.<span class="ident">num_vars</span> <span class="op">-</span> <span class="ident">supported_num_vars</span>;
-        <span class="kw">let</span> <span class="ident">ck</span> <span class="op">=</span> <span class="ident">ProverParam</span> {
+        <span class="kw">let</span> <span class="ident">ck</span> <span class="op">=</span> <span class="ident"><span class="self">Self</span>::ProverParam</span> {
             <span class="ident">powers_of_g</span>: <span class="self">self</span>.<span class="ident">prover_param</span>.<span class="ident">powers_of_g</span>[<span class="ident">to_reduce</span>..].<span class="ident">to_vec</span>(),
             <span class="ident">g</span>: <span class="self">self</span>.<span class="ident">prover_param</span>.<span class="ident">g</span>,
             <span class="ident">h</span>: <span class="self">self</span>.<span class="ident">prover_param</span>.<span class="ident">h</span>,
             <span class="ident">num_vars</span>: <span class="ident">supported_num_vars</span>,
         };
-        <span class="kw">let</span> <span class="ident">vk</span> <span class="op">=</span> <span class="ident">VerifierParam</span> {
+        <span class="kw">let</span> <span class="ident">vk</span> <span class="op">=</span> <span class="ident"><span class="self">Self</span>::VerifierParam</span> {
             <span class="ident">num_vars</span>: <span class="ident">supported_num_vars</span>,
             <span class="ident">g</span>: <span class="self">self</span>.<span class="ident">prover_param</span>.<span class="ident">g</span>,
             <span class="ident">h</span>: <span class="self">self</span>.<span class="ident">prover_param</span>.<span class="ident">h</span>,
@@ -360,10 +375,7 @@
     <span class="doccomment">/// Build SRS for testing.</span>
     <span class="doccomment">/// WARNING: THIS FUNCTION IS FOR TESTING PURPOSE ONLY.</span>
     <span class="doccomment">/// THE OUTPUT SRS SHOULD NOT BE USED IN PRODUCTION.</span>
-    <span class="kw">pub</span> <span class="kw">fn</span> <span class="ident">gen_srs_for_testing</span><span class="op">&lt;</span><span class="ident">R</span>: <span class="ident">RngCore</span><span class="op">&gt;</span>(
-        <span class="ident">rng</span>: <span class="kw-2">&amp;mut</span> <span class="ident">R</span>,
-        <span class="ident">num_vars</span>: <span class="ident">usize</span>,
-    ) -&gt; <span class="prelude-ty">Result</span><span class="op">&lt;</span><span class="self">Self</span>, <span class="ident">PCSErrors</span><span class="op">&gt;</span> {
+    <span class="kw">fn</span> <span class="ident">gen_srs_for_testing</span><span class="op">&lt;</span><span class="ident">R</span>: <span class="ident">RngCore</span><span class="op">&gt;</span>(<span class="ident">rng</span>: <span class="kw-2">&amp;mut</span> <span class="ident">R</span>, <span class="ident">num_vars</span>: <span class="ident">usize</span>) -&gt; <span class="prelude-ty">Result</span><span class="op">&lt;</span><span class="self">Self</span>, <span class="ident">PCSErrors</span><span class="op">&gt;</span> {
         <span class="kw">if</span> <span class="ident">num_vars</span> <span class="op">==</span> <span class="number">0</span> {
             <span class="kw">return</span> <span class="prelude-val">Err</span>(<span class="ident">PCSErrors::InvalidParameters</span>(
                 <span class="string">&quot;constant polynomial not supported&quot;</span>.<span class="ident">to_string</span>(),
@@ -424,7 +436,7 @@
             <span class="ident">start</span> <span class="op">+</span><span class="op">=</span> <span class="ident">size</span>;
         }
 
-        <span class="kw">let</span> <span class="ident">pp</span> <span class="op">=</span> <span class="ident">ProverParam</span> {
+        <span class="kw">let</span> <span class="ident">pp</span> <span class="op">=</span> <span class="ident"><span class="self">Self</span>::ProverParam</span> {
             <span class="ident">num_vars</span>,
             <span class="ident">g</span>: <span class="ident">g</span>.<span class="ident">into_affine</span>(),
             <span class="ident">h</span>: <span class="ident">h</span>.<span class="ident">into_affine</span>(),
@@ -501,12 +513,12 @@
     <span class="kw">fn</span> <span class="ident">test_srs_gen</span>() -&gt; <span class="prelude-ty">Result</span><span class="op">&lt;</span>(), <span class="ident">PCSErrors</span><span class="op">&gt;</span> {
         <span class="kw">let</span> <span class="kw-2">mut</span> <span class="ident">rng</span> <span class="op">=</span> <span class="ident">test_rng</span>();
         <span class="kw">for</span> <span class="ident">nv</span> <span class="kw">in</span> <span class="number">4</span>..<span class="number">10</span> {
-            <span class="kw">let</span> <span class="kw">_</span> <span class="op">=</span> <span class="ident">UniversalParams</span>::<span class="op">&lt;</span><span class="ident">E</span><span class="op">&gt;</span><span class="ident">::gen_srs_for_testing</span>(<span class="kw-2">&amp;mut</span> <span class="ident">rng</span>, <span class="ident">nv</span>)<span class="question-mark">?</span>;
+            <span class="kw">let</span> <span class="kw">_</span> <span class="op">=</span> <span class="ident">MultilinearUniversalParams</span>::<span class="op">&lt;</span><span class="ident">E</span><span class="op">&gt;</span><span class="ident">::gen_srs_for_testing</span>(<span class="kw-2">&amp;mut</span> <span class="ident">rng</span>, <span class="ident">nv</span>)<span class="question-mark">?</span>;
         }
 
         <span class="prelude-val">Ok</span>(())
     }
 }
 </code></pre></div>
-</section></div></main><div id="rustdoc-vars" data-root-path="../../" data-current-crate="pcs" data-themes="ayu,dark,light" data-resource-suffix="" data-rustdoc-version="1.62.0 (a8314ef7d 2022-06-27)" ></div>
+</section></div></main><div id="rustdoc-vars" data-root-path="../../../" data-current-crate="pcs" data-themes="ayu,dark,light" data-resource-suffix="" data-rustdoc-version="1.62.1 (e092d0b6b 2022-07-16)" ></div>
 </body></html>

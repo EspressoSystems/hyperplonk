@@ -1,9 +1,9 @@
-<!DOCTYPE html><html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1.0"><meta name="generator" content="rustdoc"><meta name="description" content="Source of the Rust file `pcs/src/util.rs`."><meta name="keywords" content="rust, rustlang, rust-lang"><title>util.rs - source</title><link rel="preload" as="font" type="font/woff2" crossorigin href="../../SourceSerif4-Regular.ttf.woff2"><link rel="preload" as="font" type="font/woff2" crossorigin href="../../FiraSans-Regular.woff2"><link rel="preload" as="font" type="font/woff2" crossorigin href="../../FiraSans-Medium.woff2"><link rel="preload" as="font" type="font/woff2" crossorigin href="../../SourceCodePro-Regular.ttf.woff2"><link rel="preload" as="font" type="font/woff2" crossorigin href="../../SourceSerif4-Bold.ttf.woff2"><link rel="preload" as="font" type="font/woff2" crossorigin href="../../SourceCodePro-Semibold.ttf.woff2"><link rel="stylesheet" type="text/css" href="../../normalize.css"><link rel="stylesheet" type="text/css" href="../../rustdoc.css" id="mainThemeStyle"><link rel="stylesheet" type="text/css" href="../../ayu.css" disabled><link rel="stylesheet" type="text/css" href="../../dark.css" disabled><link rel="stylesheet" type="text/css" href="../../light.css" id="themeStyle"><script id="default-settings" ></script><script src="../../storage.js"></script><script src="../../crates.js"></script><script defer src="../../main.js"></script><script defer src="../../source-script.js"></script><script defer src="../../source-files.js"></script>
-    <noscript><link rel="stylesheet" href="../../noscript.css"></noscript><link rel="alternate icon" type="image/png" href="../../favicon-16x16.png"><link rel="alternate icon" type="image/png" href="../../favicon-32x32.png"><link rel="icon" type="image/svg+xml" href="../../favicon.svg"></head><body class="rustdoc source"><!--[if lte IE 11]><div class="warning">This old browser is unsupported and will most likely display funky things.</div><![endif]--><nav class="mobile-topbar"><button class="sidebar-menu-toggle">&#9776;</button><a class="sidebar-logo" href="../../pcs/index.html"><div class="logo-container"><img class="rust-logo" src="../../rust-logo.svg" alt="logo"></div>
+<!DOCTYPE html><html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1.0"><meta name="generator" content="rustdoc"><meta name="description" content="Source of the Rust file `pcs/src/multilinear_kzg/util.rs`."><meta name="keywords" content="rust, rustlang, rust-lang"><title>util.rs - source</title><link rel="preload" as="font" type="font/woff2" crossorigin href="../../../SourceSerif4-Regular.ttf.woff2"><link rel="preload" as="font" type="font/woff2" crossorigin href="../../../FiraSans-Regular.woff2"><link rel="preload" as="font" type="font/woff2" crossorigin href="../../../FiraSans-Medium.woff2"><link rel="preload" as="font" type="font/woff2" crossorigin href="../../../SourceCodePro-Regular.ttf.woff2"><link rel="preload" as="font" type="font/woff2" crossorigin href="../../../SourceSerif4-Bold.ttf.woff2"><link rel="preload" as="font" type="font/woff2" crossorigin href="../../../SourceCodePro-Semibold.ttf.woff2"><link rel="stylesheet" type="text/css" href="../../../normalize.css"><link rel="stylesheet" type="text/css" href="../../../rustdoc.css" id="mainThemeStyle"><link rel="stylesheet" type="text/css" href="../../../ayu.css" disabled><link rel="stylesheet" type="text/css" href="../../../dark.css" disabled><link rel="stylesheet" type="text/css" href="../../../light.css" id="themeStyle"><script id="default-settings" ></script><script src="../../../storage.js"></script><script src="../../../crates.js"></script><script defer src="../../../main.js"></script><script defer src="../../../source-script.js"></script><script defer src="../../../source-files.js"></script>
+    <noscript><link rel="stylesheet" href="../../../noscript.css"></noscript><link rel="alternate icon" type="image/png" href="../../../favicon-16x16.png"><link rel="alternate icon" type="image/png" href="../../../favicon-32x32.png"><link rel="icon" type="image/svg+xml" href="../../../favicon.svg"></head><body class="rustdoc source"><!--[if lte IE 11]><div class="warning">This old browser is unsupported and will most likely display funky things.</div><![endif]--><nav class="mobile-topbar"><button class="sidebar-menu-toggle">&#9776;</button><a class="sidebar-logo" href="../../../pcs/index.html"><div class="logo-container"><img class="rust-logo" src="../../../rust-logo.svg" alt="logo"></div>
         </a><h2 class="location"></h2>
     </nav>
-    <nav class="sidebar"><a class="sidebar-logo" href="../../pcs/index.html"><div class="logo-container"><img class="rust-logo" src="../../rust-logo.svg" alt="logo"></div>
-        </a></nav><main><div class="width-limiter"><div class="sub-container"><a class="sub-logo-container" href="../../pcs/index.html"><img class="rust-logo" src="../../rust-logo.svg" alt="logo"></a><nav class="sub"><div class="theme-picker hidden"><button id="theme-picker" aria-label="Pick another theme!" aria-haspopup="menu" title="themes"><img width="22" height="22" alt="Pick another theme!" src="../../brush.svg"></button><div id="theme-choices" role="menu"></div></div><form class="search-form"><div class="search-container"><span></span><input class="search-input" name="search" autocomplete="off" spellcheck="false" placeholder="Click or press ‘S’ to search, ‘?’ for more options…" type="search"><button type="button" id="help-button" title="help">?</button><a id="settings-menu" href="../../settings.html" title="settings"><img width="22" height="22" alt="Change settings" src="../../wheel.svg"></a></div></form></nav></div><section id="main-content" class="content"><div class="example-wrap"><pre class="line-numbers"><span id="1">1</span>
+    <nav class="sidebar"><a class="sidebar-logo" href="../../../pcs/index.html"><div class="logo-container"><img class="rust-logo" src="../../../rust-logo.svg" alt="logo"></div>
+        </a></nav><main><div class="width-limiter"><div class="sub-container"><a class="sub-logo-container" href="../../../pcs/index.html"><img class="rust-logo" src="../../../rust-logo.svg" alt="logo"></a><nav class="sub"><div class="theme-picker hidden"><button id="theme-picker" aria-label="Pick another theme!" aria-haspopup="menu" title="themes"><img width="22" height="22" alt="Pick another theme!" src="../../../brush.svg"></button><div id="theme-choices" role="menu"></div></div><form class="search-form"><div class="search-container"><span></span><input class="search-input" name="search" autocomplete="off" spellcheck="false" placeholder="Click or press ‘S’ to search, ‘?’ for more options…" type="search"><button type="button" id="help-button" title="help">?</button><a id="settings-menu" href="../../../settings.html" title="settings"><img width="22" height="22" alt="Change settings" src="../../../wheel.svg"></a></div></form></nav></div><section id="main-content" class="content"><div class="example-wrap"><pre class="line-numbers"><span id="1">1</span>
 <span id="2">2</span>
 <span id="3">3</span>
 <span id="4">4</span>
@@ -613,6 +613,75 @@
 <span id="608">608</span>
 <span id="609">609</span>
 <span id="610">610</span>
+<span id="611">611</span>
+<span id="612">612</span>
+<span id="613">613</span>
+<span id="614">614</span>
+<span id="615">615</span>
+<span id="616">616</span>
+<span id="617">617</span>
+<span id="618">618</span>
+<span id="619">619</span>
+<span id="620">620</span>
+<span id="621">621</span>
+<span id="622">622</span>
+<span id="623">623</span>
+<span id="624">624</span>
+<span id="625">625</span>
+<span id="626">626</span>
+<span id="627">627</span>
+<span id="628">628</span>
+<span id="629">629</span>
+<span id="630">630</span>
+<span id="631">631</span>
+<span id="632">632</span>
+<span id="633">633</span>
+<span id="634">634</span>
+<span id="635">635</span>
+<span id="636">636</span>
+<span id="637">637</span>
+<span id="638">638</span>
+<span id="639">639</span>
+<span id="640">640</span>
+<span id="641">641</span>
+<span id="642">642</span>
+<span id="643">643</span>
+<span id="644">644</span>
+<span id="645">645</span>
+<span id="646">646</span>
+<span id="647">647</span>
+<span id="648">648</span>
+<span id="649">649</span>
+<span id="650">650</span>
+<span id="651">651</span>
+<span id="652">652</span>
+<span id="653">653</span>
+<span id="654">654</span>
+<span id="655">655</span>
+<span id="656">656</span>
+<span id="657">657</span>
+<span id="658">658</span>
+<span id="659">659</span>
+<span id="660">660</span>
+<span id="661">661</span>
+<span id="662">662</span>
+<span id="663">663</span>
+<span id="664">664</span>
+<span id="665">665</span>
+<span id="666">666</span>
+<span id="667">667</span>
+<span id="668">668</span>
+<span id="669">669</span>
+<span id="670">670</span>
+<span id="671">671</span>
+<span id="672">672</span>
+<span id="673">673</span>
+<span id="674">674</span>
+<span id="675">675</span>
+<span id="676">676</span>
+<span id="677">677</span>
+<span id="678">678</span>
+<span id="679">679</span>
 </pre><pre class="rust"><code><span class="doccomment">//! Useful utilities for KZG PCS</span>
 
 <span class="kw">use</span> <span class="ident"><span class="kw">crate</span>::PCSErrors</span>;
@@ -623,6 +692,36 @@
 };
 <span class="kw">use</span> <span class="ident">ark_std</span>::{<span class="ident">end_timer</span>, <span class="ident">log2</span>, <span class="ident">start_timer</span>};
 <span class="kw">use</span> <span class="ident">poly_iop::bit_decompose</span>;
+<span class="kw">use</span> <span class="ident">std::cmp::max</span>;
+
+<span class="doccomment">/// For an MLE w with `mle_num_vars` variables, and `point_len` number of</span>
+<span class="doccomment">/// points, compute the degree of the univariate polynomial `q(x):= w(l(x))`</span>
+<span class="doccomment">/// where l(x) is a list of polynomials that go through all points.</span>
+<span class="comment">// uni_degree is computed as `mle_num_vars * point_len`:</span>
+<span class="comment">// - each l(x) is of degree `point_len`</span>
+<span class="comment">// - mle has degree one</span>
+<span class="comment">// - worst case is `\prod_{i=0}^{mle_num_vars-1} l_i(x) &lt; point_len * mle_num_vars`</span>
+<span class="attribute">#[<span class="ident">inline</span>]</span>
+<span class="attribute">#[<span class="ident">allow</span>(<span class="ident">dead_code</span>)]</span>
+<span class="kw">pub</span>(<span class="kw">crate</span>) <span class="kw">fn</span> <span class="ident">compute_qx_degree</span>(<span class="ident">mle_num_vars</span>: <span class="ident">usize</span>, <span class="ident">point_len</span>: <span class="ident">usize</span>) -&gt; <span class="ident">usize</span> {
+    <span class="ident">mle_num_vars</span> <span class="op">*</span> <span class="ident">point_len</span>
+}
+
+<span class="doccomment">/// get the domain for the univariate polynomial</span>
+<span class="attribute">#[<span class="ident">inline</span>]</span>
+<span class="kw">pub</span>(<span class="kw">crate</span>) <span class="kw">fn</span> <span class="ident">get_uni_domain</span><span class="op">&lt;</span><span class="ident">F</span>: <span class="ident">PrimeField</span><span class="op">&gt;</span>(
+    <span class="ident">uni_poly_degree</span>: <span class="ident">usize</span>,
+) -&gt; <span class="prelude-ty">Result</span><span class="op">&lt;</span><span class="ident">Radix2EvaluationDomain</span><span class="op">&lt;</span><span class="ident">F</span><span class="op">&gt;</span>, <span class="ident">PCSErrors</span><span class="op">&gt;</span> {
+    <span class="kw">let</span> <span class="ident">domain</span> <span class="op">=</span> <span class="kw">match</span> <span class="ident">Radix2EvaluationDomain</span>::<span class="op">&lt;</span><span class="ident">F</span><span class="op">&gt;</span><span class="ident">::new</span>(<span class="ident">uni_poly_degree</span>) {
+        <span class="prelude-val">Some</span>(<span class="ident">p</span>) =&gt; <span class="ident">p</span>,
+        <span class="prelude-val">None</span> =&gt; {
+            <span class="kw">return</span> <span class="prelude-val">Err</span>(<span class="ident">PCSErrors::InvalidParameters</span>(
+                <span class="string">&quot;failed to build radix 2 domain&quot;</span>.<span class="ident">to_string</span>(),
+            ))
+        },
+    };
+    <span class="prelude-val">Ok</span>(<span class="ident">domain</span>)
+}
 
 <span class="doccomment">/// Compute W \circ l.</span>
 <span class="doccomment">///</span>
@@ -679,9 +778,23 @@
     <span class="ident">num_var</span> <span class="op">+</span> <span class="ident">log2</span>(<span class="ident">polynomials_len</span>) <span class="kw">as</span> <span class="ident">usize</span>
 }
 
+<span class="doccomment">/// Return the SRS size</span>
+<span class="comment">// We require an SRS that is the greater of the two:</span>
+<span class="comment">// - Multilinear srs is bounded by the merged MLS size which is `get_batched_nv(num_var,</span>
+<span class="comment">//   num_witnesses)`</span>
+<span class="comment">// - Univariate srs is bounded by q_x&#39;s degree which is `compute_uni_degree(num_vars,</span>
+<span class="comment">//   num_witnesses)`</span>
+<span class="attribute">#[<span class="ident">inline</span>]</span>
+<span class="attribute">#[<span class="ident">allow</span>(<span class="ident">dead_code</span>)]</span>
+<span class="kw">pub</span>(<span class="kw">crate</span>) <span class="kw">fn</span> <span class="ident">get_srs_size</span>(<span class="ident">num_var</span>: <span class="ident">usize</span>, <span class="ident">num_wires</span>: <span class="ident">usize</span>) -&gt; <span class="ident">usize</span> {
+    <span class="ident">max</span>(
+        <span class="ident">num_var</span> <span class="op">+</span> <span class="ident">log2</span>(<span class="ident">num_wires</span>) <span class="kw">as</span> <span class="ident">usize</span>,
+        (<span class="ident">log2</span>(<span class="ident">num_var</span>) <span class="kw">as</span> <span class="ident">usize</span> <span class="op">+</span> <span class="number">2</span>) <span class="op">*</span> <span class="ident">num_wires</span>,
+    )
+}
 <span class="doccomment">/// merge a set of polynomials. Returns an error if the</span>
 <span class="doccomment">/// polynomials do not share a same number of nvs.</span>
-<span class="kw">pub</span>(<span class="kw">crate</span>) <span class="kw">fn</span> <span class="ident">merge_polynomials</span><span class="op">&lt;</span><span class="ident">F</span>: <span class="ident">PrimeField</span><span class="op">&gt;</span>(
+<span class="kw">pub</span> <span class="kw">fn</span> <span class="ident">merge_polynomials</span><span class="op">&lt;</span><span class="ident">F</span>: <span class="ident">PrimeField</span><span class="op">&gt;</span>(
     <span class="ident">polynomials</span>: <span class="kw-2">&amp;</span>[<span class="kw">impl</span> <span class="ident">MultilinearExtension</span><span class="op">&lt;</span><span class="ident">F</span><span class="op">&gt;</span>],
 ) -&gt; <span class="prelude-ty">Result</span><span class="op">&lt;</span><span class="ident">DenseMultilinearExtension</span><span class="op">&lt;</span><span class="ident">F</span><span class="op">&gt;</span>, <span class="ident">PCSErrors</span><span class="op">&gt;</span> {
     <span class="kw">let</span> <span class="ident">nv</span> <span class="op">=</span> <span class="ident">polynomials</span>[<span class="number">0</span>].<span class="ident">num_vars</span>();
@@ -708,26 +821,10 @@
 <span class="doccomment">/// polynomials that goes through the points</span>
 <span class="kw">pub</span>(<span class="kw">crate</span>) <span class="kw">fn</span> <span class="ident">build_l</span><span class="op">&lt;</span><span class="ident">F</span>: <span class="ident">PrimeField</span><span class="op">&gt;</span>(
     <span class="ident">num_var</span>: <span class="ident">usize</span>,
-    <span class="ident">points</span>: <span class="kw-2">&amp;</span>[<span class="kw-2">&amp;</span>[<span class="ident">F</span>]],
+    <span class="ident">points</span>: <span class="kw-2">&amp;</span>[<span class="ident">Vec</span><span class="op">&lt;</span><span class="ident">F</span><span class="op">&gt;</span>],
+    <span class="ident">domain</span>: <span class="kw-2">&amp;</span><span class="ident">Radix2EvaluationDomain</span><span class="op">&lt;</span><span class="ident">F</span><span class="op">&gt;</span>,
 ) -&gt; <span class="prelude-ty">Result</span><span class="op">&lt;</span><span class="ident">Vec</span><span class="op">&lt;</span><span class="ident">DensePolynomial</span><span class="op">&lt;</span><span class="ident">F</span><span class="op">&gt;</span><span class="op">&gt;</span>, <span class="ident">PCSErrors</span><span class="op">&gt;</span> {
     <span class="kw">let</span> <span class="ident">prefix_len</span> <span class="op">=</span> <span class="ident">log2</span>(<span class="ident">points</span>.<span class="ident">len</span>()) <span class="kw">as</span> <span class="ident">usize</span>;
-
-    <span class="kw">let</span> <span class="ident">uni_degree</span> <span class="op">=</span> <span class="ident">points</span>.<span class="ident">len</span>();
-    <span class="kw">let</span> <span class="ident">small_domain</span> <span class="op">=</span> <span class="kw">match</span> <span class="ident">Radix2EvaluationDomain</span>::<span class="op">&lt;</span><span class="ident">F</span><span class="op">&gt;</span><span class="ident">::new</span>(<span class="ident">uni_degree</span>) {
-        <span class="prelude-val">Some</span>(<span class="ident">p</span>) =&gt; <span class="ident">p</span>,
-        <span class="prelude-val">None</span> =&gt; {
-            <span class="kw">return</span> <span class="prelude-val">Err</span>(<span class="ident">PCSErrors::InvalidParameters</span>(
-                <span class="string">&quot;failed to build radix 2 domain&quot;</span>.<span class="ident">to_string</span>(),
-            ))
-        },
-    };
-
-    <span class="comment">// The following code print out the roots for testing</span>
-    <span class="comment">// println!(&quot;domain root0: {}&quot;, small_domain.element(0));</span>
-    <span class="comment">// println!(&quot;domain root1: {}&quot;, small_domain.element(1));</span>
-    <span class="comment">// println!(&quot;domain root2: {}&quot;, small_domain.element(2));</span>
-    <span class="comment">// println!(&quot;domain root3: {}&quot;, small_domain.element(3));</span>
-
     <span class="kw">let</span> <span class="kw-2">mut</span> <span class="ident">uni_polys</span> <span class="op">=</span> <span class="ident">Vec::new</span>();
 
     <span class="comment">// 1.1 build the indexes and the univariate polys that go through the indexes</span>
@@ -740,17 +837,54 @@
             .<span class="ident">map</span>(<span class="op">|</span><span class="ident">x</span><span class="op">|</span> <span class="ident">F::from</span>(<span class="ident">x</span>[<span class="ident">prefix_len</span> <span class="op">-</span> <span class="ident">i</span> <span class="op">-</span> <span class="number">1</span>]))
             .<span class="ident">collect</span>();
 
-        <span class="ident">uni_polys</span>.<span class="ident">push</span>(<span class="ident">Evaluations::from_vec_and_domain</span>(<span class="ident">eval</span>, <span class="ident">small_domain</span>).<span class="ident">interpolate</span>());
+        <span class="ident">uni_polys</span>.<span class="ident">push</span>(<span class="ident">Evaluations::from_vec_and_domain</span>(<span class="ident">eval</span>, <span class="kw-2">*</span><span class="ident">domain</span>).<span class="ident">interpolate</span>());
     }
 
     <span class="comment">// 1.2 build the actual univariate polys that go through the points</span>
     <span class="kw">for</span> <span class="ident">i</span> <span class="kw">in</span> <span class="number">0</span>..<span class="ident">num_var</span> {
         <span class="kw">let</span> <span class="kw-2">mut</span> <span class="ident">eval</span>: <span class="ident">Vec</span><span class="op">&lt;</span><span class="ident">F</span><span class="op">&gt;</span> <span class="op">=</span> <span class="ident">points</span>.<span class="ident">iter</span>().<span class="ident">map</span>(<span class="op">|</span><span class="ident">x</span><span class="op">|</span> <span class="ident">x</span>[<span class="ident">i</span>]).<span class="ident">collect</span>();
-        <span class="ident">eval</span>.<span class="ident">extend_from_slice</span>(<span class="macro">vec!</span>[<span class="ident">F::zero</span>(); <span class="ident">small_domain</span>.<span class="ident">size</span> <span class="kw">as</span> <span class="ident">usize</span> <span class="op">-</span> <span class="ident">eval</span>.<span class="ident">len</span>()].<span class="ident">as_slice</span>());
-        <span class="ident">uni_polys</span>.<span class="ident">push</span>(<span class="ident">Evaluations::from_vec_and_domain</span>(<span class="ident">eval</span>, <span class="ident">small_domain</span>).<span class="ident">interpolate</span>())
+        <span class="ident">eval</span>.<span class="ident">extend_from_slice</span>(<span class="macro">vec!</span>[<span class="ident">F::zero</span>(); <span class="ident">domain</span>.<span class="ident">size</span> <span class="kw">as</span> <span class="ident">usize</span> <span class="op">-</span> <span class="ident">eval</span>.<span class="ident">len</span>()].<span class="ident">as_slice</span>());
+        <span class="ident">uni_polys</span>.<span class="ident">push</span>(<span class="ident">Evaluations::from_vec_and_domain</span>(<span class="ident">eval</span>, <span class="kw-2">*</span><span class="ident">domain</span>).<span class="ident">interpolate</span>())
     }
 
     <span class="prelude-val">Ok</span>(<span class="ident">uni_polys</span>)
+}
+
+<span class="doccomment">/// Input a list of multilinear polynomials and a list of points,</span>
+<span class="doccomment">/// generate a list of evaluations.</span>
+<span class="comment">// Note that this function is only used for testing verifications.</span>
+<span class="comment">// In practice verifier does not see polynomials, and the `mle_values`</span>
+<span class="comment">// are included in the `batch_proof`.</span>
+<span class="attribute">#[<span class="ident">cfg</span>(<span class="ident">test</span>)]</span>
+<span class="kw">pub</span>(<span class="kw">crate</span>) <span class="kw">fn</span> <span class="ident">generate_evaluations</span><span class="op">&lt;</span><span class="ident">F</span>: <span class="ident">PrimeField</span><span class="op">&gt;</span>(
+    <span class="ident">polynomials</span>: <span class="kw-2">&amp;</span>[<span class="ident">DenseMultilinearExtension</span><span class="op">&lt;</span><span class="ident">F</span><span class="op">&gt;</span>],
+    <span class="ident">points</span>: <span class="kw-2">&amp;</span>[<span class="ident">Vec</span><span class="op">&lt;</span><span class="ident">F</span><span class="op">&gt;</span>],
+) -&gt; <span class="prelude-ty">Result</span><span class="op">&lt;</span><span class="ident">Vec</span><span class="op">&lt;</span><span class="ident">F</span><span class="op">&gt;</span>, <span class="ident">PCSErrors</span><span class="op">&gt;</span> {
+    <span class="kw">if</span> <span class="ident">polynomials</span>.<span class="ident">len</span>() <span class="op">!</span><span class="op">=</span> <span class="ident">points</span>.<span class="ident">len</span>() {
+        <span class="kw">return</span> <span class="prelude-val">Err</span>(<span class="ident">PCSErrors::InvalidParameters</span>(
+            <span class="string">&quot;polynomial length does not match point length&quot;</span>.<span class="ident">to_string</span>(),
+        ));
+    }
+
+    <span class="kw">let</span> <span class="ident">num_var</span> <span class="op">=</span> <span class="ident">polynomials</span>[<span class="number">0</span>].<span class="ident">num_vars</span>;
+    <span class="kw">let</span> <span class="ident">uni_poly_degree</span> <span class="op">=</span> <span class="ident">points</span>.<span class="ident">len</span>();
+    <span class="kw">let</span> <span class="ident">merge_poly</span> <span class="op">=</span> <span class="ident">merge_polynomials</span>(<span class="ident">polynomials</span>)<span class="question-mark">?</span>;
+
+    <span class="kw">let</span> <span class="ident">domain</span> <span class="op">=</span> <span class="ident">get_uni_domain</span>::<span class="op">&lt;</span><span class="ident">F</span><span class="op">&gt;</span>(<span class="ident">uni_poly_degree</span>)<span class="question-mark">?</span>;
+    <span class="kw">let</span> <span class="ident">uni_polys</span> <span class="op">=</span> <span class="ident">build_l</span>(<span class="ident">num_var</span>, <span class="ident">points</span>, <span class="kw-2">&amp;</span><span class="ident">domain</span>)<span class="question-mark">?</span>;
+    <span class="kw">let</span> <span class="kw-2">mut</span> <span class="ident">mle_values</span> <span class="op">=</span> <span class="macro">vec!</span>[];
+
+    <span class="kw">for</span> <span class="ident">i</span> <span class="kw">in</span> <span class="number">0</span>..<span class="ident">uni_poly_degree</span> {
+        <span class="kw">let</span> <span class="ident">point</span>: <span class="ident">Vec</span><span class="op">&lt;</span><span class="ident">F</span><span class="op">&gt;</span> <span class="op">=</span> <span class="ident">uni_polys</span>
+            .<span class="ident">iter</span>()
+            .<span class="ident">rev</span>()
+            .<span class="ident">map</span>(<span class="op">|</span><span class="ident">poly</span><span class="op">|</span> <span class="ident">poly</span>.<span class="ident">evaluate</span>(<span class="kw-2">&amp;</span><span class="ident">domain</span>.<span class="ident">element</span>(<span class="ident">i</span>)))
+            .<span class="ident">collect</span>();
+
+        <span class="kw">let</span> <span class="ident">mle_value</span> <span class="op">=</span> <span class="ident">merge_poly</span>.<span class="ident">evaluate</span>(<span class="kw-2">&amp;</span><span class="ident">point</span>).<span class="ident">unwrap</span>();
+        <span class="ident">mle_values</span>.<span class="ident">push</span>(<span class="ident">mle_value</span>)
+    }
+    <span class="prelude-val">Ok</span>(<span class="ident">mle_values</span>)
 }
 
 <span class="attribute">#[<span class="ident">cfg</span>(<span class="ident">test</span>)]</span>
@@ -956,16 +1090,17 @@
 
     <span class="kw">fn</span> <span class="ident">test_build_l_helper</span><span class="op">&lt;</span><span class="ident">F</span>: <span class="ident">PrimeField</span><span class="op">&gt;</span>() -&gt; <span class="prelude-ty">Result</span><span class="op">&lt;</span>(), <span class="ident">PCSErrors</span><span class="op">&gt;</span> {
         <span class="comment">// point 1 is [1, 2]</span>
-        <span class="kw">let</span> <span class="ident">point1</span> <span class="op">=</span> [<span class="ident">Fr::from</span>(<span class="number">1u64</span>), <span class="ident">Fr::from</span>(<span class="number">2u64</span>)];
+        <span class="kw">let</span> <span class="ident">point1</span> <span class="op">=</span> <span class="macro">vec!</span>[<span class="ident">Fr::from</span>(<span class="number">1u64</span>), <span class="ident">Fr::from</span>(<span class="number">2u64</span>)];
 
         <span class="comment">// point 2 is [3, 4]</span>
-        <span class="kw">let</span> <span class="ident">point2</span> <span class="op">=</span> [<span class="ident">Fr::from</span>(<span class="number">3u64</span>), <span class="ident">Fr::from</span>(<span class="number">4u64</span>)];
+        <span class="kw">let</span> <span class="ident">point2</span> <span class="op">=</span> <span class="macro">vec!</span>[<span class="ident">Fr::from</span>(<span class="number">3u64</span>), <span class="ident">Fr::from</span>(<span class="number">4u64</span>)];
 
         <span class="comment">// point 3 is [5, 6]</span>
-        <span class="kw">let</span> <span class="ident">point3</span> <span class="op">=</span> [<span class="ident">Fr::from</span>(<span class="number">5u64</span>), <span class="ident">Fr::from</span>(<span class="number">6u64</span>)];
+        <span class="kw">let</span> <span class="ident">point3</span> <span class="op">=</span> <span class="macro">vec!</span>[<span class="ident">Fr::from</span>(<span class="number">5u64</span>), <span class="ident">Fr::from</span>(<span class="number">6u64</span>)];
 
         {
-            <span class="kw">let</span> <span class="ident">l</span> <span class="op">=</span> <span class="ident">build_l</span>(<span class="number">2</span>, <span class="kw-2">&amp;</span>[<span class="kw-2">&amp;</span><span class="ident">point1</span>, <span class="kw-2">&amp;</span><span class="ident">point2</span>])<span class="question-mark">?</span>;
+            <span class="kw">let</span> <span class="ident">domain</span> <span class="op">=</span> <span class="ident">get_uni_domain</span>::<span class="op">&lt;</span><span class="ident">Fr</span><span class="op">&gt;</span>(<span class="number">2</span>)<span class="question-mark">?</span>;
+            <span class="kw">let</span> <span class="ident">l</span> <span class="op">=</span> <span class="ident">build_l</span>(<span class="number">2</span>, <span class="kw-2">&amp;</span>[<span class="ident">point1</span>.<span class="ident">clone</span>(), <span class="ident">point2</span>.<span class="ident">clone</span>()], <span class="kw-2">&amp;</span><span class="ident">domain</span>)<span class="question-mark">?</span>;
 
             <span class="comment">// roots: [1, -1]</span>
             <span class="comment">// l0 = -1/2 * x + 1/2</span>
@@ -984,7 +1119,8 @@
         }
 
         {
-            <span class="kw">let</span> <span class="ident">l</span> <span class="op">=</span> <span class="ident">build_l</span>(<span class="number">2</span>, <span class="kw-2">&amp;</span>[<span class="kw-2">&amp;</span><span class="ident">point1</span>, <span class="kw-2">&amp;</span><span class="ident">point2</span>, <span class="kw-2">&amp;</span><span class="ident">point3</span>])<span class="question-mark">?</span>;
+            <span class="kw">let</span> <span class="ident">domain</span> <span class="op">=</span> <span class="ident">get_uni_domain</span>::<span class="op">&lt;</span><span class="ident">Fr</span><span class="op">&gt;</span>(<span class="number">3</span>)<span class="question-mark">?</span>;
+            <span class="kw">let</span> <span class="ident">l</span> <span class="op">=</span> <span class="ident">build_l</span>(<span class="number">2</span>, <span class="kw-2">&amp;</span>[<span class="ident">point1</span>, <span class="ident">point2</span>, <span class="ident">point3</span>], <span class="kw-2">&amp;</span><span class="ident">domain</span>)<span class="question-mark">?</span>;
 
             <span class="comment">// sage: q = 52435875175126190479447740508185965837690552500527637822603658699938581184513</span>
             <span class="comment">// sage: P.&lt;x&gt; = PolynomialRing(Zmod(q))</span>
@@ -1127,20 +1263,21 @@
         <span class="kw">let</span> <span class="ident">r</span> <span class="op">=</span> <span class="ident">Fr::from</span>(<span class="number">42u64</span>);
 
         <span class="comment">// point 1 is [1, 2]</span>
-        <span class="kw">let</span> <span class="ident">point1</span> <span class="op">=</span> [<span class="ident">Fr::from</span>(<span class="number">1u64</span>), <span class="ident">Fr::from</span>(<span class="number">2u64</span>)];
+        <span class="kw">let</span> <span class="ident">point1</span> <span class="op">=</span> <span class="macro">vec!</span>[<span class="ident">Fr::from</span>(<span class="number">1u64</span>), <span class="ident">Fr::from</span>(<span class="number">2u64</span>)];
 
         <span class="comment">// point 2 is [3, 4]</span>
-        <span class="kw">let</span> <span class="ident">point2</span> <span class="op">=</span> [<span class="ident">Fr::from</span>(<span class="number">3u64</span>), <span class="ident">Fr::from</span>(<span class="number">4u64</span>)];
+        <span class="kw">let</span> <span class="ident">point2</span> <span class="op">=</span> <span class="macro">vec!</span>[<span class="ident">Fr::from</span>(<span class="number">3u64</span>), <span class="ident">Fr::from</span>(<span class="number">4u64</span>)];
 
         <span class="comment">// point 3 is [5, 6]</span>
-        <span class="kw">let</span> <span class="ident">point3</span> <span class="op">=</span> [<span class="ident">Fr::from</span>(<span class="number">5u64</span>), <span class="ident">Fr::from</span>(<span class="number">6u64</span>)];
+        <span class="kw">let</span> <span class="ident">point3</span> <span class="op">=</span> <span class="macro">vec!</span>[<span class="ident">Fr::from</span>(<span class="number">5u64</span>), <span class="ident">Fr::from</span>(<span class="number">6u64</span>)];
 
         {
+            <span class="kw">let</span> <span class="ident">domain</span> <span class="op">=</span> <span class="ident">get_uni_domain</span>::<span class="op">&lt;</span><span class="ident">Fr</span><span class="op">&gt;</span>(<span class="number">2</span>)<span class="question-mark">?</span>;
             <span class="comment">// w = (3x1x2 + 2x2)(1-x0) + (x1x2 + x1)x0</span>
             <span class="comment">// with evaluations: [0,2,0,5,0,0,1,2]</span>
             <span class="kw">let</span> <span class="ident">w</span> <span class="op">=</span> <span class="ident">merge_polynomials</span>(<span class="kw-2">&amp;</span>[<span class="ident">w1</span>.<span class="ident">clone</span>(), <span class="ident">w2</span>.<span class="ident">clone</span>()])<span class="question-mark">?</span>;
 
-            <span class="kw">let</span> <span class="ident">l</span> <span class="op">=</span> <span class="ident">build_l</span>(<span class="number">2</span>, <span class="kw-2">&amp;</span>[<span class="kw-2">&amp;</span><span class="ident">point1</span>, <span class="kw-2">&amp;</span><span class="ident">point2</span>])<span class="question-mark">?</span>;
+            <span class="kw">let</span> <span class="ident">l</span> <span class="op">=</span> <span class="ident">build_l</span>(<span class="number">2</span>, <span class="kw-2">&amp;</span>[<span class="ident">point1</span>.<span class="ident">clone</span>(), <span class="ident">point2</span>.<span class="ident">clone</span>()], <span class="kw-2">&amp;</span><span class="ident">domain</span>)<span class="question-mark">?</span>;
 
             <span class="comment">// sage: P.&lt;x&gt; = PolynomialRing(ZZ)</span>
             <span class="comment">// sage: l0 = -1/2 * x + 1/2</span>
@@ -1163,12 +1300,13 @@
         }
 
         {
+            <span class="kw">let</span> <span class="ident">domain</span> <span class="op">=</span> <span class="ident">get_uni_domain</span>::<span class="op">&lt;</span><span class="ident">Fr</span><span class="op">&gt;</span>(<span class="number">3</span>)<span class="question-mark">?</span>;
             <span class="comment">// W = (3x1x2 + 2x2)    * (1-y1)    * (1-y2)</span>
             <span class="comment">//   + (x1x2 + x1)      * (1-y1)    * y2</span>
             <span class="comment">//   + (x1 + x2)        * y1        * (1-y2)</span>
             <span class="kw">let</span> <span class="ident">w</span> <span class="op">=</span> <span class="ident">merge_polynomials</span>(<span class="kw-2">&amp;</span>[<span class="ident">w1</span>, <span class="ident">w2</span>, <span class="ident">w3</span>])<span class="question-mark">?</span>;
 
-            <span class="kw">let</span> <span class="ident">l</span> <span class="op">=</span> <span class="ident">build_l</span>(<span class="number">2</span>, <span class="kw-2">&amp;</span>[<span class="kw-2">&amp;</span><span class="ident">point1</span>, <span class="kw-2">&amp;</span><span class="ident">point2</span>, <span class="kw-2">&amp;</span><span class="ident">point3</span>])<span class="question-mark">?</span>;
+            <span class="kw">let</span> <span class="ident">l</span> <span class="op">=</span> <span class="ident">build_l</span>(<span class="number">2</span>, <span class="kw-2">&amp;</span>[<span class="ident">point1</span>, <span class="ident">point2</span>, <span class="ident">point3</span>], <span class="kw-2">&amp;</span><span class="ident">domain</span>)<span class="question-mark">?</span>;
 
             <span class="comment">// l0 =</span>
             <span class="comment">// 13108968793781547619861935127046491459422638125131909455650914674984645296128*x^3 +</span>
@@ -1224,5 +1362,5 @@
     }
 }
 </code></pre></div>
-</section></div></main><div id="rustdoc-vars" data-root-path="../../" data-current-crate="pcs" data-themes="ayu,dark,light" data-resource-suffix="" data-rustdoc-version="1.62.0 (a8314ef7d 2022-06-27)" ></div>
+</section></div></main><div id="rustdoc-vars" data-root-path="../../../" data-current-crate="pcs" data-themes="ayu,dark,light" data-resource-suffix="" data-rustdoc-version="1.62.1 (e092d0b6b 2022-07-16)" ></div>
 </body></html>
