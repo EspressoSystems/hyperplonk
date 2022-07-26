@@ -1,0 +1,17 @@
+[package]
+name = "transcript"
+version = "0.1.0"
+edition = "2021"
+
+# See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
+
+[dependencies]
+
+merlin = { version = "3.0.0", default-features = false }
+
+
+ark-ff = { version = "^0.3.0", default-features = false }
+ark-serialize =  { version = "^0.3.0", default-features = false }
+ark-std = { version = "^0.3.0", default-features = false }
+
+displaydoc = { version = "0.2.3", default-features = false }

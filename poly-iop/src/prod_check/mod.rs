@@ -1,8 +1,9 @@
 //! Main module for the Permutation Check protocol
 
-use crate::{errors::PolyIOPErrors, transcript::IOPTranscript, VirtualPolynomial, ZeroCheck};
+use crate::{errors::PolyIOPErrors, VirtualPolynomial, ZeroCheck};
 use ark_ff::PrimeField;
 use ark_poly::DenseMultilinearExtension;
+use transcript::IOPTranscript;
 
 /// A ProductCheck is derived from ZeroCheck.
 ///

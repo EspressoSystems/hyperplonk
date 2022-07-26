@@ -7,8 +7,19 @@ use ark_poly::{
     MultilinearExtension, Polynomial, Radix2EvaluationDomain,
 };
 use ark_std::{end_timer, log2, start_timer};
-use poly_iop::bit_decompose;
 use std::cmp::max;
+
+/// Decompose an integer into a binary vector in little endian.
+#[allow(dead_code)]
+pub(crate) fn bit_decompose(input: u64, num_var: usize) -> Vec<bool> {
+    let mut res = Vec::with_capacity(num_var);
+    let mut i = input;
+    for _ in 0..num_var {
+        res.push(i & 1 == 1);
+        i >>= 1;
+    }
+    res
+}
 
 /// For an MLE w with `mle_num_vars` variables, and `point_len` number of
 /// points, compute the degree of the univariate polynomial `q(x):= w(l(x))`

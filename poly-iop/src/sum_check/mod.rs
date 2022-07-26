@@ -3,13 +3,13 @@
 use crate::{
     errors::PolyIOPErrors,
     structs::{IOPProof, IOPProverState, IOPVerifierState},
-    transcript::IOPTranscript,
     virtual_poly::{VPAuxInfo, VirtualPolynomial},
     PolyIOP,
 };
 use ark_ff::PrimeField;
 use ark_poly::DenseMultilinearExtension;
 use ark_std::{end_timer, start_timer};
+use transcript::IOPTranscript;
 
 mod prover;
 mod verifier;
@@ -160,7 +160,7 @@ impl<F: PrimeField> SumCheck<F> for PolyIOP<F> {
     ) -> Result<Self::Proof, PolyIOPErrors> {
         let start = start_timer!(|| "sum check prove");
 
-        transcript.append_aux_info(&poly.aux_info)?;
+        transcript.append_serializable_element(b"aux info", &poly.aux_info)?;
 
         let mut prover_state = IOPProverState::prover_init(poly)?;
         let mut challenge = None;
@@ -168,7 +168,7 @@ impl<F: PrimeField> SumCheck<F> for PolyIOP<F> {
         for _ in 0..poly.aux_info.num_variables {
             let prover_msg =
                 IOPProverState::prove_round_and_update_state(&mut prover_state, &challenge)?;
-            transcript.append_prover_message(&prover_msg)?;
+            transcript.append_serializable_element(b"prover msg", &prover_msg)?;
             prover_msgs.push(prover_msg);
             challenge = Some(transcript.get_and_append_challenge(b"Internal round")?);
         }
@@ -188,11 +188,11 @@ impl<F: PrimeField> SumCheck<F> for PolyIOP<F> {
     ) -> Result<Self::SumCheckSubClaim, PolyIOPErrors> {
         let start = start_timer!(|| "sum check verify");
 
-        transcript.append_aux_info(aux_info)?;
+        transcript.append_serializable_element(b"aux_info", aux_info)?;
         let mut verifier_state = IOPVerifierState::verifier_init(aux_info);
         for i in 0..aux_info.num_variables {
             let prover_msg = proof.proofs.get(i).expect("proof is incomplete");
-            transcript.append_prover_message(prover_msg)?;
+            transcript.append_serializable_element(b"prover_msg", prover_msg)?;
             IOPVerifierState::verify_round_and_update_state(
                 &mut verifier_state,
                 prover_msg,

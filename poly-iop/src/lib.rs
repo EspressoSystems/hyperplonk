@@ -7,7 +7,6 @@ mod perm_check;
 mod prod_check;
 mod structs;
 mod sum_check;
-mod transcript;
 mod utils;
 mod virtual_poly;
 mod zero_check;
@@ -20,7 +19,6 @@ pub use perm_check::{
 };
 pub use prod_check::ProductCheck;
 pub use sum_check::SumCheck;
-pub use transcript::IOPTranscript;
 pub use utils::*;
 pub use virtual_poly::{VPAuxInfo, VirtualPolynomial};
 pub use zero_check::ZeroCheck;

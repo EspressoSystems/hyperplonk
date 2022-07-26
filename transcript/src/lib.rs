@@ -3,12 +3,13 @@
 //! useful.
 //! TODO(ZZ): decide which APIs need to be public.
 
+mod errors;
+pub use errors::TranscriptErrors;
+
 use ark_ff::PrimeField;
 use ark_serialize::CanonicalSerialize;
 use merlin::Transcript;
 use std::marker::PhantomData;
-
-use crate::{errors::PolyIOPErrors, structs::IOPProverMessage, to_bytes, virtual_poly::VPAuxInfo};
 
 /// An IOP transcript consists of a Merlin transcript and a flag `is_empty` to
 /// indicate that if the transcript is empty.
@@ -27,6 +28,7 @@ pub struct IOPTranscript<F: PrimeField> {
     phantom: PhantomData<F>,
 }
 
+// TODO: Make this into a Trait
 impl<F: PrimeField> IOPTranscript<F> {
     /// Create a new IOP transcript.
     pub fn new(label: &'static [u8]) -> Self {
@@ -42,20 +44,9 @@ impl<F: PrimeField> IOPTranscript<F> {
         &mut self,
         label: &'static [u8],
         msg: &[u8],
-    ) -> Result<(), PolyIOPErrors> {
+    ) -> Result<(), TranscriptErrors> {
         self.transcript.append_message(label, msg);
         self.is_empty = false;
-        Ok(())
-    }
-
-    // Append the aux information for a virtual polynomial.
-    pub(crate) fn append_aux_info(&mut self, aux_info: &VPAuxInfo<F>) -> Result<(), PolyIOPErrors> {
-        let message = format!(
-            "max_mul {} num_var {}",
-            aux_info.max_degree, aux_info.num_variables
-        );
-        self.append_message(b"aux info", message.as_bytes())?;
-
         Ok(())
     }
 
@@ -64,7 +55,7 @@ impl<F: PrimeField> IOPTranscript<F> {
         &mut self,
         label: &'static [u8],
         field_elem: &F,
-    ) -> Result<(), PolyIOPErrors> {
+    ) -> Result<(), TranscriptErrors> {
         self.append_message(label, &to_bytes!(field_elem)?)
     }
 
@@ -73,19 +64,8 @@ impl<F: PrimeField> IOPTranscript<F> {
         &mut self,
         label: &'static [u8],
         group_elem: &S,
-    ) -> Result<(), PolyIOPErrors> {
+    ) -> Result<(), TranscriptErrors> {
         self.append_message(label, &to_bytes!(group_elem)?)
-    }
-
-    // Append a prover message to the transcript.
-    pub(crate) fn append_prover_message(
-        &mut self,
-        prover_message: &IOPProverMessage<F>,
-    ) -> Result<(), PolyIOPErrors> {
-        for e in prover_message.evaluations.iter() {
-            self.append_field_element(b"prover_message", e)?;
-        }
-        Ok(())
     }
 
     // Generate the challenge from the current transcript
@@ -93,10 +73,13 @@ impl<F: PrimeField> IOPTranscript<F> {
     //
     // The output field element is statistical uniform as long
     // as the field has a size less than 2^384.
-    pub fn get_and_append_challenge(&mut self, label: &'static [u8]) -> Result<F, PolyIOPErrors> {
+    pub fn get_and_append_challenge(
+        &mut self,
+        label: &'static [u8],
+    ) -> Result<F, TranscriptErrors> {
         //  we need to reject when transcript is empty
         if self.is_empty {
-            return Err(PolyIOPErrors::InvalidTranscript(
+            return Err(TranscriptErrors::InvalidTranscript(
                 "transcript is empty".to_string(),
             ));
         }
@@ -114,14 +97,14 @@ impl<F: PrimeField> IOPTranscript<F> {
     //
     // The output field element are statistical uniform as long
     // as the field has a size less than 2^384.
-    pub(crate) fn get_and_append_challenge_vectors(
+    pub fn get_and_append_challenge_vectors(
         &mut self,
         label: &'static [u8],
         len: usize,
-    ) -> Result<Vec<F>, PolyIOPErrors> {
+    ) -> Result<Vec<F>, TranscriptErrors> {
         //  we need to reject when transcript is empty
         if self.is_empty {
-            return Err(PolyIOPErrors::InvalidTranscript(
+            return Err(TranscriptErrors::InvalidTranscript(
                 "transcript is empty".to_string(),
             ));
         }
@@ -132,4 +115,15 @@ impl<F: PrimeField> IOPTranscript<F> {
         }
         Ok(res)
     }
+}
+
+/// Takes as input a struct, and converts them to a series of bytes. All traits
+/// that implement `CanonicalSerialize` can be automatically converted to bytes
+/// in this manner.
+#[macro_export]
+macro_rules! to_bytes {
+    ($x:expr) => {{
+        let mut buf = ark_std::vec![];
+        ark_serialize::CanonicalSerialize::serialize($x, &mut buf).map(|_| buf)
+    }};
 }

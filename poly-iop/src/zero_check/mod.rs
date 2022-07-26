@@ -1,8 +1,9 @@
 //! Main module for the ZeroCheck protocol.
 
-use crate::{errors::PolyIOPErrors, sum_check::SumCheck, transcript::IOPTranscript, PolyIOP};
+use crate::{errors::PolyIOPErrors, sum_check::SumCheck, PolyIOP};
 use ark_ff::PrimeField;
 use ark_std::{end_timer, start_timer};
+use transcript::IOPTranscript;
 
 /// A zero check IOP subclaim for \hat f(x) is 0, consists of the following:
 ///   - the SubClaim from the SumCheck

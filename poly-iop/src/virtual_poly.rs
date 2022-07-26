@@ -4,6 +4,7 @@
 use crate::errors::PolyIOPErrors;
 use ark_ff::PrimeField;
 use ark_poly::{DenseMultilinearExtension, MultilinearExtension};
+use ark_serialize::{CanonicalSerialize, SerializationError, Write};
 use ark_std::{
     end_timer,
     rand::{Rng, RngCore},
@@ -51,7 +52,7 @@ pub struct VirtualPolynomial<F: PrimeField> {
     raw_pointers_lookup_table: HashMap<*const DenseMultilinearExtension<F>, usize>,
 }
 
-#[derive(Clone, Debug, Default, PartialEq)]
+#[derive(Clone, Debug, Default, PartialEq, CanonicalSerialize)]
 /// Auxiliary information about the multilinear polynomial
 pub struct VPAuxInfo<F: PrimeField> {
     /// max number of multiplicands in each product
