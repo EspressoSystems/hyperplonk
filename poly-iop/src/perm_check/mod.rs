@@ -1,13 +1,14 @@
 //! Main module for the Permutation Check protocol
 
 use crate::{
-    errors::PolyIOPErrors, perm_check::util::compute_prod_0, structs::IOPProof,
-    transcript::IOPTranscript, utils::get_index, PolyIOP, VirtualPolynomial, ZeroCheck,
+    errors::PolyIOPErrors, perm_check::util::compute_prod_0, structs::IOPProof, utils::get_index,
+    PolyIOP, VirtualPolynomial, ZeroCheck,
 };
 use ark_ff::PrimeField;
 use ark_poly::DenseMultilinearExtension;
 use ark_std::{end_timer, start_timer};
 use std::rc::Rc;
+use transcript::IOPTranscript;
 
 pub mod util;
 
@@ -221,7 +222,7 @@ impl<F: PrimeField> PermutationCheck<F> for PolyIOP<F> {
         prod_x_binding: &F,
     ) -> Result<(), PolyIOPErrors> {
         if challenge.alpha.is_some() {
-            return Err(PolyIOPErrors::InvalidTranscript(
+            return Err(PolyIOPErrors::InvalidChallenge(
                 "alpha should not be sampled at the current stage".to_string(),
             ));
         }
@@ -268,7 +269,7 @@ impl<F: PrimeField> PermutationCheck<F> for PolyIOP<F> {
         let start = start_timer!(|| "compute all prod polynomial");
 
         if challenge.alpha.is_some() {
-            return Err(PolyIOPErrors::InvalidTranscript(
+            return Err(PolyIOPErrors::InvalidChallenge(
                 "alpha is already sampled".to_string(),
             ));
         }
@@ -372,7 +373,7 @@ impl<F: PrimeField> PermutationCheck<F> for PolyIOP<F> {
         let alpha = match challenge.alpha {
             Some(p) => p,
             None => {
-                return Err(PolyIOPErrors::InvalidTranscript(
+                return Err(PolyIOPErrors::InvalidChallenge(
                     "alpha is not sampled yet".to_string(),
                 ))
             },

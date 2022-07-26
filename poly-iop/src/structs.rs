@@ -2,17 +2,18 @@
 
 use crate::VirtualPolynomial;
 use ark_ff::PrimeField;
+use ark_serialize::{CanonicalSerialize, SerializationError, Write};
 
 /// An IOP proof is a collections of messages from prover to verifier at each
 /// round through the interactive protocol.
-#[derive(Clone, Debug, Default, PartialEq)]
+#[derive(Clone, Debug, Default, PartialEq, CanonicalSerialize)]
 pub struct IOPProof<F: PrimeField> {
     pub proofs: Vec<IOPProverMessage<F>>,
 }
 
 /// A message from the prover to the verifier at a given round
 /// is a list of evaluations.
-#[derive(Clone, Debug, Default, PartialEq)]
+#[derive(Clone, Debug, Default, PartialEq, CanonicalSerialize)]
 pub struct IOPProverMessage<F: PrimeField> {
     pub(crate) evaluations: Vec<F>,
 }

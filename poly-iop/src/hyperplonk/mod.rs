@@ -1,12 +1,10 @@
 //! Main module for the HyperPlonk PolyIOP.
 
-use crate::{
-    errors::PolyIOPErrors, perm_check::PermutationCheck, transcript::IOPTranscript,
-    zero_check::ZeroCheck,
-};
+use crate::{errors::PolyIOPErrors, perm_check::PermutationCheck, zero_check::ZeroCheck};
 use ark_ff::PrimeField;
 use ark_poly::DenseMultilinearExtension;
 use std::rc::Rc;
+use transcript::IOPTranscript;
 
 /// A trait for HyperPlonk Poly-IOPs
 pub trait HyperPlonkPIOP<F: PrimeField> {
