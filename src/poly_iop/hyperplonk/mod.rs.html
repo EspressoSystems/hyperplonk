@@ -129,17 +129,13 @@
 <span id="124">124</span>
 <span id="125">125</span>
 <span id="126">126</span>
-<span id="127">127</span>
-<span id="128">128</span>
 </pre><pre class="rust"><code><span class="doccomment">//! Main module for the HyperPlonk PolyIOP.</span>
 
-<span class="kw">use</span> <span class="kw">crate</span>::{
-    <span class="ident">errors::PolyIOPErrors</span>, <span class="ident">perm_check::PermutationCheck</span>, <span class="ident">transcript::IOPTranscript</span>,
-    <span class="ident">zero_check::ZeroCheck</span>,
-};
+<span class="kw">use</span> <span class="kw">crate</span>::{<span class="ident">errors::PolyIOPErrors</span>, <span class="ident">perm_check::PermutationCheck</span>, <span class="ident">zero_check::ZeroCheck</span>};
 <span class="kw">use</span> <span class="ident">ark_ff::PrimeField</span>;
 <span class="kw">use</span> <span class="ident">ark_poly::DenseMultilinearExtension</span>;
 <span class="kw">use</span> <span class="ident">std::rc::Rc</span>;
+<span class="kw">use</span> <span class="ident">transcript::IOPTranscript</span>;
 
 <span class="doccomment">/// A trait for HyperPlonk Poly-IOPs</span>
 <span class="kw">pub</span> <span class="kw">trait</span> <span class="ident">HyperPlonkPIOP</span><span class="op">&lt;</span><span class="ident">F</span>: <span class="ident">PrimeField</span><span class="op">&gt;</span> {

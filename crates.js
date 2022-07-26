@@ -1,1 +1,1 @@
-window.ALL_CRATES = ["hyperplonk","pcs","poly_iop"];
+window.ALL_CRATES = ["hyperplonk","pcs","poly_iop","transcript"];

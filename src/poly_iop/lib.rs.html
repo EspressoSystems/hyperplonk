@@ -46,8 +46,6 @@
 <span id="41">41</span>
 <span id="42">42</span>
 <span id="43">43</span>
-<span id="44">44</span>
-<span id="45">45</span>
 </pre><pre class="rust"><code><span class="kw">use</span> <span class="ident">ark_ff::PrimeField</span>;
 <span class="kw">use</span> <span class="ident">std::marker::PhantomData</span>;
 
@@ -57,7 +55,6 @@
 <span class="kw">mod</span> <span class="ident">prod_check</span>;
 <span class="kw">mod</span> <span class="ident">structs</span>;
 <span class="kw">mod</span> <span class="ident">sum_check</span>;
-<span class="kw">mod</span> <span class="ident">transcript</span>;
 <span class="kw">mod</span> <span class="ident">utils</span>;
 <span class="kw">mod</span> <span class="ident">virtual_poly</span>;
 <span class="kw">mod</span> <span class="ident">zero_check</span>;
@@ -70,7 +67,6 @@
 };
 <span class="kw">pub</span> <span class="kw">use</span> <span class="ident">prod_check::ProductCheck</span>;
 <span class="kw">pub</span> <span class="kw">use</span> <span class="ident">sum_check::SumCheck</span>;
-<span class="kw">pub</span> <span class="kw">use</span> <span class="ident">transcript::IOPTranscript</span>;
 <span class="kw">pub</span> <span class="kw">use</span> <span class="ident">utils</span>::<span class="kw-2">*</span>;
 <span class="kw">pub</span> <span class="kw">use</span> <span class="ident">virtual_poly</span>::{<span class="ident">VPAuxInfo</span>, <span class="ident">VirtualPolynomial</span>};
 <span class="kw">pub</span> <span class="kw">use</span> <span class="ident">zero_check::ZeroCheck</span>;

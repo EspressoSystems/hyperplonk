@@ -117,11 +117,13 @@
 <span id="112">112</span>
 <span id="113">113</span>
 <span id="114">114</span>
+<span id="115">115</span>
 </pre><pre class="rust"><code><span class="doccomment">//! Main module for the Permutation Check protocol</span>
 
-<span class="kw">use</span> <span class="kw">crate</span>::{<span class="ident">errors::PolyIOPErrors</span>, <span class="ident">transcript::IOPTranscript</span>, <span class="ident">VirtualPolynomial</span>, <span class="ident">ZeroCheck</span>};
+<span class="kw">use</span> <span class="kw">crate</span>::{<span class="ident">errors::PolyIOPErrors</span>, <span class="ident">VirtualPolynomial</span>, <span class="ident">ZeroCheck</span>};
 <span class="kw">use</span> <span class="ident">ark_ff::PrimeField</span>;
 <span class="kw">use</span> <span class="ident">ark_poly::DenseMultilinearExtension</span>;
+<span class="kw">use</span> <span class="ident">transcript::IOPTranscript</span>;
 
 <span class="doccomment">/// A ProductCheck is derived from ZeroCheck.</span>
 <span class="doccomment">///</span>

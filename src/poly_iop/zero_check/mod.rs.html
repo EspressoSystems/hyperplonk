@@ -213,11 +213,13 @@
 <span id="208">208</span>
 <span id="209">209</span>
 <span id="210">210</span>
+<span id="211">211</span>
 </pre><pre class="rust"><code><span class="doccomment">//! Main module for the ZeroCheck protocol.</span>
 
-<span class="kw">use</span> <span class="kw">crate</span>::{<span class="ident">errors::PolyIOPErrors</span>, <span class="ident">sum_check::SumCheck</span>, <span class="ident">transcript::IOPTranscript</span>, <span class="ident">PolyIOP</span>};
+<span class="kw">use</span> <span class="kw">crate</span>::{<span class="ident">errors::PolyIOPErrors</span>, <span class="ident">sum_check::SumCheck</span>, <span class="ident">PolyIOP</span>};
 <span class="kw">use</span> <span class="ident">ark_ff::PrimeField</span>;
 <span class="kw">use</span> <span class="ident">ark_std</span>::{<span class="ident">end_timer</span>, <span class="ident">start_timer</span>};
+<span class="kw">use</span> <span class="ident">transcript::IOPTranscript</span>;
 
 <span class="doccomment">/// A zero check IOP subclaim for \hat f(x) is 0, consists of the following:</span>
 <span class="doccomment">///   - the SubClaim from the SumCheck</span>

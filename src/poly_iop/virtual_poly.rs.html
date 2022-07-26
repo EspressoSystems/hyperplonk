@@ -555,12 +555,14 @@
 <span id="550">550</span>
 <span id="551">551</span>
 <span id="552">552</span>
+<span id="553">553</span>
 </pre><pre class="rust"><code><span class="doccomment">//! This module defines our main mathematical object `VirtualPolynomial`; and</span>
 <span class="doccomment">//! various functions associated with it.</span>
 
 <span class="kw">use</span> <span class="ident"><span class="kw">crate</span>::errors::PolyIOPErrors</span>;
 <span class="kw">use</span> <span class="ident">ark_ff::PrimeField</span>;
 <span class="kw">use</span> <span class="ident">ark_poly</span>::{<span class="ident">DenseMultilinearExtension</span>, <span class="ident">MultilinearExtension</span>};
+<span class="kw">use</span> <span class="ident">ark_serialize</span>::{<span class="ident">CanonicalSerialize</span>, <span class="ident">SerializationError</span>, <span class="ident">Write</span>};
 <span class="kw">use</span> <span class="ident">ark_std</span>::{
     <span class="ident">end_timer</span>,
     <span class="ident">rand</span>::{<span class="ident">Rng</span>, <span class="ident">RngCore</span>},
@@ -608,7 +610,7 @@
     <span class="ident">raw_pointers_lookup_table</span>: <span class="ident">HashMap</span><span class="op">&lt;</span><span class="kw-2">*const</span> <span class="ident">DenseMultilinearExtension</span><span class="op">&lt;</span><span class="ident">F</span><span class="op">&gt;</span>, <span class="ident">usize</span><span class="op">&gt;</span>,
 }
 
-<span class="attribute">#[<span class="ident">derive</span>(<span class="ident">Clone</span>, <span class="ident">Debug</span>, <span class="ident">Default</span>, <span class="ident">PartialEq</span>)]</span>
+<span class="attribute">#[<span class="ident">derive</span>(<span class="ident">Clone</span>, <span class="ident">Debug</span>, <span class="ident">Default</span>, <span class="ident">PartialEq</span>, <span class="ident">CanonicalSerialize</span>)]</span>
 <span class="doccomment">/// Auxiliary information about the multilinear polynomial</span>
 <span class="kw">pub</span> <span class="kw">struct</span> <span class="ident">VPAuxInfo</span><span class="op">&lt;</span><span class="ident">F</span>: <span class="ident">PrimeField</span><span class="op">&gt;</span> {
     <span class="doccomment">/// max number of multiplicands in each product</span>

@@ -361,11 +361,11 @@
 <span class="kw">use</span> <span class="kw">crate</span>::{
     <span class="ident">errors::PolyIOPErrors</span>,
     <span class="ident">structs</span>::{<span class="ident">IOPProverMessage</span>, <span class="ident">IOPVerifierState</span>},
-    <span class="ident">transcript::IOPTranscript</span>,
     <span class="ident">virtual_poly::VPAuxInfo</span>,
 };
 <span class="kw">use</span> <span class="ident">ark_ff::PrimeField</span>;
 <span class="kw">use</span> <span class="ident">ark_std</span>::{<span class="ident">end_timer</span>, <span class="ident">start_timer</span>};
+<span class="kw">use</span> <span class="ident">transcript::IOPTranscript</span>;
 
 <span class="attribute">#[<span class="ident">cfg</span>(<span class="ident">feature</span> <span class="op">=</span> <span class="string">&quot;parallel&quot;</span>)]</span>
 <span class="kw">use</span> <span class="ident">rayon::iter</span>::{<span class="ident">IndexedParallelIterator</span>, <span class="ident">IntoParallelIterator</span>, <span class="ident">ParallelIterator</span>};

@@ -43,7 +43,7 @@
 <span class="kw">use</span> <span class="ident">ark_serialize::SerializationError</span>;
 <span class="kw">use</span> <span class="ident">ark_std::string::String</span>;
 <span class="kw">use</span> <span class="ident">displaydoc::Display</span>;
-<span class="kw">use</span> <span class="ident">poly_iop::PolyIOPErrors</span>;
+<span class="kw">use</span> <span class="ident">transcript::TranscriptErrors</span>;
 
 <span class="doccomment">/// A `enum` specifying the possible failure modes of the PCS.</span>
 <span class="attribute">#[<span class="ident">derive</span>(<span class="ident">Display</span>, <span class="ident">Debug</span>)]</span>
@@ -58,8 +58,8 @@
     <span class="ident">InvalidParameters</span>(<span class="ident">String</span>),
     <span class="doccomment">/// An error during (de)serialization: {0}</span>
     <span class="ident">SerializationError</span>(<span class="ident">SerializationError</span>),
-    <span class="doccomment">/// PolyIOP error {0}</span>
-    <span class="ident">PolyIOPErrors</span>(<span class="ident">PolyIOPErrors</span>),
+    <span class="doccomment">/// Transcript error {0}</span>
+    <span class="ident">TranscriptError</span>(<span class="ident">TranscriptErrors</span>),
 }
 
 <span class="kw">impl</span> <span class="ident">From</span><span class="op">&lt;</span><span class="ident">SerializationError</span><span class="op">&gt;</span> <span class="kw">for</span> <span class="ident">PCSErrors</span> {
@@ -68,9 +68,9 @@
     }
 }
 
-<span class="kw">impl</span> <span class="ident">From</span><span class="op">&lt;</span><span class="ident">PolyIOPErrors</span><span class="op">&gt;</span> <span class="kw">for</span> <span class="ident">PCSErrors</span> {
-    <span class="kw">fn</span> <span class="ident">from</span>(<span class="ident">e</span>: <span class="ident">PolyIOPErrors</span>) -&gt; <span class="self">Self</span> {
-        <span class="ident"><span class="self">Self</span>::PolyIOPErrors</span>(<span class="ident">e</span>)
+<span class="kw">impl</span> <span class="ident">From</span><span class="op">&lt;</span><span class="ident">TranscriptErrors</span><span class="op">&gt;</span> <span class="kw">for</span> <span class="ident">PCSErrors</span> {
+    <span class="kw">fn</span> <span class="ident">from</span>(<span class="ident">e</span>: <span class="ident">TranscriptErrors</span>) -&gt; <span class="self">Self</span> {
+        <span class="ident"><span class="self">Self</span>::TranscriptError</span>(<span class="ident">e</span>)
     }
 }
 </code></pre></div>

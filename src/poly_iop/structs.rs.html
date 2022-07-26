@@ -44,21 +44,23 @@
 <span id="39">39</span>
 <span id="40">40</span>
 <span id="41">41</span>
+<span id="42">42</span>
 </pre><pre class="rust"><code><span class="doccomment">//! This module defines structs that are shared by all sub protocols.</span>
 
 <span class="kw">use</span> <span class="ident"><span class="kw">crate</span>::VirtualPolynomial</span>;
 <span class="kw">use</span> <span class="ident">ark_ff::PrimeField</span>;
+<span class="kw">use</span> <span class="ident">ark_serialize</span>::{<span class="ident">CanonicalSerialize</span>, <span class="ident">SerializationError</span>, <span class="ident">Write</span>};
 
 <span class="doccomment">/// An IOP proof is a collections of messages from prover to verifier at each</span>
 <span class="doccomment">/// round through the interactive protocol.</span>
-<span class="attribute">#[<span class="ident">derive</span>(<span class="ident">Clone</span>, <span class="ident">Debug</span>, <span class="ident">Default</span>, <span class="ident">PartialEq</span>)]</span>
+<span class="attribute">#[<span class="ident">derive</span>(<span class="ident">Clone</span>, <span class="ident">Debug</span>, <span class="ident">Default</span>, <span class="ident">PartialEq</span>, <span class="ident">CanonicalSerialize</span>)]</span>
 <span class="kw">pub</span> <span class="kw">struct</span> <span class="ident">IOPProof</span><span class="op">&lt;</span><span class="ident">F</span>: <span class="ident">PrimeField</span><span class="op">&gt;</span> {
     <span class="kw">pub</span> <span class="ident">proofs</span>: <span class="ident">Vec</span><span class="op">&lt;</span><span class="ident">IOPProverMessage</span><span class="op">&lt;</span><span class="ident">F</span><span class="op">&gt;</span><span class="op">&gt;</span>,
 }
 
 <span class="doccomment">/// A message from the prover to the verifier at a given round</span>
 <span class="doccomment">/// is a list of evaluations.</span>
-<span class="attribute">#[<span class="ident">derive</span>(<span class="ident">Clone</span>, <span class="ident">Debug</span>, <span class="ident">Default</span>, <span class="ident">PartialEq</span>)]</span>
+<span class="attribute">#[<span class="ident">derive</span>(<span class="ident">Clone</span>, <span class="ident">Debug</span>, <span class="ident">Default</span>, <span class="ident">PartialEq</span>, <span class="ident">CanonicalSerialize</span>)]</span>
 <span class="kw">pub</span> <span class="kw">struct</span> <span class="ident">IOPProverMessage</span><span class="op">&lt;</span><span class="ident">F</span>: <span class="ident">PrimeField</span><span class="op">&gt;</span> {
     <span class="kw">pub</span>(<span class="kw">crate</span>) <span class="ident">evaluations</span>: <span class="ident">Vec</span><span class="op">&lt;</span><span class="ident">F</span><span class="op">&gt;</span>,
 }

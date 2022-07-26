@@ -451,7 +451,7 @@
 <span class="kw">use</span> <span class="ident">ark_ec::PairingEngine</span>;
 <span class="kw">use</span> <span class="ident">ark_poly</span>::{<span class="ident">DenseMultilinearExtension</span>, <span class="ident">EvaluationDomain</span>, <span class="ident">MultilinearExtension</span>, <span class="ident">Polynomial</span>};
 <span class="kw">use</span> <span class="ident">ark_std</span>::{<span class="ident">end_timer</span>, <span class="ident">start_timer</span>, <span class="ident">vec::Vec</span>};
-<span class="kw">use</span> <span class="ident">poly_iop::IOPTranscript</span>;
+<span class="kw">use</span> <span class="ident">transcript::IOPTranscript</span>;
 
 <span class="doccomment">/// Input</span>
 <span class="doccomment">/// - the prover parameters for univariate KZG,</span>
@@ -675,12 +675,12 @@
 
     <span class="comment">// 3. check `q(r) == batch_proof.q_x_value.last` and `q(omega^i) =</span>
     <span class="comment">// batch_proof.q_x_value[i]`</span>
-    <span class="kw">for</span> <span class="ident">i</span> <span class="kw">in</span> <span class="number">0</span>..<span class="ident">points_len</span> {
+    <span class="kw">for</span> (<span class="ident">i</span>, <span class="ident">value</span>) <span class="kw">in</span> <span class="ident">values</span>.<span class="ident">iter</span>().<span class="ident">enumerate</span>().<span class="ident">take</span>(<span class="ident">points_len</span>) {
         <span class="kw">if</span> <span class="op">!</span><span class="ident">KZGUnivariatePCS::verify</span>(
             <span class="ident">uni_verifier_param</span>,
             <span class="kw-2">&amp;</span><span class="ident">batch_proof</span>.<span class="ident">q_x_commit</span>,
             <span class="kw-2">&amp;</span><span class="ident">domain</span>.<span class="ident">element</span>(<span class="ident">i</span>),
-            <span class="kw-2">&amp;</span><span class="ident">values</span>[<span class="ident">i</span>],
+            <span class="kw-2">&amp;</span><span class="ident">value</span>,
             <span class="kw-2">&amp;</span><span class="ident">batch_proof</span>.<span class="ident">q_x_opens</span>[<span class="ident">i</span>],
         )<span class="question-mark">?</span> {
             <span class="attribute">#[<span class="ident">cfg</span>(<span class="ident">debug_assertion</span>)]</span>

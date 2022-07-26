@@ -682,6 +682,17 @@
 <span id="677">677</span>
 <span id="678">678</span>
 <span id="679">679</span>
+<span id="680">680</span>
+<span id="681">681</span>
+<span id="682">682</span>
+<span id="683">683</span>
+<span id="684">684</span>
+<span id="685">685</span>
+<span id="686">686</span>
+<span id="687">687</span>
+<span id="688">688</span>
+<span id="689">689</span>
+<span id="690">690</span>
 </pre><pre class="rust"><code><span class="doccomment">//! Useful utilities for KZG PCS</span>
 
 <span class="kw">use</span> <span class="ident"><span class="kw">crate</span>::PCSErrors</span>;
@@ -691,8 +702,19 @@
     <span class="ident">MultilinearExtension</span>, <span class="ident">Polynomial</span>, <span class="ident">Radix2EvaluationDomain</span>,
 };
 <span class="kw">use</span> <span class="ident">ark_std</span>::{<span class="ident">end_timer</span>, <span class="ident">log2</span>, <span class="ident">start_timer</span>};
-<span class="kw">use</span> <span class="ident">poly_iop::bit_decompose</span>;
 <span class="kw">use</span> <span class="ident">std::cmp::max</span>;
+
+<span class="doccomment">/// Decompose an integer into a binary vector in little endian.</span>
+<span class="attribute">#[<span class="ident">allow</span>(<span class="ident">dead_code</span>)]</span>
+<span class="kw">pub</span>(<span class="kw">crate</span>) <span class="kw">fn</span> <span class="ident">bit_decompose</span>(<span class="ident">input</span>: <span class="ident">u64</span>, <span class="ident">num_var</span>: <span class="ident">usize</span>) -&gt; <span class="ident">Vec</span><span class="op">&lt;</span><span class="ident">bool</span><span class="op">&gt;</span> {
+    <span class="kw">let</span> <span class="kw-2">mut</span> <span class="ident">res</span> <span class="op">=</span> <span class="ident">Vec::with_capacity</span>(<span class="ident">num_var</span>);
+    <span class="kw">let</span> <span class="kw-2">mut</span> <span class="ident">i</span> <span class="op">=</span> <span class="ident">input</span>;
+    <span class="kw">for</span> <span class="kw">_</span> <span class="kw">in</span> <span class="number">0</span>..<span class="ident">num_var</span> {
+        <span class="ident">res</span>.<span class="ident">push</span>(<span class="ident">i</span> <span class="op">&amp;</span> <span class="number">1</span> <span class="op">==</span> <span class="number">1</span>);
+        <span class="ident">i</span> <span class="op">&gt;</span><span class="op">&gt;</span><span class="op">=</span> <span class="number">1</span>;
+    }
+    <span class="ident">res</span>
+}
 
 <span class="doccomment">/// For an MLE w with `mle_num_vars` variables, and `point_len` number of</span>
 <span class="doccomment">/// points, compute the degree of the univariate polynomial `q(x):= w(l(x))`</span>
