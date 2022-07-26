@@ -188,11 +188,11 @@ impl<F: PrimeField> SumCheck<F> for PolyIOP<F> {
     ) -> Result<Self::SumCheckSubClaim, PolyIOPErrors> {
         let start = start_timer!(|| "sum check verify");
 
-        transcript.append_serializable_element(b"aux_info", aux_info)?;
+        transcript.append_serializable_element(b"aux info", aux_info)?;
         let mut verifier_state = IOPVerifierState::verifier_init(aux_info);
         for i in 0..aux_info.num_variables {
             let prover_msg = proof.proofs.get(i).expect("proof is incomplete");
-            transcript.append_serializable_element(b"prover_msg", prover_msg)?;
+            transcript.append_serializable_element(b"prover msg", prover_msg)?;
             IOPVerifierState::verify_round_and_update_state(
                 &mut verifier_state,
                 prover_msg,
