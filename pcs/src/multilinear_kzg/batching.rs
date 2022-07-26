@@ -237,12 +237,12 @@ pub(super) fn batch_verify_internal<E: PairingEngine>(
 
     // 3. check `q(r) == batch_proof.q_x_value.last` and `q(omega^i) =
     // batch_proof.q_x_value[i]`
-    for i in 0..points_len {
+    for (i, value) in values.iter().enumerate().take(points_len) {
         if !KZGUnivariatePCS::verify(
             uni_verifier_param,
             &batch_proof.q_x_commit,
             &domain.element(i),
-            &values[i],
+            &value,
             &batch_proof.q_x_opens[i],
         )? {
             #[cfg(debug_assertion)]
