@@ -702,7 +702,6 @@ mod tests {
     use transcript::IOPTranscript;
 
     #[test]
-    #[ignore]
     fn test_hyperplonk_e2e() -> Result<(), HyperPlonkErrors> {
         // Example:
         //     q_L(X) * W_1(X)^5 - W_2(X) = 0
@@ -715,8 +714,8 @@ mod tests {
         // 1 public input
         // 1 selector,
         // 2 witnesses,
-        // 2 variables,
-        // 16 wires,
+        // 2 variables for MLE,
+        // 4 wires,
         let gates = CustomizedGates {
             gates: vec![(1, Some(0), vec![0, 0, 0, 0, 0]), (-1, None, vec![1])],
         };
