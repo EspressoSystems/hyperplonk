@@ -133,6 +133,16 @@ pub struct HyperPlonkVerifyingKey<E: PairingEngine, PCS: PolynomialCommitmentSch
 ///     (-1,    None,           vec![id_W2])
 /// ]
 ///
+/// CustomizedGates {
+///     gates: vec![
+///         (1, Some(0), vec![0, 0, 0, 0, 0]),
+///         (-1, None, vec![1])
+///     ],
+/// };
+/// where id_qL = 0 // first selector
+/// id_W1 = 0 // first witness
+/// id_w2 = 1 // second witness
+///
 /// NOTE: here coeff is a signed integer, instead of a field element
 #[derive(Clone, Debug, Default, PartialEq)]
 pub struct CustomizedGates {

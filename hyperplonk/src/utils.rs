@@ -6,13 +6,22 @@ use poly_iop::prelude::VirtualPolynomial;
 
 use crate::{errors::HyperPlonkErrors, structs::CustomizedGates};
 
+/// Build MLE from matrix of witnesses.
+///
+/// Given a matrix := [row1, row2, ...] where
+/// row1:= (a1, a2, ...)
+/// row2:= (b1, b2, ...)
+/// row3:= (c1, c2, ...)
+///
+/// output mle(a1,b1,c1, ...), mle(a2,b2,c2, ...), ...
 #[macro_export]
 macro_rules! build_mle {
     ($rows:expr) => {{
         let mut res = Vec::with_capacity($rows.len());
         let num_vars = log2($rows.len()) as usize;
+        let num_mles = $rows[0].0.len();
 
-        for i in 0..$rows.len() {
+        for i in 0..num_mles {
             let mut cur_coeffs = Vec::new();
             for row in $rows.iter() {
                 cur_coeffs.push(row.0[i])
