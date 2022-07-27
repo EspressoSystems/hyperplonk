@@ -33,8 +33,8 @@ impl<F: PrimeField> SelectorRow<F> {
         num_vars: usize,
         num_selectors: usize,
     ) -> Vec<Self> {
-        (0..num_selectors)
-            .map(|_| Self((0..1 << num_vars).map(|_| F::rand(rng)).collect::<Vec<F>>()))
+        (0..1 << num_vars)
+            .map(|_| Self((0..num_selectors).map(|_| F::rand(rng)).collect::<Vec<F>>()))
             .collect()
     }
 }

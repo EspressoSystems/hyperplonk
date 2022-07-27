@@ -144,7 +144,7 @@ where
 
         // build permutation oracles
         let permutation_oracles = Rc::new(DenseMultilinearExtension::from_evaluations_slice(
-            params.nv,
+            merged_nv,
             permutation,
         ));
 
@@ -217,7 +217,9 @@ where
         //  online public input of length 2^\ell
         let ell = pk.params.log_pub_input_len;
 
+        println!("witness");
         let witness_polys = WitnessRow::<E::Fr>::build_mles(witnesses)?;
+        println!("pi {} {}", ell, pub_input.len());
         let pi_poly = Rc::new(DenseMultilinearExtension::from_evaluations_slice(
             ell as usize,
             pub_input,
@@ -227,6 +229,8 @@ where
         // 0. sanity checks
         // =======================================================================
         // public input length
+
+        println!("sanity check0");
         if pub_input.len() != 1 << ell {
             return Err(HyperPlonkErrors::InvalidProver(format!(
                 "Public input length is not correct: got {}, expect {}",
@@ -234,6 +238,7 @@ where
                 1 << ell
             )));
         }
+        println!("sanity check0");
         // witnesses length
         for (i, w) in witnesses.iter().enumerate() {
             if w.0.len() != 1 << num_vars {
@@ -245,6 +250,7 @@ where
                 )));
             }
         }
+        println!("sanity check1");
         // check public input matches witness[0]'s first 2^ell elements
         let pi_in_w0 =
             Rc::new(witness_polys[0].fix_variables(vec![E::Fr::zero(); num_vars - ell].as_ref()));
@@ -255,7 +261,7 @@ where
                 pi_poly, pi_in_w0,
             )));
         }
-
+        println!("sanity check");
         // =======================================================================
         // 1. Commit Witness polynomials `w_i(x)` and append commitment to
         // transcript
@@ -271,6 +277,7 @@ where
 
         end_timer!(step);
 
+        println!("step 1");
         // =======================================================================
         // 2 Run ZeroCheck on
         //
@@ -285,6 +292,10 @@ where
         // =======================================================================
         let step = start_timer!("ZeroCheck on f");
 
+        println!(
+            "step 1 selector {}, nv {}",
+            pk.selector_oracles[0].num_vars, pk.params.nv
+        );
         let fx = build_f(
             &pk.params.gate_func,
             pk.params.nv,
@@ -294,6 +305,7 @@ where
         let zero_check_proof = <Self as ZeroCheck<E::Fr>>::prove(&fx, transcript)?;
         end_timer!(step);
 
+        println!("step 2");
         // =======================================================================
         // 3. Run permutation check on `\{w_i(x)\}` and `permutation_oracles`, and
         // obtain a PermCheckSubClaim.
@@ -309,11 +321,16 @@ where
         // 3.1 `generate_challenge` from current transcript (generate beta, gamma)
         let mut permutation_challenge = Self::generate_challenge(transcript)?;
 
+        println!("step 3.1");
         // 3.2. `compute_product` to build `prod(x)` etc. from f, g and s_perm
         // s_perm is the second half of permutation oracle
         let s_perm = pk.permutation_oracles.fix_variables(&[E::Fr::one()]);
         let w_merged = merge_polynomials(&witness_polys)?;
+        println!("w_merged {}", w_merged.num_vars);
+        println!("w_merged {}", witness_polys[0].num_vars);
+        println!("w_merged {}", witness_polys.len());
 
+        println!("step 3.2");
         // This function returns 3 MLEs:
         // - prod(x)
         // - numerator
@@ -322,9 +339,10 @@ where
         let prod_x_and_aux_info =
             Self::compute_prod_evals(&permutation_challenge, &w_merged, &w_merged, &s_perm)?;
 
+        println!("step 3.3");
         // 3.3 push a commitment of `prod(x)` to the transcript
         let prod_com = PCS::commit(&pk.pcs_param, &Rc::new(prod_x_and_aux_info[0].clone()))?;
-
+        println!("step 3.4");
         // 3.4. `update_challenge` with the updated transcript
         Self::update_challenge(&mut permutation_challenge, transcript, &prod_com)?;
 
@@ -336,6 +354,7 @@ where
         )?;
         end_timer!(step);
 
+        println!("step 3");
         // =======================================================================
         // 4. Generate evaluations and corresponding proofs
         // - permutation check evaluations and proofs
@@ -458,6 +477,7 @@ where
         }
         end_timer!(step);
 
+        println!("step 4");
         end_timer!(start);
 
         Ok(HyperPlonkProof {
@@ -719,7 +739,7 @@ mod tests {
         let gates = CustomizedGates {
             gates: vec![(1, Some(0), vec![0, 0, 0, 0, 0]), (-1, None, vec![1])],
         };
-        test_hyperplonk_helper::<Bls12_381>(2, 0, 0, 1, gates)
+        test_hyperplonk_helper::<Bls12_381>(2, 0, 0, 2, gates)
     }
 
     fn test_hyperplonk_helper<E: PairingEngine>(
@@ -739,8 +759,8 @@ mod tests {
             gate_func,
         };
         let pcs_srs = KZGMultilinearPCS::<E>::gen_srs_for_testing(&mut rng, 15)?;
-
-        let permutation: Vec<E::Fr> = (0..1 << nv).map(|_| E::Fr::rand(&mut rng)).collect();
+        let merged_nv = 4;
+        let permutation: Vec<E::Fr> = (0..1 << merged_nv).map(|_| E::Fr::rand(&mut rng)).collect();
         let selectors = SelectorRow::<E::Fr>::rand_selectors(&mut rng, nv, 1);
         let w1 = WitnessRow(vec![
             E::Fr::one(),
@@ -762,15 +782,17 @@ mod tests {
             &permutation,
             &selectors,
         )?;
-
+        println!("finished key gen");
         // generate a proof and verify
         let mut transcript = IOPTranscript::<E::Fr>::new(b"test hyperplonk");
         let proof = <PolyIOP<E::Fr> as HyperPlonkPIOP<E, KZGMultilinearPCS<E>>>::prove(
             &pk,
-            &[],
+            &[w1.0[0]],
             &[w1.clone(), w2.clone(), w1, w2],
             &mut transcript,
         )?;
+
+        println!("finished proving");
         let mut transcript = IOPTranscript::<E::Fr>::new(b"test hyperplonk");
         let _sub_claim = <PolyIOP<E::Fr> as HyperPlonkPIOP<E, KZGMultilinearPCS<E>>>::verify(
             &vk,
@@ -779,6 +801,7 @@ mod tests {
             &mut transcript,
         )?;
 
+        println!("finished verification");
         Ok(())
     }
 }

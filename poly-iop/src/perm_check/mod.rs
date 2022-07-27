@@ -273,6 +273,7 @@ impl<F: PrimeField> PermutationCheck<F> for PolyIOP<F> {
         let (prod_0x_eval, numerator_eval, denominator_eval) =
             compute_prod_0(&challenge.beta, &challenge.gamma, fx, gx, s_perm)?;
 
+        println!("step 3.31 {}", num_vars);
         // ===================================
         // prod(1, x)
         // ===================================
@@ -287,10 +288,14 @@ impl<F: PrimeField> PermutationCheck<F> for PolyIOP<F> {
         // is available via either eval_0x or the current view of eval_1x
         let mut prod_1x_eval = vec![];
         for x in 0..(1 << num_vars) - 1 {
+            println!("x :{}", x);
+
             // sign will decide if the evaluation should be looked up from eval_0x or
             // eval_1x; x_zero_index is the index for the evaluation (x_2, ..., x_n,
             // 0); x_one_index is the index for the evaluation (x_2, ..., x_n, 1);
             let (x_zero_index, x_one_index, sign) = get_index(x, num_vars);
+            println!("{} {} {}", x_zero_index, x_one_index, sign);
+            println!("{}", prod_0x_eval.len());
             if !sign {
                 prod_1x_eval.push(prod_0x_eval[x_zero_index] * prod_0x_eval[x_one_index]);
             } else {
@@ -302,6 +307,8 @@ impl<F: PrimeField> PermutationCheck<F> for PolyIOP<F> {
                 prod_1x_eval.push(prod_1x_eval[x_zero_index] * prod_1x_eval[x_one_index]);
             }
         }
+
+        println!("step 3.32");
         // prod(1, 1, ..., 1) := 0
         prod_1x_eval.push(F::zero());
 
