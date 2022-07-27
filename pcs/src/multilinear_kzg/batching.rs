@@ -12,10 +12,8 @@ use crate::{
 };
 use ark_ec::PairingEngine;
 use ark_poly::{DenseMultilinearExtension, EvaluationDomain, MultilinearExtension, Polynomial};
-use ark_std::{end_timer, start_timer, vec::Vec};
-use transcript::IOPTranscript;
 use ark_std::{end_timer, rc::Rc, start_timer, vec::Vec};
-use poly_iop::prelude::IOPTranscript;
+use transcript::IOPTranscript;
 
 /// Input
 /// - the prover parameters for univariate KZG,

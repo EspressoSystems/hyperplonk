@@ -4,7 +4,6 @@ use ark_serialize::SerializationError;
 use ark_std::string::String;
 use displaydoc::Display;
 use transcript::TranscriptErrors;
-use poly_iop::prelude::PolyIOPErrors;
 
 /// A `enum` specifying the possible failure modes of the PCS.
 #[derive(Display, Debug)]
@@ -18,19 +17,19 @@ pub enum PCSErrors {
     /// Invalid parameters: {0}
     InvalidParameters(String),
     /// An error during (de)serialization: {0}
-    SerializationError(SerializationError),
+    SerializationErrors(SerializationError),
     /// Transcript error {0}
-    TranscriptError(TranscriptErrors),
+    TranscriptErrors(TranscriptErrors),
 }
 
 impl From<SerializationError> for PCSErrors {
     fn from(e: ark_serialize::SerializationError) -> Self {
-        Self::SerializationError(e)
+        Self::SerializationErrors(e)
     }
 }
 
 impl From<TranscriptErrors> for PCSErrors {
     fn from(e: TranscriptErrors) -> Self {
-        Self::TranscriptError(e)
+        Self::TranscriptErrors(e)
     }
 }

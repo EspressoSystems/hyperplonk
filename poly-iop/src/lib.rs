@@ -12,7 +12,6 @@ mod virtual_poly;
 mod zero_check;
 
 pub use errors::PolyIOPErrors;
-pub use hyperplonk::HyperPlonkPIOP;
 pub use perm_check::{
     util::{identity_permutation_mle, random_permutation_mle},
     PermutationCheck,
@@ -22,9 +21,6 @@ pub use sum_check::SumCheck;
 pub use utils::*;
 pub use virtual_poly::{VPAuxInfo, VirtualPolynomial};
 pub use zero_check::ZeroCheck;
-use errors::PolyIOPErrors;
-use virtual_poly::VirtualPolynomial;
-use zero_check::ZeroCheck;
 
 #[derive(Clone, Debug, Default, Copy)]
 /// Struct for PolyIOP protocol.

@@ -699,7 +699,7 @@ mod tests {
     use ark_bls12_381::Bls12_381;
     use ark_std::{test_rng, UniformRand};
     use pcs::prelude::KZGMultilinearPCS;
-    use poly_iop::prelude::IOPTranscript;
+    use transcript::IOPTranscript;
 
     #[test]
     #[ignore]
@@ -773,7 +773,7 @@ mod tests {
             &mut transcript,
         )?;
         let mut transcript = IOPTranscript::<E::Fr>::new(b"test hyperplonk");
-        let sub_claim = <PolyIOP<E::Fr> as HyperPlonkPIOP<E, KZGMultilinearPCS<E>>>::verify(
+        let _sub_claim = <PolyIOP<E::Fr> as HyperPlonkPIOP<E, KZGMultilinearPCS<E>>>::verify(
             &vk,
             &[],
             &proof,

@@ -5,7 +5,6 @@ pub use crate::{
         PermutationCheck,
     },
     sum_check::SumCheck,
-    transcript::IOPTranscript,
     utils::*,
     virtual_poly::{VPAuxInfo, VirtualPolynomial},
     zero_check::ZeroCheck,

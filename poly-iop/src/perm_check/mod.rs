@@ -1,11 +1,9 @@
 //! Main module for the Permutation Check protocol
 
 use crate::{
-    errors::PolyIOPErrors, perm_check::util::compute_prod_0, structs::IOPProof, utils::get_index,
     errors::PolyIOPErrors,
     perm_check::util::{build_prod_partial_eval, compute_prod_0},
     structs::IOPProof,
-    transcript::IOPTranscript,
     utils::get_index,
     PolyIOP, VirtualPolynomial, ZeroCheck,
 };
@@ -331,7 +329,7 @@ impl<F: PrimeField> PermutationCheck<F> for PolyIOP<F> {
         prod_x_binding: &impl CanonicalSerialize,
     ) -> Result<(), PolyIOPErrors> {
         if challenge.alpha.is_some() {
-            return Err(PolyIOPErrors::InvalidTranscript(
+            return Err(PolyIOPErrors::InvalidChallenge(
                 "alpha should not be sampled at the current stage".to_string(),
             ));
         }

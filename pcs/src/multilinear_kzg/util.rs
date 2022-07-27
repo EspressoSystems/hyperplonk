@@ -6,10 +6,7 @@ use ark_poly::{
     univariate::DensePolynomial, DenseMultilinearExtension, EvaluationDomain, Evaluations,
     MultilinearExtension, Polynomial, Radix2EvaluationDomain,
 };
-use ark_std::{end_timer, log2, start_timer};
-use std::cmp::max;
 use ark_std::{end_timer, log2, rc::Rc, start_timer};
-use poly_iop::prelude::bit_decompose;
 
 /// Decompose an integer into a binary vector in little endian.
 #[allow(dead_code)]

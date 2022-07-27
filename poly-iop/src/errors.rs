@@ -20,19 +20,19 @@ pub enum PolyIOPErrors {
     /// Should not arrive to this point
     ShouldNotArrive,
     /// An error during (de)serialization: {0}
-    SerializationError(ark_serialize::SerializationError),
+    SerializationErrors(ark_serialize::SerializationError),
     /// Transcript Error: {0}
-    TranscriptError(TranscriptErrors),
+    TranscriptErrors(TranscriptErrors),
 }
 
 impl From<ark_serialize::SerializationError> for PolyIOPErrors {
     fn from(e: ark_serialize::SerializationError) -> Self {
-        Self::SerializationError(e)
+        Self::SerializationErrors(e)
     }
 }
 
 impl From<TranscriptErrors> for PolyIOPErrors {
     fn from(e: TranscriptErrors) -> Self {
-        Self::TranscriptError(e)
+        Self::TranscriptErrors(e)
     }
 }

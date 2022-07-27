@@ -1,13 +1,11 @@
 //! Main module for the HyperPlonk PolyIOP.
 
-use crate::{errors::PolyIOPErrors, perm_check::PermutationCheck, zero_check::ZeroCheck};
 use ark_ec::PairingEngine;
 use ark_ff::PrimeField;
 use ark_poly::DenseMultilinearExtension;
 use pcs::PolynomialCommitmentScheme;
 use poly_iop::prelude::{PermutationCheck, ZeroCheck};
 use std::rc::Rc;
-use transcript::IOPTranscript;
 
 /// The sub-claim for the HyperPlonk PolyIOP, consists of the following:
 ///   - the SubClaim for the zero-check PIOP

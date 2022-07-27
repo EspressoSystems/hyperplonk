@@ -16,6 +16,7 @@ ark-poly = { version = "^0.3.0", default-features = false }
 ark-serialize = { version = "^0.3.0", default-features = false, features = [ "derive" ] }
 
 displaydoc = { version = "0.2.3", default-features = false }
+transcript = { path = "../transcript" }
 
 [dev-dependencies]
 ark-bls12-381 = { version = "0.3.0", default-features = false, features = [ "curve" ] }

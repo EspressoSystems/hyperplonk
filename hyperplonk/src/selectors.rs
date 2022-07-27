@@ -23,7 +23,7 @@ impl<F: PrimeField> SelectorRow<F> {
 #[cfg(test)]
 impl<F: PrimeField> SelectorRow<F> {
     /// sample a row of random selector
-    pub(crate) fn rand<R: RngCore>(rng: &mut R, num_vars: usize) -> Self {
+    pub(crate) fn _rand<R: RngCore>(rng: &mut R, num_vars: usize) -> Self {
         Self((0..1 << num_vars).map(|_| F::rand(rng)).collect())
     }
     /// sample a set of random selectors

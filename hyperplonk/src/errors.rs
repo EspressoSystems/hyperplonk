@@ -5,6 +5,7 @@ use ark_std::string::String;
 use displaydoc::Display;
 use pcs::prelude::PCSErrors;
 use poly_iop::prelude::PolyIOPErrors;
+use transcript::TranscriptErrors;
 
 /// A `enum` specifying the possible failure modes of hyperplonk.
 #[allow(dead_code)]
@@ -25,6 +26,8 @@ pub enum HyperPlonkErrors {
     PolyIOPErrors(PolyIOPErrors),
     /// PCS error {0}
     PCSErrors(PCSErrors),
+    /// Transcript error {0}
+    TranscriptError(TranscriptErrors),
 }
 
 impl From<SerializationError> for HyperPlonkErrors {
@@ -42,5 +45,11 @@ impl From<PolyIOPErrors> for HyperPlonkErrors {
 impl From<PCSErrors> for HyperPlonkErrors {
     fn from(e: PCSErrors) -> Self {
         Self::PCSErrors(e)
+    }
+}
+
+impl From<TranscriptErrors> for HyperPlonkErrors {
+    fn from(e: TranscriptErrors) -> Self {
+        Self::TranscriptError(e)
     }
 }
