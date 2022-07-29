@@ -309,6 +309,19 @@ impl<F: PrimeField> VirtualPolynomial<F> {
         end_timer!(start);
         Ok(res)
     }
+
+    /// Print out the evaluation map for testing. Panic if the num_vars > 5.
+    pub fn print_evals(&self) {
+        if self.aux_info.num_variables > 5 {
+            panic!("this function is used for testing only. cannot print more than 5 num_vars")
+        }
+        for i in 0..1 << self.aux_info.num_variables {
+            let point = bit_decompose(i, self.aux_info.num_variables);
+            let point_fr: Vec<F> = point.iter().map(|&x| F::from(x)).collect();
+            println!("{} {}", i, self.evaluate(point_fr.as_ref()).unwrap())
+        }
+        println!()
+    }
 }
 
 /// Sample a random list of multilinear polynomials.
@@ -409,24 +422,23 @@ fn build_eq_x_r_helper<F: PrimeField>(r: &[F], buf: &mut Vec<F>) -> Result<(), A
     Ok(())
 }
 
+/// Decompose an integer into a binary vector in little endian.
+pub fn bit_decompose(input: u64, num_var: usize) -> Vec<bool> {
+    let mut res = Vec::with_capacity(num_var);
+    let mut i = input;
+    for _ in 0..num_var {
+        res.push(i & 1 == 1);
+        i >>= 1;
+    }
+    res
+}
+
 #[cfg(test)]
 mod test {
     use super::*;
     use ark_bls12_381::Fr;
     use ark_ff::UniformRand;
     use ark_std::test_rng;
-
-    /// Decompose an integer into a binary vector in little endian.
-    #[allow(dead_code)]
-    pub fn bit_decompose(input: u64, num_var: usize) -> Vec<bool> {
-        let mut res = Vec::with_capacity(num_var);
-        let mut i = input;
-        for _ in 0..num_var {
-            res.push(i & 1 == 1);
-            i >>= 1;
-        }
-        res
-    }
 
     #[test]
     fn test_virtual_polynomial_additions() -> Result<(), ArithErrors> {

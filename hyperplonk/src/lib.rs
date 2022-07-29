@@ -311,6 +311,8 @@ where
             &pk.selector_oracles,
             &witness_polys,
         )?;
+        fx.print_evals();
+
         let zero_check_proof = <Self as ZeroCheck<E::Fr>>::prove(&fx, transcript)?;
         end_timer!(step);
 
@@ -789,7 +791,7 @@ mod tests {
             E::Fr::from(32u64),
             E::Fr::from(243u64),
         ]);
-        // public input = w1[0]
+        // public input = w1
         let pi = w1.clone();
 
         // generate pk and vks
