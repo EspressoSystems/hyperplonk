@@ -39,6 +39,9 @@ pub struct HyperPlonkProof<
     /// PCS commit for witnesses
     // TODO: replace me with a batch commitment
     pub witness_commits: Vec<PCS::Commitment>,
+    /// PCS commit for prod(x)
+    // TODO: replace me with a batch commitment
+    pub prod_commit: PCS::Commitment,
     /// PCS openings for witness on permutation check point
     // TODO: replace me with a batch opening
     pub witness_perm_check_openings: Vec<PCS::Proof>,

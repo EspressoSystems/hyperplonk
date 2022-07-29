@@ -300,7 +300,6 @@ where
         // =======================================================================
         let step = start_timer!(|| "ZeroCheck on f");
 
-        println!("{}", transcript.get_and_append_challenge(b"1")?);
         println!(
             "step 1 selector {}, nv {}",
             pk.selector_oracles[0].num_vars, pk.params.nv
@@ -331,7 +330,7 @@ where
 
         // 3.1 `generate_challenge` from current transcript (generate beta, gamma)
         let mut permutation_challenge = Self::generate_challenge(transcript)?;
-
+        println!("{:?}", permutation_challenge);
         println!("step 3.1");
         // 3.2. `compute_product` to build `prod(x)` etc. from f, g and s_perm
         // s_perm is the second half of permutation oracle
@@ -357,6 +356,7 @@ where
         // 3.4. `update_challenge` with the updated transcript
         Self::update_challenge(&mut permutation_challenge, transcript, &prod_com)?;
 
+        println!("challenge {:?}", permutation_challenge);
         // 3.5. `prove` to generate the proof
         let perm_check_proof = <Self as PermutationCheck<E::Fr>>::prove(
             &prod_x_and_aux_info,
@@ -496,6 +496,7 @@ where
         Ok(HyperPlonkProof {
             // PCS components
             witness_commits,
+            prod_commit: prod_com,
             witness_perm_check_openings,
             witness_zero_check_openings,
             witness_perm_check_evals,
@@ -557,7 +558,7 @@ where
 
         let aux_info = VPAuxInfo::<E::Fr> {
             // TODO: get the real max degree from gate_func
-            max_degree: 2,
+            max_degree: 6,
             num_variables: num_var,
             phantom: PhantomData::default(),
         };
@@ -591,22 +592,40 @@ where
         for wi_com in proof.witness_commits.iter() {
             transcript.append_serializable_element(b"w", wi_com)?;
         }
-        println!("{}", transcript.get_and_append_challenge(b"1")?);
         let zero_check_sub_claim =
             <Self as ZeroCheck<E::Fr>>::verify(&proof.zero_check_proof, &aux_info, transcript)?;
         end_timer!(step);
-
+        println!("zero check finished\n\n");
         // =======================================================================
         // 2. Verify perm_check_proof on `\{w_i(x)\}` and `permutation_oracles`
         // =======================================================================
+
         let step = start_timer!(|| "verify permutation check");
+        let aux_info = VPAuxInfo::<E::Fr> {
+            // Prod(x) has a max degree of 2
+            // TODO: get the real max degree from gate_func
+            max_degree: 2,
+            // prod(x) has one more variable
+            num_variables: num_var + 1,
+            phantom: PhantomData::default(),
+        };
+        let mut challenge = <Self as PermutationCheck<E::Fr>>::generate_challenge(transcript)?;
+        <Self as PermutationCheck<E::Fr>>::update_challenge(
+            &mut challenge,
+            transcript,
+            &proof.prod_commit,
+        )?;
+
+        println!("challenge {:?}", challenge);
+
+        println!("updated challenge");
         let perm_check_sub_claim = <Self as PermutationCheck<E::Fr>>::verify(
             &proof.perm_check_proof,
             &aux_info,
             transcript,
         )?;
         end_timer!(step);
-
+        println!("perm check finished");
         // =======================================================================
         // 3. Verify the opening against the commitment
         // =======================================================================

@@ -25,8 +25,8 @@ ark-bls12-381 = { version = "0.3.0", default-features = false, features = [ "cur
 
 
 [features]
-default = [ "parallel", "print-trace" ]
-# default = [ "parallel" ]
+# default = [ "parallel", "print-trace" ]
+default = [ "parallel" ]
 parallel = [ 
     "ark-std/parallel", 
     "ark-ff/parallel",  

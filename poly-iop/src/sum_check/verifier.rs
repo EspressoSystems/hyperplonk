@@ -105,6 +105,12 @@ impl<F: PrimeField> SumCheckVerifier<F> for IOPVerifierState<F> {
             ));
         }
 
+        println!(
+            "eval len {} max degree {}",
+            self.polynomials_received[0].len(),
+            self.max_degree + 1
+        );
+
         // the deferred check during the interactive phase:
         // 2. set `expected` to P(r)`
         #[cfg(feature = "parallel")]

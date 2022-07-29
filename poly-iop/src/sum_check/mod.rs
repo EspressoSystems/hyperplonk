@@ -161,7 +161,7 @@ impl<F: PrimeField> SumCheck<F> for PolyIOP<F> {
         let start = start_timer!(|| "sum check prove");
 
         transcript.append_serializable_element(b"aux info", &poly.aux_info)?;
-
+        println!("sumcheck prove {}", poly.aux_info.num_variables);
         let mut prover_state = IOPProverState::prover_init(poly)?;
         let mut challenge = None;
         let mut prover_msgs = Vec::with_capacity(poly.aux_info.num_variables);
@@ -172,7 +172,7 @@ impl<F: PrimeField> SumCheck<F> for PolyIOP<F> {
             prover_msgs.push(prover_msg);
             challenge = Some(transcript.get_and_append_challenge(b"Internal round")?);
         }
-
+        // println!("sumcheck prove {}", poly.aux_info.num_variables);
         end_timer!(start);
         Ok(IOPProof {
             point: prover_state.challenges,
@@ -188,10 +188,12 @@ impl<F: PrimeField> SumCheck<F> for PolyIOP<F> {
         transcript: &mut Self::Transcript,
     ) -> Result<Self::SumCheckSubClaim, PolyIOPErrors> {
         let start = start_timer!(|| "sum check verify");
+        println!("sumcheck verifier {}", aux_info.num_variables);
 
         transcript.append_serializable_element(b"aux info", aux_info)?;
         let mut verifier_state = IOPVerifierState::verifier_init(aux_info);
         for i in 0..aux_info.num_variables {
+            println!("{}-th proof len {}", i, proof.proofs[i].evaluations.len());
             let prover_msg = proof.proofs.get(i).expect("proof is incomplete");
             transcript.append_serializable_element(b"prover msg", prover_msg)?;
             IOPVerifierState::verify_round_and_update_state(

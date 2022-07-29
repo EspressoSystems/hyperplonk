@@ -8,7 +8,7 @@ use crate::{
     PolyIOP, ZeroCheck,
 };
 use arithmetic::VirtualPolynomial;
-use ark_ff::PrimeField;
+use ark_ff::{to_bytes, PrimeField};
 use ark_poly::DenseMultilinearExtension;
 use ark_serialize::CanonicalSerialize;
 use ark_std::{end_timer, start_timer};
@@ -158,6 +158,7 @@ pub struct PermutationCheckSubClaim<F: PrimeField, ZC: ZeroCheck<F>> {
     final_query: (Vec<F>, F),
 }
 
+#[derive(Debug, Clone)]
 pub struct PermutationChallenge<F: PrimeField> {
     alpha: Option<F>,
     beta: F,
@@ -382,10 +383,10 @@ impl<F: PrimeField> PermutationCheck<F> for PolyIOP<F> {
         transcript: &mut Self::Transcript,
     ) -> Result<Self::PermutationCheckSubClaim, PolyIOPErrors> {
         let start = start_timer!(|| "Permutation check verify");
-
+        println!("zero check start");
         // invoke the zero check on the iop_proof
         let zero_check_sub_claim = <Self as ZeroCheck<F>>::verify(proof, aux_info, transcript)?;
-
+        println!("zero check finish");
         let mut final_query = vec![F::one(); aux_info.num_variables];
         final_query[aux_info.num_variables - 1] = F::zero();
         let final_eval = F::one();
@@ -442,8 +443,9 @@ fn prove_internal<F: PrimeField>(
     //           - (f(x) + beta * s_id(x)   + gamma))
     q_x.add_mle_list([prod_x0, prod_x1], -F::one())?;
     q_x.add_mle_list([prod_1x], F::one())?;
+    println!("zero check start");
     let iop_proof = <PolyIOP<F> as ZeroCheck<F>>::prove(&q_x, transcript)?;
-
+    println!("zero check finish");
     end_timer!(start);
     Ok((iop_proof, q_x))
 }
