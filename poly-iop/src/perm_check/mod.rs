@@ -5,8 +5,9 @@ use crate::{
     perm_check::util::{build_prod_partial_eval, compute_prod_0},
     structs::IOPProof,
     utils::get_index,
-    PolyIOP, VirtualPolynomial, ZeroCheck,
+    PolyIOP, ZeroCheck,
 };
+use arithmetic::VirtualPolynomial;
 use ark_ff::PrimeField;
 use ark_poly::DenseMultilinearExtension;
 use ark_serialize::CanonicalSerialize;
@@ -456,9 +457,9 @@ mod test {
         prelude::{identity_permutation_mle, random_permutation_mle},
         structs::IOPProof,
         utils::bit_decompose,
-        virtual_poly::VPAuxInfo,
-        PolyIOP, VirtualPolynomial,
+        PolyIOP,
     };
+    use arithmetic::{VPAuxInfo, VirtualPolynomial};
     use ark_bls12_381::{Fr, G1Affine};
     use ark_ec::{AffineCurve, ProjectiveCurve};
     use ark_ff::{UniformRand, Zero};

@@ -131,7 +131,8 @@ impl<F: PrimeField> ZeroCheck<F> for PolyIOP<F> {
 mod test {
 
     use super::ZeroCheck;
-    use crate::{errors::PolyIOPErrors, PolyIOP, VirtualPolynomial};
+    use crate::{errors::PolyIOPErrors, PolyIOP};
+    use arithmetic::VirtualPolynomial;
     use ark_bls12_381::Fr;
     use ark_std::test_rng;
 
@@ -166,7 +167,7 @@ mod test {
         {
             // bad path: random virtual poly whose sum is not zero
             let (poly, _sum) =
-                VirtualPolynomial::rand(nv, num_multiplicands_range, num_products, &mut rng)?;
+                VirtualPolynomial::<Fr>::rand(nv, num_multiplicands_range, num_products, &mut rng)?;
 
             let mut transcript = <PolyIOP<Fr> as ZeroCheck<Fr>>::init_transcript();
             transcript.append_message(b"testing", b"initializing transcript for testing")?;

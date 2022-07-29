@@ -1,5 +1,6 @@
 //! Error module.
 
+use arithmetic::ArithErrors;
 use ark_serialize::SerializationError;
 use ark_std::string::String;
 use displaydoc::Display;
@@ -28,6 +29,8 @@ pub enum HyperPlonkErrors {
     PCSErrors(PCSErrors),
     /// Transcript error {0}
     TranscriptError(TranscriptErrors),
+    /// Arithmetic Error: {0}
+    ArithmeticErrors(ArithErrors),
 }
 
 impl From<SerializationError> for HyperPlonkErrors {
@@ -51,5 +54,11 @@ impl From<PCSErrors> for HyperPlonkErrors {
 impl From<TranscriptErrors> for HyperPlonkErrors {
     fn from(e: TranscriptErrors) -> Self {
         Self::TranscriptError(e)
+    }
+}
+
+impl From<ArithErrors> for HyperPlonkErrors {
+    fn from(e: ArithErrors) -> Self {
+        Self::ArithmeticErrors(e)
     }
 }

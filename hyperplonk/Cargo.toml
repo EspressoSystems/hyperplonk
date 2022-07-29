@@ -17,6 +17,8 @@ ark-serialize = { version = "^0.3.0", default-features = false, features = [ "de
 
 displaydoc = { version = "0.2.3", default-features = false }
 transcript = { path = "../transcript" }
+arithmetic = { path = "../arithmetic" }
+
 
 [dev-dependencies]
 ark-bls12-381 = { version = "0.3.0", default-features = false, features = [ "curve" ] }
@@ -31,10 +33,12 @@ parallel = [
     "ark-poly/parallel", 
     "ark-ec/parallel",
     "poly-iop/parallel",
-    "pcs/parallel"
+    "pcs/parallel",
+    "arithmetic/parallel",
     ]
 print-trace = [ 
     "ark-std/print-trace",
     "poly-iop/print-trace",
-    "pcs/print-trace"
+    "pcs/print-trace",
+    "arithmetic/print-trace",
     ] 

@@ -4,8 +4,8 @@ use super::SumCheckProver;
 use crate::{
     errors::PolyIOPErrors,
     structs::{IOPProverMessage, IOPProverState},
-    virtual_poly::VirtualPolynomial,
 };
+use arithmetic::VirtualPolynomial;
 use ark_ff::PrimeField;
 use ark_poly::{DenseMultilinearExtension, MultilinearExtension};
 use ark_std::{end_timer, start_timer, vec::Vec};

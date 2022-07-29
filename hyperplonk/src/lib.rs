@@ -1,5 +1,6 @@
 //! Main module for the HyperPlonk PolyIOP.
 
+use arithmetic::VPAuxInfo;
 use ark_ec::PairingEngine;
 use ark_poly::{DenseMultilinearExtension, MultilinearExtension};
 use ark_std::{end_timer, log2, start_timer, One, Zero};
@@ -8,7 +9,7 @@ use pcs::prelude::{
     compute_qx_degree, get_batched_nv, merge_polynomials, PCSErrors, PolynomialCommitmentScheme,
 };
 use poly_iop::{
-    prelude::{PermutationCheck, SumCheck, VPAuxInfo, ZeroCheck},
+    prelude::{PermutationCheck, SumCheck, ZeroCheck},
     PolyIOP,
 };
 use selectors::{SelectorColumn, SelectorRow};

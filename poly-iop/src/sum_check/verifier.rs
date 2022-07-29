@@ -4,8 +4,8 @@ use super::{SumCheckSubClaim, SumCheckVerifier};
 use crate::{
     errors::PolyIOPErrors,
     structs::{IOPProverMessage, IOPVerifierState},
-    virtual_poly::VPAuxInfo,
 };
+use arithmetic::VPAuxInfo;
 use ark_ff::PrimeField;
 use ark_std::{end_timer, start_timer};
 use transcript::IOPTranscript;

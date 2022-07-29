@@ -1,6 +1,7 @@
 //! Main module for the Permutation Check protocol
 
-use crate::{errors::PolyIOPErrors, VirtualPolynomial, ZeroCheck};
+use crate::{errors::PolyIOPErrors, ZeroCheck};
+use arithmetic::VirtualPolynomial;
 use ark_ff::PrimeField;
 use ark_poly::DenseMultilinearExtension;
 use transcript::IOPTranscript;

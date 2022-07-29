@@ -6,7 +6,6 @@ pub use crate::{
     },
     sum_check::SumCheck,
     utils::*,
-    virtual_poly::{VPAuxInfo, VirtualPolynomial},
     zero_check::ZeroCheck,
     PolyIOP,
 };

@@ -3,9 +3,9 @@
 use crate::{
     errors::PolyIOPErrors,
     structs::{IOPProof, IOPProverState, IOPVerifierState},
-    virtual_poly::{VPAuxInfo, VirtualPolynomial},
     PolyIOP,
 };
+use arithmetic::{VPAuxInfo, VirtualPolynomial};
 use ark_ff::PrimeField;
 use ark_poly::DenseMultilinearExtension;
 use ark_std::{end_timer, start_timer};
@@ -368,7 +368,7 @@ mod test {
         assert_eq!(poly.flattened_ml_extensions.len(), 5);
 
         // test memory usage for prover
-        let prover = IOPProverState::prover_init(&poly).unwrap();
+        let prover = IOPProverState::<Fr>::prover_init(&poly).unwrap();
         assert_eq!(prover.poly.flattened_ml_extensions.len(), 5);
         drop(prover);
 

@@ -1,5 +1,6 @@
 //! Error module.
 
+use arithmetic::ArithErrors;
 use ark_std::string::String;
 use displaydoc::Display;
 use transcript::TranscriptErrors;
@@ -23,6 +24,8 @@ pub enum PolyIOPErrors {
     SerializationErrors(ark_serialize::SerializationError),
     /// Transcript Error: {0}
     TranscriptErrors(TranscriptErrors),
+    /// Arithmetic Error: {0}
+    ArithmeticErrors(ArithErrors),
 }
 
 impl From<ark_serialize::SerializationError> for PolyIOPErrors {
@@ -34,5 +37,11 @@ impl From<ark_serialize::SerializationError> for PolyIOPErrors {
 impl From<TranscriptErrors> for PolyIOPErrors {
     fn from(e: TranscriptErrors) -> Self {
         Self::TranscriptErrors(e)
+    }
+}
+
+impl From<ArithErrors> for PolyIOPErrors {
+    fn from(e: ArithErrors) -> Self {
+        Self::ArithmeticErrors(e)
     }
 }

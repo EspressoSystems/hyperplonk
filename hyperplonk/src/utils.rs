@@ -1,8 +1,8 @@
 use std::rc::Rc;
 
+use arithmetic::VirtualPolynomial;
 use ark_ff::PrimeField;
 use ark_poly::DenseMultilinearExtension;
-use poly_iop::prelude::VirtualPolynomial;
 
 use crate::{errors::HyperPlonkErrors, structs::CustomizedGates};
 
