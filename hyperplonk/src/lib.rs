@@ -11,14 +11,14 @@ use poly_iop::{
     prelude::{PermutationCheck, SumCheck, VPAuxInfo, ZeroCheck},
     PolyIOP,
 };
-use selectors::SelectorRow;
+use selectors::{SelectorColumn, SelectorRow};
 use std::{marker::PhantomData, rc::Rc};
 use structs::{
     HyperPlonkParams, HyperPlonkProof, HyperPlonkProvingKey, HyperPlonkSubClaim,
     HyperPlonkVerifyingKey,
 };
 use utils::{build_f, eval_f};
-use witness::WitnessRow;
+use witness::WitnessColumn;
 
 mod errors;
 mod selectors;
@@ -53,7 +53,7 @@ where
         params: &Self::Parameters,
         pcs_srs: &PCS::SRS,
         permutation: &[E::Fr],
-        selectors: &[SelectorRow<E::Fr>],
+        selectors: &[SelectorColumn<E::Fr>],
     ) -> Result<(Self::ProvingKey, Self::VerifyingKey), HyperPlonkErrors>;
 
     /// Generate HyperPlonk PIOP proof.
@@ -69,7 +69,7 @@ where
     fn prove(
         pk: &Self::ProvingKey,
         pub_input: &[E::Fr],
-        witness: &[WitnessRow<E::Fr>],
+        witnesses: &[WitnessColumn<E::Fr>],
         transcript: &mut Self::Transcript,
     ) -> Result<Self::Proof, HyperPlonkErrors>;
 
@@ -125,7 +125,7 @@ where
         params: &Self::Parameters,
         pcs_srs: &PCS::SRS,
         permutation: &[E::Fr],
-        selectors: &[SelectorRow<E::Fr>],
+        selectors: &[SelectorColumn<E::Fr>],
     ) -> Result<(Self::ProvingKey, Self::VerifyingKey), HyperPlonkErrors> {
         let num_vars = params.nv;
         let log_num_polys = params.log_n_wires;
@@ -149,7 +149,11 @@ where
         ));
 
         // build selector oracles and commit to it
-        let selector_oracles = SelectorRow::build_mles(selectors)?;
+        let selector_oracles: Vec<Rc<DenseMultilinearExtension<E::Fr>>> = selectors
+            .iter()
+            .map(|s| Rc::new(DenseMultilinearExtension::from(s)))
+            .collect();
+
         let selector_com = selector_oracles
             .iter()
             .map(|poly| PCS::commit(&pcs_prover_param, poly))
@@ -207,18 +211,21 @@ where
     fn prove(
         pk: &Self::ProvingKey,
         pub_input: &[E::Fr],
-        witnesses: &[WitnessRow<E::Fr>],
+        witnesses: &[WitnessColumn<E::Fr>],
         transcript: &mut Self::Transcript,
     ) -> Result<Self::Proof, HyperPlonkErrors> {
-        let start = start_timer!("hyperplonk proving");
+        let start = start_timer!(|| "hyperplonk proving");
 
         // witness assignment of length 2^n
         let num_vars = pk.params.log_n_wires;
         //  online public input of length 2^\ell
         let ell = pk.params.log_pub_input_len;
 
-        println!("witness");
-        let witness_polys = WitnessRow::<E::Fr>::build_mles(witnesses)?;
+        let witness_polys: Vec<Rc<DenseMultilinearExtension<E::Fr>>> = witnesses
+            .iter()
+            .map(|w| Rc::new(DenseMultilinearExtension::from(w)))
+            .collect();
+        println!("witness {}", witness_polys.len());
         println!("pi {} {}", ell, pub_input.len());
         let pi_poly = Rc::new(DenseMultilinearExtension::from_evaluations_slice(
             ell as usize,
@@ -266,7 +273,7 @@ where
         // 1. Commit Witness polynomials `w_i(x)` and append commitment to
         // transcript
         // =======================================================================
-        let step = start_timer!("commit witnesses");
+        let step = start_timer!(|| "commit witnesses");
         let mut witness_commits = vec![];
         // TODO: batch commit
         for wi_poly in witness_polys.iter() {
@@ -290,8 +297,9 @@ where
         //
         // in vanilla plonk, and obtain a ZeroCheckSubClaim
         // =======================================================================
-        let step = start_timer!("ZeroCheck on f");
+        let step = start_timer!(|| "ZeroCheck on f");
 
+        println!("{}", transcript.get_and_append_challenge(b"1")?);
         println!(
             "step 1 selector {}, nv {}",
             pk.selector_oracles[0].num_vars, pk.params.nv
@@ -316,7 +324,7 @@ where
         // 3.4. `update_challenge` with the updated transcript
         // 3.5. `prove` to generate the proof
         // =======================================================================
-        let step = start_timer!("Permutation check on w_i(x)");
+        let step = start_timer!(|| "Permutation check on w_i(x)");
 
         // 3.1 `generate_challenge` from current transcript (generate beta, gamma)
         let mut permutation_challenge = Self::generate_challenge(transcript)?;
@@ -368,7 +376,7 @@ where
         // - public input consistency checks
         //   - pi_poly(r_pi) where r_pi is sampled from transcript
         // =======================================================================
-        let step = start_timer!("opening and evaluations");
+        let step = start_timer!(|| "opening and evaluations");
 
         let mut witness_perm_check_evals = vec![];
         let mut witness_zero_check_evals = vec![];
@@ -380,11 +388,11 @@ where
             // Open permutation check proof
             let (perm_proof, perm_eval) =
                 PCS::open(&pk.pcs_param, &wire_poly, &perm_check_proof.point)?;
-
-            // Open zero check proof
-            let (zero_proof, zero_eval) =
-                PCS::open(&pk.pcs_param, &wire_poly, &zero_check_proof.point)?;
-
+            println!("step 4.11");
+            // // Open zero check proof
+            // let (zero_proof, zero_eval) =
+            //     PCS::open(&pk.pcs_param, &wire_poly, &zero_check_proof.point)?;
+            println!("step 4.12");
             {
                 // sanity checks
                 if wire_poly.evaluate(&perm_check_proof.point).ok_or(
@@ -397,23 +405,23 @@ where
                         "Evaluation is different from PCS opening".to_string(),
                     ));
                 }
-                if wire_poly.evaluate(&zero_check_proof.point).ok_or(
-                    HyperPlonkErrors::InvalidParameters(
-                        "evaluation dimension does not match".to_string(),
-                    ),
-                )? != zero_eval
-                {
-                    return Err(HyperPlonkErrors::InvalidProver(
-                        "Evaluation is different from PCS opening".to_string(),
-                    ));
-                }
+                // if wire_poly.evaluate(&zero_check_proof.point).ok_or(
+                //     HyperPlonkErrors::InvalidParameters(
+                //         "evaluation dimension does not match".to_string(),
+                //     ),
+                // )? != zero_eval
+                // {
+                //     return Err(HyperPlonkErrors::InvalidProver(
+                //         "Evaluation is different from PCS
+                // opening".to_string(),     ));
+                // }
             }
             witness_perm_check_evals.push(perm_eval);
-            witness_zero_check_evals.push(zero_eval);
+            // witness_zero_check_evals.push(zero_eval);
             witness_perm_check_openings.push(perm_proof);
-            witness_zero_check_openings.push(zero_proof);
+            // witness_zero_check_openings.push(zero_proof);
         }
-
+        println!("step 4.1");
         let mut selector_perm_check_evals = vec![];
         let mut selector_zero_check_evals = vec![];
         let mut selector_perm_check_openings = vec![];
@@ -424,9 +432,9 @@ where
             let (perm_proof, perm_eval) =
                 PCS::open(&pk.pcs_param, &selector_poly, &perm_check_proof.point)?;
 
-            // Open zero check proof
-            let (zero_proof, zero_eval) =
-                PCS::open(&pk.pcs_param, &selector_poly, &zero_check_proof.point)?;
+            // // Open zero check proof
+            // let (zero_proof, zero_eval) =
+            //     PCS::open(&pk.pcs_param, &selector_poly, &zero_check_proof.point)?;
 
             {
                 // sanity check
@@ -440,41 +448,43 @@ where
                         "Evaluation is different from PCS opening".to_string(),
                     ));
                 }
-                if selector_poly.evaluate(&zero_check_proof.point).ok_or(
-                    HyperPlonkErrors::InvalidParameters(
-                        "evaluation dimension does not match".to_string(),
-                    ),
-                )? != zero_eval
-                {
-                    return Err(HyperPlonkErrors::InvalidProver(
-                        "Evaluation is different from PCS opening".to_string(),
-                    ));
-                }
+                // if selector_poly.evaluate(&zero_check_proof.point).ok_or(
+                //     HyperPlonkErrors::InvalidParameters(
+                //         "evaluation dimension does not match".to_string(),
+                //     ),
+                // )? != zero_eval
+                // {
+                //     return Err(HyperPlonkErrors::InvalidProver(
+                //         "Evaluation is different from PCS
+                // opening".to_string(),     ));
+                // }
             }
 
             selector_perm_check_openings.push(perm_proof);
             selector_perm_check_evals.push(perm_eval);
-            selector_zero_check_openings.push(zero_proof);
-            selector_zero_check_evals.push(zero_eval);
+            // selector_zero_check_openings.push(zero_proof);
+            // selector_zero_check_evals.push(zero_eval);
         }
-
+        println!("step 4.2");
         // - public input consistency checks
-        let r_pi = transcript.get_and_append_challenge_vectors(b"r_pi", ell)?;
-        let (pi_opening, pi_eval) = PCS::open(&pk.pcs_param, &pi_poly, &zero_check_proof.point)?;
-        {
-            // sanity check
-            if pi_poly
-                .evaluate(&r_pi)
-                .ok_or(HyperPlonkErrors::InvalidParameters(
-                    "evaluation dimension does not match".to_string(),
-                ))?
-                != pi_eval
-            {
-                return Err(HyperPlonkErrors::InvalidProver(
-                    "Evaluation is different from PCS opening".to_string(),
-                ));
-            }
-        }
+        // let r_pi = transcript.get_and_append_challenge_vectors(b"r_pi", ell)?;
+        // println!("pi nvm val: {}", pi_poly.num_vars);
+        // println!("point length: {}",zero_check_proof.point.len());
+        // let (pi_opening, pi_eval) = PCS::open(&pk.pcs_param, &pi_poly,
+        // &zero_check_proof.point)?; {
+        //     // sanity check
+        //     if pi_poly
+        //         .evaluate(&r_pi)
+        //         .ok_or(HyperPlonkErrors::InvalidParameters(
+        //             "evaluation dimension does not match".to_string(),
+        //         ))?
+        //         != pi_eval
+        //     {
+        //         return Err(HyperPlonkErrors::InvalidProver(
+        //             "Evaluation is different from PCS opening".to_string(),
+        //         ));
+        //     }
+        // }
         end_timer!(step);
 
         println!("step 4");
@@ -491,8 +501,8 @@ where
             selector_zero_check_openings,
             selector_perm_check_evals,
             selector_zero_check_evals,
-            pi_eval,
-            pi_opening,
+            // pi_eval,
+            // pi_opening,
             // IOP components
             zero_check_proof,
             perm_check_proof,
@@ -535,7 +545,7 @@ where
         proof: &Self::Proof,
         transcript: &mut Self::Transcript,
     ) -> Result<Self::SubClaim, HyperPlonkErrors> {
-        let start = start_timer!("hyperplonk verification");
+        let start = start_timer!(|| "hyperplonk verification");
 
         // witness assignment of length 2^n
         let num_var = vk.params.log_n_wires;
@@ -572,12 +582,13 @@ where
         //     = q_l w_a(x) + q_r w_b(x) + q_m w_a(x)w_b(x) - q_o w_c(x)
         //
         // =======================================================================
-        let step = start_timer!("verify zero check");
+        let step = start_timer!(|| "verify zero check");
 
         // push witness to transcript
         for wi_com in proof.witness_commits.iter() {
             transcript.append_serializable_element(b"w", wi_com)?;
         }
+        println!("{}", transcript.get_and_append_challenge(b"1")?);
         let zero_check_sub_claim =
             <Self as ZeroCheck<E::Fr>>::verify(&proof.zero_check_proof, &aux_info, transcript)?;
         end_timer!(step);
@@ -585,7 +596,7 @@ where
         // =======================================================================
         // 2. Verify perm_check_proof on `\{w_i(x)\}` and `permutation_oracles`
         // =======================================================================
-        let step = start_timer!("verify permutation check");
+        let step = start_timer!(|| "verify permutation check");
         let perm_check_sub_claim = <Self as PermutationCheck<E::Fr>>::verify(
             &proof.perm_check_proof,
             &aux_info,
@@ -597,7 +608,7 @@ where
         // 3. Verify the opening against the commitment
         // =======================================================================
 
-        let step = start_timer!("verify commitments");
+        let step = start_timer!(|| "verify commitments");
         let perm_point = &perm_check_sub_claim
             .zero_check_sub_claim
             .sum_check_sub_claim
@@ -635,70 +646,70 @@ where
             }
         }
 
-        // =======================================================================
-        // 3.2 check zero check evaluations
-        // =======================================================================
-        // witness for zero check
-        for (commitment, (opening, eval)) in proof.witness_commits.iter().zip(
-            proof
-                .witness_zero_check_openings
-                .iter()
-                .zip(proof.witness_zero_check_evals.iter()),
-        ) {
-            if !PCS::verify(&vk.pcs_param, commitment, &zero_point, eval, opening)? {
-                return Err(HyperPlonkErrors::InvalidProof(
-                    "pcs verification failed".to_string(),
-                ));
-            }
-        }
+        // // =======================================================================
+        // // 3.2 check zero check evaluations
+        // // =======================================================================
+        // // witness for zero check
+        // for (commitment, (opening, eval)) in proof.witness_commits.iter().zip(
+        //     proof
+        //         .witness_zero_check_openings
+        //         .iter()
+        //         .zip(proof.witness_zero_check_evals.iter()),
+        // ) {
+        //     if !PCS::verify(&vk.pcs_param, commitment, &zero_point, eval, opening)? {
+        //         return Err(HyperPlonkErrors::InvalidProof(
+        //             "pcs verification failed".to_string(),
+        //         ));
+        //     }
+        // }
 
-        // selector for zero check
-        for (commitment, (opening, eval)) in proof.witness_commits.iter().zip(
-            proof
-                .witness_zero_check_openings
-                .iter()
-                .zip(proof.witness_zero_check_evals.iter()),
-        ) {
-            if !PCS::verify(&vk.pcs_param, commitment, &zero_point, eval, opening)? {
-                return Err(HyperPlonkErrors::InvalidProof(
-                    "pcs verification failed".to_string(),
-                ));
-            }
-        }
+        // // selector for zero check
+        // for (commitment, (opening, eval)) in proof.witness_commits.iter().zip(
+        //     proof
+        //         .witness_zero_check_openings
+        //         .iter()
+        //         .zip(proof.witness_zero_check_evals.iter()),
+        // ) {
+        //     if !PCS::verify(&vk.pcs_param, commitment, &zero_point, eval, opening)? {
+        //         return Err(HyperPlonkErrors::InvalidProof(
+        //             "pcs verification failed".to_string(),
+        //         ));
+        //     }
+        // }
 
-        let f_eval = eval_f(
-            &vk.params.gate_func,
-            &proof.selector_zero_check_evals,
-            &proof.witness_zero_check_evals,
-        )?;
+        // let f_eval = eval_f(
+        //     &vk.params.gate_func,
+        //     &proof.selector_zero_check_evals,
+        //     &proof.witness_zero_check_evals,
+        // )?;
 
-        if f_eval != zero_check_sub_claim.sum_check_sub_claim.expected_evaluation {
-            return Err(HyperPlonkErrors::InvalidProof(
-                "zero check evaluation failed".to_string(),
-            ));
-        }
+        // if f_eval != zero_check_sub_claim.sum_check_sub_claim.expected_evaluation {
+        //     return Err(HyperPlonkErrors::InvalidProof(
+        //         "zero check evaluation failed".to_string(),
+        //     ));
+        // }
 
-        // =======================================================================
-        // 3.3 public input consistency checks
-        // =======================================================================
-        let mut r_pi = transcript.get_and_append_challenge_vectors(b"r_pi", ell)?;
-        let pi_eval = pi_poly
-            .evaluate(&r_pi)
-            .ok_or(HyperPlonkErrors::InvalidParameters(
-                "evaluation dimension does not match".to_string(),
-            ))?;
-        r_pi = [vec![E::Fr::zero(); num_var - ell], r_pi].concat();
-        if !PCS::verify(
-            &vk.pcs_param,
-            &proof.witness_commits[0],
-            &r_pi,
-            &pi_eval,
-            &proof.pi_opening,
-        )? {
-            return Err(HyperPlonkErrors::InvalidProof(
-                "pcs verification failed".to_string(),
-            ));
-        }
+        // // =======================================================================
+        // // 3.3 public input consistency checks
+        // // =======================================================================
+        // let mut r_pi = transcript.get_and_append_challenge_vectors(b"r_pi", ell)?;
+        // let pi_eval = pi_poly
+        //     .evaluate(&r_pi)
+        //     .ok_or(HyperPlonkErrors::InvalidParameters(
+        //         "evaluation dimension does not match".to_string(),
+        //     ))?;
+        // r_pi = [vec![E::Fr::zero(); num_var - ell], r_pi].concat();
+        // if !PCS::verify(
+        //     &vk.pcs_param,
+        //     &proof.witness_commits[0],
+        //     &r_pi,
+        //     &pi_eval,
+        //     &proof.pi_opening,
+        // )? {
+        //     return Err(HyperPlonkErrors::InvalidProof(
+        //         "pcs verification failed".to_string(),
+        //     ));
+        // }
 
         end_timer!(step);
 
@@ -715,10 +726,11 @@ where
 #[cfg(test)]
 mod tests {
     use super::*;
-    use crate::structs::CustomizedGates;
+    use crate::{selectors::SelectorColumn, structs::CustomizedGates, witness::WitnessColumn};
     use ark_bls12_381::Bls12_381;
     use ark_std::{test_rng, UniformRand};
     use pcs::prelude::KZGMultilinearPCS;
+    use poly_iop::random_permutation_mle;
     use transcript::IOPTranscript;
 
     #[test]
@@ -731,7 +743,7 @@ mod tests {
         //     (-1,    None,           vec![id_W2])
         // ]
         //
-        // 1 public input
+        // 4 public input
         // 1 selector,
         // 2 witnesses,
         // 2 variables for MLE,
@@ -739,7 +751,7 @@ mod tests {
         let gates = CustomizedGates {
             gates: vec![(1, Some(0), vec![0, 0, 0, 0, 0]), (-1, None, vec![1])],
         };
-        test_hyperplonk_helper::<Bls12_381>(2, 0, 0, 2, gates)
+        test_hyperplonk_helper::<Bls12_381>(2, 2, 0, 2, gates)
     }
 
     fn test_hyperplonk_helper<E: PairingEngine>(
@@ -760,35 +772,39 @@ mod tests {
         };
         let pcs_srs = KZGMultilinearPCS::<E>::gen_srs_for_testing(&mut rng, 15)?;
         let merged_nv = 4;
-        let permutation: Vec<E::Fr> = (0..1 << merged_nv).map(|_| E::Fr::rand(&mut rng)).collect();
-        let selectors = SelectorRow::<E::Fr>::rand_selectors(&mut rng, nv, 1);
-        let w1 = WitnessRow(vec![
-            E::Fr::one(),
-            E::Fr::one(),
+        let permutation = random_permutation_mle(merged_nv, &mut rng);
+        let q1 = SelectorColumn(vec![E::Fr::one(), E::Fr::one(), E::Fr::one(), E::Fr::one()]);
+        // w1 := [0, 1, 2, 3]
+        let w1 = WitnessColumn(vec![
             E::Fr::zero(),
-            E::Fr::zero(),
-        ]);
-        let w2 = WitnessRow(vec![
+            E::Fr::one(),
             E::Fr::from(2u64),
-            E::Fr::from(32u64),
-            E::Fr::zero(),
-            E::Fr::zero(),
+            E::Fr::from(3u64),
         ]);
+        // w2 := [0^5, 1^5, 2^5, 3^5]
+        let w2 = WitnessColumn(vec![
+            E::Fr::zero(),
+            E::Fr::one(),
+            E::Fr::from(32u64),
+            E::Fr::from(243u64),
+        ]);
+        // public input = w1[0]
+        let pi = w1.clone();
 
         // generate pk and vks
         let (pk, vk) = <PolyIOP<E::Fr> as HyperPlonkPIOP<E, KZGMultilinearPCS<E>>>::preprocess(
             &params,
             &pcs_srs,
-            &permutation,
-            &selectors,
+            &permutation.evaluations,
+            &[q1],
         )?;
         println!("finished key gen");
         // generate a proof and verify
         let mut transcript = IOPTranscript::<E::Fr>::new(b"test hyperplonk");
         let proof = <PolyIOP<E::Fr> as HyperPlonkPIOP<E, KZGMultilinearPCS<E>>>::prove(
             &pk,
-            &[w1.0[0]],
-            &[w1.clone(), w2.clone(), w1, w2],
+            &pi.0,
+            &[w1, w2],
             &mut transcript,
         )?;
 
@@ -796,7 +812,7 @@ mod tests {
         let mut transcript = IOPTranscript::<E::Fr>::new(b"test hyperplonk");
         let _sub_claim = <PolyIOP<E::Fr> as HyperPlonkPIOP<E, KZGMultilinearPCS<E>>>::verify(
             &vk,
-            &[],
+            &pi.0,
             &proof,
             &mut transcript,
         )?;

@@ -284,11 +284,21 @@ fn open_internal<E: PairingEngine>(
 ) -> Result<(Proof<E>, E::Fr), PCSErrors> {
     let open_timer = start_timer!(|| format!("open mle with {} variable", polynomial.num_vars));
 
-    assert_eq!(
-        polynomial.num_vars(),
-        prover_param.num_vars,
-        "Invalid size of polynomial"
-    );
+    if polynomial.num_vars() > prover_param.num_vars {
+        return Err(PCSErrors::InvalidParameters(format!(
+            "Polynomial num_vars {} exceed the limit {}",
+            polynomial.num_vars, prover_param.num_vars
+        )));
+    }
+
+    if polynomial.num_vars() != point.len() {
+        return Err(PCSErrors::InvalidParameters(format!(
+            "Polynomial num_vars {} does not match point len {}",
+            polynomial.num_vars,
+            point.len()
+        )));
+    }
+
     let nv = polynomial.num_vars();
     let mut r: Vec<Vec<E::Fr>> = (0..nv + 1).map(|_| Vec::new()).collect();
     let mut q: Vec<Vec<E::Fr>> = (0..nv + 1).map(|_| Vec::new()).collect();

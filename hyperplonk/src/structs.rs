@@ -59,10 +59,10 @@ pub struct HyperPlonkProof<
     pub selector_perm_check_evals: Vec<E::Fr>,
     /// Evaluates of selectors on zero check point
     pub selector_zero_check_evals: Vec<E::Fr>,
-    /// Evaluates of public inputs on r_pi from transcript
-    pub pi_eval: E::Fr,
-    /// Opening of public inputs on r_pi from transcript
-    pub pi_opening: PCS::Proof,
+    // /// Evaluates of public inputs on r_pi from transcript
+    // pub pi_eval: E::Fr,
+    // /// Opening of public inputs on r_pi from transcript
+    // pub pi_opening: PCS::Proof,
     // =======================================================================
     // IOP components
     // =======================================================================
