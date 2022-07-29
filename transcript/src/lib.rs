@@ -65,7 +65,6 @@ impl<F: PrimeField> IOPTranscript<F> {
         label: &'static [u8],
         group_elem: &S,
     ) -> Result<(), TranscriptErrors> {
-        println!("transcript: {:?}", std::str::from_utf8(label).unwrap());
         self.append_message(label, &to_bytes!(group_elem)?)
     }
 

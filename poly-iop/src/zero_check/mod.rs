@@ -79,8 +79,6 @@ impl<F: PrimeField> ZeroCheck<F> for PolyIOP<F> {
         let length = poly.aux_info.num_variables;
         let r = transcript.get_and_append_challenge_vectors(b"0check r", length)?;
         let f_hat = poly.build_f_hat(r.as_ref())?;
-        println!("poly {}", poly.aux_info.num_variables);
-        println!("f_hat {}", f_hat.aux_info.num_variables);
         let res = <Self as SumCheck<F>>::prove(&f_hat, transcript);
 
         end_timer!(start);
@@ -113,7 +111,6 @@ impl<F: PrimeField> ZeroCheck<F> for PolyIOP<F> {
 
         // generate `r` and pass it to the caller for correctness check
         let length = fx_aux_info.num_variables;
-        println!("length: {}", length);
         let r = transcript.get_and_append_challenge_vectors(b"0check r", length)?;
 
         // hat_fx's max degree is increased by eq(x, r).degree() which is 1

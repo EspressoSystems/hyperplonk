@@ -8,7 +8,7 @@ use crate::{
     PolyIOP, ZeroCheck,
 };
 use arithmetic::VirtualPolynomial;
-use ark_ff::{to_bytes, PrimeField};
+use ark_ff::PrimeField;
 use ark_poly::DenseMultilinearExtension;
 use ark_serialize::CanonicalSerialize;
 use ark_std::{end_timer, start_timer};
@@ -275,7 +275,6 @@ impl<F: PrimeField> PermutationCheck<F> for PolyIOP<F> {
         let (prod_0x_eval, numerator_eval, denominator_eval) =
             compute_prod_0(&challenge.beta, &challenge.gamma, fx, gx, s_perm)?;
 
-        println!("step 3.31 {}", num_vars);
         // ===================================
         // prod(1, x)
         // ===================================
@@ -290,14 +289,10 @@ impl<F: PrimeField> PermutationCheck<F> for PolyIOP<F> {
         // is available via either eval_0x or the current view of eval_1x
         let mut prod_1x_eval = vec![];
         for x in 0..(1 << num_vars) - 1 {
-            println!("x :{}", x);
-
             // sign will decide if the evaluation should be looked up from eval_0x or
             // eval_1x; x_zero_index is the index for the evaluation (x_2, ..., x_n,
             // 0); x_one_index is the index for the evaluation (x_2, ..., x_n, 1);
             let (x_zero_index, x_one_index, sign) = get_index(x, num_vars);
-            println!("{} {} {}", x_zero_index, x_one_index, sign);
-            println!("{}", prod_0x_eval.len());
             if !sign {
                 prod_1x_eval.push(prod_0x_eval[x_zero_index] * prod_0x_eval[x_one_index]);
             } else {
@@ -310,7 +305,6 @@ impl<F: PrimeField> PermutationCheck<F> for PolyIOP<F> {
             }
         }
 
-        println!("step 3.32");
         // prod(1, 1, ..., 1) := 0
         prod_1x_eval.push(F::zero());
 
@@ -383,10 +377,9 @@ impl<F: PrimeField> PermutationCheck<F> for PolyIOP<F> {
         transcript: &mut Self::Transcript,
     ) -> Result<Self::PermutationCheckSubClaim, PolyIOPErrors> {
         let start = start_timer!(|| "Permutation check verify");
-        println!("zero check start");
+
         // invoke the zero check on the iop_proof
         let zero_check_sub_claim = <Self as ZeroCheck<F>>::verify(proof, aux_info, transcript)?;
-        println!("zero check finish");
         let mut final_query = vec![F::one(); aux_info.num_variables];
         final_query[aux_info.num_variables - 1] = F::zero();
         let final_eval = F::one();
@@ -443,9 +436,9 @@ fn prove_internal<F: PrimeField>(
     //           - (f(x) + beta * s_id(x)   + gamma))
     q_x.add_mle_list([prod_x0, prod_x1], -F::one())?;
     q_x.add_mle_list([prod_1x], F::one())?;
-    println!("zero check start");
+
     let iop_proof = <PolyIOP<F> as ZeroCheck<F>>::prove(&q_x, transcript)?;
-    println!("zero check finish");
+
     end_timer!(start);
     Ok((iop_proof, q_x))
 }

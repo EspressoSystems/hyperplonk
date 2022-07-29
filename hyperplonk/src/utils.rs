@@ -87,6 +87,7 @@ pub(crate) fn build_f<F: PrimeField>(
     Ok(res)
 }
 
+#[allow(dead_code)]
 pub(crate) fn eval_f<F: PrimeField>(
     gates: &CustomizedGates,
     selector_evals: &[F],

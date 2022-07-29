@@ -41,10 +41,6 @@ pub(super) fn compute_prod_0<F: PrimeField>(
     let mut prod_0x_evals = vec![];
     let mut numerator_evals = vec![];
     let mut denominator_evals = vec![];
-    println!(
-        "fx, gx, s_perm {} {} {}",
-        fx.num_vars, gx.num_vars, s_perm.num_vars
-    );
 
     // TODO: remove this line after replacing `s_perm` with `s`.
     let s_id = identity_permutation_mle::<F>(num_vars);

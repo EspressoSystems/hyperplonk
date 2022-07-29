@@ -39,33 +39,34 @@ pub struct HyperPlonkProof<
     /// PCS commit for witnesses
     // TODO: replace me with a batch commitment
     pub witness_commits: Vec<PCS::Commitment>,
+    pub w_merged_com: PCS::Commitment,
     /// PCS commit for prod(x)
     // TODO: replace me with a batch commitment
     pub prod_commit: PCS::Commitment,
     /// PCS openings for witness on permutation check point
     // TODO: replace me with a batch opening
-    pub witness_perm_check_openings: Vec<PCS::Proof>,
+    pub witness_perm_check_opening: PCS::Proof,
     /// PCS openings for witness on zero check point
     // TODO: replace me with a batch opening
     pub witness_zero_check_openings: Vec<PCS::Proof>,
     /// Evaluates of witnesses on permutation check point
-    pub witness_perm_check_evals: Vec<E::Fr>,
+    pub witness_perm_check_eval: E::Fr,
     /// Evaluates of witnesses on zero check point
     pub witness_zero_check_evals: Vec<E::Fr>,
     /// PCS openings for selectors on permutation check point
     // TODO: replace me with a batch opening
-    pub selector_perm_check_openings: Vec<PCS::Proof>,
+    pub perm_oracle_opening: PCS::Proof,
+    /// Evaluates of selectors on permutation check point
+    pub perm_oracle_eval: E::Fr,
     /// PCS openings for selectors on zero check point
     // TODO: replace me with a batch opening
-    pub selector_zero_check_openings: Vec<PCS::Proof>,
-    /// Evaluates of selectors on permutation check point
-    pub selector_perm_check_evals: Vec<E::Fr>,
+    pub selector_oracle_openings: Vec<PCS::Proof>,
     /// Evaluates of selectors on zero check point
-    pub selector_zero_check_evals: Vec<E::Fr>,
-    // /// Evaluates of public inputs on r_pi from transcript
-    // pub pi_eval: E::Fr,
-    // /// Opening of public inputs on r_pi from transcript
-    // pub pi_opening: PCS::Proof,
+    pub selector_oracle_evals: Vec<E::Fr>,
+    /// Evaluates of public inputs on r_pi from transcript
+    pub pi_eval: E::Fr,
+    /// Opening of public inputs on r_pi from transcript
+    pub pi_opening: PCS::Proof,
     // =======================================================================
     // IOP components
     // =======================================================================
@@ -123,6 +124,8 @@ pub struct HyperPlonkVerifyingKey<E: PairingEngine, PCS: PolynomialCommitmentSch
     /// Selector's commitment
     // TODO: replace me with a batch commitment
     pub selector_com: Vec<PCS::Commitment>,
+    /// Permutation oracle's commitment
+    pub perm_com: PCS::Commitment,
 }
 
 /// Customized gate is a list of tuples of

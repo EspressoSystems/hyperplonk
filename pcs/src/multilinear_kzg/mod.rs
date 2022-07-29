@@ -116,14 +116,20 @@ impl<E: PairingEngine> PolynomialCommitmentScheme<E> for KZGMultilinearPCS<E> {
         poly: &Self::Polynomial,
     ) -> Result<Self::Commitment, PCSErrors> {
         let commit_timer = start_timer!(|| "commit");
-
+        if prover_param.0.num_vars < poly.num_vars {
+            return Err(PCSErrors::InvalidParameters(format!(
+                "Poly length ({}) exceeds param limit ({})",
+                poly.num_vars, prover_param.0.num_vars
+            )));
+        }
+        let ignored = prover_param.0.num_vars - poly.num_vars;
         let scalars: Vec<_> = poly
             .to_evaluations()
             .into_iter()
             .map(|x| x.into_repr())
             .collect();
         let commitment = VariableBaseMSM::multi_scalar_mul(
-            &prover_param.0.powers_of_g[0].evals,
+            &prover_param.0.powers_of_g[ignored].evals,
             scalars.as_slice(),
         )
         .into_affine();
@@ -300,6 +306,7 @@ fn open_internal<E: PairingEngine>(
     }
 
     let nv = polynomial.num_vars();
+    let ignored = prover_param.num_vars - nv;
     let mut r: Vec<Vec<E::Fr>> = (0..nv + 1).map(|_| Vec::new()).collect();
     let mut q: Vec<Vec<E::Fr>> = (0..nv + 1).map(|_| Vec::new()).collect();
 
@@ -309,7 +316,7 @@ fn open_internal<E: PairingEngine>(
 
     for (i, (&point_at_k, gi)) in point
         .iter()
-        .zip(prover_param.powers_of_g.iter())
+        .zip(prover_param.powers_of_g[ignored..].iter())
         .take(nv)
         .enumerate()
     {
@@ -359,10 +366,20 @@ fn verify_internal<E: PairingEngine>(
     proof: &Proof<E>,
 ) -> Result<bool, PCSErrors> {
     let verify_timer = start_timer!(|| "verify");
+    let num_var = point.len();
+
+    if num_var > verifier_param.num_vars {
+        return Err(PCSErrors::InvalidParameters(format!(
+            "point length ({}) exceeds param limit ({})",
+            num_var, verifier_param.num_vars
+        )));
+    }
+
+    let ignored = verifier_param.num_vars - num_var;
     let prepare_inputs_timer = start_timer!(|| "prepare pairing inputs");
 
     let scalar_size = E::Fr::size_in_bits();
-    let window_size = FixedBaseMSM::get_mul_window_size(verifier_param.num_vars);
+    let window_size = FixedBaseMSM::get_mul_window_size(num_var);
 
     let h_table = FixedBaseMSM::get_window_table(
         scalar_size,
@@ -372,8 +389,9 @@ fn verify_internal<E: PairingEngine>(
     let h_mul: Vec<E::G2Projective> =
         FixedBaseMSM::multi_scalar_mul(scalar_size, window_size, &h_table, point);
 
-    let h_vec: Vec<_> = (0..verifier_param.num_vars)
-        .map(|i| verifier_param.h_mask[i].into_projective() - h_mul[i])
+    println!("length: {} {}", num_var, verifier_param.h_mask.len());
+    let h_vec: Vec<_> = (0..num_var)
+        .map(|i| verifier_param.h_mask[ignored + i].into_projective() - h_mul[i])
         .collect();
     let h_vec: Vec<E::G2Affine> = E::G2Projective::batch_normalization_into_affine(&h_vec);
     end_timer!(prepare_inputs_timer);
@@ -384,12 +402,7 @@ fn verify_internal<E: PairingEngine>(
         .proofs
         .iter()
         .map(|&x| E::G1Prepared::from(x))
-        .zip(
-            h_vec
-                .into_iter()
-                .take(verifier_param.num_vars)
-                .map(E::G2Prepared::from),
-        )
+        .zip(h_vec.into_iter().take(num_var).map(E::G2Prepared::from))
         .collect();
 
     pairings.push((
@@ -424,7 +437,7 @@ mod tests {
         let nv = poly.num_vars();
         assert_ne!(nv, 0);
         let uni_degree = 1;
-        let (ck, vk) = KZGMultilinearPCS::trim(params, uni_degree, Some(nv))?;
+        let (ck, vk) = KZGMultilinearPCS::trim(params, uni_degree, Some(nv + 1))?;
         let point: Vec<_> = (0..nv).map(|_| Fr::rand(rng)).collect();
         let com = KZGMultilinearPCS::commit(&ck, poly)?;
         let (proof, value) = KZGMultilinearPCS::open(&ck, poly, &point)?;
