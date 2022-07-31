@@ -389,7 +389,6 @@ fn verify_internal<E: PairingEngine>(
     let h_mul: Vec<E::G2Projective> =
         FixedBaseMSM::multi_scalar_mul(scalar_size, window_size, &h_table, point);
 
-    println!("length: {} {}", num_var, verifier_param.h_mask.len());
     let h_vec: Vec<_> = (0..num_var)
         .map(|i| verifier_param.h_mask[ignored + i].into_projective() - h_mul[i])
         .collect();

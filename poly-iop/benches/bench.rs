@@ -1,9 +1,9 @@
+use arithmetic::{VPAuxInfo, VirtualPolynomial};
 use ark_bls12_381::Fr;
 use ark_poly::{DenseMultilinearExtension, MultilinearExtension};
 use ark_std::{test_rng, UniformRand};
 use poly_iop::prelude::{
-    identity_permutation_mle, PermutationCheck, PolyIOP, PolyIOPErrors, SumCheck, VPAuxInfo,
-    VirtualPolynomial, ZeroCheck,
+    identity_permutation_mle, PermutationCheck, PolyIOP, PolyIOPErrors, SumCheck, ZeroCheck,
 };
 use std::{marker::PhantomData, time::Instant};
 

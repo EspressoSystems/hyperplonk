@@ -27,7 +27,7 @@ mod witness;
 
 /// A trait for HyperPlonk Poly-IOPs.
 /// A HyperPlonk is derived from SumChecks, ZeroChecks and PermutationChecks.
-pub trait HyperPlonkPIOP<E, PCS>:
+pub trait HyperPlonkSNARK<E, PCS>:
     SumCheck<E::Fr> + ZeroCheck<E::Fr> + PermutationCheck<E::Fr>
 where
     E: PairingEngine,
@@ -55,7 +55,7 @@ where
         selectors: &[SelectorColumn<E::Fr>],
     ) -> Result<(Self::ProvingKey, Self::VerifyingKey), HyperPlonkErrors>;
 
-    /// Generate HyperPlonk PIOP proof.
+    /// Generate HyperPlonk SNARK proof.
     ///
     /// Inputs:
     /// - `pk`: circuit proving key
@@ -64,7 +64,7 @@ where
     /// - `transcript`: the transcript used for generating pseudorandom
     ///   challenges
     /// Outputs:
-    /// - The HyperPlonk PIOP proof.
+    /// - The HyperPlonk SNARK proof.
     fn prove(
         pk: &Self::ProvingKey,
         pub_input: &[E::Fr],
@@ -78,7 +78,7 @@ where
     /// Inputs:
     /// - `params`: instance parameter
     /// - `pub_input`: online public input
-    /// - `proof`: HyperPlonk PIOP proof
+    /// - `proof`: HyperPlonk SNARK proof
     /// - `transcript`: the transcript used for generating pseudorandom
     ///   challenges
     /// Outputs:
@@ -92,7 +92,7 @@ where
     ) -> Result<Self::SubClaim, HyperPlonkErrors>;
 }
 
-impl<E, PCS> HyperPlonkPIOP<E, PCS> for PolyIOP<E::Fr>
+impl<E, PCS> HyperPlonkSNARK<E, PCS> for PolyIOP<E::Fr>
 where
     E: PairingEngine,
     // Ideally we want to access polynomial as PCS::Polynomial, instead of instantiating it here.
@@ -177,7 +177,7 @@ where
         ))
     }
 
-    /// Generate HyperPlonk PIOP proof.
+    /// Generate HyperPlonk SNARK proof.
     ///
     /// Inputs:
     /// - `pk`: circuit proving key
@@ -186,7 +186,7 @@ where
     /// - `transcript`: the transcript used for generating pseudorandom
     ///   challenges
     /// Outputs:
-    /// - The HyperPlonk PIOP proof.
+    /// - The HyperPlonk SNARK proof.
     ///
     /// Steps:
     ///
@@ -387,12 +387,9 @@ where
             &perm_check_proof.point,
         )?;
         // sanity checks
-        if w_merged
-            .evaluate(&perm_check_proof.point)
-            .ok_or(HyperPlonkErrors::InvalidParameters(
-                "evaluation dimension does not match".to_string(),
-            ))?
-            != witness_perm_check_eval
+        if w_merged.evaluate(&perm_check_proof.point).ok_or_else(|| {
+            HyperPlonkErrors::InvalidParameters("evaluation dimension does not match".to_string())
+        })? != witness_perm_check_eval
         {
             return Err(HyperPlonkErrors::InvalidProver(
                 "Evaluation is different from PCS opening".to_string(),
@@ -406,11 +403,11 @@ where
             let (zero_proof, zero_eval) =
                 PCS::open(&pk.pcs_param, &wire_poly, &zero_check_proof.point)?;
             {
-                if wire_poly.evaluate(&zero_check_proof.point).ok_or(
+                if wire_poly.evaluate(&zero_check_proof.point).ok_or_else(|| {
                     HyperPlonkErrors::InvalidParameters(
                         "evaluation dimension does not match".to_string(),
-                    ),
-                )? != zero_eval
+                    )
+                })? != zero_eval
                 {
                     return Err(HyperPlonkErrors::InvalidProver(
                         "Evaluation is different from PCS opening".to_string(),
@@ -429,11 +426,11 @@ where
         )?;
         {
             // sanity check
-            if s_perm.evaluate(&perm_check_proof.point).ok_or(
+            if s_perm.evaluate(&perm_check_proof.point).ok_or_else(|| {
                 HyperPlonkErrors::InvalidParameters(
                     "evaluation dimension does not match".to_string(),
-                ),
-            )? != perm_oracle_eval
+                )
+            })? != perm_oracle_eval
             {
                 return Err(HyperPlonkErrors::InvalidProver(
                     "Evaluation is different from PCS opening".to_string(),
@@ -449,13 +446,16 @@ where
             // Open zero check proof
             // during verification, use this eval against subclaim
             let (zero_proof, zero_eval) =
-                PCS::open(&pk.pcs_param, &selector_poly, &zero_check_proof.point)?;
+                PCS::open(&pk.pcs_param, selector_poly, &zero_check_proof.point)?;
             {
-                if selector_poly.evaluate(&zero_check_proof.point).ok_or(
-                    HyperPlonkErrors::InvalidParameters(
-                        "evaluation dimension does not match".to_string(),
-                    ),
-                )? != zero_eval
+                if selector_poly
+                    .evaluate(&zero_check_proof.point)
+                    .ok_or_else(|| {
+                        HyperPlonkErrors::InvalidParameters(
+                            "evaluation dimension does not match".to_string(),
+                        )
+                    })?
+                    != zero_eval
                 {
                     return Err(HyperPlonkErrors::InvalidProver(
                         "Evaluation is different from PCS
@@ -474,12 +474,11 @@ where
         let (pi_opening, pi_eval) = PCS::open(&pk.pcs_param, &pi_poly, &r_pi)?;
         {
             // sanity check
-            if pi_poly
-                .evaluate(&r_pi)
-                .ok_or(HyperPlonkErrors::InvalidParameters(
+            if pi_poly.evaluate(&r_pi).ok_or_else(|| {
+                HyperPlonkErrors::InvalidParameters(
                     "evaluation dimension does not match".to_string(),
-                ))?
-                != pi_eval
+                )
+            })? != pi_eval
             {
                 return Err(HyperPlonkErrors::InvalidProver(
                     "Evaluation is different from PCS opening".to_string(),
@@ -518,7 +517,7 @@ where
     /// Inputs:
     /// - `params`: instance parameter
     /// - `pub_input`: online public input
-    /// - `proof`: HyperPlonk PIOP proof
+    /// - `proof`: HyperPlonk SNARK proof
     /// - `transcript`: the transcript used for generating pseudorandom
     ///   challenges
     /// Outputs:
@@ -648,7 +647,7 @@ where
         if !PCS::verify(
             &vk.pcs_param,
             &proof.w_merged_com,
-            &perm_point,
+            perm_point,
             &proof.witness_perm_check_eval,
             &proof.witness_perm_check_opening,
         )? {
@@ -681,7 +680,7 @@ where
                 .iter()
                 .zip(proof.witness_zero_check_evals.iter()),
         ) {
-            if !PCS::verify(&vk.pcs_param, commitment, &zero_point, eval, opening)? {
+            if !PCS::verify(&vk.pcs_param, commitment, zero_point, eval, opening)? {
                 return Err(HyperPlonkErrors::InvalidProof(
                     "pcs verification failed".to_string(),
                 ));
@@ -698,7 +697,7 @@ where
             if !PCS::verify(
                 &vk.pcs_param,
                 &vk.selector_com[0],
-                &perm_point,
+                perm_point,
                 eval,
                 opening,
             )? {
@@ -723,11 +722,9 @@ where
         // 3.3 public input consistency checks
         // =======================================================================
         let mut r_pi = transcript.get_and_append_challenge_vectors(b"r_pi", ell)?;
-        let pi_eval = pi_poly
-            .evaluate(&r_pi)
-            .ok_or(HyperPlonkErrors::InvalidParameters(
-                "evaluation dimension does not match".to_string(),
-            ))?;
+        let pi_eval = pi_poly.evaluate(&r_pi).ok_or_else(|| {
+            HyperPlonkErrors::InvalidParameters("evaluation dimension does not match".to_string())
+        })?;
         r_pi = [vec![E::Fr::zero(); num_var - ell], r_pi].concat();
         if !PCS::verify(
             &vk.pcs_param,
@@ -825,7 +822,7 @@ mod tests {
         let pi = w1.clone();
 
         // generate pk and vks
-        let (pk, vk) = <PolyIOP<E::Fr> as HyperPlonkPIOP<E, KZGMultilinearPCS<E>>>::preprocess(
+        let (pk, vk) = <PolyIOP<E::Fr> as HyperPlonkSNARK<E, KZGMultilinearPCS<E>>>::preprocess(
             &params,
             &pcs_srs,
             &perm,
@@ -834,7 +831,7 @@ mod tests {
 
         // generate a proof and verify
         let mut transcript = IOPTranscript::<E::Fr>::new(b"test hyperplonk");
-        let proof = <PolyIOP<E::Fr> as HyperPlonkPIOP<E, KZGMultilinearPCS<E>>>::prove(
+        let proof = <PolyIOP<E::Fr> as HyperPlonkSNARK<E, KZGMultilinearPCS<E>>>::prove(
             &pk,
             &pi.0,
             &[w1, w2],
@@ -842,7 +839,7 @@ mod tests {
         )?;
 
         let mut transcript = IOPTranscript::<E::Fr>::new(b"test hyperplonk");
-        let _sub_claim = <PolyIOP<E::Fr> as HyperPlonkPIOP<E, KZGMultilinearPCS<E>>>::verify(
+        let _sub_claim = <PolyIOP<E::Fr> as HyperPlonkSNARK<E, KZGMultilinearPCS<E>>>::verify(
             &vk,
             &pi.0,
             &proof,
