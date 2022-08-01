@@ -41,8 +41,18 @@
 <span id="36">36</span>
 <span id="37">37</span>
 <span id="38">38</span>
+<span id="39">39</span>
+<span id="40">40</span>
+<span id="41">41</span>
+<span id="42">42</span>
+<span id="43">43</span>
+<span id="44">44</span>
+<span id="45">45</span>
+<span id="46">46</span>
+<span id="47">47</span>
 </pre><pre class="rust"><code><span class="doccomment">//! Error module.</span>
 
+<span class="kw">use</span> <span class="ident">arithmetic::ArithErrors</span>;
 <span class="kw">use</span> <span class="ident">ark_std::string::String</span>;
 <span class="kw">use</span> <span class="ident">displaydoc::Display</span>;
 <span class="kw">use</span> <span class="ident">transcript::TranscriptErrors</span>;
@@ -63,20 +73,28 @@
     <span class="doccomment">/// Should not arrive to this point</span>
     <span class="ident">ShouldNotArrive</span>,
     <span class="doccomment">/// An error during (de)serialization: {0}</span>
-    <span class="ident">SerializationError</span>(<span class="ident">ark_serialize::SerializationError</span>),
+    <span class="ident">SerializationErrors</span>(<span class="ident">ark_serialize::SerializationError</span>),
     <span class="doccomment">/// Transcript Error: {0}</span>
-    <span class="ident">TranscriptError</span>(<span class="ident">TranscriptErrors</span>),
+    <span class="ident">TranscriptErrors</span>(<span class="ident">TranscriptErrors</span>),
+    <span class="doccomment">/// Arithmetic Error: {0}</span>
+    <span class="ident">ArithmeticErrors</span>(<span class="ident">ArithErrors</span>),
 }
 
 <span class="kw">impl</span> <span class="ident">From</span><span class="op">&lt;</span><span class="ident">ark_serialize::SerializationError</span><span class="op">&gt;</span> <span class="kw">for</span> <span class="ident">PolyIOPErrors</span> {
     <span class="kw">fn</span> <span class="ident">from</span>(<span class="ident">e</span>: <span class="ident">ark_serialize::SerializationError</span>) -&gt; <span class="self">Self</span> {
-        <span class="ident"><span class="self">Self</span>::SerializationError</span>(<span class="ident">e</span>)
+        <span class="ident"><span class="self">Self</span>::SerializationErrors</span>(<span class="ident">e</span>)
     }
 }
 
 <span class="kw">impl</span> <span class="ident">From</span><span class="op">&lt;</span><span class="ident">TranscriptErrors</span><span class="op">&gt;</span> <span class="kw">for</span> <span class="ident">PolyIOPErrors</span> {
     <span class="kw">fn</span> <span class="ident">from</span>(<span class="ident">e</span>: <span class="ident">TranscriptErrors</span>) -&gt; <span class="self">Self</span> {
-        <span class="ident"><span class="self">Self</span>::TranscriptError</span>(<span class="ident">e</span>)
+        <span class="ident"><span class="self">Self</span>::TranscriptErrors</span>(<span class="ident">e</span>)
+    }
+}
+
+<span class="kw">impl</span> <span class="ident">From</span><span class="op">&lt;</span><span class="ident">ArithErrors</span><span class="op">&gt;</span> <span class="kw">for</span> <span class="ident">PolyIOPErrors</span> {
+    <span class="kw">fn</span> <span class="ident">from</span>(<span class="ident">e</span>: <span class="ident">ArithErrors</span>) -&gt; <span class="self">Self</span> {
+        <span class="ident"><span class="self">Self</span>::ArithmeticErrors</span>(<span class="ident">e</span>)
     }
 }
 </code></pre></div>

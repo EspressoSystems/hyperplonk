@@ -166,8 +166,8 @@
 <span class="kw">use</span> <span class="kw">crate</span>::{
     <span class="ident">errors::PolyIOPErrors</span>,
     <span class="ident">structs</span>::{<span class="ident">IOPProverMessage</span>, <span class="ident">IOPProverState</span>},
-    <span class="ident">virtual_poly::VirtualPolynomial</span>,
 };
+<span class="kw">use</span> <span class="ident">arithmetic::VirtualPolynomial</span>;
 <span class="kw">use</span> <span class="ident">ark_ff::PrimeField</span>;
 <span class="kw">use</span> <span class="ident">ark_poly</span>::{<span class="ident">DenseMultilinearExtension</span>, <span class="ident">MultilinearExtension</span>};
 <span class="kw">use</span> <span class="ident">ark_std</span>::{<span class="ident">end_timer</span>, <span class="ident">start_timer</span>, <span class="ident">vec::Vec</span>};
@@ -222,7 +222,7 @@
         <span class="comment">// for the current round, and m is the round number, indexed from 1</span>
         <span class="comment">//</span>
         <span class="comment">// i.e.:</span>
-        <span class="comment">// at round m &lt;=n, for each mle g(x_1, ... x_n) within the flattened_mle</span>
+        <span class="comment">// at round m &lt;= n, for each mle g(x_1, ... x_n) within the flattened_mle</span>
         <span class="comment">// which has already been evaluated to</span>
         <span class="comment">//</span>
         <span class="comment">//    g(r_1, ..., r_{m-1}, x_m ... x_n)</span>

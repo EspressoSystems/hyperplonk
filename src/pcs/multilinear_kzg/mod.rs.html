@@ -444,6 +444,45 @@
 <span id="439">439</span>
 <span id="440">440</span>
 <span id="441">441</span>
+<span id="442">442</span>
+<span id="443">443</span>
+<span id="444">444</span>
+<span id="445">445</span>
+<span id="446">446</span>
+<span id="447">447</span>
+<span id="448">448</span>
+<span id="449">449</span>
+<span id="450">450</span>
+<span id="451">451</span>
+<span id="452">452</span>
+<span id="453">453</span>
+<span id="454">454</span>
+<span id="455">455</span>
+<span id="456">456</span>
+<span id="457">457</span>
+<span id="458">458</span>
+<span id="459">459</span>
+<span id="460">460</span>
+<span id="461">461</span>
+<span id="462">462</span>
+<span id="463">463</span>
+<span id="464">464</span>
+<span id="465">465</span>
+<span id="466">466</span>
+<span id="467">467</span>
+<span id="468">468</span>
+<span id="469">469</span>
+<span id="470">470</span>
+<span id="471">471</span>
+<span id="472">472</span>
+<span id="473">473</span>
+<span id="474">474</span>
+<span id="475">475</span>
+<span id="476">476</span>
+<span id="477">477</span>
+<span id="478">478</span>
+<span id="479">479</span>
+<span id="480">480</span>
 </pre><pre class="rust"><code><span class="doccomment">//! Main module for multilinear KZG commitment scheme</span>
 
 <span class="kw">mod</span> <span class="ident">batching</span>;
@@ -464,7 +503,7 @@
 <span class="kw">use</span> <span class="ident">ark_ff::PrimeField</span>;
 <span class="kw">use</span> <span class="ident">ark_poly</span>::{<span class="ident">DenseMultilinearExtension</span>, <span class="ident">MultilinearExtension</span>};
 <span class="kw">use</span> <span class="ident">ark_serialize</span>::{<span class="ident">CanonicalDeserialize</span>, <span class="ident">CanonicalSerialize</span>, <span class="ident">Read</span>, <span class="ident">SerializationError</span>, <span class="ident">Write</span>};
-<span class="kw">use</span> <span class="ident">ark_std</span>::{<span class="ident">end_timer</span>, <span class="ident">rand::RngCore</span>, <span class="ident">start_timer</span>, <span class="ident">vec::Vec</span>, <span class="ident">One</span>, <span class="ident">Zero</span>};
+<span class="kw">use</span> <span class="ident">ark_std</span>::{<span class="ident">end_timer</span>, <span class="ident">rand::RngCore</span>, <span class="ident">rc::Rc</span>, <span class="ident">start_timer</span>, <span class="ident">vec::Vec</span>, <span class="ident">One</span>, <span class="ident">Zero</span>};
 <span class="kw">use</span> <span class="ident">batching</span>::{<span class="ident">batch_verify_internal</span>, <span class="ident">multi_open_internal</span>};
 <span class="kw">use</span> <span class="ident">srs</span>::{<span class="ident">MultilinearProverParam</span>, <span class="ident">MultilinearUniversalParams</span>, <span class="ident">MultilinearVerifierParam</span>};
 <span class="kw">use</span> <span class="ident">std::marker::PhantomData</span>;
@@ -505,14 +544,14 @@
     <span class="kw">type</span> <span class="ident">VerifierParam</span> <span class="op">=</span> (<span class="ident">MultilinearVerifierParam</span><span class="op">&lt;</span><span class="ident">E</span><span class="op">&gt;</span>, <span class="ident">UnivariateVerifierParam</span><span class="op">&lt;</span><span class="ident">E</span><span class="op">&gt;</span>);
     <span class="kw">type</span> <span class="ident">SRS</span> <span class="op">=</span> (<span class="ident">MultilinearUniversalParams</span><span class="op">&lt;</span><span class="ident">E</span><span class="op">&gt;</span>, <span class="ident">UnivariateUniversalParams</span><span class="op">&lt;</span><span class="ident">E</span><span class="op">&gt;</span>);
     <span class="comment">// Polynomial and its associated types</span>
-    <span class="kw">type</span> <span class="ident">Polynomial</span> <span class="op">=</span> <span class="ident">DenseMultilinearExtension</span><span class="op">&lt;</span><span class="ident">E::Fr</span><span class="op">&gt;</span>;
+    <span class="kw">type</span> <span class="ident">Polynomial</span> <span class="op">=</span> <span class="ident">Rc</span><span class="op">&lt;</span><span class="ident">DenseMultilinearExtension</span><span class="op">&lt;</span><span class="ident">E::Fr</span><span class="op">&gt;</span><span class="op">&gt;</span>;
     <span class="kw">type</span> <span class="ident">Point</span> <span class="op">=</span> <span class="ident">Vec</span><span class="op">&lt;</span><span class="ident">E::Fr</span><span class="op">&gt;</span>;
     <span class="kw">type</span> <span class="ident">Evaluation</span> <span class="op">=</span> <span class="ident">E::Fr</span>;
     <span class="comment">// Commitments and proofs</span>
     <span class="kw">type</span> <span class="ident">Commitment</span> <span class="op">=</span> <span class="ident">Commitment</span><span class="op">&lt;</span><span class="ident">E</span><span class="op">&gt;</span>;
+    <span class="kw">type</span> <span class="ident">BatchCommitment</span> <span class="op">=</span> <span class="ident">Commitment</span><span class="op">&lt;</span><span class="ident">E</span><span class="op">&gt;</span>;
     <span class="kw">type</span> <span class="ident">Proof</span> <span class="op">=</span> <span class="ident">Proof</span><span class="op">&lt;</span><span class="ident">E</span><span class="op">&gt;</span>;
     <span class="kw">type</span> <span class="ident">BatchProof</span> <span class="op">=</span> <span class="ident">BatchProof</span><span class="op">&lt;</span><span class="ident">E</span><span class="op">&gt;</span>;
-    <span class="kw">type</span> <span class="ident">BatchCommitment</span> <span class="op">=</span> <span class="ident">Commitment</span><span class="op">&lt;</span><span class="ident">E</span><span class="op">&gt;</span>;
 
     <span class="doccomment">/// Build SRS for testing.</span>
     <span class="doccomment">///</span>
@@ -531,6 +570,28 @@
         ))
     }
 
+    <span class="doccomment">/// Trim the universal parameters to specialize the public parameters.</span>
+    <span class="doccomment">/// Input both `supported_log_degree` for univariate and</span>
+    <span class="doccomment">/// `supported_num_vars` for multilinear.</span>
+    <span class="kw">fn</span> <span class="ident">trim</span>(
+        <span class="ident">srs</span>: <span class="kw-2">&amp;</span><span class="ident"><span class="self">Self</span>::SRS</span>,
+        <span class="ident">supported_log_degree</span>: <span class="ident">usize</span>,
+        <span class="ident">supported_num_vars</span>: <span class="prelude-ty">Option</span><span class="op">&lt;</span><span class="ident">usize</span><span class="op">&gt;</span>,
+    ) -&gt; <span class="prelude-ty">Result</span><span class="op">&lt;</span>(<span class="ident"><span class="self">Self</span>::ProverParam</span>, <span class="ident"><span class="self">Self</span>::VerifierParam</span>), <span class="ident">PCSErrors</span><span class="op">&gt;</span> {
+        <span class="kw">let</span> <span class="ident">supported_num_vars</span> <span class="op">=</span> <span class="kw">match</span> <span class="ident">supported_num_vars</span> {
+            <span class="prelude-val">Some</span>(<span class="ident">p</span>) =&gt; <span class="ident">p</span>,
+            <span class="prelude-val">None</span> =&gt; {
+                <span class="kw">return</span> <span class="prelude-val">Err</span>(<span class="ident">PCSErrors::InvalidParameters</span>(
+                    <span class="string">&quot;multilinear should receive a num_var param&quot;</span>.<span class="ident">to_string</span>(),
+                ))
+            },
+        };
+        <span class="kw">let</span> (<span class="ident">uni_ck</span>, <span class="ident">uni_vk</span>) <span class="op">=</span> <span class="ident">srs</span>.<span class="number">1</span>.<span class="ident">trim</span>(<span class="ident">supported_log_degree</span>)<span class="question-mark">?</span>;
+        <span class="kw">let</span> (<span class="ident">ml_ck</span>, <span class="ident">ml_vk</span>) <span class="op">=</span> <span class="ident">srs</span>.<span class="number">0</span>.<span class="ident">trim</span>(<span class="ident">supported_num_vars</span>)<span class="question-mark">?</span>;
+
+        <span class="prelude-val">Ok</span>(((<span class="ident">ml_ck</span>, <span class="ident">uni_ck</span>), (<span class="ident">ml_vk</span>, <span class="ident">uni_vk</span>)))
+    }
+
     <span class="doccomment">/// Generate a commitment for a polynomial.</span>
     <span class="doccomment">///</span>
     <span class="doccomment">/// This function takes `2^num_vars` number of scalar multiplications over</span>
@@ -540,14 +601,20 @@
         <span class="ident">poly</span>: <span class="kw-2">&amp;</span><span class="ident"><span class="self">Self</span>::Polynomial</span>,
     ) -&gt; <span class="prelude-ty">Result</span><span class="op">&lt;</span><span class="ident"><span class="self">Self</span>::Commitment</span>, <span class="ident">PCSErrors</span><span class="op">&gt;</span> {
         <span class="kw">let</span> <span class="ident">commit_timer</span> <span class="op">=</span> <span class="macro">start_timer!</span>(<span class="op">|</span><span class="op">|</span> <span class="string">&quot;commit&quot;</span>);
-
+        <span class="kw">if</span> <span class="ident">prover_param</span>.<span class="number">0</span>.<span class="ident">num_vars</span> <span class="op">&lt;</span> <span class="ident">poly</span>.<span class="ident">num_vars</span> {
+            <span class="kw">return</span> <span class="prelude-val">Err</span>(<span class="ident">PCSErrors::InvalidParameters</span>(<span class="macro">format!</span>(
+                <span class="string">&quot;Poly length ({}) exceeds param limit ({})&quot;</span>,
+                <span class="ident">poly</span>.<span class="ident">num_vars</span>, <span class="ident">prover_param</span>.<span class="number">0</span>.<span class="ident">num_vars</span>
+            )));
+        }
+        <span class="kw">let</span> <span class="ident">ignored</span> <span class="op">=</span> <span class="ident">prover_param</span>.<span class="number">0</span>.<span class="ident">num_vars</span> <span class="op">-</span> <span class="ident">poly</span>.<span class="ident">num_vars</span>;
         <span class="kw">let</span> <span class="ident">scalars</span>: <span class="ident">Vec</span><span class="op">&lt;</span><span class="kw">_</span><span class="op">&gt;</span> <span class="op">=</span> <span class="ident">poly</span>
             .<span class="ident">to_evaluations</span>()
             .<span class="ident">into_iter</span>()
             .<span class="ident">map</span>(<span class="op">|</span><span class="ident">x</span><span class="op">|</span> <span class="ident">x</span>.<span class="ident">into_repr</span>())
             .<span class="ident">collect</span>();
         <span class="kw">let</span> <span class="ident">commitment</span> <span class="op">=</span> <span class="ident">VariableBaseMSM::multi_scalar_mul</span>(
-            <span class="kw-2">&amp;</span><span class="ident">prover_param</span>.<span class="number">0</span>.<span class="ident">powers_of_g</span>[<span class="number">0</span>].<span class="ident">evals</span>,
+            <span class="kw-2">&amp;</span><span class="ident">prover_param</span>.<span class="number">0</span>.<span class="ident">powers_of_g</span>[<span class="ident">ignored</span>].<span class="ident">evals</span>,
             <span class="ident">scalars</span>.<span class="ident">as_slice</span>(),
         )
         .<span class="ident">into_affine</span>();
@@ -708,12 +775,23 @@
 ) -&gt; <span class="prelude-ty">Result</span><span class="op">&lt;</span>(<span class="ident">Proof</span><span class="op">&lt;</span><span class="ident">E</span><span class="op">&gt;</span>, <span class="ident">E::Fr</span>), <span class="ident">PCSErrors</span><span class="op">&gt;</span> {
     <span class="kw">let</span> <span class="ident">open_timer</span> <span class="op">=</span> <span class="macro">start_timer!</span>(<span class="op">|</span><span class="op">|</span> <span class="macro">format!</span>(<span class="string">&quot;open mle with {} variable&quot;</span>, <span class="ident">polynomial</span>.<span class="ident">num_vars</span>));
 
-    <span class="macro">assert_eq!</span>(
-        <span class="ident">polynomial</span>.<span class="ident">num_vars</span>(),
-        <span class="ident">prover_param</span>.<span class="ident">num_vars</span>,
-        <span class="string">&quot;Invalid size of polynomial&quot;</span>
-    );
+    <span class="kw">if</span> <span class="ident">polynomial</span>.<span class="ident">num_vars</span>() <span class="op">&gt;</span> <span class="ident">prover_param</span>.<span class="ident">num_vars</span> {
+        <span class="kw">return</span> <span class="prelude-val">Err</span>(<span class="ident">PCSErrors::InvalidParameters</span>(<span class="macro">format!</span>(
+            <span class="string">&quot;Polynomial num_vars {} exceed the limit {}&quot;</span>,
+            <span class="ident">polynomial</span>.<span class="ident">num_vars</span>, <span class="ident">prover_param</span>.<span class="ident">num_vars</span>
+        )));
+    }
+
+    <span class="kw">if</span> <span class="ident">polynomial</span>.<span class="ident">num_vars</span>() <span class="op">!</span><span class="op">=</span> <span class="ident">point</span>.<span class="ident">len</span>() {
+        <span class="kw">return</span> <span class="prelude-val">Err</span>(<span class="ident">PCSErrors::InvalidParameters</span>(<span class="macro">format!</span>(
+            <span class="string">&quot;Polynomial num_vars {} does not match point len {}&quot;</span>,
+            <span class="ident">polynomial</span>.<span class="ident">num_vars</span>,
+            <span class="ident">point</span>.<span class="ident">len</span>()
+        )));
+    }
+
     <span class="kw">let</span> <span class="ident">nv</span> <span class="op">=</span> <span class="ident">polynomial</span>.<span class="ident">num_vars</span>();
+    <span class="kw">let</span> <span class="ident">ignored</span> <span class="op">=</span> <span class="ident">prover_param</span>.<span class="ident">num_vars</span> <span class="op">-</span> <span class="ident">nv</span>;
     <span class="kw">let</span> <span class="kw-2">mut</span> <span class="ident">r</span>: <span class="ident">Vec</span><span class="op">&lt;</span><span class="ident">Vec</span><span class="op">&lt;</span><span class="ident">E::Fr</span><span class="op">&gt;</span><span class="op">&gt;</span> <span class="op">=</span> (<span class="number">0</span>..<span class="ident">nv</span> <span class="op">+</span> <span class="number">1</span>).<span class="ident">map</span>(<span class="op">|</span><span class="kw">_</span><span class="op">|</span> <span class="ident">Vec::new</span>()).<span class="ident">collect</span>();
     <span class="kw">let</span> <span class="kw-2">mut</span> <span class="ident">q</span>: <span class="ident">Vec</span><span class="op">&lt;</span><span class="ident">Vec</span><span class="op">&lt;</span><span class="ident">E::Fr</span><span class="op">&gt;</span><span class="op">&gt;</span> <span class="op">=</span> (<span class="number">0</span>..<span class="ident">nv</span> <span class="op">+</span> <span class="number">1</span>).<span class="ident">map</span>(<span class="op">|</span><span class="kw">_</span><span class="op">|</span> <span class="ident">Vec::new</span>()).<span class="ident">collect</span>();
 
@@ -723,7 +801,7 @@
 
     <span class="kw">for</span> (<span class="ident">i</span>, (<span class="kw-2">&amp;</span><span class="ident">point_at_k</span>, <span class="ident">gi</span>)) <span class="kw">in</span> <span class="ident">point</span>
         .<span class="ident">iter</span>()
-        .<span class="ident">zip</span>(<span class="ident">prover_param</span>.<span class="ident">powers_of_g</span>.<span class="ident">iter</span>())
+        .<span class="ident">zip</span>(<span class="ident">prover_param</span>.<span class="ident">powers_of_g</span>[<span class="ident">ignored</span>..].<span class="ident">iter</span>())
         .<span class="ident">take</span>(<span class="ident">nv</span>)
         .<span class="ident">enumerate</span>()
     {
@@ -773,10 +851,20 @@
     <span class="ident">proof</span>: <span class="kw-2">&amp;</span><span class="ident">Proof</span><span class="op">&lt;</span><span class="ident">E</span><span class="op">&gt;</span>,
 ) -&gt; <span class="prelude-ty">Result</span><span class="op">&lt;</span><span class="ident">bool</span>, <span class="ident">PCSErrors</span><span class="op">&gt;</span> {
     <span class="kw">let</span> <span class="ident">verify_timer</span> <span class="op">=</span> <span class="macro">start_timer!</span>(<span class="op">|</span><span class="op">|</span> <span class="string">&quot;verify&quot;</span>);
+    <span class="kw">let</span> <span class="ident">num_var</span> <span class="op">=</span> <span class="ident">point</span>.<span class="ident">len</span>();
+
+    <span class="kw">if</span> <span class="ident">num_var</span> <span class="op">&gt;</span> <span class="ident">verifier_param</span>.<span class="ident">num_vars</span> {
+        <span class="kw">return</span> <span class="prelude-val">Err</span>(<span class="ident">PCSErrors::InvalidParameters</span>(<span class="macro">format!</span>(
+            <span class="string">&quot;point length ({}) exceeds param limit ({})&quot;</span>,
+            <span class="ident">num_var</span>, <span class="ident">verifier_param</span>.<span class="ident">num_vars</span>
+        )));
+    }
+
+    <span class="kw">let</span> <span class="ident">ignored</span> <span class="op">=</span> <span class="ident">verifier_param</span>.<span class="ident">num_vars</span> <span class="op">-</span> <span class="ident">num_var</span>;
     <span class="kw">let</span> <span class="ident">prepare_inputs_timer</span> <span class="op">=</span> <span class="macro">start_timer!</span>(<span class="op">|</span><span class="op">|</span> <span class="string">&quot;prepare pairing inputs&quot;</span>);
 
     <span class="kw">let</span> <span class="ident">scalar_size</span> <span class="op">=</span> <span class="ident">E::Fr::size_in_bits</span>();
-    <span class="kw">let</span> <span class="ident">window_size</span> <span class="op">=</span> <span class="ident">FixedBaseMSM::get_mul_window_size</span>(<span class="ident">verifier_param</span>.<span class="ident">num_vars</span>);
+    <span class="kw">let</span> <span class="ident">window_size</span> <span class="op">=</span> <span class="ident">FixedBaseMSM::get_mul_window_size</span>(<span class="ident">num_var</span>);
 
     <span class="kw">let</span> <span class="ident">h_table</span> <span class="op">=</span> <span class="ident">FixedBaseMSM::get_window_table</span>(
         <span class="ident">scalar_size</span>,
@@ -786,8 +874,8 @@
     <span class="kw">let</span> <span class="ident">h_mul</span>: <span class="ident">Vec</span><span class="op">&lt;</span><span class="ident">E::G2Projective</span><span class="op">&gt;</span> <span class="op">=</span>
         <span class="ident">FixedBaseMSM::multi_scalar_mul</span>(<span class="ident">scalar_size</span>, <span class="ident">window_size</span>, <span class="kw-2">&amp;</span><span class="ident">h_table</span>, <span class="ident">point</span>);
 
-    <span class="kw">let</span> <span class="ident">h_vec</span>: <span class="ident">Vec</span><span class="op">&lt;</span><span class="kw">_</span><span class="op">&gt;</span> <span class="op">=</span> (<span class="number">0</span>..<span class="ident">verifier_param</span>.<span class="ident">num_vars</span>)
-        .<span class="ident">map</span>(<span class="op">|</span><span class="ident">i</span><span class="op">|</span> <span class="ident">verifier_param</span>.<span class="ident">h_mask</span>[<span class="ident">i</span>].<span class="ident">into_projective</span>() <span class="op">-</span> <span class="ident">h_mul</span>[<span class="ident">i</span>])
+    <span class="kw">let</span> <span class="ident">h_vec</span>: <span class="ident">Vec</span><span class="op">&lt;</span><span class="kw">_</span><span class="op">&gt;</span> <span class="op">=</span> (<span class="number">0</span>..<span class="ident">num_var</span>)
+        .<span class="ident">map</span>(<span class="op">|</span><span class="ident">i</span><span class="op">|</span> <span class="ident">verifier_param</span>.<span class="ident">h_mask</span>[<span class="ident">ignored</span> <span class="op">+</span> <span class="ident">i</span>].<span class="ident">into_projective</span>() <span class="op">-</span> <span class="ident">h_mul</span>[<span class="ident">i</span>])
         .<span class="ident">collect</span>();
     <span class="kw">let</span> <span class="ident">h_vec</span>: <span class="ident">Vec</span><span class="op">&lt;</span><span class="ident">E::G2Affine</span><span class="op">&gt;</span> <span class="op">=</span> <span class="ident">E::G2Projective::batch_normalization_into_affine</span>(<span class="kw-2">&amp;</span><span class="ident">h_vec</span>);
     <span class="macro">end_timer!</span>(<span class="ident">prepare_inputs_timer</span>);
@@ -798,12 +886,7 @@
         .<span class="ident">proofs</span>
         .<span class="ident">iter</span>()
         .<span class="ident">map</span>(<span class="op">|</span><span class="kw-2">&amp;</span><span class="ident">x</span><span class="op">|</span> <span class="ident">E::G1Prepared::from</span>(<span class="ident">x</span>))
-        .<span class="ident">zip</span>(
-            <span class="ident">h_vec</span>
-                .<span class="ident">into_iter</span>()
-                .<span class="ident">take</span>(<span class="ident">verifier_param</span>.<span class="ident">num_vars</span>)
-                .<span class="ident">map</span>(<span class="ident">E::G2Prepared::from</span>),
-        )
+        .<span class="ident">zip</span>(<span class="ident">h_vec</span>.<span class="ident">into_iter</span>().<span class="ident">take</span>(<span class="ident">num_var</span>).<span class="ident">map</span>(<span class="ident">E::G2Prepared::from</span>))
         .<span class="ident">collect</span>();
 
     <span class="ident">pairings</span>.<span class="ident">push</span>((
@@ -823,7 +906,6 @@
 <span class="attribute">#[<span class="ident">cfg</span>(<span class="ident">test</span>)]</span>
 <span class="kw">mod</span> <span class="ident">tests</span> {
     <span class="kw">use</span> <span class="kw">super</span>::<span class="kw-2">*</span>;
-    <span class="kw">use</span> <span class="ident"><span class="kw">crate</span>::StructuredReferenceString</span>;
     <span class="kw">use</span> <span class="ident">ark_bls12_381::Bls12_381</span>;
     <span class="kw">use</span> <span class="ident">ark_ec::PairingEngine</span>;
     <span class="kw">use</span> <span class="ident">ark_poly</span>::{<span class="ident">DenseMultilinearExtension</span>, <span class="ident">MultilinearExtension</span>};
@@ -833,17 +915,13 @@
 
     <span class="kw">fn</span> <span class="ident">test_single_helper</span><span class="op">&lt;</span><span class="ident">R</span>: <span class="ident">RngCore</span><span class="op">&gt;</span>(
         <span class="ident">params</span>: <span class="kw-2">&amp;</span>(<span class="ident">MultilinearUniversalParams</span><span class="op">&lt;</span><span class="ident">E</span><span class="op">&gt;</span>, <span class="ident">UnivariateUniversalParams</span><span class="op">&lt;</span><span class="ident">E</span><span class="op">&gt;</span>),
-        <span class="ident">poly</span>: <span class="kw-2">&amp;</span><span class="ident">DenseMultilinearExtension</span><span class="op">&lt;</span><span class="ident">Fr</span><span class="op">&gt;</span>,
+        <span class="ident">poly</span>: <span class="kw-2">&amp;</span><span class="ident">Rc</span><span class="op">&lt;</span><span class="ident">DenseMultilinearExtension</span><span class="op">&lt;</span><span class="ident">Fr</span><span class="op">&gt;</span><span class="op">&gt;</span>,
         <span class="ident">rng</span>: <span class="kw-2">&amp;mut</span> <span class="ident">R</span>,
     ) -&gt; <span class="prelude-ty">Result</span><span class="op">&lt;</span>(), <span class="ident">PCSErrors</span><span class="op">&gt;</span> {
         <span class="kw">let</span> <span class="ident">nv</span> <span class="op">=</span> <span class="ident">poly</span>.<span class="ident">num_vars</span>();
         <span class="macro">assert_ne!</span>(<span class="ident">nv</span>, <span class="number">0</span>);
         <span class="kw">let</span> <span class="ident">uni_degree</span> <span class="op">=</span> <span class="number">1</span>;
-        <span class="kw">let</span> (<span class="ident">uni_ck</span>, <span class="ident">uni_vk</span>) <span class="op">=</span> <span class="ident">params</span>.<span class="number">1</span>.<span class="ident">trim</span>(<span class="ident">uni_degree</span>)<span class="question-mark">?</span>;
-        <span class="kw">let</span> (<span class="ident">ml_ck</span>, <span class="ident">ml_vk</span>) <span class="op">=</span> <span class="ident">params</span>.<span class="number">0</span>.<span class="ident">trim</span>(<span class="ident">nv</span>)<span class="question-mark">?</span>;
-        <span class="kw">let</span> <span class="ident">ck</span> <span class="op">=</span> (<span class="ident">ml_ck</span>, <span class="ident">uni_ck</span>);
-        <span class="kw">let</span> <span class="ident">vk</span> <span class="op">=</span> (<span class="ident">ml_vk</span>, <span class="ident">uni_vk</span>);
-
+        <span class="kw">let</span> (<span class="ident">ck</span>, <span class="ident">vk</span>) <span class="op">=</span> <span class="ident">KZGMultilinearPCS::trim</span>(<span class="ident">params</span>, <span class="ident">uni_degree</span>, <span class="prelude-val">Some</span>(<span class="ident">nv</span> <span class="op">+</span> <span class="number">1</span>))<span class="question-mark">?</span>;
         <span class="kw">let</span> <span class="ident">point</span>: <span class="ident">Vec</span><span class="op">&lt;</span><span class="kw">_</span><span class="op">&gt;</span> <span class="op">=</span> (<span class="number">0</span>..<span class="ident">nv</span>).<span class="ident">map</span>(<span class="op">|</span><span class="kw">_</span><span class="op">|</span> <span class="ident">Fr::rand</span>(<span class="ident">rng</span>)).<span class="ident">collect</span>();
         <span class="kw">let</span> <span class="ident">com</span> <span class="op">=</span> <span class="ident">KZGMultilinearPCS::commit</span>(<span class="kw-2">&amp;</span><span class="ident">ck</span>, <span class="ident">poly</span>)<span class="question-mark">?</span>;
         <span class="kw">let</span> (<span class="ident">proof</span>, <span class="ident">value</span>) <span class="op">=</span> <span class="ident">KZGMultilinearPCS::open</span>(<span class="kw-2">&amp;</span><span class="ident">ck</span>, <span class="ident">poly</span>, <span class="kw-2">&amp;</span><span class="ident">point</span>)<span class="question-mark">?</span>;
@@ -867,11 +945,11 @@
         <span class="kw">let</span> <span class="ident">params</span> <span class="op">=</span> <span class="ident">KZGMultilinearPCS</span>::<span class="op">&lt;</span><span class="ident">E</span><span class="op">&gt;</span><span class="ident">::gen_srs_for_testing</span>(<span class="kw-2">&amp;mut</span> <span class="ident">rng</span>, <span class="number">10</span>)<span class="question-mark">?</span>;
 
         <span class="comment">// normal polynomials</span>
-        <span class="kw">let</span> <span class="ident">poly1</span> <span class="op">=</span> <span class="ident">DenseMultilinearExtension::rand</span>(<span class="number">8</span>, <span class="kw-2">&amp;mut</span> <span class="ident">rng</span>);
+        <span class="kw">let</span> <span class="ident">poly1</span> <span class="op">=</span> <span class="ident">Rc::new</span>(<span class="ident">DenseMultilinearExtension::rand</span>(<span class="number">8</span>, <span class="kw-2">&amp;mut</span> <span class="ident">rng</span>));
         <span class="ident">test_single_helper</span>(<span class="kw-2">&amp;</span><span class="ident">params</span>, <span class="kw-2">&amp;</span><span class="ident">poly1</span>, <span class="kw-2">&amp;mut</span> <span class="ident">rng</span>)<span class="question-mark">?</span>;
 
         <span class="comment">// single-variate polynomials</span>
-        <span class="kw">let</span> <span class="ident">poly2</span> <span class="op">=</span> <span class="ident">DenseMultilinearExtension::rand</span>(<span class="number">1</span>, <span class="kw-2">&amp;mut</span> <span class="ident">rng</span>);
+        <span class="kw">let</span> <span class="ident">poly2</span> <span class="op">=</span> <span class="ident">Rc::new</span>(<span class="ident">DenseMultilinearExtension::rand</span>(<span class="number">1</span>, <span class="kw-2">&amp;mut</span> <span class="ident">rng</span>));
         <span class="ident">test_single_helper</span>(<span class="kw-2">&amp;</span><span class="ident">params</span>, <span class="kw-2">&amp;</span><span class="ident">poly2</span>, <span class="kw-2">&amp;mut</span> <span class="ident">rng</span>)<span class="question-mark">?</span>;
 
         <span class="prelude-val">Ok</span>(())

@@ -387,6 +387,22 @@
 <span id="382">382</span>
 <span id="383">383</span>
 <span id="384">384</span>
+<span id="385">385</span>
+<span id="386">386</span>
+<span id="387">387</span>
+<span id="388">388</span>
+<span id="389">389</span>
+<span id="390">390</span>
+<span id="391">391</span>
+<span id="392">392</span>
+<span id="393">393</span>
+<span id="394">394</span>
+<span id="395">395</span>
+<span id="396">396</span>
+<span id="397">397</span>
+<span id="398">398</span>
+<span id="399">399</span>
+<span id="400">400</span>
 </pre><pre class="rust"><code><span class="doccomment">//! Main module for univariate KZG commitment scheme</span>
 
 <span class="kw">use</span> <span class="kw">crate</span>::{
@@ -427,9 +443,9 @@
     <span class="kw">type</span> <span class="ident">Evaluation</span> <span class="op">=</span> <span class="ident">E::Fr</span>;
     <span class="comment">// Polynomial and its associated types</span>
     <span class="kw">type</span> <span class="ident">Commitment</span> <span class="op">=</span> <span class="ident">Commitment</span><span class="op">&lt;</span><span class="ident">E</span><span class="op">&gt;</span>;
+    <span class="kw">type</span> <span class="ident">BatchCommitment</span> <span class="op">=</span> <span class="ident">Vec</span><span class="op">&lt;</span><span class="ident"><span class="self">Self</span>::Commitment</span><span class="op">&gt;</span>;
     <span class="kw">type</span> <span class="ident">Proof</span> <span class="op">=</span> <span class="ident">KZGUnivariateOpening</span><span class="op">&lt;</span><span class="ident">E</span><span class="op">&gt;</span>;
     <span class="kw">type</span> <span class="ident">BatchProof</span> <span class="op">=</span> <span class="ident">Vec</span><span class="op">&lt;</span><span class="ident"><span class="self">Self</span>::Proof</span><span class="op">&gt;</span>;
-    <span class="kw">type</span> <span class="ident">BatchCommitment</span> <span class="op">=</span> <span class="ident">Vec</span><span class="op">&lt;</span><span class="ident"><span class="self">Self</span>::Commitment</span><span class="op">&gt;</span>;
 
     <span class="doccomment">/// Build SRS for testing.</span>
     <span class="doccomment">///</span>
@@ -443,6 +459,22 @@
         <span class="ident">log_size</span>: <span class="ident">usize</span>,
     ) -&gt; <span class="prelude-ty">Result</span><span class="op">&lt;</span><span class="ident"><span class="self">Self</span>::SRS</span>, <span class="ident">PCSErrors</span><span class="op">&gt;</span> {
         <span class="ident"><span class="self">Self</span>::SRS::gen_srs_for_testing</span>(<span class="ident">rng</span>, <span class="ident">log_size</span>)
+    }
+
+    <span class="doccomment">/// Trim the universal parameters to specialize the public parameters.</span>
+    <span class="doccomment">/// Input `supported_log_degree` for univariate.</span>
+    <span class="doccomment">/// `supported_num_vars` must be None or an error is returned.</span>
+    <span class="kw">fn</span> <span class="ident">trim</span>(
+        <span class="ident">srs</span>: <span class="kw-2">&amp;</span><span class="ident"><span class="self">Self</span>::SRS</span>,
+        <span class="ident">supported_log_degree</span>: <span class="ident">usize</span>,
+        <span class="ident">supported_num_vars</span>: <span class="prelude-ty">Option</span><span class="op">&lt;</span><span class="ident">usize</span><span class="op">&gt;</span>,
+    ) -&gt; <span class="prelude-ty">Result</span><span class="op">&lt;</span>(<span class="ident"><span class="self">Self</span>::ProverParam</span>, <span class="ident"><span class="self">Self</span>::VerifierParam</span>), <span class="ident">PCSErrors</span><span class="op">&gt;</span> {
+        <span class="kw">if</span> <span class="ident">supported_num_vars</span>.<span class="ident">is_some</span>() {
+            <span class="kw">return</span> <span class="prelude-val">Err</span>(<span class="ident">PCSErrors::InvalidParameters</span>(
+                <span class="string">&quot;univariate should not receive a num_var param&quot;</span>.<span class="ident">to_string</span>(),
+            ));
+        }
+        <span class="ident">srs</span>.<span class="ident">trim</span>(<span class="ident">supported_log_degree</span>)
     }
 
     <span class="doccomment">/// Generate a commitment for a polynomial</span>
@@ -731,7 +763,7 @@
             }
             <span class="kw">let</span> <span class="ident">log_degree</span> <span class="op">=</span> <span class="ident">log2</span>(<span class="ident">degree</span>) <span class="kw">as</span> <span class="ident">usize</span>;
             <span class="kw">let</span> <span class="ident">pp</span> <span class="op">=</span> <span class="ident">KZGUnivariatePCS</span>::<span class="op">&lt;</span><span class="ident">E</span><span class="op">&gt;</span><span class="ident">::gen_srs_for_testing</span>(<span class="ident">rng</span>, <span class="ident">log_degree</span>)<span class="question-mark">?</span>;
-            <span class="kw">let</span> (<span class="ident">ck</span>, <span class="ident">vk</span>) <span class="op">=</span> <span class="ident">pp</span>.<span class="ident">trim</span>(<span class="ident">log_degree</span>)<span class="question-mark">?</span>;
+            <span class="kw">let</span> (<span class="ident">ck</span>, <span class="ident">vk</span>) <span class="op">=</span> <span class="ident">KZGUnivariatePCS</span>::<span class="op">&lt;</span><span class="ident">E</span><span class="op">&gt;</span><span class="ident">::trim</span>(<span class="kw-2">&amp;</span><span class="ident">pp</span>, <span class="ident">log_degree</span>, <span class="prelude-val">None</span>)<span class="question-mark">?</span>;
             <span class="kw">let</span> <span class="kw-2">mut</span> <span class="ident">comms</span> <span class="op">=</span> <span class="ident">Vec::new</span>();
             <span class="kw">let</span> <span class="kw-2">mut</span> <span class="ident">values</span> <span class="op">=</span> <span class="ident">Vec::new</span>();
             <span class="kw">let</span> <span class="kw-2">mut</span> <span class="ident">points</span> <span class="op">=</span> <span class="ident">Vec::new</span>();

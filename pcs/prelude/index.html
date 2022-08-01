@@ -22,7 +22,12 @@ https://github.com/arkworks-rs/poly-commit/blob/master/src/kzg10/data_structures
 </div></div></div><h2 id="enums" class="small-section-header"><a href="#enums">Enums</a></h2>
 <div class="item-table"><div class="item-row"><div class="item-left module-item"><a class="enum" href="enum.PCSErrors.html" title="pcs::prelude::PCSErrors enum">PCSErrors</a></div><div class="item-right docblock-short"><p>A <code>enum</code> specifying the possible failure modes of the PCS.</p>
 </div></div></div><h2 id="functions" class="small-section-header"><a href="#functions">Functions</a></h2>
-<div class="item-table"><div class="item-row"><div class="item-left module-item"><a class="fn" href="fn.merge_polynomials.html" title="pcs::prelude::merge_polynomials fn">merge_polynomials</a></div><div class="item-right docblock-short"><p>merge a set of polynomials. Returns an error if the
+<div class="item-table"><div class="item-row"><div class="item-left module-item"><a class="fn" href="fn.compute_qx_degree.html" title="pcs::prelude::compute_qx_degree fn">compute_qx_degree</a></div><div class="item-right docblock-short"><p>For an MLE w with <code>mle_num_vars</code> variables, and <code>point_len</code> number of
+points, compute the degree of the univariate polynomial <code>q(x):= w(l(x))</code>
+where l(x) is a list of polynomials that go through all points.</p>
+</div></div><div class="item-row"><div class="item-left module-item"><a class="fn" href="fn.get_batched_nv.html" title="pcs::prelude::get_batched_nv fn">get_batched_nv</a></div><div class="item-right docblock-short"><p>Return the number of variables that one need for an MLE to
+batch the list of MLEs</p>
+</div></div><div class="item-row"><div class="item-left module-item"><a class="fn" href="fn.merge_polynomials.html" title="pcs::prelude::merge_polynomials fn">merge_polynomials</a></div><div class="item-right docblock-short"><p>merge a set of polynomials. Returns an error if the
 polynomials do not share a same number of nvs.</p>
 </div></div></div></section></div></main><div id="rustdoc-vars" data-root-path="../../" data-current-crate="pcs" data-themes="ayu,dark,light" data-resource-suffix="" data-rustdoc-version="1.62.1 (e092d0b6b 2022-07-16)" ></div>
 </body></html>
