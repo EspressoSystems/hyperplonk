@@ -471,7 +471,7 @@ where
         // 4.3 public input consistency checks
         let r_pi = transcript.get_and_append_challenge_vectors(b"r_pi", ell)?;
 
-        let (pi_opening, pi_eval) = PCS::open(&pk.pcs_param, &pi_poly, &r_pi)?;
+        let (pi_opening, pi_eval) = PCS::open(&pk.pcs_param, &pi_in_w0, &r_pi)?;
         {
             // sanity check
             if pi_poly.evaluate(&r_pi).ok_or_else(|| {
