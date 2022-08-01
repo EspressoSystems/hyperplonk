@@ -2,7 +2,7 @@ pub use crate::{
     errors::PCSErrors,
     multilinear_kzg::{
         srs::{MultilinearProverParam, MultilinearUniversalParams, MultilinearVerifierParam},
-        util::merge_polynomials,
+        util::{compute_qx_degree, get_batched_nv, merge_polynomials},
         BatchProof, KZGMultilinearPCS, Proof,
     },
     structs::Commitment,

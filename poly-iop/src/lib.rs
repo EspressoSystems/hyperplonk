@@ -2,17 +2,15 @@ use ark_ff::PrimeField;
 use std::marker::PhantomData;
 
 mod errors;
-mod hyperplonk;
 mod perm_check;
+pub mod prelude;
 mod prod_check;
 mod structs;
 mod sum_check;
 mod utils;
-mod virtual_poly;
 mod zero_check;
 
 pub use errors::PolyIOPErrors;
-pub use hyperplonk::HyperPlonkPIOP;
 pub use perm_check::{
     util::{identity_permutation_mle, random_permutation_mle},
     PermutationCheck,
@@ -20,7 +18,6 @@ pub use perm_check::{
 pub use prod_check::ProductCheck;
 pub use sum_check::SumCheck;
 pub use utils::*;
-pub use virtual_poly::{VPAuxInfo, VirtualPolynomial};
 pub use zero_check::ZeroCheck;
 
 #[derive(Clone, Debug, Default, Copy)]

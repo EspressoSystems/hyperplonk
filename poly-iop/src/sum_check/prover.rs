@@ -4,8 +4,8 @@ use super::SumCheckProver;
 use crate::{
     errors::PolyIOPErrors,
     structs::{IOPProverMessage, IOPProverState},
-    virtual_poly::VirtualPolynomial,
 };
+use arithmetic::VirtualPolynomial;
 use ark_ff::PrimeField;
 use ark_poly::{DenseMultilinearExtension, MultilinearExtension};
 use ark_std::{end_timer, start_timer, vec::Vec};
@@ -60,7 +60,7 @@ impl<F: PrimeField> SumCheckProver<F> for IOPProverState<F> {
         // for the current round, and m is the round number, indexed from 1
         //
         // i.e.:
-        // at round m <=n, for each mle g(x_1, ... x_n) within the flattened_mle
+        // at round m <= n, for each mle g(x_1, ... x_n) within the flattened_mle
         // which has already been evaluated to
         //
         //    g(r_1, ..., r_{m-1}, x_m ... x_n)

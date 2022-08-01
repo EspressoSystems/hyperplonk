@@ -3,9 +3,9 @@
 use crate::{
     errors::PolyIOPErrors,
     structs::{IOPProof, IOPProverState, IOPVerifierState},
-    virtual_poly::{VPAuxInfo, VirtualPolynomial},
     PolyIOP,
 };
+use arithmetic::{VPAuxInfo, VirtualPolynomial};
 use ark_ff::PrimeField;
 use ark_poly::DenseMultilinearExtension;
 use ark_std::{end_timer, start_timer};
@@ -20,12 +20,12 @@ pub trait SumCheck<F: PrimeField> {
     type VPAuxInfo;
     type MultilinearExtension;
 
-    type Proof;
+    type SumCheckProof;
     type Transcript;
     type SumCheckSubClaim;
 
     /// Extract sum from the proof
-    fn extract_sum(proof: &Self::Proof) -> F;
+    fn extract_sum(proof: &Self::SumCheckProof) -> F;
 
     /// Initialize the system with a transcript
     ///
@@ -41,12 +41,12 @@ pub trait SumCheck<F: PrimeField> {
     fn prove(
         poly: &Self::VirtualPolynomial,
         transcript: &mut Self::Transcript,
-    ) -> Result<Self::Proof, PolyIOPErrors>;
+    ) -> Result<Self::SumCheckProof, PolyIOPErrors>;
 
     /// Verify the claimed sum using the proof
     fn verify(
         sum: F,
-        proof: &Self::Proof,
+        proof: &Self::SumCheckProof,
         aux_info: &Self::VPAuxInfo,
         transcript: &mut Self::Transcript,
     ) -> Result<Self::SumCheckSubClaim, PolyIOPErrors>;
@@ -123,7 +123,7 @@ pub struct SumCheckSubClaim<F: PrimeField> {
 }
 
 impl<F: PrimeField> SumCheck<F> for PolyIOP<F> {
-    type Proof = IOPProof<F>;
+    type SumCheckProof = IOPProof<F>;
     type VirtualPolynomial = VirtualPolynomial<F>;
     type VPAuxInfo = VPAuxInfo<F>;
     type MultilinearExtension = DenseMultilinearExtension<F>;
@@ -131,7 +131,7 @@ impl<F: PrimeField> SumCheck<F> for PolyIOP<F> {
     type Transcript = IOPTranscript<F>;
 
     /// Extract sum from the proof
-    fn extract_sum(proof: &Self::Proof) -> F {
+    fn extract_sum(proof: &Self::SumCheckProof) -> F {
         let start = start_timer!(|| "extract sum");
         let res = proof.proofs[0].evaluations[0] + proof.proofs[0].evaluations[1];
         end_timer!(start);
@@ -157,7 +157,7 @@ impl<F: PrimeField> SumCheck<F> for PolyIOP<F> {
     fn prove(
         poly: &Self::VirtualPolynomial,
         transcript: &mut Self::Transcript,
-    ) -> Result<Self::Proof, PolyIOPErrors> {
+    ) -> Result<Self::SumCheckProof, PolyIOPErrors> {
         let start = start_timer!(|| "sum check prove");
 
         transcript.append_serializable_element(b"aux info", &poly.aux_info)?;
@@ -172,9 +172,15 @@ impl<F: PrimeField> SumCheck<F> for PolyIOP<F> {
             prover_msgs.push(prover_msg);
             challenge = Some(transcript.get_and_append_challenge(b"Internal round")?);
         }
+        // pushing the last challenge point to the state
+        match challenge {
+            Some(p) => prover_state.challenges.push(p),
+            None => (),
+        };
 
         end_timer!(start);
         Ok(IOPProof {
+            point: prover_state.challenges,
             proofs: prover_msgs,
         })
     }
@@ -182,7 +188,7 @@ impl<F: PrimeField> SumCheck<F> for PolyIOP<F> {
     /// Verify the claimed sum using the proof
     fn verify(
         claimed_sum: F,
-        proof: &Self::Proof,
+        proof: &Self::SumCheckProof,
         aux_info: &Self::VPAuxInfo,
         transcript: &mut Self::Transcript,
     ) -> Result<Self::SumCheckSubClaim, PolyIOPErrors> {
@@ -367,7 +373,7 @@ mod test {
         assert_eq!(poly.flattened_ml_extensions.len(), 5);
 
         // test memory usage for prover
-        let prover = IOPProverState::prover_init(&poly).unwrap();
+        let prover = IOPProverState::<Fr>::prover_init(&poly).unwrap();
         assert_eq!(prover.poly.flattened_ml_extensions.len(), 5);
         drop(prover);
 

@@ -18,7 +18,7 @@ use ark_ec::{
 use ark_ff::PrimeField;
 use ark_poly::{DenseMultilinearExtension, MultilinearExtension};
 use ark_serialize::{CanonicalDeserialize, CanonicalSerialize, Read, SerializationError, Write};
-use ark_std::{end_timer, rand::RngCore, start_timer, vec::Vec, One, Zero};
+use ark_std::{end_timer, rand::RngCore, rc::Rc, start_timer, vec::Vec, One, Zero};
 use batching::{batch_verify_internal, multi_open_internal};
 use srs::{MultilinearProverParam, MultilinearUniversalParams, MultilinearVerifierParam};
 use std::marker::PhantomData;
@@ -59,14 +59,14 @@ impl<E: PairingEngine> PolynomialCommitmentScheme<E> for KZGMultilinearPCS<E> {
     type VerifierParam = (MultilinearVerifierParam<E>, UnivariateVerifierParam<E>);
     type SRS = (MultilinearUniversalParams<E>, UnivariateUniversalParams<E>);
     // Polynomial and its associated types
-    type Polynomial = DenseMultilinearExtension<E::Fr>;
+    type Polynomial = Rc<DenseMultilinearExtension<E::Fr>>;
     type Point = Vec<E::Fr>;
     type Evaluation = E::Fr;
     // Commitments and proofs
     type Commitment = Commitment<E>;
+    type BatchCommitment = Commitment<E>;
     type Proof = Proof<E>;
     type BatchProof = BatchProof<E>;
-    type BatchCommitment = Commitment<E>;
 
     /// Build SRS for testing.
     ///
@@ -85,6 +85,28 @@ impl<E: PairingEngine> PolynomialCommitmentScheme<E> for KZGMultilinearPCS<E> {
         ))
     }
 
+    /// Trim the universal parameters to specialize the public parameters.
+    /// Input both `supported_log_degree` for univariate and
+    /// `supported_num_vars` for multilinear.
+    fn trim(
+        srs: &Self::SRS,
+        supported_log_degree: usize,
+        supported_num_vars: Option<usize>,
+    ) -> Result<(Self::ProverParam, Self::VerifierParam), PCSErrors> {
+        let supported_num_vars = match supported_num_vars {
+            Some(p) => p,
+            None => {
+                return Err(PCSErrors::InvalidParameters(
+                    "multilinear should receive a num_var param".to_string(),
+                ))
+            },
+        };
+        let (uni_ck, uni_vk) = srs.1.trim(supported_log_degree)?;
+        let (ml_ck, ml_vk) = srs.0.trim(supported_num_vars)?;
+
+        Ok(((ml_ck, uni_ck), (ml_vk, uni_vk)))
+    }
+
     /// Generate a commitment for a polynomial.
     ///
     /// This function takes `2^num_vars` number of scalar multiplications over
@@ -94,14 +116,20 @@ impl<E: PairingEngine> PolynomialCommitmentScheme<E> for KZGMultilinearPCS<E> {
         poly: &Self::Polynomial,
     ) -> Result<Self::Commitment, PCSErrors> {
         let commit_timer = start_timer!(|| "commit");
-
+        if prover_param.0.num_vars < poly.num_vars {
+            return Err(PCSErrors::InvalidParameters(format!(
+                "Poly length ({}) exceeds param limit ({})",
+                poly.num_vars, prover_param.0.num_vars
+            )));
+        }
+        let ignored = prover_param.0.num_vars - poly.num_vars;
         let scalars: Vec<_> = poly
             .to_evaluations()
             .into_iter()
             .map(|x| x.into_repr())
             .collect();
         let commitment = VariableBaseMSM::multi_scalar_mul(
-            &prover_param.0.powers_of_g[0].evals,
+            &prover_param.0.powers_of_g[ignored].evals,
             scalars.as_slice(),
         )
         .into_affine();
@@ -262,12 +290,23 @@ fn open_internal<E: PairingEngine>(
 ) -> Result<(Proof<E>, E::Fr), PCSErrors> {
     let open_timer = start_timer!(|| format!("open mle with {} variable", polynomial.num_vars));
 
-    assert_eq!(
-        polynomial.num_vars(),
-        prover_param.num_vars,
-        "Invalid size of polynomial"
-    );
+    if polynomial.num_vars() > prover_param.num_vars {
+        return Err(PCSErrors::InvalidParameters(format!(
+            "Polynomial num_vars {} exceed the limit {}",
+            polynomial.num_vars, prover_param.num_vars
+        )));
+    }
+
+    if polynomial.num_vars() != point.len() {
+        return Err(PCSErrors::InvalidParameters(format!(
+            "Polynomial num_vars {} does not match point len {}",
+            polynomial.num_vars,
+            point.len()
+        )));
+    }
+
     let nv = polynomial.num_vars();
+    let ignored = prover_param.num_vars - nv;
     let mut r: Vec<Vec<E::Fr>> = (0..nv + 1).map(|_| Vec::new()).collect();
     let mut q: Vec<Vec<E::Fr>> = (0..nv + 1).map(|_| Vec::new()).collect();
 
@@ -277,7 +316,7 @@ fn open_internal<E: PairingEngine>(
 
     for (i, (&point_at_k, gi)) in point
         .iter()
-        .zip(prover_param.powers_of_g.iter())
+        .zip(prover_param.powers_of_g[ignored..].iter())
         .take(nv)
         .enumerate()
     {
@@ -327,10 +366,20 @@ fn verify_internal<E: PairingEngine>(
     proof: &Proof<E>,
 ) -> Result<bool, PCSErrors> {
     let verify_timer = start_timer!(|| "verify");
+    let num_var = point.len();
+
+    if num_var > verifier_param.num_vars {
+        return Err(PCSErrors::InvalidParameters(format!(
+            "point length ({}) exceeds param limit ({})",
+            num_var, verifier_param.num_vars
+        )));
+    }
+
+    let ignored = verifier_param.num_vars - num_var;
     let prepare_inputs_timer = start_timer!(|| "prepare pairing inputs");
 
     let scalar_size = E::Fr::size_in_bits();
-    let window_size = FixedBaseMSM::get_mul_window_size(verifier_param.num_vars);
+    let window_size = FixedBaseMSM::get_mul_window_size(num_var);
 
     let h_table = FixedBaseMSM::get_window_table(
         scalar_size,
@@ -340,8 +389,8 @@ fn verify_internal<E: PairingEngine>(
     let h_mul: Vec<E::G2Projective> =
         FixedBaseMSM::multi_scalar_mul(scalar_size, window_size, &h_table, point);
 
-    let h_vec: Vec<_> = (0..verifier_param.num_vars)
-        .map(|i| verifier_param.h_mask[i].into_projective() - h_mul[i])
+    let h_vec: Vec<_> = (0..num_var)
+        .map(|i| verifier_param.h_mask[ignored + i].into_projective() - h_mul[i])
         .collect();
     let h_vec: Vec<E::G2Affine> = E::G2Projective::batch_normalization_into_affine(&h_vec);
     end_timer!(prepare_inputs_timer);
@@ -352,12 +401,7 @@ fn verify_internal<E: PairingEngine>(
         .proofs
         .iter()
         .map(|&x| E::G1Prepared::from(x))
-        .zip(
-            h_vec
-                .into_iter()
-                .take(verifier_param.num_vars)
-                .map(E::G2Prepared::from),
-        )
+        .zip(h_vec.into_iter().take(num_var).map(E::G2Prepared::from))
         .collect();
 
     pairings.push((
@@ -377,7 +421,6 @@ fn verify_internal<E: PairingEngine>(
 #[cfg(test)]
 mod tests {
     use super::*;
-    use crate::StructuredReferenceString;
     use ark_bls12_381::Bls12_381;
     use ark_ec::PairingEngine;
     use ark_poly::{DenseMultilinearExtension, MultilinearExtension};
@@ -387,17 +430,13 @@ mod tests {
 
     fn test_single_helper<R: RngCore>(
         params: &(MultilinearUniversalParams<E>, UnivariateUniversalParams<E>),
-        poly: &DenseMultilinearExtension<Fr>,
+        poly: &Rc<DenseMultilinearExtension<Fr>>,
         rng: &mut R,
     ) -> Result<(), PCSErrors> {
         let nv = poly.num_vars();
         assert_ne!(nv, 0);
         let uni_degree = 1;
-        let (uni_ck, uni_vk) = params.1.trim(uni_degree)?;
-        let (ml_ck, ml_vk) = params.0.trim(nv)?;
-        let ck = (ml_ck, uni_ck);
-        let vk = (ml_vk, uni_vk);
-
+        let (ck, vk) = KZGMultilinearPCS::trim(params, uni_degree, Some(nv + 1))?;
         let point: Vec<_> = (0..nv).map(|_| Fr::rand(rng)).collect();
         let com = KZGMultilinearPCS::commit(&ck, poly)?;
         let (proof, value) = KZGMultilinearPCS::open(&ck, poly, &point)?;
@@ -421,11 +460,11 @@ mod tests {
         let params = KZGMultilinearPCS::<E>::gen_srs_for_testing(&mut rng, 10)?;
 
         // normal polynomials
-        let poly1 = DenseMultilinearExtension::rand(8, &mut rng);
+        let poly1 = Rc::new(DenseMultilinearExtension::rand(8, &mut rng));
         test_single_helper(&params, &poly1, &mut rng)?;
 
         // single-variate polynomials
-        let poly2 = DenseMultilinearExtension::rand(1, &mut rng);
+        let poly2 = Rc::new(DenseMultilinearExtension::rand(1, &mut rng));
         test_single_helper(&params, &poly2, &mut rng)?;
 
         Ok(())

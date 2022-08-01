@@ -1,9 +1,9 @@
+use arithmetic::{VPAuxInfo, VirtualPolynomial};
 use ark_bls12_381::Fr;
 use ark_poly::{DenseMultilinearExtension, MultilinearExtension};
 use ark_std::{test_rng, UniformRand};
-use poly_iop::{
-    identity_permutation_mle, PermutationCheck, PolyIOP, PolyIOPErrors, SumCheck, VPAuxInfo,
-    VirtualPolynomial, ZeroCheck,
+use poly_iop::prelude::{
+    identity_permutation_mle, PermutationCheck, PolyIOP, PolyIOPErrors, SumCheck, ZeroCheck,
 };
 use std::{marker::PhantomData, time::Instant};
 
@@ -156,7 +156,7 @@ fn bench_permutation_check() -> Result<(), PolyIOPErrors> {
             let mut challenge =
                 <PolyIOP<Fr> as PermutationCheck<Fr>>::generate_challenge(&mut transcript)?;
 
-            let prod_x_and_aux = <PolyIOP<Fr> as PermutationCheck<Fr>>::compute_products(
+            let prod_x_and_aux = <PolyIOP<Fr> as PermutationCheck<Fr>>::compute_prod_evals(
                 &challenge, &w, &w, &s_perm,
             )?;
 

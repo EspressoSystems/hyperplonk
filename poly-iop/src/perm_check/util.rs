@@ -5,7 +5,7 @@ use ark_ff::PrimeField;
 use ark_poly::DenseMultilinearExtension;
 use ark_std::{end_timer, rand::RngCore, start_timer};
 
-/// Returns three MLEs:
+/// Returns the evaluations of three MLEs:
 /// - prod(0,x)
 /// - numerator
 /// - denominator
@@ -34,14 +34,7 @@ pub(super) fn compute_prod_0<F: PrimeField>(
     fx: &DenseMultilinearExtension<F>,
     gx: &DenseMultilinearExtension<F>,
     s_perm: &DenseMultilinearExtension<F>,
-) -> Result<
-    (
-        DenseMultilinearExtension<F>,
-        DenseMultilinearExtension<F>,
-        DenseMultilinearExtension<F>,
-    ),
-    PolyIOPErrors,
-> {
+) -> Result<(Vec<F>, Vec<F>, Vec<F>), PolyIOPErrors> {
     let start = start_timer!(|| "compute prod(1,x)");
 
     let num_vars = fx.num_vars;
@@ -63,12 +56,8 @@ pub(super) fn compute_prod_0<F: PrimeField>(
         denominator_evals.push(denominator);
     }
 
-    let prod_0x = DenseMultilinearExtension::from_evaluations_vec(num_vars, prod_0x_evals);
-    let numerator = DenseMultilinearExtension::from_evaluations_vec(num_vars, numerator_evals);
-    let denominator = DenseMultilinearExtension::from_evaluations_vec(num_vars, denominator_evals);
-
     end_timer!(start);
-    Ok((prod_0x, numerator, denominator))
+    Ok((prod_0x_evals, numerator_evals, denominator_evals))
 }
 
 /// An MLE that represent an identity permutation: `f(index) \mapto index`
@@ -90,6 +79,57 @@ pub fn random_permutation_mle<F: PrimeField, R: RngCore>(
         s_perm_vec.push(s_id_vec.remove(index));
     }
     DenseMultilinearExtension::from_evaluations_vec(num_vars, s_perm_vec)
+}
+
+/// Helper function of the IOP.
+///
+/// Input:
+/// - prod(x)
+///
+/// Output: the following 4 polynomials
+/// - prod(0, x)
+/// - prod(1, x)
+/// - prod(x, 0)
+/// - prod(x, 1)
+pub(super) fn build_prod_partial_eval<F: PrimeField>(
+    prod_x: &DenseMultilinearExtension<F>,
+) -> Result<[DenseMultilinearExtension<F>; 4], PolyIOPErrors> {
+    let start = start_timer!(|| "build prod polynomial");
+
+    let prod_x_eval = &prod_x.evaluations;
+    let num_vars = prod_x.num_vars - 1;
+
+    // prod(0, x)
+    let prod_0_x =
+        DenseMultilinearExtension::from_evaluations_slice(num_vars, &prod_x_eval[0..1 << num_vars]);
+    // prod(1, x)
+    let prod_1_x = DenseMultilinearExtension::from_evaluations_slice(
+        num_vars,
+        &prod_x_eval[1 << num_vars..1 << (num_vars + 1)],
+    );
+
+    // ===================================
+    // prod(x, 0) and prod(x, 1)
+    // ===================================
+    //
+    // now we compute eval_x0 and eval_x1
+    // eval_0x will be the odd coefficients of eval
+    // and eval_1x will be the even coefficients of eval
+    let mut eval_x0 = vec![];
+    let mut eval_x1 = vec![];
+    for (x, &prod_x) in prod_x_eval.iter().enumerate() {
+        if x & 1 == 0 {
+            eval_x0.push(prod_x);
+        } else {
+            eval_x1.push(prod_x);
+        }
+    }
+    let prod_x_0 = DenseMultilinearExtension::from_evaluations_vec(num_vars, eval_x0);
+    let prod_x_1 = DenseMultilinearExtension::from_evaluations_vec(num_vars, eval_x1);
+
+    end_timer!(start);
+
+    Ok([prod_0_x, prod_1_x, prod_x_0, prod_x_1])
 }
 
 #[cfg(test)]
@@ -116,6 +156,10 @@ mod test {
             let gamma = Fr::rand(&mut rng);
 
             let (prod_0, numerator, denominator) = compute_prod_0(&beta, &gamma, &f, &g, &s_perm)?;
+            let prod_0 = DenseMultilinearExtension::from_evaluations_vec(num_vars, prod_0);
+            let numerator = DenseMultilinearExtension::from_evaluations_vec(num_vars, numerator);
+            let denominator =
+                DenseMultilinearExtension::from_evaluations_vec(num_vars, denominator);
 
             for i in 0..1 << num_vars {
                 let r: Vec<Fr> = bit_decompose(i, num_vars)

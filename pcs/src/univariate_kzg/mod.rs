@@ -38,9 +38,9 @@ impl<E: PairingEngine> PolynomialCommitmentScheme<E> for KZGUnivariatePCS<E> {
     type Evaluation = E::Fr;
     // Polynomial and its associated types
     type Commitment = Commitment<E>;
+    type BatchCommitment = Vec<Self::Commitment>;
     type Proof = KZGUnivariateOpening<E>;
     type BatchProof = Vec<Self::Proof>;
-    type BatchCommitment = Vec<Self::Commitment>;
 
     /// Build SRS for testing.
     ///
@@ -54,6 +54,22 @@ impl<E: PairingEngine> PolynomialCommitmentScheme<E> for KZGUnivariatePCS<E> {
         log_size: usize,
     ) -> Result<Self::SRS, PCSErrors> {
         Self::SRS::gen_srs_for_testing(rng, log_size)
+    }
+
+    /// Trim the universal parameters to specialize the public parameters.
+    /// Input `supported_log_degree` for univariate.
+    /// `supported_num_vars` must be None or an error is returned.
+    fn trim(
+        srs: &Self::SRS,
+        supported_log_degree: usize,
+        supported_num_vars: Option<usize>,
+    ) -> Result<(Self::ProverParam, Self::VerifierParam), PCSErrors> {
+        if supported_num_vars.is_some() {
+            return Err(PCSErrors::InvalidParameters(
+                "univariate should not receive a num_var param".to_string(),
+            ));
+        }
+        srs.trim(supported_log_degree)
     }
 
     /// Generate a commitment for a polynomial
@@ -342,7 +358,7 @@ mod tests {
             }
             let log_degree = log2(degree) as usize;
             let pp = KZGUnivariatePCS::<E>::gen_srs_for_testing(rng, log_degree)?;
-            let (ck, vk) = pp.trim(log_degree)?;
+            let (ck, vk) = KZGUnivariatePCS::<E>::trim(&pp, log_degree, None)?;
             let mut comms = Vec::new();
             let mut values = Vec::new();
             let mut points = Vec::new();

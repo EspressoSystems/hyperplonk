@@ -6,6 +6,7 @@ mod univariate_kzg;
 pub mod prelude;
 
 use ark_ec::PairingEngine;
+use ark_serialize::CanonicalSerialize;
 use ark_std::rand::RngCore;
 use errors::PCSErrors;
 
@@ -21,10 +22,10 @@ pub trait PolynomialCommitmentScheme<E: PairingEngine> {
     type Point;
     type Evaluation;
     // Commitments and proofs
-    type Commitment;
+    type Commitment: CanonicalSerialize;
+    type BatchCommitment: CanonicalSerialize;
     type Proof;
     type BatchProof;
-    type BatchCommitment;
 
     /// Build SRS for testing.
     ///
@@ -37,6 +38,15 @@ pub trait PolynomialCommitmentScheme<E: PairingEngine> {
         rng: &mut R,
         log_size: usize,
     ) -> Result<Self::SRS, PCSErrors>;
+
+    /// Trim the universal parameters to specialize the public parameters.
+    /// Input both `supported_log_degree` for univariate and
+    /// `supported_num_vars` for multilinear.
+    fn trim(
+        srs: &Self::SRS,
+        supported_log_degree: usize,
+        supported_num_vars: Option<usize>,
+    ) -> Result<(Self::ProverParam, Self::VerifierParam), PCSErrors>;
 
     /// Generate a commitment for a polynomial
     fn commit(

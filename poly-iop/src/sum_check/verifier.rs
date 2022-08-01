@@ -4,8 +4,8 @@ use super::{SumCheckSubClaim, SumCheckVerifier};
 use crate::{
     errors::PolyIOPErrors,
     structs::{IOPProverMessage, IOPVerifierState},
-    virtual_poly::VPAuxInfo,
 };
+use arithmetic::VPAuxInfo;
 use ark_ff::PrimeField;
 use ark_std::{end_timer, start_timer};
 use transcript::IOPTranscript;
@@ -104,6 +104,12 @@ impl<F: PrimeField> SumCheckVerifier<F> for IOPVerifierState<F> {
                 "insufficient rounds".to_string(),
             ));
         }
+
+        println!(
+            "eval len {} max degree {}",
+            self.polynomials_received[0].len(),
+            self.max_degree + 1
+        );
 
         // the deferred check during the interactive phase:
         // 2. set `expected` to P(r)`
