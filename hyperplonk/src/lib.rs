@@ -8,6 +8,7 @@ use ark_std::{end_timer, log2, start_timer, One, Zero};
 use errors::HyperPlonkErrors;
 use pcs::prelude::{compute_qx_degree, merge_polynomials, PCSErrors, PolynomialCommitmentScheme};
 use poly_iop::{
+    identity_permutation_mle,
     prelude::{PermutationCheck, SumCheck, ZeroCheck},
     PolyIOP,
 };
@@ -139,11 +140,9 @@ where
 
         // build permutation oracles
         let permutation_oracles = Rc::new(DenseMultilinearExtension::from_evaluations_slice(
-            // num_vars = merged_nv + 1 because this oracle encodes both s_id and s_perm
-            merged_nv + 1,
+            merged_nv,
             permutation,
         ));
-
         let perm_com = PCS::commit(&pcs_prover_param, &permutation_oracles)?;
 
         // build selector oracles and commit to it
@@ -334,16 +333,21 @@ where
 
         // 3.2. `compute_product` to build `prod(x)` etc. from f, g and s_perm
         // s_perm is the second half of permutation oracle
-        let s_id = pk.permutation_oracles.fix_variables(&[E::Fr::zero()]);
-        let s_perm = pk.permutation_oracles.fix_variables(&[E::Fr::one()]);
+        // let s_id = pk.permutation_oracles.fix_variables(&[E::Fr::zero()]);
+        // assert_eq!(s_id, identity_permutation_mle(merged_nv));
+        // let s_perm = pk.permutation_oracles.fix_variables(&[E::Fr::one()]);
 
         // This function returns 3 MLEs:
         // - prod(x)
         // - numerator
         // - denominator
         // See function signature for details.
-        let prod_x_and_aux_info =
-            Self::compute_prod_evals(&permutation_challenge, &w_merged, &w_merged, &s_perm)?;
+        let prod_x_and_aux_info = Self::compute_prod_evals(
+            &permutation_challenge,
+            &w_merged,
+            &w_merged,
+            &pk.permutation_oracles,
+        )?;
         let prod_x = Rc::new(prod_x_and_aux_info[0].clone());
 
         // 3.3 push a commitment of `prod(x)` to the transcript
@@ -352,7 +356,7 @@ where
         // 3.4. `update_challenge` with the updated transcript
         Self::update_challenge(&mut permutation_challenge, transcript, &prod_com)?;
 
-        println!("alpha {}",permutation_challenge. alpha.unwrap());
+        println!("alpha {}", permutation_challenge.alpha.unwrap());
         // 3.5. `prove` to generate the proof
         let (perm_check_proof, q_x) = <Self as PermutationCheck<E::Fr>>::prove(
             &prod_x_and_aux_info,
@@ -360,23 +364,33 @@ where
             transcript,
         )?;
         println!("qx in prove: {}", q_x.evaluate(&perm_check_proof.point)?);
+        println!(
+            "num: {}",
+            prod_x_and_aux_info[1]
+                .evaluate(&perm_check_proof.point)
+                .unwrap()
+        );
+        println!(
+            "denom: {}",
+            prod_x_and_aux_info[2]
+                .evaluate(&perm_check_proof.point)
+                .unwrap()
+        );
+
+        // println!("sid: {}", s_id.evaluate(&perm_check_proof.point).unwrap());
+
         // 3.6 open prod(0,x), prod(1, x), prod(x, 0), prod(x, 1) at zero_check.point
         // prod(0, x)
-        let (prod_0_x_opening, prod_0_x_eval) = PCS::open(
-            &pk.pcs_param,
-            &prod_x,
-            &[&[E::Fr::zero()], perm_check_proof.point.as_slice()].concat(),
-        )?;
+        let tmp_point = [perm_check_proof.point.as_slice(), &[E::Fr::zero()]].concat();
+        let (prod_0_x_opening, prod_0_x_eval) = PCS::open(&pk.pcs_param, &prod_x, &tmp_point)?;
+        #[cfg(feature = "extensive_sanity_checks")]
         {
             // sanity check
-            if prod_x
-                .evaluate(&[&[E::Fr::zero()], perm_check_proof.point.as_slice()].concat())
-                .ok_or_else(|| {
-                    HyperPlonkErrors::InvalidParameters(
-                        "evaluation dimension does not match".to_string(),
-                    )
-                })?
-                != prod_0_x_eval
+            if prod_x.evaluate(&tmp_point).ok_or_else(|| {
+                HyperPlonkErrors::InvalidParameters(
+                    "evaluation dimension does not match".to_string(),
+                )
+            })? != prod_0_x_eval
             {
                 return Err(HyperPlonkErrors::InvalidProver(
                     "Evaluation is different from PCS opening".to_string(),
@@ -384,21 +398,16 @@ where
             }
         }
         // prod(1, x)
-        let (prod_1_x_opening, prod_1_x_eval) = PCS::open(
-            &pk.pcs_param,
-            &prod_x,
-            &[&[E::Fr::one()], perm_check_proof.point.as_slice()].concat(),
-        )?;
+        let tmp_point = [perm_check_proof.point.as_slice(), &[E::Fr::one()]].concat();
+        let (prod_1_x_opening, prod_1_x_eval) = PCS::open(&pk.pcs_param, &prod_x, &tmp_point)?;
+        #[cfg(feature = "extensive_sanity_checks")]
         {
             // sanity check
-            if prod_x
-                .evaluate(&[&[E::Fr::one()], perm_check_proof.point.as_slice()].concat())
-                .ok_or_else(|| {
-                    HyperPlonkErrors::InvalidParameters(
-                        "evaluation dimension does not match".to_string(),
-                    )
-                })?
-                != prod_1_x_eval
+            if prod_x.evaluate(&tmp_point).ok_or_else(|| {
+                HyperPlonkErrors::InvalidParameters(
+                    "evaluation dimension does not match".to_string(),
+                )
+            })? != prod_1_x_eval
             {
                 return Err(HyperPlonkErrors::InvalidProver(
                     "Evaluation is different from PCS opening".to_string(),
@@ -406,21 +415,16 @@ where
             }
         }
         // prod(x, 0)
-        let (prod_x_0_opening, prod_x_0_eval) = PCS::open(
-            &pk.pcs_param,
-            &prod_x,
-            &[perm_check_proof.point.as_slice(), &[E::Fr::zero()]].concat(),
-        )?;
+        let tmp_point = [&[E::Fr::zero()], perm_check_proof.point.as_slice()].concat();
+        let (prod_x_0_opening, prod_x_0_eval) = PCS::open(&pk.pcs_param, &prod_x, &tmp_point)?;
+        #[cfg(feature = "extensive_sanity_checks")]
         {
             // sanity check
-            if prod_x
-                .evaluate(&[perm_check_proof.point.as_slice(), &[E::Fr::zero()]].concat())
-                .ok_or_else(|| {
-                    HyperPlonkErrors::InvalidParameters(
-                        "evaluation dimension does not match".to_string(),
-                    )
-                })?
-                != prod_x_0_eval
+            if prod_x.evaluate(&tmp_point).ok_or_else(|| {
+                HyperPlonkErrors::InvalidParameters(
+                    "evaluation dimension does not match".to_string(),
+                )
+            })? != prod_x_0_eval
             {
                 return Err(HyperPlonkErrors::InvalidProver(
                     "Evaluation is different from PCS opening".to_string(),
@@ -428,21 +432,16 @@ where
             }
         }
         // prod(x, 1)
-        let (prod_x_1_opening, prod_x_1_eval) = PCS::open(
-            &pk.pcs_param,
-            &prod_x,
-            &[perm_check_proof.point.as_slice(), &[E::Fr::one()]].concat(),
-        )?;
+        let tmp_point = [&[E::Fr::one()], perm_check_proof.point.as_slice()].concat();
+        let (prod_x_1_opening, prod_x_1_eval) = PCS::open(&pk.pcs_param, &prod_x, &tmp_point)?;
+        #[cfg(feature = "extensive_sanity_checks")]
         {
             // sanity check
-            if prod_x
-                .evaluate(&[perm_check_proof.point.as_slice(), &[E::Fr::one()]].concat())
-                .ok_or_else(|| {
-                    HyperPlonkErrors::InvalidParameters(
-                        "evaluation dimension does not match".to_string(),
-                    )
-                })?
-                != prod_x_1_eval
+            if prod_x.evaluate(&tmp_point).ok_or_else(|| {
+                HyperPlonkErrors::InvalidParameters(
+                    "evaluation dimension does not match".to_string(),
+                )
+            })? != prod_x_1_eval
             {
                 return Err(HyperPlonkErrors::InvalidProver(
                     "Evaluation is different from PCS opening".to_string(),
@@ -478,14 +477,20 @@ where
             &Rc::new(w_merged.clone()),
             &perm_check_proof.point,
         )?;
-        // sanity checks
-        if w_merged.evaluate(&perm_check_proof.point).ok_or_else(|| {
-            HyperPlonkErrors::InvalidParameters("evaluation dimension does not match".to_string())
-        })? != witness_perm_check_eval
+
+        #[cfg(feature = "extensive_sanity_checks")]
         {
-            return Err(HyperPlonkErrors::InvalidProver(
-                "Evaluation is different from PCS opening".to_string(),
-            ));
+            // sanity checks
+            if w_merged.evaluate(&perm_check_proof.point).ok_or_else(|| {
+                HyperPlonkErrors::InvalidParameters(
+                    "evaluation dimension does not match".to_string(),
+                )
+            })? != witness_perm_check_eval
+            {
+                return Err(HyperPlonkErrors::InvalidProver(
+                    "Evaluation is different from PCS opening".to_string(),
+                ));
+            }
         }
 
         // 4.2 open zero check proof
@@ -510,40 +515,47 @@ where
             witness_zero_check_openings.push(zero_proof);
         }
 
-        // Open permutation check proof
-        // at s_id
-        let (s_id_opening, s_id_eval) = PCS::open(
-            &pk.pcs_param,
-            &pk.permutation_oracles,
-            &[&[E::Fr::zero()], perm_check_proof.point.as_slice()].concat(),
-        )?;
-        {
-            // sanity check
-            if s_id.evaluate(&perm_check_proof.point).ok_or_else(|| {
-                HyperPlonkErrors::InvalidParameters(
-                    "evaluation dimension does not match".to_string(),
-                )
-            })? != s_id_eval
-            {
-                return Err(HyperPlonkErrors::InvalidProver(
-                    "Evaluation is different from PCS opening".to_string(),
-                ));
-            }
-        }
+        // // Open permutation check proof
+        // // at s_id
+        // let (s_id_opening, s_id_eval) = PCS::open(
+        //     &pk.pcs_param,
+        //     &pk.permutation_oracles,
+        //     &[&[E::Fr::zero()], perm_check_proof.point.as_slice()].concat(),
+        // )?;
+        // #[cfg(feature = "extensive_sanity_checks")]
+        // {
+        //     // sanity check
+        //     if s_id.evaluate(&perm_check_proof.point).ok_or_else(|| {
+        //         HyperPlonkErrors::InvalidParameters(
+        //             "evaluation dimension does not match".to_string(),
+        //         )
+        //     })? != s_id_eval
+        //     {
+        //         return Err(HyperPlonkErrors::InvalidProver(
+        //             "Evaluation is different from PCS opening".to_string(),
+        //         ));
+        //     }
+        // }
 
         // at s_perm
         let (s_perm_opening, s_perm_eval) = PCS::open(
             &pk.pcs_param,
             &pk.permutation_oracles,
-            &[&[E::Fr::one()], perm_check_proof.point.as_slice()].concat(),
+            &perm_check_proof.point,
         )?;
+
+        #[cfg(feature = "extensive_sanity_checks")]
         {
             // sanity check
-            if s_perm.evaluate(&perm_check_proof.point).ok_or_else(|| {
-                HyperPlonkErrors::InvalidParameters(
-                    "evaluation dimension does not match".to_string(),
-                )
-            })? != s_perm_eval
+            if pk
+                .permutation_oracles
+                .evaluate(&perm_check_proof.point)
+                .ok_or_else(|| {
+                    HyperPlonkErrors::InvalidParameters(
+                        "evaluation dimension does not match".to_string(),
+                    )
+                })?
+                != s_perm_eval
             {
                 return Err(HyperPlonkErrors::InvalidProver(
                     "Evaluation is different from PCS opening".to_string(),
@@ -560,6 +572,8 @@ where
             // during verification, use this eval against subclaim
             let (zero_proof, zero_eval) =
                 PCS::open(&pk.pcs_param, selector_poly, &zero_check_proof.point)?;
+
+            #[cfg(feature = "extensive_sanity_checks")]
             {
                 if selector_poly
                     .evaluate(&zero_check_proof.point)
@@ -571,9 +585,7 @@ where
                     != zero_eval
                 {
                     return Err(HyperPlonkErrors::InvalidProver(
-                        "Evaluation is different from PCS
-                opening"
-                            .to_string(),
+                        "Evaluation is different from PCS opening".to_string(),
                     ));
                 }
             }
@@ -585,6 +597,8 @@ where
         let r_pi = transcript.get_and_append_challenge_vectors(b"r_pi", ell)?;
 
         let (pi_opening, pi_eval) = PCS::open(&pk.pcs_param, &pi_in_w0, &r_pi)?;
+
+        #[cfg(feature = "extensive_sanity_checks")]
         {
             // sanity check
             if pi_poly.evaluate(&r_pi).ok_or_else(|| {
@@ -622,8 +636,8 @@ where
             ],
             witness_perm_check_opening,
             witness_perm_check_eval,
-            perm_oracle_opening: vec![s_id_opening, s_perm_opening],
-            perm_oracle_evals: vec![s_id_eval, s_perm_eval],
+            perm_oracle_opening: s_perm_opening,
+            perm_oracle_eval: s_perm_eval,
             // =======================================================================
             // PCS components: zero check
             // =======================================================================
@@ -682,6 +696,8 @@ where
         transcript: &mut Self::Transcript,
     ) -> Result<bool, HyperPlonkErrors> {
         let start = start_timer!(|| "hyperplonk verification");
+
+        println!("\n\n\n");
 
         // witness assignment of length 2^n
         let num_var = vk.params.nv;
@@ -798,15 +814,34 @@ where
             .alpha
             .ok_or_else(|| HyperPlonkErrors::InvalidVerifier("alpha is not set".to_string()))?;
 
+        let s_id = identity_permutation_mle::<E::Fr>(perm_check_point.len());
+        let s_id_eval = s_id
+            .evaluate(perm_check_point)
+            .ok_or_else(|| HyperPlonkErrors::InvalidVerifier("alpha is not set".to_string()))?;
+
+        println!("sid: {}", s_id.evaluate(perm_check_point).unwrap());
+
         println!("alpha {}", alpha);
+        println!(
+            "{}",
+            (proof.witness_perm_check_eval
+                + challenge.beta * proof.perm_oracle_eval
+                + challenge.gamma)
+        );
+        println!(
+            "{}",
+            proof.witness_perm_check_eval + challenge.beta * s_id_eval + challenge.gamma
+        );
+        println!("sid: {}", s_id_eval);
+
         let q_x_rec = proof.prod_evals[1] - proof.prod_evals[2] * proof.prod_evals[3]
             + alpha
                 * ((proof.witness_perm_check_eval
-                    + challenge.beta * proof.perm_oracle_evals[1]
+                    + challenge.beta * proof.perm_oracle_eval
                     + challenge.gamma)
                     * proof.prod_evals[0]
                     - (proof.witness_perm_check_eval
-                        + challenge.beta * proof.perm_oracle_evals[0]
+                        + challenge.beta * s_id_eval
                         + challenge.gamma));
         println!("qx: {}", q_x_rec);
         println!(
@@ -848,25 +883,25 @@ where
             ));
         }
 
-        // perm_oracle for permutation check
-        if !PCS::verify(
-            &vk.pcs_param,
-            &vk.perm_com,
-            &[&[E::Fr::zero()], perm_check_point.as_slice()].concat(),
-            &proof.perm_oracle_evals[0],
-            &proof.perm_oracle_opening[0],
-        )? {
-            return Err(HyperPlonkErrors::InvalidProof(
-                "pcs verification failed".to_string(),
-            ));
-        }
+        // // perm_oracle for permutation check
+        // if !PCS::verify(
+        //     &vk.pcs_param,
+        //     &vk.perm_com,
+        //     &[&[E::Fr::zero()], perm_check_point.as_slice()].concat(),
+        //     &proof.perm_oracle_evals[0],
+        //     &proof.perm_oracle_opening[0],
+        // )? {
+        //     return Err(HyperPlonkErrors::InvalidProof(
+        //         "pcs verification failed".to_string(),
+        //     ));
+        // }
 
         if !PCS::verify(
             &vk.pcs_param,
             &vk.perm_com,
-            &[&[E::Fr::one()], perm_check_point.as_slice()].concat(),
-            &proof.perm_oracle_evals[1],
-            &proof.perm_oracle_opening[1],
+            &perm_check_point,
+            &proof.perm_oracle_eval,
+            &proof.perm_oracle_opening,
         )? {
             return Err(HyperPlonkErrors::InvalidProof(
                 "pcs verification failed".to_string(),
@@ -878,7 +913,7 @@ where
         if !PCS::verify(
             &vk.pcs_param,
             &proof.prod_commit,
-            &[&[E::Fr::zero()], perm_check_point.as_slice()].concat(),
+            &[perm_check_point.as_slice(), &[E::Fr::zero()]].concat(),
             &proof.prod_evals[0],
             &proof.prod_openings[0],
         )? {
@@ -890,7 +925,7 @@ where
         if !PCS::verify(
             &vk.pcs_param,
             &proof.prod_commit,
-            &[&[E::Fr::one()], perm_check_point.as_slice()].concat(),
+            &[perm_check_point.as_slice(), &[E::Fr::one()]].concat(),
             &proof.prod_evals[1],
             &proof.prod_openings[1],
         )? {
@@ -902,7 +937,7 @@ where
         if !PCS::verify(
             &vk.pcs_param,
             &proof.prod_commit,
-            &[perm_check_point.as_slice(), &[E::Fr::zero()]].concat(),
+            &[&[E::Fr::zero()], perm_check_point.as_slice()].concat(),
             &proof.prod_evals[2],
             &proof.prod_openings[2],
         )? {
@@ -914,7 +949,7 @@ where
         if !PCS::verify(
             &vk.pcs_param,
             &proof.prod_commit,
-            &[perm_check_point.as_slice(), &[E::Fr::one()]].concat(),
+            &[&[E::Fr::one()], perm_check_point.as_slice()].concat(),
             &proof.prod_evals[3],
             &proof.prod_openings[3],
         )? {
@@ -1041,8 +1076,21 @@ mod tests {
         let merged_nv = nv + log_n_wires;
 
         let s_perm = random_permutation_mle(merged_nv, &mut rng);
-        let s_id = identity_permutation_mle(merged_nv);
-        let perm: Vec<E::Fr> = [s_id.evaluations, s_perm.evaluations].concat();
+        let s_id = identity_permutation_mle::<E::Fr>(merged_nv);
+
+        // let perm: Vec<E::Fr> = [s_id.clone().evaluations,
+        // s_perm.clone().evaluations].concat(); let t = merge_polynomials(&[Rc:
+        // :new(s_id.clone()), Rc::new(s_perm.clone())])?; assert_eq!(
+        //     t,
+        //     DenseMultilinearExtension::from_evaluations_slice(merged_nv + 1, &perm)
+        // );
+        // println!("here {:?}", t.clone().fix_variables(&[E::Fr::zero()]));
+        // println!("here {:?}", t.clone().fix_variables(&[E::Fr::one()]));
+
+        // // assert_eq!(t.clone().fix_variables(&[E::Fr::zero()]), s_id);
+        // println!("here {:?}", s_id);
+        // println!("here {:?}", s_perm);
+        // assert_eq!(t.clone().fix_variables(&[E::Fr::one()]), s_id);
 
         let q1 = SelectorColumn(vec![E::Fr::one(), E::Fr::one(), E::Fr::one(), E::Fr::one()]);
         // w1 := [0, 1, 2, 3]
@@ -1066,7 +1114,8 @@ mod tests {
         let (pk, vk) = <PolyIOP<E::Fr> as HyperPlonkSNARK<E, KZGMultilinearPCS<E>>>::preprocess(
             &params,
             &pcs_srs,
-            &perm,
+            // &perm,
+            &s_perm.evaluations,
             &[q1],
         )?;
 
