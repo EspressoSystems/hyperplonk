@@ -1020,7 +1020,6 @@ mod tests {
         let (pk, vk) = <PolyIOP<E::Fr> as HyperPlonkSNARK<E, KZGMultilinearPCS<E>>>::preprocess(
             &params,
             &pcs_srs,
-            // &perm,
             &s_perm.evaluations,
             &[q1],
         )?;
