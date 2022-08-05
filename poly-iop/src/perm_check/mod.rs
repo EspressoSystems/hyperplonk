@@ -160,9 +160,9 @@ pub struct PermutationCheckSubClaim<F: PrimeField, ZC: ZeroCheck<F>> {
 
 #[derive(Debug, Clone)]
 pub struct PermutationChallenge<F: PrimeField> {
-    alpha: Option<F>,
-    beta: F,
-    gamma: F,
+    pub alpha: Option<F>,
+    pub beta: F,
+    pub gamma: F,
 }
 
 /// A PermutationCheck is derived from ZeroCheck.

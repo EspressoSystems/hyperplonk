@@ -333,6 +333,7 @@ where
 
         // 3.2. `compute_product` to build `prod(x)` etc. from f, g and s_perm
         // s_perm is the second half of permutation oracle
+        let s_id = pk.permutation_oracles.fix_variables(&[E::Fr::zero()]);
         let s_perm = pk.permutation_oracles.fix_variables(&[E::Fr::one()]);
 
         // This function returns 3 MLEs:
@@ -508,7 +509,28 @@ where
         }
 
         // Open permutation check proof
-        let (perm_oracle_opening, perm_oracle_eval) = PCS::open(
+        // at s_id
+        let (s_id_opening, s_id_eval) = PCS::open(
+            &pk.pcs_param,
+            &pk.permutation_oracles,
+            &[&[E::Fr::zero()], perm_check_proof.point.as_slice()].concat(),
+        )?;
+        {
+            // sanity check
+            if s_id.evaluate(&perm_check_proof.point).ok_or_else(|| {
+                HyperPlonkErrors::InvalidParameters(
+                    "evaluation dimension does not match".to_string(),
+                )
+            })? != s_id_eval
+            {
+                return Err(HyperPlonkErrors::InvalidProver(
+                    "Evaluation is different from PCS opening".to_string(),
+                ));
+            }
+        }
+
+        // at s_perm
+        let (s_perm_opening, s_perm_eval) = PCS::open(
             &pk.pcs_param,
             &pk.permutation_oracles,
             &[&[E::Fr::one()], perm_check_proof.point.as_slice()].concat(),
@@ -519,7 +541,7 @@ where
                 HyperPlonkErrors::InvalidParameters(
                     "evaluation dimension does not match".to_string(),
                 )
-            })? != perm_oracle_eval
+            })? != s_perm_eval
             {
                 return Err(HyperPlonkErrors::InvalidProver(
                     "Evaluation is different from PCS opening".to_string(),
@@ -579,9 +601,14 @@ where
         end_timer!(start);
 
         Ok(HyperPlonkProof {
-            // PCS components
+            // =======================================================================
+            // PCS components: common
+            // =======================================================================
             witness_commits,
             w_merged_com,
+            // =======================================================================
+            // PCS components: permutation check
+            // =======================================================================
             // We do not validate prod(x), this is checked by subclaim
             prod_commit: prod_com,
             prod_evals: vec![prod_0_x_eval, prod_1_x_eval, prod_x_0_eval, prod_x_1_eval],
@@ -592,16 +619,24 @@ where
                 prod_x_1_opening,
             ],
             witness_perm_check_opening,
-            witness_zero_check_openings,
             witness_perm_check_eval,
+            perm_oracle_opening: vec![s_id_opening, s_perm_opening],
+            perm_oracle_eval: vec![s_id_eval, s_perm_eval],
+            // =======================================================================
+            // PCS components: zero check
+            // =======================================================================
+            witness_zero_check_openings,
             witness_zero_check_evals,
-            perm_oracle_opening,
-            perm_oracle_eval,
             selector_oracle_openings,
             selector_oracle_evals,
+            // =======================================================================
+            // PCS components: public inputs
+            // =======================================================================
             pi_eval,
             pi_opening,
+            // =======================================================================
             // IOP components
+            // =======================================================================
             zero_check_proof,
             perm_check_proof,
         })
@@ -753,10 +788,17 @@ where
         //           - (f(x) + beta * s_id(x)   + gamma))
         // where
         // - Q(x) is zero_check.exp_eval
-        // - prod(1, x) ... from prod_com evaluated over (1, zero_point) // <- change to
-        // another name g(x), f(x) -- w_merged over (zero_point)
-        // s_perm(x) and s_id(x) from vk_param.perm_oracle
-        // alpha, beta, gamma from challenge
+        // - prod(1, x) ... from prod_com evaluated over (1, zero_point)
+        // - g(x), f(x) -- w_merged over (zero_point)
+        // - s_perm(x) and s_id(x) from vk_param.perm_oracle
+        // - alpha, beta, gamma from challenge
+
+        // let q_x_rec = proof.prod_evals[1] - proof.prod_evals[2] * proof.prod_evals[3]
+        //     + challenge.alpha.ok_or_else(|| HyperPlonkErrors::InvalidVerifier("alpha
+        // is not set".to_string()))? * (         proof.witness_perm_check_eval
+        // + challenge.beta *
+
+        //     )
 
         end_timer!(step);
         // =======================================================================
@@ -784,9 +826,21 @@ where
         if !PCS::verify(
             &vk.pcs_param,
             &vk.perm_com,
+            &[&[E::Fr::zero()], perm_check_point.as_slice()].concat(),
+            &proof.perm_oracle_eval[0],
+            &proof.perm_oracle_opening[0],
+        )? {
+            return Err(HyperPlonkErrors::InvalidProof(
+                "pcs verification failed".to_string(),
+            ));
+        }
+
+        if !PCS::verify(
+            &vk.pcs_param,
+            &vk.perm_com,
             &[&[E::Fr::one()], perm_check_point.as_slice()].concat(),
-            &proof.perm_oracle_eval,
-            &proof.perm_oracle_opening,
+            &proof.perm_oracle_eval[1],
+            &proof.perm_oracle_opening[1],
         )? {
             return Err(HyperPlonkErrors::InvalidProof(
                 "pcs verification failed".to_string(),
