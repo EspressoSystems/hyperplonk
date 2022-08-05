@@ -112,7 +112,6 @@ impl<F: PrimeField> ZeroCheck<F> for PolyIOP<F> {
                 proof.proofs[0].evaluations[0] + proof.proofs[0].evaluations[1]
             )));
         }
-        println!("here 0 check");
 
         // generate `r` and pass it to the caller for correctness check
         let length = fx_aux_info.num_variables;

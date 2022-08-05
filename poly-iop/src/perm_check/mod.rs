@@ -128,7 +128,7 @@ pub trait PermutationCheck<F: PrimeField>: ZeroCheck<F> {
         prod_x_and_aux_info: &[DenseMultilinearExtension<F>; 3],
         challenge: &Self::PermutationChallenge,
         transcript: &mut IOPTranscript<F>,
-    ) -> Result<(Self::PermutationProof, VirtualPolynomial<F>), PolyIOPErrors>;
+    ) -> Result<Self::PermutationProof, PolyIOPErrors>;
 
     /// Verify that an MLE g(x) is a permutation of
     /// MLE f(x) over a permutation given by s_perm.
@@ -355,7 +355,7 @@ impl<F: PrimeField> PermutationCheck<F> for PolyIOP<F> {
         prod_x_and_aux_info: &[DenseMultilinearExtension<F>; 3],
         challenge: &Self::PermutationChallenge,
         transcript: &mut IOPTranscript<F>,
-    ) -> Result<(Self::PermutationProof, VirtualPolynomial<F>), PolyIOPErrors> {
+    ) -> Result<Self::PermutationProof, PolyIOPErrors> {
         let alpha = match challenge.alpha {
             Some(p) => p,
             None => {
@@ -366,7 +366,7 @@ impl<F: PrimeField> PermutationCheck<F> for PolyIOP<F> {
         };
 
         let (proof, _q_x) = prove_internal(prod_x_and_aux_info, &alpha, transcript)?;
-        Ok((proof, _q_x))
+        Ok(proof)
     }
 
     /// Verify that an MLE g(x) is a permutation of an

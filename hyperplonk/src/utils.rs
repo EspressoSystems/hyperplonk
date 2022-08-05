@@ -74,10 +74,9 @@ pub(crate) fn build_f<F: PrimeField>(
             F::from(*coeff as u64)
         };
         let mut mle_list = vec![];
-        match *selector {
-            Some(s) => mle_list.push(selector_mles[s].clone()),
-            None => (),
-        };
+        if let Some(s) = *selector {
+            mle_list.push(selector_mles[s].clone())
+        }
         for &witness in witnesses.iter() {
             mle_list.push(witness_mles[witness].clone())
         }
