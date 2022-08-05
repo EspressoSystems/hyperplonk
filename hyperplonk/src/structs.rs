@@ -61,7 +61,7 @@ pub struct HyperPlonkProof<
     // TODO: replace me with a batch opening
     pub perm_oracle_opening: Vec<PCS::Proof>,
     /// Evaluates of selectors on permutation check point
-    pub perm_oracle_eval: Vec<E::Fr>,
+    pub perm_oracle_evals: Vec<E::Fr>,
     // =======================================================================
     // PCS components: zero check
     // =======================================================================

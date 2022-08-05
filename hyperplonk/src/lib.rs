@@ -325,6 +325,7 @@ where
         // 3.3. push a commitment of `prod(x)` to the transcript
         // 3.4. `update_challenge` with the updated transcript
         // 3.5. `prove` to generate the proof
+        // 3.6. open prod(0,x), prod(1, x), prod(x, 0), prod(x, 1) at zero_check.point
         // =======================================================================
         let step = start_timer!(|| "Permutation check on w_i(x)");
 
@@ -351,13 +352,14 @@ where
         // 3.4. `update_challenge` with the updated transcript
         Self::update_challenge(&mut permutation_challenge, transcript, &prod_com)?;
 
+        println!("alpha {}",permutation_challenge. alpha.unwrap());
         // 3.5. `prove` to generate the proof
-        let perm_check_proof = <Self as PermutationCheck<E::Fr>>::prove(
+        let (perm_check_proof, q_x) = <Self as PermutationCheck<E::Fr>>::prove(
             &prod_x_and_aux_info,
             &permutation_challenge,
             transcript,
         )?;
-
+        println!("qx in prove: {}", q_x.evaluate(&perm_check_proof.point)?);
         // 3.6 open prod(0,x), prod(1, x), prod(x, 0), prod(x, 1) at zero_check.point
         // prod(0, x)
         let (prod_0_x_opening, prod_0_x_eval) = PCS::open(
@@ -621,7 +623,7 @@ where
             witness_perm_check_opening,
             witness_perm_check_eval,
             perm_oracle_opening: vec![s_id_opening, s_perm_opening],
-            perm_oracle_eval: vec![s_id_eval, s_perm_eval],
+            perm_oracle_evals: vec![s_id_eval, s_perm_eval],
             // =======================================================================
             // PCS components: zero check
             // =======================================================================
@@ -780,25 +782,49 @@ where
             .point;
 
         // check perm check subclaim:
-        // &proof.witness_perm_check_eval ?= perm_check_sub_claim.expected_eval
+        // proof.witness_perm_check_eval ?= perm_check_sub_claim.expected_eval
         //
         // Q(x) := prod(1,x) - prod(x, 0) * prod(x, 1)
         //       + alpha * (
         //             (g(x) + beta * s_perm(x) + gamma) * prod(0, x)
         //           - (f(x) + beta * s_id(x)   + gamma))
         // where
-        // - Q(x) is zero_check.exp_eval
-        // - prod(1, x) ... from prod_com evaluated over (1, zero_point)
-        // - g(x), f(x) -- w_merged over (zero_point)
+        // - Q(x) is perm_check_sub_claim.zero_check.exp_eval
+        // - prod(1, x) ... from prod(x) evaluated over (1, zero_point)
+        // - g(x), f(x) are both w_merged over (zero_point)
         // - s_perm(x) and s_id(x) from vk_param.perm_oracle
         // - alpha, beta, gamma from challenge
+        let alpha = challenge
+            .alpha
+            .ok_or_else(|| HyperPlonkErrors::InvalidVerifier("alpha is not set".to_string()))?;
 
-        // let q_x_rec = proof.prod_evals[1] - proof.prod_evals[2] * proof.prod_evals[3]
-        //     + challenge.alpha.ok_or_else(|| HyperPlonkErrors::InvalidVerifier("alpha
-        // is not set".to_string()))? * (         proof.witness_perm_check_eval
-        // + challenge.beta *
+        println!("alpha {}", alpha);
+        let q_x_rec = proof.prod_evals[1] - proof.prod_evals[2] * proof.prod_evals[3]
+            + alpha
+                * ((proof.witness_perm_check_eval
+                    + challenge.beta * proof.perm_oracle_evals[1]
+                    + challenge.gamma)
+                    * proof.prod_evals[0]
+                    - (proof.witness_perm_check_eval
+                        + challenge.beta * proof.perm_oracle_evals[0]
+                        + challenge.gamma));
+        println!("qx: {}", q_x_rec);
+        println!(
+            "subclaim: {}",
+            perm_check_sub_claim
+                .zero_check_sub_claim
+                .expected_evaluation
+        );
 
-        //     )
+        if q_x_rec
+            != perm_check_sub_claim
+                .zero_check_sub_claim
+                .expected_evaluation
+        {
+            return Err(HyperPlonkErrors::InvalidVerifier(
+                "evaluation failed".to_string(),
+            ));
+        }
 
         end_timer!(step);
         // =======================================================================
@@ -827,7 +853,7 @@ where
             &vk.pcs_param,
             &vk.perm_com,
             &[&[E::Fr::zero()], perm_check_point.as_slice()].concat(),
-            &proof.perm_oracle_eval[0],
+            &proof.perm_oracle_evals[0],
             &proof.perm_oracle_opening[0],
         )? {
             return Err(HyperPlonkErrors::InvalidProof(
@@ -839,7 +865,7 @@ where
             &vk.pcs_param,
             &vk.perm_com,
             &[&[E::Fr::one()], perm_check_point.as_slice()].concat(),
-            &proof.perm_oracle_eval[1],
+            &proof.perm_oracle_evals[1],
             &proof.perm_oracle_opening[1],
         )? {
             return Err(HyperPlonkErrors::InvalidProof(
