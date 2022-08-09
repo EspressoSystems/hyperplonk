@@ -80,8 +80,7 @@ where
     /// - `transcript`: the transcript used for generating pseudorandom
     ///   challenges
     /// Outputs:
-    /// - Return error if the verification fails, otherwise return the
-    ///   evaluation subclaim
+    /// - Return a boolean on whether the verification is successful
     fn verify(
         params: &Self::VerifyingKey,
         pub_input: &[E::Fr],
@@ -627,8 +626,7 @@ where
     /// - `transcript`: the transcript used for generating pseudorandom
     ///   challenges
     /// Outputs:
-    /// - Return error if the verification fails, otherwise return the
-    ///   evaluation subclaim
+    /// - Return a boolean on whether the verification is successful
     ///
     /// 1. Verify zero_check_proof on
     ///
