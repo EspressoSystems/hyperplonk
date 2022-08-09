@@ -15,6 +15,7 @@ use poly_iop::{
 use selectors::SelectorColumn;
 use std::{marker::PhantomData, rc::Rc};
 use structs::{HyperPlonkParams, HyperPlonkProof, HyperPlonkProvingKey, HyperPlonkVerifyingKey};
+use transcript::IOPTranscript;
 use utils::build_f;
 use witness::WitnessColumn;
 
@@ -59,33 +60,26 @@ where
     /// - `pk`: circuit proving key
     /// - `pub_input`: online public input
     /// - `witness`: witness assignment
-    /// - `transcript`: the transcript used for generating pseudorandom
-    ///   challenges
     /// Outputs:
     /// - The HyperPlonk SNARK proof.
     fn prove(
         pk: &Self::ProvingKey,
         pub_input: &[E::Fr],
         witnesses: &[WitnessColumn<E::Fr>],
-        transcript: &mut Self::Transcript,
     ) -> Result<Self::Proof, HyperPlonkErrors>;
 
-    /// Verify the HyperPlonk proof and generate the evaluation subclaims to be
-    /// checked later by the SNARK verifier.
+    /// Verify the HyperPlonk proof.
     ///
     /// Inputs:
     /// - `params`: instance parameter
     /// - `pub_input`: online public input
-    /// - `proof`: HyperPlonk SNARK proof
-    /// - `transcript`: the transcript used for generating pseudorandom
-    ///   challenges
+    /// - `proof`: HyperPlonk SNARK proof challenges
     /// Outputs:
     /// - Return a boolean on whether the verification is successful
     fn verify(
         params: &Self::VerifyingKey,
         pub_input: &[E::Fr],
         proof: &Self::Proof,
-        transcript: &mut Self::Transcript,
     ) -> Result<bool, HyperPlonkErrors>;
 }
 
@@ -177,8 +171,6 @@ where
     /// - `pk`: circuit proving key
     /// - `pub_input`: online public input of length 2^\ell
     /// - `witness`: witness assignment of length 2^n
-    /// - `transcript`: the transcript used for generating pseudorandom
-    ///   challenges
     /// Outputs:
     /// - The HyperPlonk SNARK proof.
     ///
@@ -211,9 +203,9 @@ where
         pk: &Self::ProvingKey,
         pub_input: &[E::Fr],
         witnesses: &[WitnessColumn<E::Fr>],
-        transcript: &mut Self::Transcript,
     ) -> Result<Self::Proof, HyperPlonkErrors> {
         let start = start_timer!(|| "hyperplonk proving");
+        let mut transcript = IOPTranscript::<E::Fr>::new(b"hyperplonk");
 
         // witness assignment of length 2^n
         let num_vars = pk.params.nv;
@@ -311,7 +303,7 @@ where
             &witness_polys,
         )?;
 
-        let zero_check_proof = <Self as ZeroCheck<E::Fr>>::prove(&fx, transcript)?;
+        let zero_check_proof = <Self as ZeroCheck<E::Fr>>::prove(&fx, &mut transcript)?;
         end_timer!(step);
 
         // =======================================================================
@@ -329,7 +321,7 @@ where
         let step = start_timer!(|| "Permutation check on w_i(x)");
 
         // 3.1 `generate_challenge` from current transcript (generate beta, gamma)
-        let mut permutation_challenge = Self::generate_challenge(transcript)?;
+        let mut permutation_challenge = Self::generate_challenge(&mut transcript)?;
 
         // 3.2. `compute_product` to build `prod(x)` etc. from f, g and s_perm
 
@@ -350,13 +342,13 @@ where
         let prod_com = PCS::commit(&pk.pcs_param, &prod_x)?;
 
         // 3.4. `update_challenge` with the updated transcript
-        Self::update_challenge(&mut permutation_challenge, transcript, &prod_com)?;
+        Self::update_challenge(&mut permutation_challenge, &mut transcript, &prod_com)?;
 
         // 3.5. `prove` to generate the proof
         let perm_check_proof = <Self as PermutationCheck<E::Fr>>::prove(
             &prod_x_and_aux_info,
             &permutation_challenge,
-            transcript,
+            &mut transcript,
         )?;
 
         // 3.6 open prod(0,x), prod(1, x), prod(x, 0), prod(x, 1) at zero_check.point
@@ -616,15 +608,12 @@ where
         })
     }
 
-    /// Verify the HyperPlonk proof and generate the evaluation subclaims to be
-    /// checked later by the SNARK verifier.
+    /// Verify the HyperPlonk proof.
     ///
     /// Inputs:
-    /// - `params`: instance parameter
+    /// - `vk`: verification key
     /// - `pub_input`: online public input
     /// - `proof`: HyperPlonk SNARK proof
-    /// - `transcript`: the transcript used for generating pseudorandom
-    ///   challenges
     /// Outputs:
     /// - Return a boolean on whether the verification is successful
     ///
@@ -650,10 +639,10 @@ where
         vk: &Self::VerifyingKey,
         pub_input: &[E::Fr],
         proof: &Self::Proof,
-        transcript: &mut Self::Transcript,
     ) -> Result<bool, HyperPlonkErrors> {
         let start = start_timer!(|| "hyperplonk verification");
 
+        let mut transcript = IOPTranscript::<E::Fr>::new(b"hyperplonk");
         // witness assignment of length 2^n
         let num_var = vk.params.nv;
         let log_num_witness_polys = vk.params.log_n_wires;
@@ -704,7 +693,7 @@ where
         let zero_check_sub_claim = <Self as ZeroCheck<E::Fr>>::verify(
             &proof.zero_check_proof,
             &zero_check_aux_info,
-            transcript,
+            &mut transcript,
         )?;
 
         let zero_check_point = &zero_check_sub_claim.sum_check_sub_claim.point;
@@ -735,17 +724,17 @@ where
             num_variables: merged_nv,
             phantom: PhantomData::default(),
         };
-        let mut challenge = <Self as PermutationCheck<E::Fr>>::generate_challenge(transcript)?;
+        let mut challenge = <Self as PermutationCheck<E::Fr>>::generate_challenge(&mut transcript)?;
         <Self as PermutationCheck<E::Fr>>::update_challenge(
             &mut challenge,
-            transcript,
+            &mut transcript,
             &proof.prod_commit,
         )?;
 
         let perm_check_sub_claim = <Self as PermutationCheck<E::Fr>>::verify(
             &proof.perm_check_proof,
             &perm_check_aux_info,
-            transcript,
+            &mut transcript,
         )?;
         let perm_check_point = &perm_check_sub_claim
             .zero_check_sub_claim
@@ -952,7 +941,6 @@ mod tests {
     use ark_std::test_rng;
     use pcs::prelude::KZGMultilinearPCS;
     use poly_iop::random_permutation_mle;
-    use transcript::IOPTranscript;
 
     #[test]
     fn test_hyperplonk_e2e() -> Result<(), HyperPlonkErrors> {
@@ -1023,20 +1011,14 @@ mod tests {
         )?;
 
         // generate a proof and verify
-        let mut transcript = IOPTranscript::<E::Fr>::new(b"test hyperplonk");
         let proof = <PolyIOP<E::Fr> as HyperPlonkSNARK<E, KZGMultilinearPCS<E>>>::prove(
             &pk,
             &pi.0,
             &[w1, w2],
-            &mut transcript,
         )?;
 
-        let mut transcript = IOPTranscript::<E::Fr>::new(b"test hyperplonk");
         let _sub_claim = <PolyIOP<E::Fr> as HyperPlonkSNARK<E, KZGMultilinearPCS<E>>>::verify(
-            &vk,
-            &pi.0,
-            &proof,
-            &mut transcript,
+            &vk, &pi.0, &proof,
         )?;
 
         Ok(())
