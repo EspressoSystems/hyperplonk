@@ -242,7 +242,7 @@ pub(super) fn batch_verify_internal<E: PairingEngine>(
             uni_verifier_param,
             &batch_proof.q_x_commit,
             &domain.element(i),
-            &value,
+            value,
             &batch_proof.q_x_opens[i],
         )? {
             #[cfg(debug_assertion)]

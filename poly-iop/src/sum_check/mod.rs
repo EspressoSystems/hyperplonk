@@ -173,9 +173,8 @@ impl<F: PrimeField> SumCheck<F> for PolyIOP<F> {
             challenge = Some(transcript.get_and_append_challenge(b"Internal round")?);
         }
         // pushing the last challenge point to the state
-        match challenge {
-            Some(p) => prover_state.challenges.push(p),
-            None => (),
+        if let Some(p) = challenge {
+            prover_state.challenges.push(p)
         };
 
         end_timer!(start);

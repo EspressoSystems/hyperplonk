@@ -1,7 +1,9 @@
 //! Main module for the ZeroCheck protocol.
 
 use crate::{errors::PolyIOPErrors, sum_check::SumCheck, PolyIOP};
+use arithmetic::build_eq_x_r;
 use ark_ff::PrimeField;
+use ark_poly::MultilinearExtension;
 use ark_std::{end_timer, start_timer};
 use transcript::IOPTranscript;
 
@@ -12,6 +14,8 @@ use transcript::IOPTranscript;
 pub struct ZeroCheckSubClaim<F: PrimeField, SC: SumCheck<F>> {
     // the SubClaim from the SumCheck
     pub sum_check_sub_claim: SC::SumCheckSubClaim,
+    /// the expected evaluation
+    pub expected_evaluation: F,
     // the initial challenge r which is used to build eq(x, r)
     pub init_challenge: Vec<F>,
 }
@@ -119,9 +123,18 @@ impl<F: PrimeField> ZeroCheck<F> for PolyIOP<F> {
         let subclaim =
             <Self as SumCheck<F>>::verify(F::zero(), proof, &hat_fx_aux_info, transcript)?;
 
+        // expected_eval = sumcheck.expect_eval/eq(x, r)
+        // where x = sum_check_sub_claim.point
+        let eq_x_r = build_eq_x_r(&r)?;
+        let expected_evaluation = subclaim.expected_evaluation
+            / eq_x_r.evaluate(&subclaim.point).ok_or_else(|| {
+                PolyIOPErrors::InvalidParameters("evaluation dimension does not match".to_string())
+            })?;
+
         end_timer!(start);
         Ok(ZeroCheckSubClaim {
             sum_check_sub_claim: subclaim,
+            expected_evaluation,
             init_challenge: r,
         })
     }
