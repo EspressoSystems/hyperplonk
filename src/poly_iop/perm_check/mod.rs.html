@@ -836,9 +836,9 @@
 
 <span class="attribute">#[<span class="ident">derive</span>(<span class="ident">Debug</span>, <span class="ident">Clone</span>)]</span>
 <span class="kw">pub</span> <span class="kw">struct</span> <span class="ident">PermutationChallenge</span><span class="op">&lt;</span><span class="ident">F</span>: <span class="ident">PrimeField</span><span class="op">&gt;</span> {
-    <span class="ident">alpha</span>: <span class="prelude-ty">Option</span><span class="op">&lt;</span><span class="ident">F</span><span class="op">&gt;</span>,
-    <span class="ident">beta</span>: <span class="ident">F</span>,
-    <span class="ident">gamma</span>: <span class="ident">F</span>,
+    <span class="kw">pub</span> <span class="ident">alpha</span>: <span class="prelude-ty">Option</span><span class="op">&lt;</span><span class="ident">F</span><span class="op">&gt;</span>,
+    <span class="kw">pub</span> <span class="ident">beta</span>: <span class="ident">F</span>,
+    <span class="kw">pub</span> <span class="ident">gamma</span>: <span class="ident">F</span>,
 }
 
 <span class="doccomment">/// A PermutationCheck is derived from ZeroCheck.</span>

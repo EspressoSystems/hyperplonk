@@ -159,6 +159,21 @@
 <span id="154">154</span>
 <span id="155">155</span>
 <span id="156">156</span>
+<span id="157">157</span>
+<span id="158">158</span>
+<span id="159">159</span>
+<span id="160">160</span>
+<span id="161">161</span>
+<span id="162">162</span>
+<span id="163">163</span>
+<span id="164">164</span>
+<span id="165">165</span>
+<span id="166">166</span>
+<span id="167">167</span>
+<span id="168">168</span>
+<span id="169">169</span>
+<span id="170">170</span>
+<span id="171">171</span>
 </pre><pre class="rust"><code><span class="doccomment">//! Main module for the HyperPlonk PolyIOP.</span>
 
 <span class="kw">use</span> <span class="ident">ark_ec::PairingEngine</span>;
@@ -195,35 +210,50 @@
     <span class="ident">PC</span>: <span class="ident">PermutationCheck</span><span class="op">&lt;</span><span class="ident">E::Fr</span><span class="op">&gt;</span>,
 <span class="op">&gt;</span> {
     <span class="comment">// =======================================================================</span>
-    <span class="comment">// PCS components</span>
+    <span class="comment">// PCS components: common</span>
     <span class="comment">// =======================================================================</span>
     <span class="doccomment">/// PCS commit for witnesses</span>
     <span class="comment">// TODO: replace me with a batch commitment</span>
     <span class="kw">pub</span> <span class="ident">witness_commits</span>: <span class="ident">Vec</span><span class="op">&lt;</span><span class="ident">PCS::Commitment</span><span class="op">&gt;</span>,
     <span class="kw">pub</span> <span class="ident">w_merged_com</span>: <span class="ident">PCS::Commitment</span>,
+    <span class="comment">// =======================================================================</span>
+    <span class="comment">// PCS components: permutation check</span>
+    <span class="comment">// =======================================================================</span>
     <span class="doccomment">/// PCS commit for prod(x)</span>
     <span class="comment">// TODO: replace me with a batch commitment</span>
     <span class="kw">pub</span> <span class="ident">prod_commit</span>: <span class="ident">PCS::Commitment</span>,
+    <span class="doccomment">/// prod(x)&#39;s evaluations</span>
+    <span class="doccomment">/// sequence: prod(0,x), prod(1, x), prod(x, 0), prod(x, 1)</span>
+    <span class="kw">pub</span> <span class="ident">prod_evals</span>: <span class="ident">Vec</span><span class="op">&lt;</span><span class="ident">E::Fr</span><span class="op">&gt;</span>,
+    <span class="doccomment">/// prod(x)&#39;s openings</span>
+    <span class="doccomment">/// sequence: prod(0,x), prod(1, x), prod(x, 0), prod(x, 1)</span>
+    <span class="kw">pub</span> <span class="ident">prod_openings</span>: <span class="ident">Vec</span><span class="op">&lt;</span><span class="ident">PCS::Proof</span><span class="op">&gt;</span>,
     <span class="doccomment">/// PCS openings for witness on permutation check point</span>
     <span class="comment">// TODO: replace me with a batch opening</span>
     <span class="kw">pub</span> <span class="ident">witness_perm_check_opening</span>: <span class="ident">PCS::Proof</span>,
-    <span class="doccomment">/// PCS openings for witness on zero check point</span>
-    <span class="comment">// TODO: replace me with a batch opening</span>
-    <span class="kw">pub</span> <span class="ident">witness_zero_check_openings</span>: <span class="ident">Vec</span><span class="op">&lt;</span><span class="ident">PCS::Proof</span><span class="op">&gt;</span>,
     <span class="doccomment">/// Evaluates of witnesses on permutation check point</span>
     <span class="kw">pub</span> <span class="ident">witness_perm_check_eval</span>: <span class="ident">E::Fr</span>,
-    <span class="doccomment">/// Evaluates of witnesses on zero check point</span>
-    <span class="kw">pub</span> <span class="ident">witness_zero_check_evals</span>: <span class="ident">Vec</span><span class="op">&lt;</span><span class="ident">E::Fr</span><span class="op">&gt;</span>,
     <span class="doccomment">/// PCS openings for selectors on permutation check point</span>
     <span class="comment">// TODO: replace me with a batch opening</span>
     <span class="kw">pub</span> <span class="ident">perm_oracle_opening</span>: <span class="ident">PCS::Proof</span>,
     <span class="doccomment">/// Evaluates of selectors on permutation check point</span>
     <span class="kw">pub</span> <span class="ident">perm_oracle_eval</span>: <span class="ident">E::Fr</span>,
+    <span class="comment">// =======================================================================</span>
+    <span class="comment">// PCS components: zero check</span>
+    <span class="comment">// =======================================================================</span>
+    <span class="doccomment">/// PCS openings for witness on zero check point</span>
+    <span class="comment">// TODO: replace me with a batch opening</span>
+    <span class="kw">pub</span> <span class="ident">witness_zero_check_openings</span>: <span class="ident">Vec</span><span class="op">&lt;</span><span class="ident">PCS::Proof</span><span class="op">&gt;</span>,
+    <span class="doccomment">/// Evaluates of witnesses on zero check point</span>
+    <span class="kw">pub</span> <span class="ident">witness_zero_check_evals</span>: <span class="ident">Vec</span><span class="op">&lt;</span><span class="ident">E::Fr</span><span class="op">&gt;</span>,
     <span class="doccomment">/// PCS openings for selectors on zero check point</span>
     <span class="comment">// TODO: replace me with a batch opening</span>
     <span class="kw">pub</span> <span class="ident">selector_oracle_openings</span>: <span class="ident">Vec</span><span class="op">&lt;</span><span class="ident">PCS::Proof</span><span class="op">&gt;</span>,
     <span class="doccomment">/// Evaluates of selectors on zero check point</span>
     <span class="kw">pub</span> <span class="ident">selector_oracle_evals</span>: <span class="ident">Vec</span><span class="op">&lt;</span><span class="ident">E::Fr</span><span class="op">&gt;</span>,
+    <span class="comment">// =======================================================================</span>
+    <span class="comment">// PCS components: public inputs</span>
+    <span class="comment">// =======================================================================</span>
     <span class="doccomment">/// Evaluates of public inputs on r_pi from transcript</span>
     <span class="kw">pub</span> <span class="ident">pi_eval</span>: <span class="ident">E::Fr</span>,
     <span class="doccomment">/// Opening of public inputs on r_pi from transcript</span>

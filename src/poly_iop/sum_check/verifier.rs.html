@@ -355,12 +355,6 @@
 <span id="350">350</span>
 <span id="351">351</span>
 <span id="352">352</span>
-<span id="353">353</span>
-<span id="354">354</span>
-<span id="355">355</span>
-<span id="356">356</span>
-<span id="357">357</span>
-<span id="358">358</span>
 </pre><pre class="rust"><code><span class="doccomment">//! Verifier subroutines for a SumCheck protocol.</span>
 
 <span class="kw">use</span> <span class="kw">super</span>::{<span class="ident">SumCheckSubClaim</span>, <span class="ident">SumCheckVerifier</span>};
@@ -467,12 +461,6 @@
                 <span class="string">&quot;insufficient rounds&quot;</span>.<span class="ident">to_string</span>(),
             ));
         }
-
-        <span class="macro">println!</span>(
-            <span class="string">&quot;eval len {} max degree {}&quot;</span>,
-            <span class="self">self</span>.<span class="ident">polynomials_received</span>[<span class="number">0</span>].<span class="ident">len</span>(),
-            <span class="self">self</span>.<span class="ident">max_degree</span> <span class="op">+</span> <span class="number">1</span>
-        );
 
         <span class="comment">// the deferred check during the interactive phase:</span>
         <span class="comment">// 2. set `expected` to P(r)`</span>
