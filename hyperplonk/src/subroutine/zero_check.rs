@@ -1,19 +1,14 @@
 use crate::{
     errors::HyperPlonkErrors,
-    selectors::SelectorColumn,
-    structs::{HyperPlonkParams, HyperPlonkProof, HyperPlonkProvingKey, HyperPlonkVerifyingKey},
+    structs::{HyperPlonkProof, HyperPlonkProvingKey, HyperPlonkVerifyingKey},
     utils::{build_f, eval_f},
-    witness::WitnessColumn,
 };
 use arithmetic::{DenseMultilinearExtension, VPAuxInfo};
 use ark_ec::PairingEngine;
 use ark_poly::MultilinearExtension;
-use ark_std::{end_timer, log2, start_timer, One, Zero};
-use pcs::prelude::{compute_qx_degree, merge_polynomials, PCSErrors, PolynomialCommitmentScheme};
-use poly_iop::{
-    identity_permutation_mle,
-    prelude::{IOPProof, PermutationCheck, PolyIOP, SumCheck, ZeroCheck},
-};
+use ark_std::{end_timer, start_timer};
+use pcs::prelude::PolynomialCommitmentScheme;
+use poly_iop::prelude::{IOPProof, PermutationCheck, PolyIOP, ZeroCheck};
 use std::{marker::PhantomData, rc::Rc};
 use transcript::IOPTranscript;
 
@@ -58,6 +53,15 @@ where
 
     let mut witness_zero_check_evals = vec![];
     let mut witness_zero_check_openings = vec![];
+
+    // =======================================================================
+    // 4. Generate evaluations and corresponding proofs
+    //
+    // - zero check evaluations and proofs
+    //   - wi_poly(r_zero_check) where r_zero_check is from zero_check_proof
+    //   - selector_poly(r_zero_check)
+    //
+    // =======================================================================
     // 4.2 open zero check proof
     // TODO: batch opening
     for wire_poly in witness_polys {
@@ -121,7 +125,8 @@ where
     ))
 }
 
-#[allow(clippy::type_complexity)]
+/// Internal function to verify the zero check component
+/// is correct in the proof.
 pub(crate) fn zero_check_verifier_subroutine<E, PCS, ZC, PC>(
     vk: &HyperPlonkVerifyingKey<E, PCS>,
     proof: &HyperPlonkProof<E, PCS, ZC, PC>,

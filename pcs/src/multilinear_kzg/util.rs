@@ -107,7 +107,7 @@ pub fn get_batched_nv(num_var: usize, polynomials_len: usize) -> usize {
 /// polynomials do not share a same number of nvs.
 pub fn merge_polynomials<F: PrimeField>(
     polynomials: &[Rc<DenseMultilinearExtension<F>>],
-) -> Result<DenseMultilinearExtension<F>, PCSErrors> {
+) -> Result<Rc<DenseMultilinearExtension<F>>, PCSErrors> {
     let nv = polynomials[0].num_vars();
     for poly in polynomials.iter() {
         if nv != poly.num_vars() {
@@ -123,9 +123,9 @@ pub fn merge_polynomials<F: PrimeField>(
         scalars.extend_from_slice(poly.to_evaluations().as_slice());
     }
     scalars.extend_from_slice(vec![F::zero(); (1 << merged_nv) - scalars.len()].as_ref());
-    Ok(DenseMultilinearExtension::from_evaluations_vec(
+    Ok(Rc::new(DenseMultilinearExtension::from_evaluations_vec(
         merged_nv, scalars,
-    ))
+    )))
 }
 
 /// Given a list of points, build `l(points)` which is a list of univariate
@@ -337,7 +337,7 @@ mod test {
                 F::from(1u64),
                 F::from(2u64),
             ];
-            let w_rec = DenseMultilinearExtension::from_evaluations_vec(3, w_eval);
+            let w_rec = Rc::new(DenseMultilinearExtension::from_evaluations_vec(3, w_eval));
 
             assert_eq!(w, w_rec);
         }
@@ -387,7 +387,7 @@ mod test {
                 F::zero(),
                 F::zero(),
             ];
-            let w_rec = DenseMultilinearExtension::from_evaluations_vec(4, w_eval);
+            let w_rec = Rc::new(DenseMultilinearExtension::from_evaluations_vec(4, w_eval));
 
             assert_eq!(w, w_rec);
         }
