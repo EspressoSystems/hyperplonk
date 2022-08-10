@@ -1,6 +1,9 @@
 //! Main module for the HyperPlonk PolyIOP.
 
-use crate::{utils::eval_f, subroutine::zero_check::zero_check_prover_subroutine};
+use crate::{
+    subroutine::zero_check::{zero_check_prover_subroutine, zero_check_verifier_subroutine},
+    utils::eval_f,
+};
 use arithmetic::VPAuxInfo;
 use ark_ec::PairingEngine;
 use ark_poly::{DenseMultilinearExtension, MultilinearExtension};
@@ -304,10 +307,11 @@ where
         //     &witness_polys,
         // )?;
 
-        // let zero_check_proof = <Self as ZeroCheck<E::Fr>>::prove(&fx, &mut transcript)?;
-        // end_timer!(step);
+        // let zero_check_proof = <Self as ZeroCheck<E::Fr>>::prove(&fx, &mut
+        // transcript)?; end_timer!(step);
 
-        let (zero_check_proof,
+        let (
+            zero_check_proof,
             witness_zero_check_openings,
             witness_zero_check_evals,
             selector_oracle_openings,
@@ -481,8 +485,8 @@ where
         //     let (zero_proof, zero_eval) =
         //         PCS::open(&pk.pcs_param, &wire_poly, &zero_check_proof.point)?;
         //     {
-        //         let eval = wire_poly.evaluate(&zero_check_proof.point).ok_or_else(|| {
-        //             HyperPlonkErrors::InvalidParameters(
+        //         let eval = wire_poly.evaluate(&zero_check_proof.point).ok_or_else(||
+        // {             HyperPlonkErrors::InvalidParameters(
         //                 "evaluation dimension does not match".to_string(),
         //             )
         //         })?;
@@ -684,41 +688,45 @@ where
         //     = q_l w_a(x) + q_r w_b(x) + q_m w_a(x)w_b(x) - q_o w_c(x)
         //
         // =======================================================================
-        let step = start_timer!(|| "verify zero check");
-        // Zero check and sum check have different AuxInfo because `w_merged` and
-        // `Prod(x)` have degree and num_vars
-        let zero_check_aux_info = VPAuxInfo::<E::Fr> {
-            // TODO: get the real max degree from gate_func
-            // Here we use 6 is because the test has q[0] * w[0]^5 which is degree 6
-            max_degree: 6,
-            num_variables: num_var,
-            phantom: PhantomData::default(),
-        };
-
-        // push witness to transcript
-        transcript.append_serializable_element(b"w", &proof.w_merged_com)?;
-
-        let zero_check_sub_claim = <Self as ZeroCheck<E::Fr>>::verify(
-            &proof.zero_check_proof,
-            &zero_check_aux_info,
-            &mut transcript,
-        )?;
-
-        let zero_check_point = &zero_check_sub_claim.sum_check_sub_claim.point;
-
-        // check zero check subclaim
-        let f_eval = eval_f(
-            &vk.params.gate_func,
-            &proof.selector_oracle_evals,
-            &proof.witness_zero_check_evals,
-        )?;
-        if f_eval != zero_check_sub_claim.expected_evaluation {
-            return Err(HyperPlonkErrors::InvalidProof(
-                "zero check evaluation failed".to_string(),
-            ));
+        if !zero_check_verifier_subroutine(vk, proof, &mut transcript)? {
+            return Ok(false);
         }
 
-        end_timer!(step);
+        // let step = start_timer!(|| "verify zero check");
+        // // Zero check and sum check have different AuxInfo because `w_merged` and
+        // // `Prod(x)` have degree and num_vars
+        // let zero_check_aux_info = VPAuxInfo::<E::Fr> {
+        //     // TODO: get the real max degree from gate_func
+        //     // Here we use 6 is because the test has q[0] * w[0]^5 which is degree 6
+        //     max_degree: 6,
+        //     num_variables: num_var,
+        //     phantom: PhantomData::default(),
+        // };
+
+        // // push witness to transcript
+        // transcript.append_serializable_element(b"w", &proof.w_merged_com)?;
+
+        // let zero_check_sub_claim = <Self as ZeroCheck<E::Fr>>::verify(
+        //     &proof.zero_check_proof,
+        //     &zero_check_aux_info,
+        //     &mut transcript,
+        // )?;
+
+        // let zero_check_point = &zero_check_sub_claim.sum_check_sub_claim.point;
+
+        // // check zero check subclaim
+        // let f_eval = eval_f(
+        //     &vk.params.gate_func,
+        //     &proof.selector_oracle_evals,
+        //     &proof.witness_zero_check_evals,
+        // )?;
+        // if f_eval != zero_check_sub_claim.expected_evaluation {
+        //     return Err(HyperPlonkErrors::InvalidProof(
+        //         "zero check evaluation failed".to_string(),
+        //     ));
+        // }
+
+        // end_timer!(step);
         // =======================================================================
         // 2. Verify perm_check_proof on `\{w_i(x)\}` and `permutation_oracles`
         // =======================================================================
@@ -877,43 +885,43 @@ where
             ));
         }
 
-        // =======================================================================
-        // 3.2 check zero check evaluations
-        // =======================================================================
-        // witness for zero check
-        // TODO: batch verification
-        for (commitment, (opening, eval)) in proof.witness_commits.iter().zip(
-            proof
-                .witness_zero_check_openings
-                .iter()
-                .zip(proof.witness_zero_check_evals.iter()),
-        ) {
-            if !PCS::verify(&vk.pcs_param, commitment, zero_check_point, eval, opening)? {
-                return Err(HyperPlonkErrors::InvalidProof(
-                    "pcs verification failed".to_string(),
-                ));
-            }
-        }
+        // // =======================================================================
+        // // 3.2 check zero check evaluations
+        // // =======================================================================
+        // // witness for zero check
+        // // TODO: batch verification
+        // for (commitment, (opening, eval)) in proof.witness_commits.iter().zip(
+        //     proof
+        //         .witness_zero_check_openings
+        //         .iter()
+        //         .zip(proof.witness_zero_check_evals.iter()),
+        // ) {
+        //     if !PCS::verify(&vk.pcs_param, commitment, zero_check_point, eval,
+        // opening)? {         return Err(HyperPlonkErrors::InvalidProof(
+        //             "pcs verification failed".to_string(),
+        //         ));
+        //     }
+        // }
 
-        // selector for zero check
-        // TODO: for now we only support a single selector polynomial
-        for (opening, eval) in proof
-            .selector_oracle_openings
-            .iter()
-            .zip(proof.selector_oracle_evals.iter())
-        {
-            if !PCS::verify(
-                &vk.pcs_param,
-                &vk.selector_com[0],
-                perm_check_point,
-                eval,
-                opening,
-            )? {
-                return Err(HyperPlonkErrors::InvalidProof(
-                    "pcs verification failed".to_string(),
-                ));
-            }
-        }
+        // // selector for zero check
+        // // TODO: for now we only support a single selector polynomial
+        // for (opening, eval) in proof
+        //     .selector_oracle_openings
+        //     .iter()
+        //     .zip(proof.selector_oracle_evals.iter())
+        // {
+        //     if !PCS::verify(
+        //         &vk.pcs_param,
+        //         &vk.selector_com[0],
+        //         zero_check_point,
+        //         eval,
+        //         opening,
+        //     )? {
+        //         return Err(HyperPlonkErrors::InvalidProof(
+        //             "pcs verification failed".to_string(),
+        //         ));
+        //     }
+        // }
 
         // =======================================================================
         // 3.3 public input consistency checks
