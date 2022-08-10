@@ -48,6 +48,8 @@ pub struct BatchProof<E: PairingEngine> {
     pub q_x_commit: Commitment<E>,
     /// openings of q(x) at 1, omega, ..., and r
     pub q_x_opens: Vec<KZGUnivariateOpening<E>>,
+    /// evaluations of q(x) at 1, omega, ..., and r
+    pub q_x_evals: Vec<E::Fr>,
 }
 
 impl<E: PairingEngine> PolynomialCommitmentScheme<E> for KZGMultilinearPCS<E> {

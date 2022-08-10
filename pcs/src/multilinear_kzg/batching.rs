@@ -46,6 +46,7 @@ use transcript::IOPTranscript;
 /// 7. get a point `p := l(r)`
 /// 8. output an opening of `w` over point `p`
 /// 9. output `w(p)`
+/// 10. output MLEs evaluated at points
 pub(super) fn multi_open_internal<E: PairingEngine>(
     uni_prover_param: &UnivariateProverParam<E::G1Affine>,
     ml_prover_param: &MultilinearProverParam<E>,
@@ -153,6 +154,22 @@ pub(super) fn multi_open_internal<E: PairingEngine>(
             "Q(r) does not match W(l(r))".to_string(),
         ));
     }
+
+    // 10. output MLEs evaluated at points (this is different from q(omega^i))
+    let mle_evals: Vec<E::Fr> = polynomials
+        .iter()
+        .zip(points.iter())
+        .map(
+            |(poly, point)| poly.evaluate(point).unwrap(), // todo
+        )
+        .collect();
+
+    for i in 0..mle_evals.len() {
+        println!("{}", i);
+        println!("mle eval: {}", mle_evals[i]);
+        println!("ex eval:  {}", q_x_evals[i])
+    }
+
     end_timer!(open_timer);
 
     Ok((
@@ -160,8 +177,9 @@ pub(super) fn multi_open_internal<E: PairingEngine>(
             proof: mle_opening,
             q_x_commit,
             q_x_opens,
+            q_x_evals,
         },
-        q_x_evals,
+        mle_evals,
     ))
 }
 
@@ -184,7 +202,7 @@ pub(super) fn batch_verify_internal<E: PairingEngine>(
     ml_verifier_param: &MultilinearVerifierParam<E>,
     multi_commitment: &Commitment<E>,
     points: &[Vec<E::Fr>],
-    values: &[E::Fr],
+    _values: &[E::Fr],
     batch_proof: &BatchProof<E>,
 ) -> Result<bool, PCSErrors> {
     let verify_timer = start_timer!(|| "batch verify");
@@ -204,7 +222,7 @@ pub(super) fn batch_verify_internal<E: PairingEngine>(
         ));
     }
 
-    if points_len + 1 != values.len() {
+    if points_len + 1 != batch_proof.q_x_evals.len() {
         return Err(PCSErrors::InvalidParameters(
             "values length does not match point length".to_string(),
         ));
@@ -237,7 +255,7 @@ pub(super) fn batch_verify_internal<E: PairingEngine>(
 
     // 3. check `q(r) == batch_proof.q_x_value.last` and `q(omega^i) =
     // batch_proof.q_x_value[i]`
-    for (i, value) in values.iter().enumerate().take(points_len) {
+    for (i, value) in batch_proof.q_x_evals.iter().enumerate().take(points_len) {
         if !KZGUnivariatePCS::verify(
             uni_verifier_param,
             &batch_proof.q_x_commit,
@@ -255,7 +273,7 @@ pub(super) fn batch_verify_internal<E: PairingEngine>(
         uni_verifier_param,
         &batch_proof.q_x_commit,
         &r,
-        &values[points_len],
+        &batch_proof.q_x_evals[points_len],
         &batch_proof.q_x_opens[points_len],
     )? {
         #[cfg(debug_assertion)]
@@ -275,7 +293,7 @@ pub(super) fn batch_verify_internal<E: PairingEngine>(
         ml_verifier_param,
         multi_commitment,
         &point,
-        &values[points_len],
+        &batch_proof.q_x_evals[points_len],
         &batch_proof.proof,
     )?;
 
@@ -333,7 +351,7 @@ mod tests {
         let (batch_proof, evaluations) =
             multi_open_internal(&uni_ck, &ml_ck, polys, &com, &points)?;
 
-        for (a, b) in evals.iter().zip(evaluations.iter()) {
+        for (a, b) in evals.iter().zip(batch_proof.q_x_evals.iter()) {
             assert_eq!(a, b)
         }
 
@@ -377,20 +395,21 @@ mod tests {
                     commitment: <E as PairingEngine>::G1Affine::default()
                 },
                 q_x_opens: vec![],
+                q_x_evals: vec![],
             },
         )
         .is_err());
 
         // bad value
-        let mut wrong_evals = evaluations.clone();
-        wrong_evals[0] = Fr::default();
+        let mut bad_proof = batch_proof.clone();
+        bad_proof.q_x_evals[0] = Fr::default();
         assert!(!batch_verify_internal(
             &uni_vk,
             &ml_vk,
             &com,
             &points,
-            &wrong_evals,
-            &batch_proof
+            &evaluations,
+            &bad_proof
         )?);
 
         // bad q(x) commit
