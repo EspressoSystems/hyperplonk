@@ -8,7 +8,7 @@ use ark_ec::{msm::VariableBaseMSM, AffineCurve, PairingEngine, ProjectiveCurve};
 use ark_ff::PrimeField;
 use ark_poly::{univariate::DensePolynomial, Polynomial, UVPolynomial};
 use ark_serialize::{CanonicalDeserialize, CanonicalSerialize, Read, SerializationError, Write};
-use ark_std::{end_timer, rand::RngCore, start_timer, One, UniformRand, Zero};
+use ark_std::{end_timer, rand::RngCore, start_timer, One};
 use srs::{UnivariateProverParam, UnivariateUniversalParams, UnivariateVerifierParam};
 use std::marker::PhantomData;
 
@@ -38,7 +38,6 @@ impl<E: PairingEngine> PolynomialCommitmentScheme<E> for KZGUnivariatePCS<E> {
     type Evaluation = E::Fr;
     // Polynomial and its associated types
     type Commitment = Commitment<E>;
-    type BatchCommitment = Vec<Self::Commitment>;
     type Proof = KZGUnivariateOpening<E>;
     type BatchProof = Vec<Self::Proof>;
 
@@ -105,17 +104,10 @@ impl<E: PairingEngine> PolynomialCommitmentScheme<E> for KZGUnivariatePCS<E> {
 
     /// Generate a commitment for a list of polynomials
     fn multi_commit(
-        prover_param: &Self::ProverParam,
-        polys: &[Self::Polynomial],
-    ) -> Result<Self::BatchCommitment, PCSErrors> {
-        let commit_time = start_timer!(|| format!("batch commit {} polynomials", polys.len()));
-        let res = polys
-            .iter()
-            .map(|poly| Self::commit(prover_param, poly))
-            .collect::<Result<Vec<Self::Commitment>, PCSErrors>>()?;
-
-        end_timer!(commit_time);
-        Ok(res)
+        _prover_param: &Self::ProverParam,
+        _polys: &[Self::Polynomial],
+    ) -> Result<Self::Commitment, PCSErrors> {
+        unimplemented!()
     }
 
     /// On input a polynomial `p` and a point `point`, outputs a proof for the
@@ -211,59 +203,14 @@ impl<E: PairingEngine> PolynomialCommitmentScheme<E> for KZGUnivariatePCS<E> {
     // This is a naive approach
     // TODO: to implement the more efficient batch verification algorithm
     // (e.g., the appendix C.4 in https://eprint.iacr.org/2020/1536.pdf)
-    fn batch_verify<R: RngCore>(
-        verifier_param: &Self::VerifierParam,
-        multi_commitment: &Self::BatchCommitment,
-        points: &[Self::Point],
-        values: &[E::Fr],
-        batch_proof: &Self::BatchProof,
-        rng: &mut R,
+    fn batch_verify(
+        _verifier_param: &Self::VerifierParam,
+        _multi_commitment: &Self::Commitment,
+        _points: &[Self::Point],
+        _values: &[E::Fr],
+        _batch_proof: &Self::BatchProof,
     ) -> Result<bool, PCSErrors> {
-        let check_time =
-            start_timer!(|| format!("Checking {} evaluation proofs", multi_commitment.len()));
-
-        let mut total_c = <E::G1Projective>::zero();
-        let mut total_w = <E::G1Projective>::zero();
-
-        let combination_time = start_timer!(|| "Combining commitments and proofs");
-        let mut randomizer = E::Fr::one();
-        // Instead of multiplying g and gamma_g in each turn, we simply accumulate
-        // their coefficients and perform a final multiplication at the end.
-        let mut g_multiplier = E::Fr::zero();
-        for (((c, z), v), proof) in multi_commitment
-            .iter()
-            .zip(points)
-            .zip(values)
-            .zip(batch_proof)
-        {
-            let w = proof.proof;
-            let mut temp = w.mul(*z);
-            temp.add_assign_mixed(&c.commitment);
-            let c = temp;
-            g_multiplier += &(randomizer * v);
-            total_c += &c.mul(randomizer.into_repr());
-            total_w += &w.mul(randomizer.into_repr());
-            // We don't need to sample randomizers from the full field,
-            // only from 128-bit strings.
-            randomizer = u128::rand(rng).into();
-        }
-        total_c -= &verifier_param.g.mul(g_multiplier);
-        end_timer!(combination_time);
-
-        let to_affine_time = start_timer!(|| "Converting results to affine for pairing");
-        let affine_points = E::G1Projective::batch_normalization_into_affine(&[-total_w, total_c]);
-        let (total_w, total_c) = (affine_points[0], affine_points[1]);
-        end_timer!(to_affine_time);
-
-        let pairing_time = start_timer!(|| "Performing product of pairings");
-        let result = E::product_of_pairings(&[
-            (total_w.into(), verifier_param.beta_h.into()),
-            (total_c.into(), verifier_param.h.into()),
-        ])
-        .is_one();
-        end_timer!(pairing_time);
-        end_timer!(check_time, || format!("Result: {}", result));
-        Ok(result)
+        unimplemented!()
     }
 }
 
@@ -346,44 +293,6 @@ mod tests {
         Ok(())
     }
 
-    fn batch_check_test_template<E>() -> Result<(), PCSErrors>
-    where
-        E: PairingEngine,
-    {
-        let rng = &mut test_rng();
-        for _ in 0..10 {
-            let mut degree = 0;
-            while degree <= 1 {
-                degree = usize::rand(rng) % 20;
-            }
-            let log_degree = log2(degree) as usize;
-            let pp = KZGUnivariatePCS::<E>::gen_srs_for_testing(rng, log_degree)?;
-            let (ck, vk) = KZGUnivariatePCS::<E>::trim(&pp, log_degree, None)?;
-            let mut comms = Vec::new();
-            let mut values = Vec::new();
-            let mut points = Vec::new();
-            let mut proofs = Vec::new();
-            for _ in 0..10 {
-                let p = <DensePolynomial<E::Fr> as UVPolynomial<E::Fr>>::rand(degree, rng);
-                let comm = KZGUnivariatePCS::<E>::commit(&ck, &p)?;
-                let point = E::Fr::rand(rng);
-                let (proof, value) = KZGUnivariatePCS::<E>::open(&ck, &p, &point)?;
-
-                assert!(KZGUnivariatePCS::<E>::verify(
-                    &vk, &comm, &point, &value, &proof
-                )?);
-                comms.push(comm);
-                values.push(value);
-                points.push(point);
-                proofs.push(proof);
-            }
-            assert!(KZGUnivariatePCS::<E>::batch_verify(
-                &vk, &comms, &points, &values, &proofs, rng
-            )?);
-        }
-        Ok(())
-    }
-
     #[test]
     fn end_to_end_test() {
         end_to_end_test_template::<Bls12_381>().expect("test failed for bls12-381");
@@ -392,9 +301,5 @@ mod tests {
     #[test]
     fn linear_polynomial_test() {
         linear_polynomial_test_template::<Bls12_381>().expect("test failed for bls12-381");
-    }
-    #[test]
-    fn batch_check_test() {
-        batch_check_test_template::<Bls12_381>().expect("test failed for bls12-381");
     }
 }

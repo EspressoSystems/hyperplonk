@@ -64,7 +64,6 @@ impl<E: PairingEngine> PolynomialCommitmentScheme<E> for KZGMultilinearPCS<E> {
     type Evaluation = E::Fr;
     // Commitments and proofs
     type Commitment = Commitment<E>;
-    type BatchCommitment = Commitment<E>;
     type Proof = Proof<E>;
     type BatchProof = BatchProof<E>;
 
@@ -255,13 +254,12 @@ impl<E: PairingEngine> PolynomialCommitmentScheme<E> for KZGMultilinearPCS<E> {
     /// through the points
     /// 5. get a point `p := l(r)`
     /// 6. verifies `p` is verifies against proof
-    fn batch_verify<R: RngCore>(
+    fn batch_verify(
         verifier_param: &Self::VerifierParam,
-        multi_commitment: &Self::BatchCommitment,
+        multi_commitment: &Self::Commitment,
         points: &[Self::Point],
         values: &[E::Fr],
         batch_proof: &Self::BatchProof,
-        _rng: &mut R,
     ) -> Result<bool, PCSErrors> {
         batch_verify_internal(
             &verifier_param.1,
