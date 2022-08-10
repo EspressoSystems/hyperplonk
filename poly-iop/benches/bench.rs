@@ -5,7 +5,7 @@ use ark_std::{test_rng, UniformRand};
 use poly_iop::prelude::{
     identity_permutation_mle, PermutationCheck, PolyIOP, PolyIOPErrors, SumCheck, ZeroCheck,
 };
-use std::{marker::PhantomData, time::Instant};
+use std::{marker::PhantomData, rc::Rc, time::Instant};
 
 fn main() -> Result<(), PolyIOPErrors> {
     bench_permutation_check()?;
@@ -143,7 +143,7 @@ fn bench_permutation_check() -> Result<(), PolyIOPErrors> {
             10
         };
 
-        let w = DenseMultilinearExtension::rand(nv, &mut rng);
+        let w = Rc::new(DenseMultilinearExtension::rand(nv, &mut rng));
 
         // s_perm is the identity map
         let s_perm = identity_permutation_mle(nv);

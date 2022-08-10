@@ -1,8 +1,14 @@
 //! Main module for the HyperPlonk PolyIOP.
 
 use crate::subroutine::{
-    perm_check::{perm_check_prover_subroutine, perm_check_verifier_subroutine},
-    zero_check::{zero_check_prover_subroutine, zero_check_verifier_subroutine},
+    perm_check::{
+        estimate_perm_check_param_size, perm_check_prover_subroutine,
+        perm_check_verifier_subroutine,
+    },
+    zero_check::{
+        estimate_zero_check_param_size, zero_check_prover_subroutine,
+        zero_check_verifier_subroutine,
+    },
 };
 use ark_ec::PairingEngine;
 use ark_poly::{DenseMultilinearExtension, MultilinearExtension};
@@ -14,7 +20,7 @@ use poly_iop::{
     PolyIOP,
 };
 use selectors::SelectorColumn;
-use std::rc::Rc;
+use std::{cmp::max, rc::Rc};
 use structs::{HyperPlonkParams, HyperPlonkProof, HyperPlonkProvingKey, HyperPlonkVerifyingKey};
 use transcript::IOPTranscript;
 use witness::WitnessColumn;
@@ -119,37 +125,52 @@ where
     ) -> Result<(Self::ProvingKey, Self::VerifyingKey), HyperPlonkErrors> {
         let num_vars = params.nv;
         let log_num_witness_polys = params.log_n_wires;
+        let (zero_check_nv, zero_check_uni_degree) =
+            estimate_zero_check_param_size(num_vars, params.log_n_wires);
+        println!(
+            "zero check nv: {}, uni {}",
+            zero_check_nv, zero_check_uni_degree
+        );
+        let (perm_check_nv, perm_check_uni_degree) =
+            estimate_perm_check_param_size(num_vars, params.log_n_wires);
+        let nv = max(zero_check_nv, perm_check_nv);
+        let uni_degree = max(zero_check_uni_degree, perm_check_uni_degree);
 
-        // number of variables in merged polynomial for Multilinear-KZG
-        let merged_nv = num_vars + log_num_witness_polys;
-        // degree of q(x) for Univariate-KZG
-        let supported_uni_degree = compute_qx_degree(num_vars, 1 << log_num_witness_polys);
+        // // number of variables in merged polynomial for Multilinear-KZG
+        // let merged_nv = num_vars + log_num_witness_polys;
+        // // degree of q(x) for Univariate-KZG
+        // let q_x_degree = compute_qx_degree(num_vars, 1 << log_num_witness_polys);
+        // let prod_x_degree = merged_nv * 4;
+        // let supported_uni_degree = max(prod_x_degree, q_x_degree);
+        // println!("q(x) degree: {}\nnum_vars: {}\nmerged_vars {}\nprod x {}",
+        // q_x_degree, num_vars, merged_nv, prod_x_degree); extract PCS prover
+        // and verifier keys from SRS
+        let (pcs_prover_param, pcs_verifier_param) =
+            PCS::trim(pcs_srs, log2(uni_degree) as usize, Some(nv + 1))?;
 
-        // extract PCS prover and verifier keys from SRS
-        let (pcs_prover_param, pcs_verifier_param) = PCS::trim(
-            pcs_srs,
-            log2(supported_uni_degree) as usize,
-            Some(merged_nv + 1),
-        )?;
-
+        println!("here");
         // build permutation oracles
         let permutation_oracles = Rc::new(DenseMultilinearExtension::from_evaluations_slice(
-            merged_nv,
+            num_vars + log_num_witness_polys,
             permutation,
         ));
+        println!("here");
         let perm_com = PCS::commit(&pcs_prover_param, &permutation_oracles)?;
 
+        println!("here");
         // build selector oracles and commit to it
         let selector_oracles: Vec<Rc<DenseMultilinearExtension<E::Fr>>> = selectors
             .iter()
             .map(|s| Rc::new(DenseMultilinearExtension::from(s)))
             .collect();
 
+        println!("here");
         let selector_com = selector_oracles
             .iter()
             .map(|poly| PCS::commit(&pcs_prover_param, poly))
             .collect::<Result<Vec<PCS::Commitment>, PCSErrors>>()?;
 
+        println!("here");
         Ok((
             Self::ProvingKey {
                 params: params.clone(),
@@ -218,6 +239,7 @@ where
         //  online public input of length 2^\ell
         let ell = pk.params.log_pub_input_len;
 
+        println!("here");
         let witness_polys: Vec<Rc<DenseMultilinearExtension<E::Fr>>> = witnesses
             .iter()
             .map(|w| Rc::new(DenseMultilinearExtension::from(w)))
@@ -259,6 +281,7 @@ where
                 pi_poly, pi_in_w0,
             )));
         }
+        println!("here");
         // =======================================================================
         // 1. Commit Witness polynomials `w_i(x)` and append commitment to
         // transcript
@@ -314,7 +337,7 @@ where
             perm_oracle_opening,
             perm_oracle_eval,
             prod_com,
-            prod_openings,
+            prod_opening,
             prod_evals,
         ) = perm_check_prover_subroutine(pk, &witness_polys, &mut transcript)?;
 
@@ -361,7 +384,7 @@ where
             // We do not validate prod(x), this is checked by subclaim
             prod_commit: prod_com,
             prod_evals,
-            prod_openings,
+            prod_opening,
             witness_perm_check_opening,
             witness_perm_check_eval,
             perm_oracle_opening,

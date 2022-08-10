@@ -12,6 +12,23 @@ use poly_iop::prelude::{IOPProof, PermutationCheck, PolyIOP, ZeroCheck};
 use std::{marker::PhantomData, rc::Rc};
 use transcript::IOPTranscript;
 
+/// Estimate the PCS parameter sizes for zero check
+/// Returns
+/// - degree of univariate polynomial
+/// - number over vars in multilinear polynomial
+pub(crate) fn estimate_zero_check_param_size(
+    num_vars: usize,
+    log_n_wires: usize,
+) -> (usize, usize) {
+    // we merge all the witness into a single MLE w_merged
+    // whose number variable = num_var + log(num_wires)
+    let merged_nv = num_vars + log_n_wires;
+    // to batch open its commitment we will need a univariate q(x)
+    // whose degree is num_vars * n_wires
+    let uni_degree = num_vars * (1 << log_n_wires);
+    (merged_nv, uni_degree)
+}
+
 /// Internal function to generate
 /// - zero check proof
 /// - PCS openings and evaluations for witness and selector polynomials at zero

@@ -9,11 +9,30 @@ use ark_std::{end_timer, start_timer, One, Zero};
 use pcs::prelude::{merge_polynomials, PolynomialCommitmentScheme};
 use poly_iop::{
     identity_permutation_mle,
-    prelude::{IOPProof, PermutationCheck, ZeroCheck},
+    prelude::{build_prod_partial_eval, IOPProof, PermutationCheck, ZeroCheck},
     PolyIOP,
 };
 use std::{marker::PhantomData, rc::Rc};
 use transcript::IOPTranscript;
+
+/// Estimate the PCS parameter sizes for permutation check
+/// Returns
+/// - degree of univariate polynomial
+/// - number over vars in multilinear polynomial
+pub(crate) fn estimate_perm_check_param_size(
+    num_vars: usize,
+    log_n_wires: usize,
+) -> (usize, usize) {
+    // we first get the num_var for m_merged that is to be used for perm check
+    let merged_nv = num_vars + log_n_wires;
+    // we merge all the product into a single MLE
+    // whose number variable = merged_nv + 2
+    let merged_prod_nv = merged_nv + 2;
+    // to batch open its commitment we will need a univariate q(x)
+    // whose degree is merged_nv * 4
+    let uni_degree = merged_nv * 4;
+    (merged_prod_nv, uni_degree)
+}
 
 /// Internal function to generate
 /// - permutation check proof
@@ -31,7 +50,7 @@ pub(crate) fn perm_check_prover_subroutine<E, PCS>(
         PCS::Proof,
         PCS::Evaluation,
         PCS::Commitment,
-        Vec<PCS::Proof>,
+        PCS::BatchProof,
         Vec<PCS::Evaluation>,
     ),
     HyperPlonkErrors,
@@ -165,6 +184,31 @@ where
         prod_x_1_opening,
     ];
     let prod_evals = vec![prod_0_x_eval, prod_1_x_eval, prod_x_0_eval, prod_x_1_eval];
+    println!("prod evals: {:?}\n", prod_evals);
+
+    let point_0_x = [perm_check_proof.point.as_slice(), &[E::Fr::zero()]].concat();
+    let point_1_x = [perm_check_proof.point.as_slice(), &[E::Fr::one()]].concat();
+    let point_x_0 = [&[E::Fr::zero()], perm_check_proof.point.as_slice()].concat();
+    let point_x_1 = [&[E::Fr::one()], perm_check_proof.point.as_slice()].concat();
+
+    let prod_partial_mles = build_prod_partial_eval(&prod_x)?;
+
+    println!("here");
+    let (prod_opening, prod_evals) = PCS::multi_open(
+        &pk.pcs_param,
+        &prod_com,
+        &prod_partial_mles,
+        // &[
+        //     prod_x.clone(),
+        //     prod_x.clone(),
+        //     prod_x.clone(),
+        //     prod_x.clone(),
+        // ],
+        &[point_0_x, point_1_x, point_x_0, point_x_1],
+    )?;
+
+    println!("here");
+    println!("prod evals: {:?}\n", prod_evals);
 
     // =======================================================================
     // 4. Generate evaluations and corresponding proofs
@@ -225,7 +269,7 @@ where
         s_perm_opening,
         s_perm_eval,
         prod_com,
-        prod_openings,
+        prod_opening,
         prod_evals,
     ))
 }
@@ -357,53 +401,53 @@ where
     // prod(x) for permutation check
     // TODO: batch verification
 
-    // prod(0, x)
-    if !PCS::verify(
-        &vk.pcs_param,
-        &proof.prod_commit,
-        &[perm_check_point.as_slice(), &[E::Fr::zero()]].concat(),
-        &proof.prod_evals[0],
-        &proof.prod_openings[0],
-    )? {
-        return Err(HyperPlonkErrors::InvalidProof(
-            "pcs verification failed".to_string(),
-        ));
-    }
-    // prod(1, x)
-    if !PCS::verify(
-        &vk.pcs_param,
-        &proof.prod_commit,
-        &[perm_check_point.as_slice(), &[E::Fr::one()]].concat(),
-        &proof.prod_evals[1],
-        &proof.prod_openings[1],
-    )? {
-        return Err(HyperPlonkErrors::InvalidProof(
-            "pcs verification failed".to_string(),
-        ));
-    }
-    // prod(x, 0)
-    if !PCS::verify(
-        &vk.pcs_param,
-        &proof.prod_commit,
-        &[&[E::Fr::zero()], perm_check_point.as_slice()].concat(),
-        &proof.prod_evals[2],
-        &proof.prod_openings[2],
-    )? {
-        return Err(HyperPlonkErrors::InvalidProof(
-            "pcs verification failed".to_string(),
-        ));
-    }
-    // prod(x, 1)
-    if !PCS::verify(
-        &vk.pcs_param,
-        &proof.prod_commit,
-        &[&[E::Fr::one()], perm_check_point.as_slice()].concat(),
-        &proof.prod_evals[3],
-        &proof.prod_openings[3],
-    )? {
-        return Err(HyperPlonkErrors::InvalidProof(
-            "pcs verification failed".to_string(),
-        ));
-    }
+    // // prod(0, x)
+    // if !PCS::verify(
+    //     &vk.pcs_param,
+    //     &proof.prod_commit,
+    //     &[perm_check_point.as_slice(), &[E::Fr::zero()]].concat(),
+    //     &proof.prod_evals[0],
+    //     &proof.prod_openings[0],
+    // )? {
+    //     return Err(HyperPlonkErrors::InvalidProof(
+    //         "pcs verification failed".to_string(),
+    //     ));
+    // }
+    // // prod(1, x)
+    // if !PCS::verify(
+    //     &vk.pcs_param,
+    //     &proof.prod_commit,
+    //     &[perm_check_point.as_slice(), &[E::Fr::one()]].concat(),
+    //     &proof.prod_evals[1],
+    //     &proof.prod_openings[1],
+    // )? {
+    //     return Err(HyperPlonkErrors::InvalidProof(
+    //         "pcs verification failed".to_string(),
+    //     ));
+    // }
+    // // prod(x, 0)
+    // if !PCS::verify(
+    //     &vk.pcs_param,
+    //     &proof.prod_commit,
+    //     &[&[E::Fr::zero()], perm_check_point.as_slice()].concat(),
+    //     &proof.prod_evals[2],
+    //     &proof.prod_openings[2],
+    // )? {
+    //     return Err(HyperPlonkErrors::InvalidProof(
+    //         "pcs verification failed".to_string(),
+    //     ));
+    // }
+    // // prod(x, 1)
+    // if !PCS::verify(
+    //     &vk.pcs_param,
+    //     &proof.prod_commit,
+    //     &[&[E::Fr::one()], perm_check_point.as_slice()].concat(),
+    //     &proof.prod_evals[3],
+    //     &proof.prod_openings[3],
+    // )? {
+    //     return Err(HyperPlonkErrors::InvalidProof(
+    //         "pcs verification failed".to_string(),
+    //     ));
+    // }
     Ok(true)
 }

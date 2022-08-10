@@ -1,7 +1,7 @@
 pub use crate::{
     errors::PolyIOPErrors,
     perm_check::{
-        util::{identity_permutation_mle, random_permutation_mle},
+        util::{build_prod_partial_eval, identity_permutation_mle, random_permutation_mle},
         PermutationCheck,
     },
     structs::IOPProof,
