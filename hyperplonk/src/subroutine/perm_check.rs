@@ -96,7 +96,7 @@ where
         &w_merged,
         &pk.permutation_oracles,
     )?;
-    let prod_x = Rc::new(prod_x_and_aux_info[0].clone());
+    let prod_x = prod_x_and_aux_info[0].clone();
 
     // 3.3 push a commitment of `prod(x)` to the transcript
     let prod_com = PCS::commit(&pk.pcs_param, &prod_x)?;
@@ -116,13 +116,18 @@ where
     )?;
 
     // 3.6 open prod(0,x), prod(1, x), prod(x, 0), prod(x, 1) at zero_check.point
+
+    let point_0_x = [perm_check_proof.point.as_slice(), &[E::Fr::zero()]].concat();
+    let point_1_x = [perm_check_proof.point.as_slice(), &[E::Fr::one()]].concat();
+    let point_x_0 = [&[E::Fr::zero()], perm_check_proof.point.as_slice()].concat();
+    let point_x_1 = [&[E::Fr::one()], perm_check_proof.point.as_slice()].concat();
+
     // prod(0, x)
-    let tmp_point = [perm_check_proof.point.as_slice(), &[E::Fr::zero()]].concat();
-    let (prod_0_x_opening, prod_0_x_eval) = PCS::open(&pk.pcs_param, &prod_x, &tmp_point)?;
+    let (prod_0_x_opening, prod_0_x_eval) = PCS::open(&pk.pcs_param, &prod_x, &point_0_x)?;
     #[cfg(feature = "extensive_sanity_checks")]
     {
         // sanity check
-        let eval = prod_x.evaluate(&tmp_point).ok_or_else(|| {
+        let eval = prod_x.evaluate(&point_0_x).ok_or_else(|| {
             HyperPlonkErrors::InvalidParameters("evaluation dimension does not match".to_string())
         })?;
         if eval != prod_0_x_eval {
@@ -132,12 +137,11 @@ where
         }
     }
     // prod(1, x)
-    let tmp_point = [perm_check_proof.point.as_slice(), &[E::Fr::one()]].concat();
-    let (prod_1_x_opening, prod_1_x_eval) = PCS::open(&pk.pcs_param, &prod_x, &tmp_point)?;
+    let (prod_1_x_opening, prod_1_x_eval) = PCS::open(&pk.pcs_param, &prod_x, &point_1_x)?;
     #[cfg(feature = "extensive_sanity_checks")]
     {
         // sanity check
-        let eval = prod_x.evaluate(&tmp_point).ok_or_else(|| {
+        let eval = prod_x.evaluate(&point_1_x).ok_or_else(|| {
             HyperPlonkErrors::InvalidParameters("evaluation dimension does not match".to_string())
         })?;
         if eval != prod_1_x_eval {
@@ -186,15 +190,25 @@ where
     let prod_evals = vec![prod_0_x_eval, prod_1_x_eval, prod_x_0_eval, prod_x_1_eval];
     println!("prod evals: {:?}\n", prod_evals);
 
-    let point_0_x = [perm_check_proof.point.as_slice(), &[E::Fr::zero()]].concat();
-    let point_1_x = [perm_check_proof.point.as_slice(), &[E::Fr::one()]].concat();
-    let point_x_0 = [&[E::Fr::zero()], perm_check_proof.point.as_slice()].concat();
-    let point_x_1 = [&[E::Fr::one()], perm_check_proof.point.as_slice()].concat();
-
-    let prod_partial_mles = build_prod_partial_eval(&prod_x)?;
+    let (prod_opening, _prod_evals) = PCS::multi_open(
+        &pk.pcs_param,
+        &prod_com,
+        &[
+            prod_x.clone(),
+            prod_x.clone(),
+            prod_x.clone(),
+            prod_x.clone(),
+        ],
+        &[point_0_x, point_1_x, point_x_0, point_x_1],
+    )?;
 
     println!("here");
-    let (prod_opening, prod_evals) = PCS::multi_open(
+    println!("prod evals: {:?}\n", prod_evals);
+
+    println!("here");
+
+    let prod_partial_mles = build_prod_partial_eval(&prod_x)?;
+    let (prod_opening, _prod_evals) = PCS::multi_open(
         &pk.pcs_param,
         &prod_com,
         &prod_partial_mles,
@@ -204,7 +218,12 @@ where
         //     prod_x.clone(),
         //     prod_x.clone(),
         // ],
-        &[point_0_x, point_1_x, point_x_0, point_x_1],
+        &[
+            perm_check_proof.point.clone(),
+            perm_check_proof.point.clone(),
+            perm_check_proof.point.clone(),
+            perm_check_proof.point.clone(),
+        ],
     )?;
 
     println!("here");
