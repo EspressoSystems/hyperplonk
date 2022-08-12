@@ -3,6 +3,7 @@
 use arithmetic::ArithErrors;
 use ark_std::string::String;
 use displaydoc::Display;
+use pcs::prelude::PCSErrors;
 use transcript::TranscriptErrors;
 
 /// A `enum` specifying the possible failure modes of the PolyIOP.
@@ -26,6 +27,8 @@ pub enum PolyIOPErrors {
     TranscriptErrors(TranscriptErrors),
     /// Arithmetic Error: {0}
     ArithmeticErrors(ArithErrors),
+    /// PCS error {0}
+    PCSErrors(PCSErrors),
 }
 
 impl From<ark_serialize::SerializationError> for PolyIOPErrors {
@@ -43,5 +46,11 @@ impl From<TranscriptErrors> for PolyIOPErrors {
 impl From<ArithErrors> for PolyIOPErrors {
     fn from(e: ArithErrors) -> Self {
         Self::ArithmeticErrors(e)
+    }
+}
+
+impl From<PCSErrors> for PolyIOPErrors {
+    fn from(e: PCSErrors) -> Self {
+        Self::PCSErrors(e)
     }
 }
