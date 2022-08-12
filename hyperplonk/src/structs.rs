@@ -165,7 +165,7 @@ pub struct HyperPlonkVerifyingKey<E: PairingEngine, PCS: PolynomialCommitmentSch
 /// id_w2 = 1 // second witness
 ///
 /// NOTE: here coeff is a signed integer, instead of a field element
-#[derive(Clone, Debug, Default, PartialEq)]
+#[derive(Clone, Debug, Default, PartialEq, Eq)]
 pub struct CustomizedGates {
     pub(crate) gates: Vec<(i64, Option<usize>, Vec<usize>)>,
 }
