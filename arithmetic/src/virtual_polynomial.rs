@@ -52,7 +52,7 @@ pub struct VirtualPolynomial<F: PrimeField> {
     raw_pointers_lookup_table: HashMap<*const DenseMultilinearExtension<F>, usize>,
 }
 
-#[derive(Clone, Debug, Default, PartialEq, CanonicalSerialize)]
+#[derive(Clone, Debug, Default, PartialEq, Eq, CanonicalSerialize)]
 /// Auxiliary information about the multilinear polynomial
 pub struct VPAuxInfo<F: PrimeField> {
     /// max number of multiplicands in each product
