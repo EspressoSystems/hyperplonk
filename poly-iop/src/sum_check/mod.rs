@@ -1,5 +1,7 @@
 //! This module implements the sum check protocol.
 
+use std::rc::Rc;
+
 use crate::{
     errors::PolyIOPErrors,
     structs::{IOPProof, IOPProverState, IOPVerifierState},
@@ -16,6 +18,7 @@ mod verifier;
 
 /// Trait for doing sum check protocols.
 pub trait SumCheck<F: PrimeField> {
+    type MLE;
     type VirtualPolynomial;
     type VPAuxInfo;
     type MultilinearExtension;
@@ -124,6 +127,7 @@ pub struct SumCheckSubClaim<F: PrimeField> {
 
 impl<F: PrimeField> SumCheck<F> for PolyIOP<F> {
     type SumCheckProof = IOPProof<F>;
+    type MLE = Rc<DenseMultilinearExtension<F>>;
     type VirtualPolynomial = VirtualPolynomial<F>;
     type VPAuxInfo = VPAuxInfo<F>;
     type MultilinearExtension = DenseMultilinearExtension<F>;

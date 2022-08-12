@@ -1,7 +1,7 @@
 //! This module defines our main mathematical object `VirtualPolynomial`; and
 //! various functions associated with it.
 
-use crate::{errors::ArithErrors, multilinear_polynomial::random_zero_mle_list};
+use crate::{random_mle_list, random_zero_mle_list, ArithErrors};
 use ark_ff::PrimeField;
 use ark_poly::{DenseMultilinearExtension, MultilinearExtension};
 use ark_serialize::{CanonicalSerialize, SerializationError, Write};
@@ -322,42 +322,6 @@ impl<F: PrimeField> VirtualPolynomial<F> {
         }
         println!()
     }
-}
-
-/// Sample a random list of multilinear polynomials.
-/// Returns
-/// - the list of polynomials,
-/// - its sum of polynomial evaluations over the boolean hypercube.
-fn random_mle_list<F: PrimeField, R: RngCore>(
-    nv: usize,
-    degree: usize,
-    rng: &mut R,
-) -> (Vec<Rc<DenseMultilinearExtension<F>>>, F) {
-    let start = start_timer!(|| "sample random mle list");
-    let mut multiplicands = Vec::with_capacity(degree);
-    for _ in 0..degree {
-        multiplicands.push(Vec::with_capacity(1 << nv))
-    }
-    let mut sum = F::zero();
-
-    for _ in 0..(1 << nv) {
-        let mut product = F::one();
-
-        for e in multiplicands.iter_mut() {
-            let val = F::rand(rng);
-            e.push(val);
-            product *= val;
-        }
-        sum += product;
-    }
-
-    let list = multiplicands
-        .into_iter()
-        .map(|x| Rc::new(DenseMultilinearExtension::from_evaluations_vec(nv, x)))
-        .collect();
-
-    end_timer!(start);
-    (list, sum)
 }
 
 // This function build the eq(x, r) polynomial for any given r.

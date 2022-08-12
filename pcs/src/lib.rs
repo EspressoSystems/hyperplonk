@@ -23,7 +23,6 @@ pub trait PolynomialCommitmentScheme<E: PairingEngine> {
     type Evaluation;
     // Commitments and proofs
     type Commitment: CanonicalSerialize;
-    type BatchCommitment: CanonicalSerialize;
     type Proof;
     type BatchProof;
 
@@ -58,7 +57,7 @@ pub trait PolynomialCommitmentScheme<E: PairingEngine> {
     fn multi_commit(
         prover_param: &Self::ProverParam,
         polys: &[Self::Polynomial],
-    ) -> Result<Self::BatchCommitment, PCSErrors>;
+    ) -> Result<Self::Commitment, PCSErrors>;
 
     /// On input a polynomial `p` and a point `point`, outputs a proof for the
     /// same.
@@ -89,13 +88,12 @@ pub trait PolynomialCommitmentScheme<E: PairingEngine> {
 
     /// Verifies that `value_i` is the evaluation at `x_i` of the polynomial
     /// `poly_i` committed inside `comm`.
-    fn batch_verify<R: RngCore>(
+    fn batch_verify(
         verifier_param: &Self::VerifierParam,
-        multi_commitment: &Self::BatchCommitment,
+        multi_commitment: &Self::Commitment,
         points: &[Self::Point],
         values: &[E::Fr],
         batch_proof: &Self::BatchProof,
-        rng: &mut R,
     ) -> Result<bool, PCSErrors>;
 }
 

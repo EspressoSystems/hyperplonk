@@ -8,18 +8,6 @@ use ark_poly::{
 };
 use ark_std::{end_timer, log2, rc::Rc, start_timer};
 
-/// Decompose an integer into a binary vector in little endian.
-#[allow(dead_code)]
-pub(crate) fn bit_decompose(input: u64, num_var: usize) -> Vec<bool> {
-    let mut res = Vec::with_capacity(num_var);
-    let mut i = input;
-    for _ in 0..num_var {
-        res.push(i & 1 == 1);
-        i >>= 1;
-    }
-    res
-}
-
 /// For an MLE w with `mle_num_vars` variables, and `point_len` number of
 /// points, compute the degree of the univariate polynomial `q(x):= w(l(x))`
 /// where l(x) is a list of polynomials that go through all points.
@@ -107,7 +95,7 @@ pub fn get_batched_nv(num_var: usize, polynomials_len: usize) -> usize {
 /// polynomials do not share a same number of nvs.
 pub fn merge_polynomials<F: PrimeField>(
     polynomials: &[Rc<DenseMultilinearExtension<F>>],
-) -> Result<DenseMultilinearExtension<F>, PCSErrors> {
+) -> Result<Rc<DenseMultilinearExtension<F>>, PCSErrors> {
     let nv = polynomials[0].num_vars();
     for poly in polynomials.iter() {
         if nv != poly.num_vars() {
@@ -123,9 +111,9 @@ pub fn merge_polynomials<F: PrimeField>(
         scalars.extend_from_slice(poly.to_evaluations().as_slice());
     }
     scalars.extend_from_slice(vec![F::zero(); (1 << merged_nv) - scalars.len()].as_ref());
-    Ok(DenseMultilinearExtension::from_evaluations_vec(
+    Ok(Rc::new(DenseMultilinearExtension::from_evaluations_vec(
         merged_nv, scalars,
-    ))
+    )))
 }
 
 /// Given a list of points, build `l(points)` which is a list of univariate
@@ -337,7 +325,7 @@ mod test {
                 F::from(1u64),
                 F::from(2u64),
             ];
-            let w_rec = DenseMultilinearExtension::from_evaluations_vec(3, w_eval);
+            let w_rec = Rc::new(DenseMultilinearExtension::from_evaluations_vec(3, w_eval));
 
             assert_eq!(w, w_rec);
         }
@@ -387,7 +375,7 @@ mod test {
                 F::zero(),
                 F::zero(),
             ];
-            let w_rec = DenseMultilinearExtension::from_evaluations_vec(4, w_eval);
+            let w_rec = Rc::new(DenseMultilinearExtension::from_evaluations_vec(4, w_eval));
 
             assert_eq!(w, w_rec);
         }
