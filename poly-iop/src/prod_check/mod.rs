@@ -3,7 +3,8 @@
 use crate::{
     errors::PolyIOPErrors,
     prod_check::util::{compute_product_poly, prove_zero_check},
-    PolyIOP, ZeroCheck,
+    zero_check::ZeroCheck,
+    PolyIOP,
 };
 use arithmetic::VPAuxInfo;
 use ark_ec::PairingEngine;
@@ -69,10 +70,10 @@ where
     ///
     /// Cost: O(N)
     fn prove(
+        pk: &PCS::ProverParam,
         fx: &Self::Polynomial,
         gx: &Self::Polynomial,
         transcript: &mut IOPTranscript<E::Fr>,
-        pk: &PCS::ProverParam,
     ) -> Result<(Self::ProductProof, Self::Polynomial), PolyIOPErrors>;
 
     /// Verify that for witness multilinear polynomials f(x), g(x)
@@ -131,10 +132,10 @@ where
     }
 
     fn prove(
+        pk: &PCS::ProverParam,
         fx: &Self::Polynomial,
         gx: &Self::Polynomial,
         transcript: &mut IOPTranscript<E::Fr>,
-        pk: &PCS::ProverParam,
     ) -> Result<(Self::ProductProof, Self::Polynomial), PolyIOPErrors> {
         let start = start_timer!(|| "prod_check prove");
 
@@ -148,7 +149,7 @@ where
         let prod_x = compute_product_poly(fx, gx)?;
 
         // generate challenge
-        let prod_x_comm = PCS::commit(pk, &Rc::new(prod_x.clone()))?;
+        let prod_x_comm = PCS::commit(pk, &prod_x)?;
         transcript.append_serializable_element(b"prod(x)", &prod_x_comm)?;
         let alpha = transcript.get_and_append_challenge(b"alpha")?;
 
@@ -162,7 +163,7 @@ where
                 zero_check_proof,
                 prod_x_comm,
             },
-            Rc::new(prod_x.clone()),
+            prod_x,
         ))
     }
 
@@ -228,10 +229,10 @@ mod test {
         transcript.append_message(b"testing", b"initializing transcript for testing")?;
 
         let (proof, prod_x) = <PolyIOP<E::Fr> as ProductCheck<E, PCS>>::prove(
+            pk,
             &Rc::new(f.clone()),
             &Rc::new(g.clone()),
             &mut transcript,
-            pk,
         )?;
 
         let mut transcript = <PolyIOP<E::Fr> as ProductCheck<E, PCS>>::init_transcript();
@@ -251,10 +252,10 @@ mod test {
 
         let h = f + g;
         let (bad_proof, prod_x_bad) = <PolyIOP<E::Fr> as ProductCheck<E, PCS>>::prove(
+            pk,
             &Rc::new(f.clone()),
             &Rc::new(h.clone()),
             &mut transcript,
-            pk,
         )?;
 
         let mut transcript = <PolyIOP<E::Fr> as ProductCheck<E, PCS>>::init_transcript();

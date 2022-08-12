@@ -1,6 +1,8 @@
 //! This module implements useful functions for the product check protocol.
 
-use crate::{errors::PolyIOPErrors, structs::IOPProof, utils::get_index, PolyIOP, ZeroCheck};
+use crate::{
+    errors::PolyIOPErrors, structs::IOPProof, utils::get_index, zero_check::ZeroCheck, PolyIOP,
+};
 use arithmetic::VirtualPolynomial;
 use ark_ff::PrimeField;
 use ark_poly::DenseMultilinearExtension;
@@ -19,9 +21,9 @@ use transcript::IOPTranscript;
 /// The caller needs to check num_vars matches in f and g
 /// Cost: linear in N.
 pub(super) fn compute_product_poly<F: PrimeField>(
-    fx: &DenseMultilinearExtension<F>,
-    gx: &DenseMultilinearExtension<F>,
-) -> Result<DenseMultilinearExtension<F>, PolyIOPErrors> {
+    fx: &Rc<DenseMultilinearExtension<F>>,
+    gx: &Rc<DenseMultilinearExtension<F>>,
+) -> Result<Rc<DenseMultilinearExtension<F>>, PolyIOPErrors> {
     let start = start_timer!(|| "compute evaluations of prod polynomial");
     let num_vars = fx.num_vars;
 
@@ -69,7 +71,10 @@ pub(super) fn compute_product_poly<F: PrimeField>(
     // prod(x)'s evaluation is indeed `e := [eval_0x[..], eval_1x[..]].concat()`
     let eval = [prod_0x_eval.as_slice(), prod_1x_eval.as_slice()].concat();
 
-    let prod_x = DenseMultilinearExtension::from_evaluations_vec(num_vars + 1, eval);
+    let prod_x = Rc::new(DenseMultilinearExtension::from_evaluations_vec(
+        num_vars + 1,
+        eval,
+    ));
 
     end_timer!(start);
     Ok(prod_x)
@@ -82,21 +87,19 @@ pub(super) fn compute_product_poly<F: PrimeField>(
 ///
 /// Cost: O(N)
 pub(super) fn prove_zero_check<F: PrimeField>(
-    fx: &DenseMultilinearExtension<F>,
-    gx: &DenseMultilinearExtension<F>,
-    prod_x: &DenseMultilinearExtension<F>,
+    fx: &Rc<DenseMultilinearExtension<F>>,
+    gx: &Rc<DenseMultilinearExtension<F>>,
+    prod_x: &Rc<DenseMultilinearExtension<F>>,
     alpha: &F,
     transcript: &mut IOPTranscript<F>,
 ) -> Result<(IOPProof<F>, VirtualPolynomial<F>), PolyIOPErrors> {
     let start = start_timer!(|| "zerocheck in product check");
 
     let prod_partial_evals = build_prod_partial_eval(prod_x)?;
-    let prod_0x = Rc::new(prod_partial_evals[0].clone());
-    let prod_1x = Rc::new(prod_partial_evals[1].clone());
-    let prod_x0 = Rc::new(prod_partial_evals[2].clone());
-    let prod_x1 = Rc::new(prod_partial_evals[3].clone());
-    let fx = Rc::new(fx.clone());
-    let gx = Rc::new(gx.clone());
+    let prod_0x = prod_partial_evals[0].clone();
+    let prod_1x = prod_partial_evals[1].clone();
+    let prod_x0 = prod_partial_evals[2].clone();
+    let prod_x1 = prod_partial_evals[3].clone();
 
     // compute g(x) * prod(0, x) * alpha
     let mut q_x = VirtualPolynomial::new_from_mle(gx, F::one());
@@ -104,7 +107,7 @@ pub(super) fn prove_zero_check<F: PrimeField>(
 
     //   g(x) * prod(0, x) * alpha
     // - f(x) * alpha
-    q_x.add_mle_list([fx], -*alpha)?;
+    q_x.add_mle_list([fx.clone()], -*alpha)?;
 
     // Q(x) := prod(1,x) - prod(x, 0) * prod(x, 1)
     //       + alpha * (
@@ -130,21 +133,23 @@ pub(super) fn prove_zero_check<F: PrimeField>(
 /// - prod(x, 0)
 /// - prod(x, 1)
 fn build_prod_partial_eval<F: PrimeField>(
-    prod_x: &DenseMultilinearExtension<F>,
-) -> Result<[DenseMultilinearExtension<F>; 4], PolyIOPErrors> {
+    prod_x: &Rc<DenseMultilinearExtension<F>>,
+) -> Result<[Rc<DenseMultilinearExtension<F>>; 4], PolyIOPErrors> {
     let start = start_timer!(|| "build partial prod polynomial");
 
     let prod_x_eval = &prod_x.evaluations;
     let num_vars = prod_x.num_vars - 1;
 
     // prod(0, x)
-    let prod_0_x =
-        DenseMultilinearExtension::from_evaluations_slice(num_vars, &prod_x_eval[0..1 << num_vars]);
+    let prod_0_x = Rc::new(DenseMultilinearExtension::from_evaluations_slice(
+        num_vars,
+        &prod_x_eval[0..1 << num_vars],
+    ));
     // prod(1, x)
-    let prod_1_x = DenseMultilinearExtension::from_evaluations_slice(
+    let prod_1_x = Rc::new(DenseMultilinearExtension::from_evaluations_slice(
         num_vars,
         &prod_x_eval[1 << num_vars..1 << (num_vars + 1)],
-    );
+    ));
 
     // ===================================
     // prod(x, 0) and prod(x, 1)
@@ -162,8 +167,12 @@ fn build_prod_partial_eval<F: PrimeField>(
             eval_x1.push(prod_x);
         }
     }
-    let prod_x_0 = DenseMultilinearExtension::from_evaluations_vec(num_vars, eval_x0);
-    let prod_x_1 = DenseMultilinearExtension::from_evaluations_vec(num_vars, eval_x1);
+    let prod_x_0 = Rc::new(DenseMultilinearExtension::from_evaluations_vec(
+        num_vars, eval_x0,
+    ));
+    let prod_x_1 = Rc::new(DenseMultilinearExtension::from_evaluations_vec(
+        num_vars, eval_x1,
+    ));
 
     end_timer!(start);
 

@@ -1,6 +1,6 @@
 //! This module implements useful functions for the permutation check protocol.
 
-use crate::PolyIOPErrors;
+use crate::errors::PolyIOPErrors;
 use ark_ff::PrimeField;
 use ark_poly::DenseMultilinearExtension;
 use ark_std::{end_timer, rand::RngCore, start_timer};

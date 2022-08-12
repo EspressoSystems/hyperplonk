@@ -5,8 +5,7 @@ use crate::{
     perm_check::util::{build_prod_partial_eval, compute_prod_0},
     structs::IOPProof,
     utils::get_index,
-    zero_check::ZeroCheck,
-    PolyIOP,
+    PolyIOP, zero_check::ZeroCheck,
 };
 use arithmetic::VirtualPolynomial;
 use ark_ec::PairingEngine;
@@ -408,18 +407,6 @@ where
         s_perm: &Self::Polynomial,
         transcript: &mut IOPTranscript<E::Fr>,
     ) -> Result<Self::PermutationProof, PolyIOPErrors> {
-        if fx.num_vars != gx.num_vars {
-            return Err(PolyIOPErrors::InvalidParameters(
-                "fx and gx have different number of variables".to_string(),
-            ));
-        }
-
-        if fx.num_vars != s_perm.num_vars {
-            return Err(PolyIOPErrors::InvalidParameters(
-                "fx and s_perm have different number of variables".to_string(),
-            ));
-        }
-
         // 3.1 `generate_challenge` from current transcript (generate beta, gamma)
         let mut challenge = <Self as PermutationCheck<E, PCS>>::generate_challenge(transcript)?;
 
@@ -503,7 +490,7 @@ fn prove_internal<F: PrimeField>(
 
     // compute (g(x) + beta * s_perm(x) + gamma) * prod(0, x) * alpha
     // which is prods[6] * prod[1] * alpha
-    let mut q_x = VirtualPolynomial::new_from_mle(&denominator, F::one());
+    let mut q_x = VirtualPolynomial::new_from_mle(denominator, F::one());
     q_x.mul_by_mle(prod_0x, *alpha)?;
 
     //   (g(x) + beta * s_perm(x) + gamma) * prod(0, x) * alpha
