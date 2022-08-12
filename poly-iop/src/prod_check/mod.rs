@@ -1,4 +1,4 @@
-//! Main module for the &Product Check protocol
+//! Main module for the Product Check protocol
 
 use crate::{
     errors::PolyIOPErrors,
@@ -43,6 +43,7 @@ where
 {
     type ProductCheckSubClaim;
     type ProductProof;
+    type Polynomial;
 
     /// Initialize the system with a transcript
     ///
@@ -52,7 +53,9 @@ where
     /// ProductCheck prover/verifier.
     fn init_transcript() -> Self::Transcript;
 
-    /// Generate a proof for product check.
+    /// Generate a proof for product check, showing that witness multilinear
+    /// polynomials f(x), g(x) satisfy `\prod_{x \in {0,1}^n} f(x) =
+    /// \prod_{x \in {0,1}^n} g(x)`
     ///
     /// Inputs:
     /// - fx: the numerator multilinear polynomial
@@ -66,11 +69,11 @@ where
     ///
     /// Cost: O(N)
     fn prove(
-        fx: &DenseMultilinearExtension<E::Fr>,
-        gx: &DenseMultilinearExtension<E::Fr>,
+        fx: &Self::Polynomial,
+        gx: &Self::Polynomial,
         transcript: &mut IOPTranscript<E::Fr>,
         pk: &PCS::ProverParam,
-    ) -> Result<(Self::ProductProof, DenseMultilinearExtension<E::Fr>), PolyIOPErrors>;
+    ) -> Result<(Self::ProductProof, Self::Polynomial), PolyIOPErrors>;
 
     /// Verify that for witness multilinear polynomials f(x), g(x)
     /// it holds that `\prod_{x \in {0,1}^n} f(x) = \prod_{x \in {0,1}^n} g(x)`
@@ -83,11 +86,11 @@ where
 
 /// A product check subclaim consists of
 /// - A zero check IOP subclaim for
-/// `Q(x) = prod(1, x) - prod(x, 0) * prod(x, 1) + alpha * (f(x) - prod(0, x) *
-/// g(x))` is 0, consists of the following:
+/// `Q(x) = prod(1, x) - prod(x, 0) * prod(x, 1) + challenge * (f(x) - prod(0,
+/// x) * g(x))` is 0, consists of the following:
 ///   - the SubClaim from the SumCheck
 ///   - the initial challenge r which is used to build eq(x, r) in ZeroCheck
-/// - The challenge `alpha`
+/// - The challenge `challenge`
 /// - A final query for `prod(1, ..., 1, 0) = claimed_product`.
 // Note that this final query is in fact a constant that
 // is independent from the proof. So we should avoid
@@ -101,7 +104,7 @@ pub struct ProductCheckSubClaim<F: PrimeField, ZC: ZeroCheck<F>> {
     //   format for points)
     // The expected final query evaluation is 1
     final_query: (Vec<F>, F),
-    alpha: F,
+    challenge: F,
 }
 
 /// A product check proof consists of
@@ -121,17 +124,18 @@ where
 {
     type ProductCheckSubClaim = ProductCheckSubClaim<E::Fr, Self>;
     type ProductProof = ProductProof<E, PCS, Self>;
+    type Polynomial = Rc<DenseMultilinearExtension<E::Fr>>;
 
     fn init_transcript() -> Self::Transcript {
         IOPTranscript::<E::Fr>::new(b"Initializing ProductCheck transcript")
     }
 
     fn prove(
-        fx: &DenseMultilinearExtension<E::Fr>,
-        gx: &DenseMultilinearExtension<E::Fr>,
+        fx: &Self::Polynomial,
+        gx: &Self::Polynomial,
         transcript: &mut IOPTranscript<E::Fr>,
         pk: &PCS::ProverParam,
-    ) -> Result<(Self::ProductProof, DenseMultilinearExtension<E::Fr>), PolyIOPErrors> {
+    ) -> Result<(Self::ProductProof, Self::Polynomial), PolyIOPErrors> {
         let start = start_timer!(|| "prod_check prove");
 
         if fx.num_vars != gx.num_vars {
@@ -158,7 +162,7 @@ where
                 zero_check_proof,
                 prod_x_comm,
             },
-            prod_x,
+            Rc::new(prod_x.clone()),
         ))
     }
 
@@ -194,7 +198,7 @@ where
         Ok(ProductCheckSubClaim {
             zero_check_sub_claim,
             final_query: (final_query, final_eval),
-            alpha,
+            challenge: alpha,
         })
     }
 }

@@ -39,7 +39,8 @@ parallel = [
     "arithmetic/parallel",
     "ark-std/parallel", 
     "ark-ff/parallel",  
-    "ark-poly/parallel" 
+    "ark-poly/parallel",
+    "pcs/parallel",
     ]
 print-trace = [ 
     "arithmetic/print-trace",
