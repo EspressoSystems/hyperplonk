@@ -8,10 +8,12 @@ use crate::{
     PolyIOP, ZeroCheck,
 };
 use arithmetic::VirtualPolynomial;
+use ark_ec::PairingEngine;
 use ark_ff::PrimeField;
 use ark_poly::DenseMultilinearExtension;
 use ark_serialize::CanonicalSerialize;
-use ark_std::{end_timer, start_timer};
+use ark_std::{end_timer, start_timer, One, Zero};
+use pcs::PolynomialCommitmentScheme;
 use std::rc::Rc;
 use transcript::IOPTranscript;
 
@@ -33,10 +35,15 @@ pub mod util;
 /// caller)
 /// 4. `update_challenge` with the updated transcript (generate alpha)
 /// 5. `prove` to generate the proof
-pub trait PermutationCheck<F: PrimeField>: ZeroCheck<F> {
+pub trait PermutationCheck<E, PCS>: ZeroCheck<E::Fr>
+where
+    E: PairingEngine,
+    PCS: PolynomialCommitmentScheme<E>,
+{
     type PermutationCheckSubClaim;
     type PermutationChallenge;
     type PermutationProof;
+    type Polynomial;
 
     /// Generate the preprocessed polynomial for the permutation check.
     ///
@@ -46,9 +53,9 @@ pub trait PermutationCheck<F: PrimeField>: ZeroCheck<F> {
     ///   polynomial)
     /// - s(1, X1, ..., Xn) = s_perm(X1, ..., Xn) (permutation polynomial)
     fn preprocess(
-        permutation: &[F],
+        permutation: &[E::Fr],
         aux_info: &Self::VPAuxInfo,
-    ) -> Result<DenseMultilinearExtension<F>, PolyIOPErrors>;
+    ) -> Result<Self::Polynomial, PolyIOPErrors>;
 
     /// Initialize the system with a transcript
     ///
@@ -93,10 +100,10 @@ pub trait PermutationCheck<F: PrimeField>: ZeroCheck<F> {
     /// TODO: replace argument `s_perm` with the merged polynomial `s`.
     fn compute_prod_evals(
         challenge: &Self::PermutationChallenge,
-        fx: &DenseMultilinearExtension<F>,
-        gx: &DenseMultilinearExtension<F>,
-        s_perm: &DenseMultilinearExtension<F>,
-    ) -> Result<[DenseMultilinearExtension<F>; 3], PolyIOPErrors>;
+        fx: &Self::Polynomial,
+        gx: &Self::Polynomial,
+        s_perm: &Self::Polynomial,
+    ) -> Result<[Self::Polynomial; 3], PolyIOPErrors>;
 
     /// Step 3 of the IOP.
     /// push a commitment of `prod(x)` to the transcript
@@ -111,10 +118,10 @@ pub trait PermutationCheck<F: PrimeField>: ZeroCheck<F> {
     fn update_challenge(
         challenge: &mut Self::PermutationChallenge,
         transcript: &mut Self::Transcript,
-        prod_x_binding: &impl CanonicalSerialize,
+        prod_x_commit: &impl CanonicalSerialize,
     ) -> Result<(), PolyIOPErrors>;
 
-    /// Step 5 of the IOP.
+    /// Step 5 of the IOP: invoking zerocheck.
     ///
     /// Initialize the prover to argue that an MLE g(x) is a permutation of
     /// MLE f(x) over a permutation given by s_perm.
@@ -124,10 +131,20 @@ pub trait PermutationCheck<F: PrimeField>: ZeroCheck<F> {
     /// - transcript: a transcript that is used to generate the challenges beta
     ///   and gamma
     /// Cost: O(N)
-    fn prove(
-        prod_x_and_aux_info: &[DenseMultilinearExtension<F>; 3],
+    fn invoke_zero_check(
+        prod_x_and_aux_info: &[Self::Polynomial; 3],
         challenge: &Self::PermutationChallenge,
-        transcript: &mut IOPTranscript<F>,
+        transcript: &mut IOPTranscript<E::Fr>,
+    ) -> Result<Self::PermutationProof, PolyIOPErrors>;
+
+    /// todo
+    /// Cost: O(N)
+    fn prove(
+        pcs_param: &PCS::ProverParam,
+        fx: &Self::Polynomial,
+        gx: &Self::Polynomial,
+        s_perm: &Self::Polynomial,
+        transcript: &mut IOPTranscript<E::Fr>,
     ) -> Result<Self::PermutationProof, PolyIOPErrors>;
 
     /// Verify that an MLE g(x) is a permutation of
@@ -181,14 +198,18 @@ pub struct PermutationChallenge<F: PrimeField> {
 /// caller)
 /// 4. `update_challenge` with the updated transcript (generate alpha)
 /// 5. `prove` to generate the proof
-impl<F: PrimeField> PermutationCheck<F> for PolyIOP<F> {
+impl<E, PCS> PermutationCheck<E, PCS> for PolyIOP<E::Fr>
+where
+    E: PairingEngine,
+    PCS: PolynomialCommitmentScheme<E, Polynomial = Rc<DenseMultilinearExtension<E::Fr>>>,
+{
     /// A Permutation SubClaim is indeed a ZeroCheck SubClaim that consists of
     /// - the SubClaim from the SumCheck
     /// - the initial challenge r which is used to build eq(x, r)
-    type PermutationCheckSubClaim = PermutationCheckSubClaim<F, Self>;
-
+    type PermutationCheckSubClaim = PermutationCheckSubClaim<E::Fr, Self>;
     type PermutationProof = Self::SumCheckProof;
-    type PermutationChallenge = PermutationChallenge<F>;
+    type PermutationChallenge = PermutationChallenge<E::Fr>;
+    type Polynomial = Rc<DenseMultilinearExtension<E::Fr>>;
 
     /// Generate the preprocessed polynomial for the permutation check.
     ///
@@ -198,9 +219,9 @@ impl<F: PrimeField> PermutationCheck<F> for PolyIOP<F> {
     ///   polynomial)
     /// - s(1, X1, ..., Xn) = s_perm(X1, ..., Xn) (permutation polynomial)
     fn preprocess(
-        _permutation: &[F],
+        _permutation: &[E::Fr],
         _aux_info: &Self::VPAuxInfo,
-    ) -> Result<DenseMultilinearExtension<F>, PolyIOPErrors> {
+    ) -> Result<Self::Polynomial, PolyIOPErrors> {
         unimplemented!();
     }
 
@@ -211,7 +232,7 @@ impl<F: PrimeField> PermutationCheck<F> for PolyIOP<F> {
     /// may be initialized by this complex protocol, and passed to the
     /// PermutationCheck prover/verifier.
     fn init_transcript() -> Self::Transcript {
-        IOPTranscript::<F>::new(b"Initializing PermutationCheck transcript")
+        IOPTranscript::<E::Fr>::new(b"Initializing PermutationCheck transcript")
     }
 
     /// Step 1 of the IOP.
@@ -255,10 +276,10 @@ impl<F: PrimeField> PermutationCheck<F> for PolyIOP<F> {
     /// TODO: replace argument `s_perm` with the merged polynomial `s`.
     fn compute_prod_evals(
         challenge: &Self::PermutationChallenge,
-        fx: &DenseMultilinearExtension<F>,
-        gx: &DenseMultilinearExtension<F>,
-        s_perm: &DenseMultilinearExtension<F>,
-    ) -> Result<[DenseMultilinearExtension<F>; 3], PolyIOPErrors> {
+        fx: &Self::Polynomial,
+        gx: &Self::Polynomial,
+        s_perm: &Self::Polynomial,
+    ) -> Result<[Self::Polynomial; 3], PolyIOPErrors> {
         let start = start_timer!(|| "compute evaluations of prod polynomial");
 
         if challenge.alpha.is_some() {
@@ -306,7 +327,7 @@ impl<F: PrimeField> PermutationCheck<F> for PolyIOP<F> {
         }
 
         // prod(1, 1, ..., 1) := 0
-        prod_1x_eval.push(F::zero());
+        prod_1x_eval.push(E::Fr::zero());
 
         // ===================================
         // prod(x)
@@ -314,10 +335,18 @@ impl<F: PrimeField> PermutationCheck<F> for PolyIOP<F> {
         // prod(x)'s evaluation is indeed `e := [eval_0x[..], eval_1x[..]].concat()`
         let eval = [prod_0x_eval.as_slice(), prod_1x_eval.as_slice()].concat();
 
-        let fx = DenseMultilinearExtension::from_evaluations_vec(num_vars + 1, eval);
-        let numerator = DenseMultilinearExtension::from_evaluations_vec(num_vars, numerator_eval);
-        let denominator =
-            DenseMultilinearExtension::from_evaluations_vec(num_vars, denominator_eval);
+        let fx = Rc::new(DenseMultilinearExtension::from_evaluations_vec(
+            num_vars + 1,
+            eval,
+        ));
+        let numerator = Rc::new(DenseMultilinearExtension::from_evaluations_vec(
+            num_vars,
+            numerator_eval,
+        ));
+        let denominator = Rc::new(DenseMultilinearExtension::from_evaluations_vec(
+            num_vars,
+            denominator_eval,
+        ));
 
         end_timer!(start);
         Ok([fx, numerator, denominator])
@@ -329,19 +358,19 @@ impl<F: PrimeField> PermutationCheck<F> for PolyIOP<F> {
     fn update_challenge(
         challenge: &mut Self::PermutationChallenge,
         transcript: &mut Self::Transcript,
-        prod_x_binding: &impl CanonicalSerialize,
+        prod_x_commit: &impl CanonicalSerialize,
     ) -> Result<(), PolyIOPErrors> {
         if challenge.alpha.is_some() {
             return Err(PolyIOPErrors::InvalidChallenge(
                 "alpha should not be sampled at the current stage".to_string(),
             ));
         }
-        transcript.append_serializable_element(b"prod(x)", prod_x_binding)?;
+        transcript.append_serializable_element(b"prod(x)", prod_x_commit)?;
         challenge.alpha = Some(transcript.get_and_append_challenge(b"alpha")?);
         Ok(())
     }
 
-    /// Step 5 of the IOP.
+    /// Step 5 of the IOP: invoking zerocheck.
     ///
     /// Initialize the prover to argue that an MLE g(x) is a permutation of
     /// MLE f(x) over a permutation given by s_perm.
@@ -351,10 +380,10 @@ impl<F: PrimeField> PermutationCheck<F> for PolyIOP<F> {
     /// - transcript: a transcript that is used to generate the challenges beta
     ///   and gamma
     /// Cost: O(N)
-    fn prove(
-        prod_x_and_aux_info: &[DenseMultilinearExtension<F>; 3],
+    fn invoke_zero_check(
+        prod_x_and_aux_info: &[Self::Polynomial; 3],
         challenge: &Self::PermutationChallenge,
-        transcript: &mut IOPTranscript<F>,
+        transcript: &mut IOPTranscript<E::Fr>,
     ) -> Result<Self::PermutationProof, PolyIOPErrors> {
         let alpha = match challenge.alpha {
             Some(p) => p,
@@ -369,6 +398,44 @@ impl<F: PrimeField> PermutationCheck<F> for PolyIOP<F> {
         Ok(proof)
     }
 
+    /// todo
+    /// Cost: O(N)
+    fn prove(
+        pcs_param: &PCS::ProverParam,
+        fx: &Self::Polynomial,
+        gx: &Self::Polynomial,
+        s_perm: &Self::Polynomial,
+        transcript: &mut IOPTranscript<E::Fr>,
+    ) -> Result<Self::PermutationProof, PolyIOPErrors> {
+        // 3.1 `generate_challenge` from current transcript (generate beta, gamma)
+        let mut challenge = <Self as PermutationCheck<E, PCS>>::generate_challenge(transcript)?;
+
+        // 3.2. `compute_product` to build `prod(x)` etc. from f, g and s_perm
+        // - prod(x)
+        // - numerator
+        // - denominator
+        // See function signature for details.
+        let prod_x_and_aux =
+            <Self as PermutationCheck<E, PCS>>::compute_prod_evals(&challenge, fx, gx, s_perm)?;
+
+        // 3.3 push a commitment of `prod(x)` to the transcript
+        let prod_x_com = PCS::commit(&pcs_param, &prod_x_and_aux[0])?;
+
+        // 3.4. `update_challenge` with the updated transcript
+        <Self as PermutationCheck<E, PCS>>::update_challenge(
+            &mut challenge,
+            transcript,
+            &prod_x_com,
+        )?;
+
+        // 3.5. `prove` to generate the proof
+        <Self as PermutationCheck<E, PCS>>::invoke_zero_check(
+            &prod_x_and_aux,
+            &challenge,
+            transcript,
+        )
+    }
+
     /// Verify that an MLE g(x) is a permutation of an
     /// MLE f(x) over a permutation given by s_perm.
     fn verify(
@@ -379,10 +446,10 @@ impl<F: PrimeField> PermutationCheck<F> for PolyIOP<F> {
         let start = start_timer!(|| "Permutation check verify");
 
         // invoke the zero check on the iop_proof
-        let zero_check_sub_claim = <Self as ZeroCheck<F>>::verify(proof, aux_info, transcript)?;
-        let mut final_query = vec![F::one(); aux_info.num_variables];
-        final_query[aux_info.num_variables - 1] = F::zero();
-        let final_eval = F::one();
+        let zero_check_sub_claim = <Self as ZeroCheck<E::Fr>>::verify(proof, aux_info, transcript)?;
+        let mut final_query = vec![E::Fr::one(); aux_info.num_variables];
+        final_query[aux_info.num_variables - 1] = E::Fr::zero();
+        let final_eval = E::Fr::one();
 
         end_timer!(start);
 
@@ -407,19 +474,19 @@ impl<F: PrimeField> PermutationCheck<F> for PolyIOP<F> {
 ///
 /// Cost: O(N)
 fn prove_internal<F: PrimeField>(
-    prod_x_and_aux_info: &[DenseMultilinearExtension<F>; 3],
+    prod_x_and_aux_info: &[Rc<DenseMultilinearExtension<F>>; 3],
     alpha: &F,
     transcript: &mut IOPTranscript<F>,
 ) -> Result<(IOPProof<F>, VirtualPolynomial<F>), PolyIOPErrors> {
     let start = start_timer!(|| "Permutation check prove");
 
     let prod_partial_evals = build_prod_partial_eval(&prod_x_and_aux_info[0])?;
-    let prod_0x = Rc::new(prod_partial_evals[0].clone());
-    let prod_1x = Rc::new(prod_partial_evals[1].clone());
-    let prod_x0 = Rc::new(prod_partial_evals[2].clone());
-    let prod_x1 = Rc::new(prod_partial_evals[3].clone());
-    let numerator = Rc::new(prod_x_and_aux_info[1].clone());
-    let denominator = Rc::new(prod_x_and_aux_info[2].clone());
+    let prod_0x = prod_partial_evals[0].clone();
+    let prod_1x = prod_partial_evals[1].clone();
+    let prod_x0 = prod_partial_evals[2].clone();
+    let prod_x1 = prod_partial_evals[3].clone();
+    let numerator = prod_x_and_aux_info[1].clone();
+    let denominator = prod_x_and_aux_info[2].clone();
 
     // compute (g(x) + beta * s_perm(x) + gamma) * prod(0, x) * alpha
     // which is prods[6] * prod[1] * alpha
@@ -455,12 +522,15 @@ mod test {
         PolyIOP,
     };
     use arithmetic::{VPAuxInfo, VirtualPolynomial};
-    use ark_bls12_381::{Fr, G1Affine};
+    use ark_bls12_381::{Bls12_381, Fr, G1Affine};
     use ark_ec::{AffineCurve, ProjectiveCurve};
     use ark_ff::{UniformRand, Zero};
     use ark_poly::{DenseMultilinearExtension, MultilinearExtension};
     use ark_std::test_rng;
-    use std::marker::PhantomData;
+    use pcs::prelude::KZGMultilinearPCS;
+    use std::{marker::PhantomData, rc::Rc};
+
+    type KZG = KZGMultilinearPCS<Bls12_381>;
 
     /// This is a mock function to generate some commitment element for testing.
     fn mock_commit<G: AffineCurve>(_f: &DenseMultilinearExtension<G::ScalarField>) -> G {
@@ -469,22 +539,23 @@ mod test {
     }
 
     fn test_permutation_check_helper(
-        f: &DenseMultilinearExtension<Fr>,
-        g: &DenseMultilinearExtension<Fr>,
-        s_perm: &DenseMultilinearExtension<Fr>,
+        f: &Rc<DenseMultilinearExtension<Fr>>,
+        g: &Rc<DenseMultilinearExtension<Fr>>,
+        s_perm: &Rc<DenseMultilinearExtension<Fr>>,
     ) -> Result<(IOPProof<Fr>, VirtualPolynomial<Fr>), PolyIOPErrors> {
-        let mut transcript = <PolyIOP<Fr> as PermutationCheck<Fr>>::init_transcript();
+        let mut transcript = <PolyIOP<Fr> as PermutationCheck<Bls12_381, KZG>>::init_transcript();
         transcript.append_message(b"testing", b"initializing transcript for testing")?;
 
         let mut challenge =
-            <PolyIOP<Fr> as PermutationCheck<Fr>>::generate_challenge(&mut transcript)?;
+            <PolyIOP<Fr> as PermutationCheck<Bls12_381, KZG>>::generate_challenge(&mut transcript)?;
 
-        let prod_x_and_aux =
-            <PolyIOP<Fr> as PermutationCheck<Fr>>::compute_prod_evals(&challenge, f, g, s_perm)?;
+        let prod_x_and_aux = <PolyIOP<Fr> as PermutationCheck<Bls12_381, KZG>>::compute_prod_evals(
+            &challenge, f, g, s_perm,
+        )?;
 
         let prod_x_binding: G1Affine = mock_commit(&prod_x_and_aux[0]);
 
-        <PolyIOP<Fr> as PermutationCheck<Fr>>::update_challenge(
+        <PolyIOP<Fr> as PermutationCheck<Bls12_381, KZG>>::update_challenge(
             &mut challenge,
             &mut transcript,
             &prod_x_binding,
@@ -505,18 +576,22 @@ mod test {
 
         {
             // good path: w is a permutation of w itself under the identify map
-            let w = DenseMultilinearExtension::rand(nv, &mut rng);
+            let w = Rc::new(DenseMultilinearExtension::rand(nv, &mut rng));
 
             // s_perm is the identity map
             let s_perm = identity_permutation_mle(nv);
 
             let (proof, q_x) = test_permutation_check_helper(&w, &w, &s_perm)?;
 
-            let mut transcript = <PolyIOP<Fr> as PermutationCheck<Fr>>::init_transcript();
+            let mut transcript =
+                <PolyIOP<Fr> as PermutationCheck<Bls12_381, KZG>>::init_transcript();
             transcript.append_message(b"testing", b"initializing transcript for testing")?;
-            let subclaim =
-                <PolyIOP<Fr> as PermutationCheck<Fr>>::verify(&proof, &poly_info, &mut transcript)?
-                    .zero_check_sub_claim;
+            let subclaim = <PolyIOP<Fr> as PermutationCheck<Bls12_381, KZG>>::verify(
+                &proof,
+                &poly_info,
+                &mut transcript,
+            )?
+            .zero_check_sub_claim;
             assert_eq!(
                 q_x.evaluate(&subclaim.sum_check_sub_claim.point).unwrap(),
                 subclaim.sum_check_sub_claim.expected_evaluation,
@@ -534,17 +609,18 @@ mod test {
 
         {
             // bad path 1: w is a not permutation of w itself under a random map
-            let w = DenseMultilinearExtension::rand(nv, &mut rng);
+            let w = Rc::new(DenseMultilinearExtension::rand(nv, &mut rng));
 
             // s_perm is a random map
             let s_perm = random_permutation_mle(nv, &mut rng);
 
             let (proof, q_x) = test_permutation_check_helper(&w, &w, &s_perm)?;
 
-            let mut transcript = <PolyIOP<Fr> as PermutationCheck<Fr>>::init_transcript();
+            let mut transcript =
+                <PolyIOP<Fr> as PermutationCheck<Bls12_381, KZG>>::init_transcript();
             transcript.append_message(b"testing", b"initializing transcript for testing")?;
             if nv != 1 {
-                assert!(<PolyIOP<Fr> as PermutationCheck<Fr>>::verify(
+                assert!(<PolyIOP<Fr> as PermutationCheck<Bls12_381, KZG>>::verify(
                     &proof,
                     &poly_info,
                     &mut transcript
@@ -553,7 +629,7 @@ mod test {
             } else {
                 // a trivial poly is always a permutation of itself, so the zero check should
                 // pass
-                let subclaim = <PolyIOP<Fr> as PermutationCheck<Fr>>::verify(
+                let subclaim = <PolyIOP<Fr> as PermutationCheck<Bls12_381, KZG>>::verify(
                     &proof,
                     &poly_info,
                     &mut transcript,
@@ -572,18 +648,19 @@ mod test {
 
         {
             // bad path 2: f is a not permutation of g under a identity map
-            let f = DenseMultilinearExtension::rand(nv, &mut rng);
-            let g = DenseMultilinearExtension::rand(nv, &mut rng);
+            let f = Rc::new(DenseMultilinearExtension::rand(nv, &mut rng));
+            let g = Rc::new(DenseMultilinearExtension::rand(nv, &mut rng));
 
             // s_perm is the identity map
             let s_perm = identity_permutation_mle(nv);
 
             let (proof, q_x) = test_permutation_check_helper(&f, &g, &s_perm)?;
 
-            let mut transcript = <PolyIOP<Fr> as PermutationCheck<Fr>>::init_transcript();
+            let mut transcript =
+                <PolyIOP<Fr> as PermutationCheck<Bls12_381, KZG>>::init_transcript();
             transcript.append_message(b"testing", b"initializing transcript for testing")?;
             if nv != 1 {
-                assert!(<PolyIOP<Fr> as PermutationCheck<Fr>>::verify(
+                assert!(<PolyIOP<Fr> as PermutationCheck<Bls12_381, KZG>>::verify(
                     &proof,
                     &poly_info,
                     &mut transcript
@@ -592,7 +669,7 @@ mod test {
             } else {
                 // a trivial poly is always a permutation of itself, so the zero check should
                 // pass
-                let subclaim = <PolyIOP<Fr> as PermutationCheck<Fr>>::verify(
+                let subclaim = <PolyIOP<Fr> as PermutationCheck<Bls12_381, KZG>>::verify(
                     &proof,
                     &poly_info,
                     &mut transcript,
@@ -632,20 +709,23 @@ mod test {
         let mut rng = test_rng();
 
         for num_vars in 2..6 {
-            let f = DenseMultilinearExtension::rand(num_vars, &mut rng);
-            let g = DenseMultilinearExtension::rand(num_vars, &mut rng);
+            let f = Rc::new(DenseMultilinearExtension::rand(num_vars, &mut rng));
+            let g = Rc::new(DenseMultilinearExtension::rand(num_vars, &mut rng));
 
             let s_id = identity_permutation_mle::<Fr>(num_vars);
             let s_perm = random_permutation_mle(num_vars, &mut rng);
 
-            let mut transcript = <PolyIOP<Fr> as PermutationCheck<Fr>>::init_transcript();
+            let mut transcript =
+                <PolyIOP<Fr> as PermutationCheck<Bls12_381, KZG>>::init_transcript();
             transcript.append_message(b"testing", b"initializing transcript for testing")?;
-            let challenge =
-                <PolyIOP<Fr> as PermutationCheck<Fr>>::generate_challenge(&mut transcript)?;
-
-            let prod_and_aux = <PolyIOP<Fr> as PermutationCheck<Fr>>::compute_prod_evals(
-                &challenge, &f, &g, &s_perm,
+            let challenge = <PolyIOP<Fr> as PermutationCheck<Bls12_381, KZG>>::generate_challenge(
+                &mut transcript,
             )?;
+
+            let prod_and_aux =
+                <PolyIOP<Fr> as PermutationCheck<Bls12_381, KZG>>::compute_prod_evals(
+                    &challenge, &f, &g, &s_perm,
+                )?;
             let prod_partial_eval = build_prod_partial_eval(&prod_and_aux[0])?;
 
             for i in 0..1 << num_vars {

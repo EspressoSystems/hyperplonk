@@ -4,6 +4,7 @@ use crate::PolyIOPErrors;
 use ark_ff::PrimeField;
 use ark_poly::DenseMultilinearExtension;
 use ark_std::{end_timer, rand::RngCore, start_timer};
+use std::rc::Rc;
 
 /// Returns the evaluations of three MLEs:
 /// - prod(0,x)
@@ -61,16 +62,20 @@ pub(super) fn compute_prod_0<F: PrimeField>(
 }
 
 /// An MLE that represent an identity permutation: `f(index) \mapto index`
-pub fn identity_permutation_mle<F: PrimeField>(num_vars: usize) -> DenseMultilinearExtension<F> {
+pub fn identity_permutation_mle<F: PrimeField>(
+    num_vars: usize,
+) -> Rc<DenseMultilinearExtension<F>> {
     let s_id_vec = (0..1u64 << num_vars).map(F::from).collect();
-    DenseMultilinearExtension::from_evaluations_vec(num_vars, s_id_vec)
+    Rc::new(DenseMultilinearExtension::from_evaluations_vec(
+        num_vars, s_id_vec,
+    ))
 }
 
 /// An MLE that represent a random permutation
 pub fn random_permutation_mle<F: PrimeField, R: RngCore>(
     num_vars: usize,
     rng: &mut R,
-) -> DenseMultilinearExtension<F> {
+) -> Rc<DenseMultilinearExtension<F>> {
     let len = 1u64 << num_vars;
     let mut s_id_vec: Vec<F> = (0..len).map(F::from).collect();
     let mut s_perm_vec = vec![];
@@ -78,7 +83,9 @@ pub fn random_permutation_mle<F: PrimeField, R: RngCore>(
         let index = rng.next_u64() as usize % s_id_vec.len();
         s_perm_vec.push(s_id_vec.remove(index));
     }
-    DenseMultilinearExtension::from_evaluations_vec(num_vars, s_perm_vec)
+    Rc::new(DenseMultilinearExtension::from_evaluations_vec(
+        num_vars, s_perm_vec,
+    ))
 }
 
 /// Helper function of the IOP.
@@ -92,21 +99,23 @@ pub fn random_permutation_mle<F: PrimeField, R: RngCore>(
 /// - prod(x, 0)
 /// - prod(x, 1)
 pub(super) fn build_prod_partial_eval<F: PrimeField>(
-    prod_x: &DenseMultilinearExtension<F>,
-) -> Result<[DenseMultilinearExtension<F>; 4], PolyIOPErrors> {
+    prod_x: &Rc<DenseMultilinearExtension<F>>,
+) -> Result<[Rc<DenseMultilinearExtension<F>>; 4], PolyIOPErrors> {
     let start = start_timer!(|| "build prod polynomial");
 
     let prod_x_eval = &prod_x.evaluations;
     let num_vars = prod_x.num_vars - 1;
 
     // prod(0, x)
-    let prod_0_x =
-        DenseMultilinearExtension::from_evaluations_slice(num_vars, &prod_x_eval[0..1 << num_vars]);
+    let prod_0_x = Rc::new(DenseMultilinearExtension::from_evaluations_slice(
+        num_vars,
+        &prod_x_eval[0..1 << num_vars],
+    ));
     // prod(1, x)
-    let prod_1_x = DenseMultilinearExtension::from_evaluations_slice(
+    let prod_1_x = Rc::new(DenseMultilinearExtension::from_evaluations_slice(
         num_vars,
         &prod_x_eval[1 << num_vars..1 << (num_vars + 1)],
-    );
+    ));
 
     // ===================================
     // prod(x, 0) and prod(x, 1)
@@ -124,8 +133,12 @@ pub(super) fn build_prod_partial_eval<F: PrimeField>(
             eval_x1.push(prod_x);
         }
     }
-    let prod_x_0 = DenseMultilinearExtension::from_evaluations_vec(num_vars, eval_x0);
-    let prod_x_1 = DenseMultilinearExtension::from_evaluations_vec(num_vars, eval_x1);
+    let prod_x_0 = Rc::new(DenseMultilinearExtension::from_evaluations_vec(
+        num_vars, eval_x0,
+    ));
+    let prod_x_1 = Rc::new(DenseMultilinearExtension::from_evaluations_vec(
+        num_vars, eval_x1,
+    ));
 
     end_timer!(start);
 

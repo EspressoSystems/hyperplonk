@@ -6,14 +6,13 @@ edition = "2021"
 # See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
 
 [dependencies]
-pcs = { path = "../pcs" }
 
 ark-ff = { version = "^0.3.0", default-features = false }
 ark-std = { version = "^0.3.0", default-features = false }
+ark-ec = { version = "^0.3.0", default-features = false }
 ark-poly = { version = "^0.3.0", default-features = false }
 ark-serialize =  { version = "^0.3.0", default-features = false }
 ark-bls12-381 = { version = "0.3.0", default-features = false, features = [ "curve" ] }
-ark-ec = { version = "^0.3.0", default-features = false }
 
 rand_chacha = { version = "0.3.0", default-features = false }
 displaydoc = { version = "0.2.3", default-features = false }
@@ -21,6 +20,7 @@ rayon = { version = "1.5.2", default-features = false, optional = true }
 
 transcript = { path = "../transcript" }
 arithmetic = { path = "../arithmetic" }
+pcs = { path = "../pcs" }
 
 [dev-dependencies]
 ark-ec = { version = "^0.3.0", default-features = false }
@@ -39,10 +39,11 @@ parallel = [
     "arithmetic/parallel",
     "ark-std/parallel", 
     "ark-ff/parallel",  
-    "ark-poly/parallel",
+    "ark-poly/parallel", 
     "pcs/parallel",
     ]
 print-trace = [ 
     "arithmetic/print-trace",
-    "ark-std/print-trace" 
+    "ark-std/print-trace",
+    "pcs/print-trace",
     ] 
