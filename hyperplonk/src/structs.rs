@@ -1,8 +1,8 @@
 //! Main module for the HyperPlonk PolyIOP.
 
+use arithmetic::prelude::DenseMultilinearExtension;
 use ark_ec::PairingEngine;
 use ark_ff::PrimeField;
-use ark_poly::DenseMultilinearExtension;
 use pcs::PolynomialCommitmentScheme;
 use poly_iop::prelude::{PermutationCheck, ZeroCheck};
 use std::rc::Rc;

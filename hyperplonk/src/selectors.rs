@@ -1,6 +1,6 @@
 use crate::errors::HyperPlonkErrors;
+use arithmetic::prelude::DenseMultilinearExtension;
 use ark_ff::PrimeField;
-use ark_poly::DenseMultilinearExtension;
 use ark_std::log2;
 
 /// A column of selectors of length `#constraints`

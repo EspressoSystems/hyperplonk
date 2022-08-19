@@ -1,6 +1,6 @@
 //! This module defines structs that are shared by all sub protocols.
 
-use arithmetic::VirtualPolynomial;
+use arithmetic::prelude::VirtualPolynomial;
 use ark_ff::PrimeField;
 use ark_serialize::{CanonicalSerialize, SerializationError, Write};
 

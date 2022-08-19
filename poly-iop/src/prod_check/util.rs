@@ -1,9 +1,8 @@
 //! This module implements useful functions for the product check protocol.
 
 use crate::{errors::PolyIOPErrors, structs::IOPProof, utils::get_index, PolyIOP, ZeroCheck};
-use arithmetic::VirtualPolynomial;
+use arithmetic::prelude::{DenseMultilinearExtension, VirtualPolynomial};
 use ark_ff::PrimeField;
-use ark_poly::DenseMultilinearExtension;
 use ark_std::{end_timer, start_timer};
 use std::rc::Rc;
 use transcript::IOPTranscript;

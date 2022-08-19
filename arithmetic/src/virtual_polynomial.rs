@@ -1,9 +1,12 @@
 //! This module defines our main mathematical object `VirtualPolynomial`; and
 //! various functions associated with it.
 
-use crate::{errors::ArithErrors, multilinear_polynomial::random_zero_mle_list};
+use crate::{
+    errors::ArithErrors,
+    prelude::{DenseMultilinearExtension, MultilinearExtension},
+    util::bit_decompose,
+};
 use ark_ff::PrimeField;
-use ark_poly::{DenseMultilinearExtension, MultilinearExtension};
 use ark_serialize::{CanonicalSerialize, SerializationError, Write};
 use ark_std::{
     end_timer,
@@ -255,7 +258,8 @@ impl<F: PrimeField> VirtualPolynomial<F> {
         for _ in 0..num_products {
             let num_multiplicands =
                 rng.gen_range(num_multiplicands_range.0..num_multiplicands_range.1);
-            let (product, product_sum) = random_mle_list(nv, num_multiplicands, rng);
+            let (product, product_sum) =
+                DenseMultilinearExtension::random_mle_list(nv, num_multiplicands, rng);
             let coefficient = F::rand(rng);
             poly.add_mle_list(product.into_iter(), coefficient)?;
             sum += product_sum * coefficient;
@@ -277,7 +281,8 @@ impl<F: PrimeField> VirtualPolynomial<F> {
         for _ in 0..num_products {
             let num_multiplicands =
                 rng.gen_range(num_multiplicands_range.0..num_multiplicands_range.1);
-            let product = random_zero_mle_list(nv, num_multiplicands, rng);
+            let product =
+                DenseMultilinearExtension::random_zero_mle_list(nv, num_multiplicands, rng);
             let coefficient = F::rand(rng);
             poly.add_mle_list(product.into_iter(), coefficient)?;
         }
@@ -302,7 +307,7 @@ impl<F: PrimeField> VirtualPolynomial<F> {
             )));
         }
 
-        let eq_x_r = build_eq_x_r(r)?;
+        let eq_x_r = DenseMultilinearExtension::build_eq_x_r(r)?;
         let mut res = self.clone();
         res.mul_by_mle(eq_x_r, F::one())?;
 
@@ -322,115 +327,6 @@ impl<F: PrimeField> VirtualPolynomial<F> {
         }
         println!()
     }
-}
-
-/// Sample a random list of multilinear polynomials.
-/// Returns
-/// - the list of polynomials,
-/// - its sum of polynomial evaluations over the boolean hypercube.
-fn random_mle_list<F: PrimeField, R: RngCore>(
-    nv: usize,
-    degree: usize,
-    rng: &mut R,
-) -> (Vec<Rc<DenseMultilinearExtension<F>>>, F) {
-    let start = start_timer!(|| "sample random mle list");
-    let mut multiplicands = Vec::with_capacity(degree);
-    for _ in 0..degree {
-        multiplicands.push(Vec::with_capacity(1 << nv))
-    }
-    let mut sum = F::zero();
-
-    for _ in 0..(1 << nv) {
-        let mut product = F::one();
-
-        for e in multiplicands.iter_mut() {
-            let val = F::rand(rng);
-            e.push(val);
-            product *= val;
-        }
-        sum += product;
-    }
-
-    let list = multiplicands
-        .into_iter()
-        .map(|x| Rc::new(DenseMultilinearExtension::from_evaluations_vec(nv, x)))
-        .collect();
-
-    end_timer!(start);
-    (list, sum)
-}
-
-// This function build the eq(x, r) polynomial for any given r.
-//
-// Evaluate
-//      eq(x,y) = \prod_i=1^num_var (x_i * y_i + (1-x_i)*(1-y_i))
-// over r, which is
-//      eq(x,y) = \prod_i=1^num_var (x_i * r_i + (1-x_i)*(1-r_i))
-pub fn build_eq_x_r<F: PrimeField>(
-    r: &[F],
-) -> Result<Rc<DenseMultilinearExtension<F>>, ArithErrors> {
-    let start = start_timer!(|| "zero check build eq_x_r");
-
-    // we build eq(x,r) from its evaluations
-    // we want to evaluate eq(x,r) over x \in {0, 1}^num_vars
-    // for example, with num_vars = 4, x is a binary vector of 4, then
-    //  0 0 0 0 -> (1-r0)   * (1-r1)    * (1-r2)    * (1-r3)
-    //  1 0 0 0 -> r0       * (1-r1)    * (1-r2)    * (1-r3)
-    //  0 1 0 0 -> (1-r0)   * r1        * (1-r2)    * (1-r3)
-    //  1 1 0 0 -> r0       * r1        * (1-r2)    * (1-r3)
-    //  ....
-    //  1 1 1 1 -> r0       * r1        * r2        * r3
-    // we will need 2^num_var evaluations
-
-    let mut eval = Vec::new();
-    build_eq_x_r_helper(r, &mut eval)?;
-
-    let mle = DenseMultilinearExtension::from_evaluations_vec(r.len(), eval);
-
-    let res = Rc::new(mle);
-    end_timer!(start);
-    Ok(res)
-}
-
-/// A helper function to build eq(x, r) recursively.
-/// This function takes `r.len()` steps, and for each step it requires a maximum
-/// `r.len()-1` multiplications.
-fn build_eq_x_r_helper<F: PrimeField>(r: &[F], buf: &mut Vec<F>) -> Result<(), ArithErrors> {
-    if r.is_empty() {
-        return Err(ArithErrors::InvalidParameters("r length is 0".to_string()));
-    } else if r.len() == 1 {
-        // initializing the buffer with [1-r_0, r_0]
-        buf.push(F::one() - r[0]);
-        buf.push(r[0]);
-    } else {
-        build_eq_x_r_helper(&r[1..], buf)?;
-
-        // suppose at the previous step we received [b_1, ..., b_k]
-        // for the current step we will need
-        // if x_0 = 0:   (1-r0) * [b_1, ..., b_k]
-        // if x_0 = 1:   r0 * [b_1, ..., b_k]
-
-        let mut res = vec![];
-        for &b_i in buf.iter() {
-            let tmp = r[0] * b_i;
-            res.push(b_i - tmp);
-            res.push(tmp);
-        }
-        *buf = res;
-    }
-
-    Ok(())
-}
-
-/// Decompose an integer into a binary vector in little endian.
-pub fn bit_decompose(input: u64, num_var: usize) -> Vec<bool> {
-    let mut res = Vec::with_capacity(num_var);
-    let mut i = input;
-    for _ in 0..num_var {
-        res.push(i & 1 == 1);
-        i >>= 1;
-    }
-    res
 }
 
 #[cfg(test)]
@@ -472,7 +368,7 @@ mod test {
 
                 let (a, _a_sum) =
                     VirtualPolynomial::<Fr>::rand(nv, (2, 3), num_products, &mut rng)?;
-                let (b, _b_sum) = random_mle_list(nv, 1, &mut rng);
+                let (b, _b_sum) = DenseMultilinearExtension::random_mle_list(nv, 1, &mut rng);
                 let b_mle = b[0].clone();
                 let coeff = Fr::rand(&mut rng);
                 let b_vp = VirtualPolynomial::new_from_mle(b_mle.clone(), coeff);
@@ -489,61 +385,5 @@ mod test {
         }
 
         Ok(())
-    }
-
-    #[test]
-    fn test_eq_xr() {
-        let mut rng = test_rng();
-        for nv in 4..10 {
-            let r: Vec<Fr> = (0..nv).map(|_| Fr::rand(&mut rng)).collect();
-            let eq_x_r = build_eq_x_r(r.as_ref()).unwrap();
-            let eq_x_r2 = build_eq_x_r_for_test(r.as_ref());
-            assert_eq!(eq_x_r, eq_x_r2);
-        }
-    }
-
-    /// Naive method to build eq(x, r).
-    /// Only used for testing purpose.
-    // Evaluate
-    //      eq(x,y) = \prod_i=1^num_var (x_i * y_i + (1-x_i)*(1-y_i))
-    // over r, which is
-    //      eq(x,y) = \prod_i=1^num_var (x_i * r_i + (1-x_i)*(1-r_i))
-    fn build_eq_x_r_for_test<F: PrimeField>(r: &[F]) -> Rc<DenseMultilinearExtension<F>> {
-        let start = start_timer!(|| "zero check naive build eq_x_r");
-
-        // we build eq(x,r) from its evaluations
-        // we want to evaluate eq(x,r) over x \in {0, 1}^num_vars
-        // for example, with num_vars = 4, x is a binary vector of 4, then
-        //  0 0 0 0 -> (1-r0)   * (1-r1)    * (1-r2)    * (1-r3)
-        //  1 0 0 0 -> r0       * (1-r1)    * (1-r2)    * (1-r3)
-        //  0 1 0 0 -> (1-r0)   * r1        * (1-r2)    * (1-r3)
-        //  1 1 0 0 -> r0       * r1        * (1-r2)    * (1-r3)
-        //  ....
-        //  1 1 1 1 -> r0       * r1        * r2        * r3
-        // we will need 2^num_var evaluations
-
-        // First, we build array for {1 - r_i}
-        let one_minus_r: Vec<F> = r.iter().map(|ri| F::one() - ri).collect();
-
-        let num_var = r.len();
-        let mut eval = vec![];
-
-        for i in 0..1 << num_var {
-            let mut current_eval = F::one();
-            let bit_sequence = bit_decompose(i, num_var);
-
-            for (&bit, (ri, one_minus_ri)) in
-                bit_sequence.iter().zip(r.iter().zip(one_minus_r.iter()))
-            {
-                current_eval *= if bit { *ri } else { *one_minus_ri };
-            }
-            eval.push(current_eval);
-        }
-
-        let mle = DenseMultilinearExtension::from_evaluations_vec(num_var, eval);
-
-        let res = Rc::new(mle);
-        end_timer!(start);
-        res
     }
 }

@@ -5,9 +5,8 @@ use crate::{
     structs::{IOPProof, IOPProverState, IOPVerifierState},
     PolyIOP,
 };
-use arithmetic::{VPAuxInfo, VirtualPolynomial};
+use arithmetic::prelude::{DenseMultilinearExtension, VPAuxInfo, VirtualPolynomial};
 use ark_ff::PrimeField;
-use ark_poly::DenseMultilinearExtension;
 use ark_std::{end_timer, start_timer};
 use transcript::IOPTranscript;
 
@@ -216,9 +215,9 @@ impl<F: PrimeField> SumCheck<F> for PolyIOP<F> {
 mod test {
 
     use super::*;
+    use arithmetic::prelude::{DenseMultilinearExtension, MultilinearExtension};
     use ark_bls12_381::Fr;
     use ark_ff::UniformRand;
-    use ark_poly::{DenseMultilinearExtension, MultilinearExtension};
     use ark_std::test_rng;
     use std::rc::Rc;
 

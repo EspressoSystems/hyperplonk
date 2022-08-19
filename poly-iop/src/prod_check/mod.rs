@@ -5,10 +5,9 @@ use crate::{
     prod_check::util::{compute_product_poly, prove_zero_check},
     PolyIOP, ZeroCheck,
 };
-use arithmetic::VPAuxInfo;
+use arithmetic::prelude::{DenseMultilinearExtension, VPAuxInfo};
 use ark_ec::PairingEngine;
 use ark_ff::{One, PrimeField, Zero};
-use ark_poly::DenseMultilinearExtension;
 use ark_std::{end_timer, start_timer};
 use pcs::prelude::PolynomialCommitmentScheme;
 use std::{marker::PhantomData, rc::Rc};
@@ -207,9 +206,9 @@ where
 mod test {
     use super::ProductCheck;
     use crate::{errors::PolyIOPErrors, PolyIOP};
+    use arithmetic::prelude::{DenseMultilinearExtension, MultilinearExtension};
     use ark_bls12_381::{Bls12_381, Fr};
     use ark_ec::PairingEngine;
-    use ark_poly::{DenseMultilinearExtension, MultilinearExtension};
     use ark_std::test_rng;
     use pcs::{prelude::KZGMultilinearPCS, PolynomialCommitmentScheme};
     use std::rc::Rc;

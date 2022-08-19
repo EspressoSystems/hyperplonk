@@ -1,6 +1,6 @@
+use arithmetic::prelude::{DenseMultilinearExtension, MultilinearExtension};
 use ark_bls12_381::{Bls12_381, Fr};
 use ark_ff::UniformRand;
-use ark_poly::{DenseMultilinearExtension, MultilinearExtension};
 use ark_std::{rc::Rc, test_rng};
 use pcs::{
     prelude::{KZGMultilinearPCS, PCSErrors, PolynomialCommitmentScheme},

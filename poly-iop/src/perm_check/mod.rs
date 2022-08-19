@@ -7,9 +7,8 @@ use crate::{
     utils::get_index,
     PolyIOP, ZeroCheck,
 };
-use arithmetic::VirtualPolynomial;
+use arithmetic::prelude::{DenseMultilinearExtension, VirtualPolynomial};
 use ark_ff::PrimeField;
-use ark_poly::DenseMultilinearExtension;
 use ark_serialize::CanonicalSerialize;
 use ark_std::{end_timer, start_timer};
 use std::rc::Rc;
@@ -454,11 +453,12 @@ mod test {
         utils::bit_decompose,
         PolyIOP,
     };
-    use arithmetic::{VPAuxInfo, VirtualPolynomial};
+    use arithmetic::prelude::{
+        DenseMultilinearExtension, MultilinearExtension, VPAuxInfo, VirtualPolynomial,
+    };
     use ark_bls12_381::{Fr, G1Affine};
     use ark_ec::{AffineCurve, ProjectiveCurve};
     use ark_ff::{UniformRand, Zero};
-    use ark_poly::{DenseMultilinearExtension, MultilinearExtension};
     use ark_std::test_rng;
     use std::marker::PhantomData;
 

@@ -11,7 +11,6 @@ ark-std = { version = "^0.3.0", default-features = false }
 ark-serialize = { version = "^0.3.0", default-features = false, features = [ "derive" ] }
 ark-ff = { version = "^0.3.0", default-features = false }
 ark-ec = { version = "^0.3.0", default-features = false }
-ark-poly = {version = "^0.3.0", default-features = false }
 ark-sponge = {version = "^0.3.0", default-features = false}
 ark-bls12-381 = { version = "0.3.0", default-features = false, features = [ "curve" ] }
 
@@ -19,6 +18,7 @@ displaydoc = { version = "0.2.3", default-features = false }
 derivative = { version = "2", features = ["use_core"] }
 
 transcript = { path = "../transcript" }
+arithmetic = { path = "../arithmetic" }
 
 # Benchmarks
 [[bench]]
@@ -32,9 +32,10 @@ default = [ "parallel" ]
 parallel = [ 
     "ark-std/parallel", 
     "ark-ff/parallel",  
-    "ark-poly/parallel", 
     "ark-ec/parallel",
+    "arithmetic/parallel"
     ]
 print-trace = [ 
     "ark-std/print-trace",
+    "arithmetic/print-trace"
     ] 

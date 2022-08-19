@@ -4,9 +4,9 @@ use crate::{
     prelude::{Commitment, PCSErrors},
     PolynomialCommitmentScheme, StructuredReferenceString,
 };
+use arithmetic::prelude::{DensePolynomial, Polynomial, UVPolynomial};
 use ark_ec::{msm::VariableBaseMSM, AffineCurve, PairingEngine, ProjectiveCurve};
 use ark_ff::PrimeField;
-use ark_poly::{univariate::DensePolynomial, Polynomial, UVPolynomial};
 use ark_serialize::{CanonicalDeserialize, CanonicalSerialize, Read, SerializationError, Write};
 use ark_std::{end_timer, rand::RngCore, start_timer, One, UniformRand, Zero};
 use srs::{UnivariateProverParam, UnivariateUniversalParams, UnivariateVerifierParam};
@@ -289,9 +289,9 @@ fn convert_to_bigints<F: PrimeField>(p: &[F]) -> Vec<F::BigInt> {
 mod tests {
     use super::*;
     use crate::StructuredReferenceString;
+    use arithmetic::prelude::DensePolynomial;
     use ark_bls12_381::Bls12_381;
     use ark_ec::PairingEngine;
-    use ark_poly::univariate::DensePolynomial;
     use ark_std::{log2, test_rng, UniformRand};
 
     fn end_to_end_test_template<E>() -> Result<(), PCSErrors>

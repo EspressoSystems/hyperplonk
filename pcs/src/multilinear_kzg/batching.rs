@@ -10,8 +10,10 @@ use crate::{
     univariate_kzg::KZGUnivariatePCS,
     PCSErrors, PolynomialCommitmentScheme,
 };
+use arithmetic::prelude::{
+    DenseMultilinearExtension, EvaluationDomain, MultilinearExtension, Polynomial,
+};
 use ark_ec::PairingEngine;
-use ark_poly::{DenseMultilinearExtension, EvaluationDomain, MultilinearExtension, Polynomial};
 use ark_std::{end_timer, rc::Rc, start_timer, vec::Vec};
 use transcript::IOPTranscript;
 
@@ -300,9 +302,9 @@ mod tests {
         prelude::UnivariateUniversalParams,
         StructuredReferenceString,
     };
+    use arithmetic::prelude::{DenseMultilinearExtension, MultilinearExtension};
     use ark_bls12_381::Bls12_381 as E;
     use ark_ec::PairingEngine;
-    use ark_poly::{DenseMultilinearExtension, MultilinearExtension};
     use ark_std::{log2, rand::RngCore, test_rng, vec::Vec, UniformRand};
     type Fr = <E as PairingEngine>::Fr;
 

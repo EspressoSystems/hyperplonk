@@ -1,11 +1,11 @@
 //! Useful utilities for KZG PCS
 
 use crate::PCSErrors;
-use ark_ff::PrimeField;
-use ark_poly::{
-    univariate::DensePolynomial, DenseMultilinearExtension, EvaluationDomain, Evaluations,
+use arithmetic::prelude::{
+    DenseMultilinearExtension, DensePolynomial, EvaluationDomain, Evaluations,
     MultilinearExtension, Polynomial, Radix2EvaluationDomain,
 };
+use ark_ff::PrimeField;
 use ark_std::{end_timer, log2, rc::Rc, start_timer};
 
 /// Decompose an integer into a binary vector in little endian.
@@ -201,9 +201,9 @@ pub(crate) fn generate_evaluations<F: PrimeField>(
 #[cfg(test)]
 mod test {
     use super::*;
+    use arithmetic::prelude::UVPolynomial;
     use ark_bls12_381::Fr;
     use ark_ff::field_new;
-    use ark_poly::UVPolynomial;
     use ark_std::{One, Zero};
 
     #[test]

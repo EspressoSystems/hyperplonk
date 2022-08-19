@@ -5,7 +5,7 @@ use crate::{
     errors::PolyIOPErrors,
     structs::{IOPProverMessage, IOPVerifierState},
 };
-use arithmetic::VPAuxInfo;
+use arithmetic::prelude::VPAuxInfo;
 use ark_ff::PrimeField;
 use ark_std::{end_timer, start_timer};
 use transcript::IOPTranscript;
@@ -312,8 +312,8 @@ fn u64_factorial(a: usize) -> u64 {
 mod test {
     use super::interpolate_uni_poly;
     use crate::errors::PolyIOPErrors;
+    use arithmetic::prelude::{DensePolynomial, Polynomial, UVPolynomial};
     use ark_bls12_381::Fr;
-    use ark_poly::{univariate::DensePolynomial, Polynomial, UVPolynomial};
     use ark_std::{vec::Vec, UniformRand};
 
     #[test]

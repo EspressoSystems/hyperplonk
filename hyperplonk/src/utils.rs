@@ -1,10 +1,7 @@
-use std::rc::Rc;
-
-use arithmetic::VirtualPolynomial;
-use ark_ff::PrimeField;
-use ark_poly::DenseMultilinearExtension;
-
 use crate::{errors::HyperPlonkErrors, structs::CustomizedGates};
+use arithmetic::prelude::{DenseMultilinearExtension, VirtualPolynomial};
+use ark_ff::PrimeField;
+use std::rc::Rc;
 
 /// Build MLE from matrix of witnesses.
 ///
@@ -114,9 +111,9 @@ pub(crate) fn eval_f<F: PrimeField>(
 #[cfg(test)]
 mod test {
     use super::*;
+    use arithmetic::prelude::MultilinearExtension;
     use ark_bls12_381::Fr;
     use ark_ff::PrimeField;
-    use ark_poly::MultilinearExtension;
     #[test]
     fn test_build_gate() -> Result<(), HyperPlonkErrors> {
         test_build_gate_helper::<Fr>()

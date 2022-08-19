@@ -5,9 +5,8 @@ use crate::{
     errors::PolyIOPErrors,
     structs::{IOPProverMessage, IOPProverState},
 };
-use arithmetic::VirtualPolynomial;
+use arithmetic::prelude::{DenseMultilinearExtension, MultilinearExtension, VirtualPolynomial};
 use ark_ff::PrimeField;
-use ark_poly::{DenseMultilinearExtension, MultilinearExtension};
 use ark_std::{end_timer, start_timer, vec::Vec};
 use std::rc::Rc;
 

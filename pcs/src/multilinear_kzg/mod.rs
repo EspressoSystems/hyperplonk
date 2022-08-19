@@ -11,12 +11,12 @@ use crate::{
     univariate_kzg::KZGUnivariateOpening,
     PCSErrors, PolynomialCommitmentScheme, StructuredReferenceString,
 };
+use arithmetic::prelude::{DenseMultilinearExtension, MultilinearExtension};
 use ark_ec::{
     msm::{FixedBaseMSM, VariableBaseMSM},
     AffineCurve, PairingEngine, ProjectiveCurve,
 };
 use ark_ff::PrimeField;
-use ark_poly::{DenseMultilinearExtension, MultilinearExtension};
 use ark_serialize::{CanonicalDeserialize, CanonicalSerialize, Read, SerializationError, Write};
 use ark_std::{end_timer, rand::RngCore, rc::Rc, start_timer, vec::Vec, One, Zero};
 use batching::{batch_verify_internal, multi_open_internal};
@@ -421,9 +421,9 @@ fn verify_internal<E: PairingEngine>(
 #[cfg(test)]
 mod tests {
     use super::*;
+    use arithmetic::prelude::{DenseMultilinearExtension, MultilinearExtension};
     use ark_bls12_381::Bls12_381;
     use ark_ec::PairingEngine;
-    use ark_poly::{DenseMultilinearExtension, MultilinearExtension};
     use ark_std::{rand::RngCore, test_rng, vec::Vec, UniformRand};
     type E = Bls12_381;
     type Fr = <E as PairingEngine>::Fr;

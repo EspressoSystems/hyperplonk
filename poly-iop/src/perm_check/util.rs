@@ -1,8 +1,8 @@
 //! This module implements useful functions for the permutation check protocol.
 
 use crate::PolyIOPErrors;
+use arithmetic::prelude::DenseMultilinearExtension;
 use ark_ff::PrimeField;
-use ark_poly::DenseMultilinearExtension;
 use ark_std::{end_timer, rand::RngCore, start_timer};
 
 /// Returns the evaluations of three MLEs:
@@ -136,9 +136,9 @@ pub(super) fn build_prod_partial_eval<F: PrimeField>(
 mod test {
     use super::*;
     use crate::utils::bit_decompose;
+    use arithmetic::prelude::MultilinearExtension;
     use ark_bls12_381::Fr;
     use ark_ff::UniformRand;
-    use ark_poly::MultilinearExtension;
     use ark_std::test_rng;
 
     #[test]

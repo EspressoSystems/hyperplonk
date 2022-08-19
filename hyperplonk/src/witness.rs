@@ -1,6 +1,6 @@
 use crate::{build_mle, errors::HyperPlonkErrors};
+use arithmetic::prelude::DenseMultilinearExtension;
 use ark_ff::PrimeField;
-use ark_poly::DenseMultilinearExtension;
 use ark_std::log2;
 use std::rc::Rc;
 

@@ -1,9 +1,9 @@
 //! Implementing Structured Reference Strings for multilinear polynomial KZG
 
 use crate::{prelude::PCSErrors, StructuredReferenceString};
+use arithmetic::prelude::DenseMultilinearExtension;
 use ark_ec::{msm::FixedBaseMSM, AffineCurve, PairingEngine, ProjectiveCurve};
 use ark_ff::{Field, PrimeField};
-use ark_poly::DenseMultilinearExtension;
 use ark_serialize::{CanonicalDeserialize, CanonicalSerialize, Read, SerializationError, Write};
 use ark_std::{end_timer, rand::RngCore, start_timer, vec::Vec, UniformRand};
 use std::collections::LinkedList;

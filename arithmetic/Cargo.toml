@@ -10,7 +10,7 @@ edition = "2021"
 ark-ff = { version = "^0.3.0", default-features = false }
 ark-std = { version = "^0.3.0", default-features = false }
 ark-poly = { version = "^0.3.0", default-features = false }
-ark-serialize =  { version = "^0.3.0", default-features = false }
+ark-serialize =  { version = "^0.3.0", default-features = false, features = [ "derive" ] }
 ark-bls12-381 = { version = "0.3.0", default-features = false, features = [ "curve" ] }
 
 rand_chacha = { version = "0.3.0", default-features = false }
@@ -27,7 +27,6 @@ parallel = [
     "rayon",
     "ark-std/parallel", 
     "ark-ff/parallel",  
-    "ark-poly/parallel" 
     ]
 print-trace = [ 
     "ark-std/print-trace" 

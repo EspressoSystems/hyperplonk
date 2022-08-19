@@ -1,9 +1,11 @@
 //! Main module for the HyperPlonk PolyIOP.
 
 use crate::utils::eval_f;
-use arithmetic::VPAuxInfo;
+use arithmetic::{
+    prelude::{DenseMultilinearExtension, VPAuxInfo},
+    MultilinearExtension,
+};
 use ark_ec::PairingEngine;
-use ark_poly::{DenseMultilinearExtension, MultilinearExtension};
 use ark_std::{end_timer, log2, start_timer, One, Zero};
 use errors::HyperPlonkErrors;
 use pcs::prelude::{compute_qx_degree, merge_polynomials, PCSErrors, PolynomialCommitmentScheme};
