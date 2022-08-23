@@ -20,8 +20,8 @@ use ark_std::{
 /// The latter is a multilinear polynomial represented in terms of its
 /// evaluations over the domain {0,1}^`num_vars` (i.e. the Boolean hypercube).
 ///
-/// Index represents a point, which is a vector in {0,1}^`num_vars` in little
-/// endian form. For example, `0b1011` represents `P(1,1,0,1)`
+/// Index represents a point, which is a vector in {0,1}^`num_vars` in **BIG**
+/// endian form. For example, `0b1011` represents `P(1,0,1,1)`
 pub trait MultilinearExtension<F: Field>:
     Sized
     + Clone
@@ -50,14 +50,14 @@ pub trait MultilinearExtension<F: Field>:
     /// are sampled uniformly at random.
     fn rand<R: Rng>(num_vars: usize, rng: &mut R) -> Self;
 
-    /// Relabel the point by swapping `k` scalars from positions `a..a+k` to
-    /// positions `b..b+k`, and from position `b..b+k` to position `a..a+k`
-    /// in vector.
-    ///
-    /// This function turns `P(x_1,...,x_a,...,x_{a+k - 1},...,x_b,...,x_{b+k -
-    /// 1},...,x_n)` to `P(x_1,...,x_b,...,x_{b+k - 1},...,x_a,...,x_{a+k -
-    /// 1},...,x_n)`
-    fn relabel(&self, a: usize, b: usize, k: usize) -> Self;
+    // /// Relabel the point by swapping `k` scalars from positions `a..a+k` to
+    // /// positions `b..b+k`, and from position `b..b+k` to position `a..a+k`
+    // /// in vector.
+    // ///
+    // /// This function turns `P(x_1,...,x_a,...,x_{a+k - 1},...,x_b,...,x_{b+k -
+    // /// 1},...,x_n)` to `P(x_1,...,x_b,...,x_{b+k - 1},...,x_a,...,x_{a+k -
+    // /// 1},...,x_n)`
+    // fn relabel(&self, a: usize, b: usize, k: usize) -> Self;
 
     /// Reduce the number of variables of `self` by fixing the
     /// `partial_point.len()` variables at `partial_point`.
