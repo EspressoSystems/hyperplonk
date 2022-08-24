@@ -90,7 +90,7 @@ where
 ///   - the SubClaim from the SumCheck
 ///   - the initial challenge r which is used to build eq(x, r) in ZeroCheck
 /// - The challenge `challenge`
-/// - A final query for `prod(1, ..., 1, 0) = claimed_product`.
+/// - A final query for `prod(0, 1, ..., 1) = claimed_product`.
 // Note that this final query is in fact a constant that
 // is independent from the proof. So we should avoid
 // (de)serialize it.
@@ -99,8 +99,7 @@ pub struct ProductCheckSubClaim<F: PrimeField, ZC: ZeroCheck<F>> {
     // the SubClaim from the ZeroCheck
     zero_check_sub_claim: ZC::ZeroCheckSubClaim,
     // final query which consists of
-    // - the vector `(1, ..., 1, 0)` (needs to be reversed because Arkwork's MLE uses big-endian
-    //   format for points)
+    // - the vector `(0, 1, ..., 1)`
     // The expected final query evaluation is 1
     final_query: (Vec<F>, F),
     challenge: F,
@@ -189,7 +188,7 @@ where
         // the final query is on prod_x, hence has length `num_vars` + 1
         let mut final_query = vec![E::Fr::one(); aux_info.num_variables + 1];
         // the point has to be reversed because Arkworks uses big-endian.
-        final_query[0] = E::Fr::zero();
+        final_query[aux_info.num_variables] = E::Fr::zero();
         let final_eval = E::Fr::one();
 
         end_timer!(start);

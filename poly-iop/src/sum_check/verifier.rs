@@ -154,7 +154,8 @@ impl<F: PrimeField> SumCheckVerifier<F> for IOPVerifierState<F> {
         {
             // the deferred check during the interactive phase:
             // 1. check if the received 'P(0) + P(1) = expected`.
-            if evaluations[0] + evaluations[1] != expected {
+
+            if evaluations[0] + evaluations[1 << (self.num_vars - self.round)] != expected {
                 return Err(PolyIOPErrors::InvalidProof(
                     "Prover message is not consistent with the claim.".to_string(),
                 ));

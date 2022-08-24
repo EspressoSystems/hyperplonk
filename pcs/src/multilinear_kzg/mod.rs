@@ -128,6 +128,11 @@ impl<E: PairingEngine> PolynomialCommitmentScheme<E> for KZGMultilinearPCS<E> {
             .into_iter()
             .map(|x| x.into_repr())
             .collect();
+        assert_eq!(
+            prover_param.0.powers_of_g[ignored].evals.len(),
+            scalars.len()
+        );
+
         let commitment = VariableBaseMSM::multi_scalar_mul(
             &prover_param.0.powers_of_g[ignored].evals,
             scalars.as_slice(),
@@ -326,14 +331,14 @@ fn open_internal<E: PairingEngine>(
         let cur_dim = 1 << (k - 1);
         let mut cur_q = vec![E::Fr::zero(); cur_dim];
         let mut cur_r = vec![E::Fr::zero(); cur_dim];
+        let one_minus_k = E::Fr::one() - point_at_k;
 
         for b in 0..(1 << (k - 1)) {
-            // q_b = pre_r [2^b + 1] - pre_r [2^b]
-            cur_q[b] = r[k][(b << 1) + 1] - r[k][b << 1];
+            // q_b = pre_r [b + n/2] - pre_r [b]
+            cur_q[b] = r[k][cur_dim + b] - r[k][b];
 
-            // r_b = pre_r [2^b]*(1-p) + pre_r [2^b + 1] * p
-            cur_r[b] =
-                r[k][b << 1] * (E::Fr::one() - point_at_k) + (r[k][(b << 1) + 1] * point_at_k);
+            // r_b = pre_r [b]*(1-p) + pre_r [b + n/2] * p
+            cur_r[b] = r[k][b] * one_minus_k + (r[k][cur_dim + b] * point_at_k);
         }
 
         let scalars: Vec<_> = (0..(1 << k)).map(|x| cur_q[x >> 1].into_repr()).collect();

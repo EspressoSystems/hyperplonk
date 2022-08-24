@@ -86,7 +86,7 @@ pub(crate) fn compute_w_circ_l<F: PrimeField>(
     for point in domain.elements() {
         // we reverse the order here because the coefficient vec are stored in
         // bit-reversed order
-        let l_eval: Vec<F> = l.iter().rev().map(|x| x.evaluate(&point)).collect();
+        let l_eval: Vec<F> = l.iter().map(|x| x.evaluate(&point)).collect();
         res_eval.push(w.evaluate(l_eval.as_ref()).unwrap())
     }
     let evaluation = Evaluations::from_vec_and_domain(res_eval, domain);
@@ -601,7 +601,7 @@ mod test {
             // q(x) = x^3 - 7/2*x^2 - 7/2*x + 16
             let q_x = compute_w_circ_l(&w, &l)?;
 
-            let point: Vec<Fr> = l.iter().rev().map(|poly| poly.evaluate(&r)).collect();
+            let point: Vec<Fr> = l.iter().map(|poly| poly.evaluate(&r)).collect();
 
             assert_eq!(
                 q_x.evaluate(&r),
@@ -650,10 +650,10 @@ mod test {
             let q_x = compute_w_circ_l(&w, &l)?;
 
             let point: Vec<Fr> = vec![
-                l[3].evaluate(&r),
-                l[2].evaluate(&r),
-                l[1].evaluate(&r),
                 l[0].evaluate(&r),
+                l[1].evaluate(&r),
+                l[2].evaluate(&r),
+                l[3].evaluate(&r),
             ];
 
             assert_eq!(

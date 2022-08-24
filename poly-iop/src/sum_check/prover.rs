@@ -109,15 +109,16 @@ impl<F: PrimeField> SumCheckProver<F> for IOPProverState<F> {
 
         #[cfg(feature = "parallel")]
         products_sum.par_iter_mut().enumerate().for_each(|(t, e)| {
-            for b in 0..1 << (self.poly.aux_info.num_variables - self.round) {
+            let cur_dim = 1 << (self.poly.aux_info.num_variables - self.round);
+            let one_minus_t = F::one() - F::from(t as u64);
+            for b in 0..cur_dim {
                 // evaluate P_round(t)
                 for (coefficient, products) in products_list.iter() {
                     let num_mles = products.len();
                     let mut product = *coefficient;
                     for &f in products.iter().take(num_mles) {
                         let table = &flattened_ml_extensions[f]; // f's range is checked in init
-                        product *= table[b << 1] * (F::one() - F::from(t as u64))
-                            + table[(b << 1) + 1] * F::from(t as u64);
+                        product *= table[b] * one_minus_t + table[cur_dim + b] * F::from(t as u64);
                     }
                     *e += product;
                 }
@@ -126,15 +127,16 @@ impl<F: PrimeField> SumCheckProver<F> for IOPProverState<F> {
 
         #[cfg(not(feature = "parallel"))]
         products_sum.iter_mut().enumerate().for_each(|(t, e)| {
-            for b in 0..1 << (self.poly.aux_info.num_variables - self.round) {
+            let cur_dim = 1 << (self.poly.aux_info.num_variables - self.round);
+            let one_minus_t = F::one() - F::from(t as u64);
+            for b in 0..1 << cur_dim {
                 // evaluate P_round(t)
                 for (coefficient, products) in products_list.iter() {
                     let num_mles = products.len();
                     let mut product = *coefficient;
                     for &f in products.iter().take(num_mles) {
                         let table = &flattened_ml_extensions[f]; // f's range is checked in init
-                        product *= table[b << 1] * (F::one() - F::from(t as u64))
-                            + table[(b << 1) + 1] * F::from(t as u64);
+                        product *= table[b] * one_minus_t + table[cur_dim + b] * F::from(t as u64);
                     }
                     *e += product;
                 }
