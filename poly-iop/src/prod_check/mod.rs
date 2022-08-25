@@ -43,7 +43,7 @@ where
     PCS: PolynomialCommitmentScheme<E>,
 {
     type ProductCheckSubClaim;
-    type ProductProof;
+    type ProductCheckProof;
     type Polynomial;
 
     /// Initialize the system with a transcript
@@ -70,16 +70,16 @@ where
     ///
     /// Cost: O(N)
     fn prove(
-        pk: &PCS::ProverParam,
+        pcs_param: &PCS::ProverParam,
         fx: &Self::Polynomial,
         gx: &Self::Polynomial,
         transcript: &mut IOPTranscript<E::Fr>,
-    ) -> Result<(Self::ProductProof, Self::Polynomial), PolyIOPErrors>;
+    ) -> Result<(Self::ProductCheckProof, Self::Polynomial), PolyIOPErrors>;
 
     /// Verify that for witness multilinear polynomials f(x), g(x)
     /// it holds that `\prod_{x \in {0,1}^n} f(x) = \prod_{x \in {0,1}^n} g(x)`
     fn verify(
-        proof: &Self::ProductProof,
+        proof: &Self::ProductCheckProof,
         num_vars: usize,
         transcript: &mut Self::Transcript,
     ) -> Result<Self::ProductCheckSubClaim, PolyIOPErrors>;
@@ -99,21 +99,24 @@ where
 #[derive(Clone, Debug, Default, PartialEq)]
 pub struct ProductCheckSubClaim<F: PrimeField, ZC: ZeroCheck<F>> {
     // the SubClaim from the ZeroCheck
-    zero_check_sub_claim: ZC::ZeroCheckSubClaim,
+    pub(crate) zero_check_sub_claim: ZC::ZeroCheckSubClaim,
     // final query which consists of
     // - the vector `(1, ..., 1, 0)` (needs to be reversed because Arkwork's MLE uses big-endian
     //   format for points)
     // The expected final query evaluation is 1
     final_query: (Vec<F>, F),
-    challenge: F,
+    pub(crate) challenge: F,
 }
 
 /// A product check proof consists of
 /// - a zerocheck proof
 /// - a product polynomial commitment
 #[derive(Clone, Debug, Default, PartialEq)]
-pub struct ProductProof<E: PairingEngine, PCS: PolynomialCommitmentScheme<E>, ZC: ZeroCheck<E::Fr>>
-{
+pub struct ProductCheckProof<
+    E: PairingEngine,
+    PCS: PolynomialCommitmentScheme<E>,
+    ZC: ZeroCheck<E::Fr>,
+> {
     zero_check_proof: ZC::ZeroCheckProof,
     prod_x_comm: PCS::Commitment,
 }
@@ -124,7 +127,7 @@ where
     PCS: PolynomialCommitmentScheme<E, Polynomial = Rc<DenseMultilinearExtension<E::Fr>>>,
 {
     type ProductCheckSubClaim = ProductCheckSubClaim<E::Fr, Self>;
-    type ProductProof = ProductProof<E, PCS, Self>;
+    type ProductCheckProof = ProductCheckProof<E, PCS, Self>;
     type Polynomial = Rc<DenseMultilinearExtension<E::Fr>>;
 
     fn init_transcript() -> Self::Transcript {
@@ -132,11 +135,11 @@ where
     }
 
     fn prove(
-        pk: &PCS::ProverParam,
+        pcs_param: &PCS::ProverParam,
         fx: &Self::Polynomial,
         gx: &Self::Polynomial,
         transcript: &mut IOPTranscript<E::Fr>,
-    ) -> Result<(Self::ProductProof, Self::Polynomial), PolyIOPErrors> {
+    ) -> Result<(Self::ProductCheckProof, Self::Polynomial), PolyIOPErrors> {
         let start = start_timer!(|| "prod_check prove");
 
         if fx.num_vars != gx.num_vars {
@@ -149,7 +152,7 @@ where
         let prod_x = compute_product_poly(fx, gx)?;
 
         // generate challenge
-        let prod_x_comm = PCS::commit(pk, &prod_x)?;
+        let prod_x_comm = PCS::commit(pcs_param, &prod_x)?;
         transcript.append_serializable_element(b"prod(x)", &prod_x_comm)?;
         let alpha = transcript.get_and_append_challenge(b"alpha")?;
 
@@ -159,7 +162,7 @@ where
         end_timer!(start);
 
         Ok((
-            ProductProof {
+            ProductCheckProof {
                 zero_check_proof,
                 prod_x_comm,
             },
@@ -168,7 +171,7 @@ where
     }
 
     fn verify(
-        proof: &Self::ProductProof,
+        proof: &Self::ProductCheckProof,
         num_vars: usize,
         transcript: &mut Self::Transcript,
     ) -> Result<Self::ProductCheckSubClaim, PolyIOPErrors> {
@@ -219,7 +222,7 @@ mod test {
     fn test_product_check_helper<E, PCS>(
         f: &DenseMultilinearExtension<E::Fr>,
         g: &DenseMultilinearExtension<E::Fr>,
-        pk: &PCS::ProverParam,
+        pcs_param: &PCS::ProverParam,
     ) -> Result<(), PolyIOPErrors>
     where
         E: PairingEngine,
@@ -229,7 +232,7 @@ mod test {
         transcript.append_message(b"testing", b"initializing transcript for testing")?;
 
         let (proof, prod_x) = <PolyIOP<E::Fr> as ProductCheck<E, PCS>>::prove(
-            pk,
+            pcs_param,
             &Rc::new(f.clone()),
             &Rc::new(g.clone()),
             &mut transcript,
@@ -252,7 +255,7 @@ mod test {
 
         let h = f + g;
         let (bad_proof, prod_x_bad) = <PolyIOP<E::Fr> as ProductCheck<E, PCS>>::prove(
-            pk,
+            pcs_param,
             &Rc::new(f.clone()),
             &Rc::new(h.clone()),
             &mut transcript,
@@ -282,9 +285,9 @@ mod test {
         g.evaluations.reverse();
 
         let srs = KZGMultilinearPCS::<Bls12_381>::gen_srs_for_testing(&mut rng, nv + 1)?;
-        let (pk, _) = KZGMultilinearPCS::<Bls12_381>::trim(&srs, nv + 1, Some(nv + 1))?;
+        let (pcs_param, _) = KZGMultilinearPCS::<Bls12_381>::trim(&srs, nv + 1, Some(nv + 1))?;
 
-        test_product_check_helper::<Bls12_381, KZGMultilinearPCS<Bls12_381>>(&f, &g, &pk)?;
+        test_product_check_helper::<Bls12_381, KZGMultilinearPCS<Bls12_381>>(&f, &g, &pcs_param)?;
 
         Ok(())
     }
