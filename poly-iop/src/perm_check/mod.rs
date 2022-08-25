@@ -63,11 +63,11 @@ where
     /// Cost: O(N)
     fn prove(
         pcs_param: &PCS::ProverParam,
-        fx: &Self::Polynomial,
-        gx: &Self::Polynomial,
-        s_perm: &Self::Polynomial,
+        fx: &Self::MultilinearExtension,
+        gx: &Self::MultilinearExtension,
+        s_perm: &Self::MultilinearExtension,
         transcript: &mut IOPTranscript<E::Fr>,
-    ) -> Result<(Self::PermutationProof, Self::Polynomial), PolyIOPErrors>;
+    ) -> Result<(Self::PermutationProof, Self::MultilinearExtension), PolyIOPErrors>;
 
     /// Verify that an MLE g(x) is a permutation of
     /// MLE f(x) over a permutation given by s_perm.
@@ -127,11 +127,11 @@ where
     /// Cost: O(N)
     fn prove(
         pcs_param: &PCS::ProverParam,
-        fx: &Self::Polynomial,
-        gx: &Self::Polynomial,
-        s_perm: &Self::Polynomial,
+        fx: &Self::MultilinearExtension,
+        gx: &Self::MultilinearExtension,
+        s_perm: &Self::MultilinearExtension,
         transcript: &mut IOPTranscript<E::Fr>,
-    ) -> Result<(Self::PermutationProof, Self::Polynomial), PolyIOPErrors> {
+    ) -> Result<(Self::PermutationProof, Self::MultilinearExtension), PolyIOPErrors> {
         let start = start_timer!(|| "Permutation check prove");
         if fx.num_vars != gx.num_vars {
             return Err(PolyIOPErrors::InvalidParameters(
@@ -172,7 +172,7 @@ where
 
         // invoke the zero check on the iop_proof
         let product_check_sub_claim =
-            <Self as ProductCheck<E, PCS>>::verify(proof, aux_info.num_variables, transcript)?;
+            <Self as ProductCheck<E, PCS>>::verify(proof, aux_info, transcript)?;
 
         end_timer!(start);
         Ok(PermutationCheckSubClaim {

@@ -1,5 +1,7 @@
 //! Main module for the ZeroCheck protocol.
 
+use std::fmt::Debug;
+
 use crate::{errors::PolyIOPErrors, sum_check::SumCheck, PolyIOP};
 use arithmetic::build_eq_x_r;
 use ark_ff::PrimeField;
@@ -22,8 +24,8 @@ pub struct ZeroCheckSubClaim<F: PrimeField, SC: SumCheck<F>> {
 
 /// A ZeroCheck is derived from SumCheck.
 pub trait ZeroCheck<F: PrimeField>: SumCheck<F> {
-    type ZeroCheckSubClaim;
-    type ZeroCheckProof;
+    type ZeroCheckSubClaim: Clone + Debug + Default + PartialEq;
+    type ZeroCheckProof: Clone + Debug + Default + PartialEq;
 
     /// Initialize the system with a transcript
     ///

@@ -12,7 +12,7 @@ use ark_ff::{One, PrimeField, Zero};
 use ark_poly::DenseMultilinearExtension;
 use ark_std::{end_timer, start_timer};
 use pcs::prelude::PolynomialCommitmentScheme;
-use std::{marker::PhantomData, rc::Rc};
+use std::rc::Rc;
 use transcript::IOPTranscript;
 
 mod util;
@@ -44,7 +44,6 @@ where
 {
     type ProductCheckSubClaim;
     type ProductCheckProof;
-    type Polynomial;
 
     /// Initialize the system with a transcript
     ///
@@ -71,16 +70,16 @@ where
     /// Cost: O(N)
     fn prove(
         pcs_param: &PCS::ProverParam,
-        fx: &Self::Polynomial,
-        gx: &Self::Polynomial,
+        fx: &Self::MultilinearExtension,
+        gx: &Self::MultilinearExtension,
         transcript: &mut IOPTranscript<E::Fr>,
-    ) -> Result<(Self::ProductCheckProof, Self::Polynomial), PolyIOPErrors>;
+    ) -> Result<(Self::ProductCheckProof, Self::MultilinearExtension), PolyIOPErrors>;
 
     /// Verify that for witness multilinear polynomials f(x), g(x)
     /// it holds that `\prod_{x \in {0,1}^n} f(x) = \prod_{x \in {0,1}^n} g(x)`
     fn verify(
         proof: &Self::ProductCheckProof,
-        num_vars: usize,
+        aux_info: &VPAuxInfo<E::Fr>,
         transcript: &mut Self::Transcript,
     ) -> Result<Self::ProductCheckSubClaim, PolyIOPErrors>;
 }
@@ -99,13 +98,13 @@ where
 #[derive(Clone, Debug, Default, PartialEq)]
 pub struct ProductCheckSubClaim<F: PrimeField, ZC: ZeroCheck<F>> {
     // the SubClaim from the ZeroCheck
-    pub(crate) zero_check_sub_claim: ZC::ZeroCheckSubClaim,
+    pub zero_check_sub_claim: ZC::ZeroCheckSubClaim,
     // final query which consists of
     // - the vector `(1, ..., 1, 0)` (needs to be reversed because Arkwork's MLE uses big-endian
     //   format for points)
     // The expected final query evaluation is 1
     final_query: (Vec<F>, F),
-    pub(crate) challenge: F,
+    pub challenge: F,
 }
 
 /// A product check proof consists of
@@ -117,8 +116,8 @@ pub struct ProductCheckProof<
     PCS: PolynomialCommitmentScheme<E>,
     ZC: ZeroCheck<E::Fr>,
 > {
-    zero_check_proof: ZC::ZeroCheckProof,
-    prod_x_comm: PCS::Commitment,
+    pub zero_check_proof: ZC::ZeroCheckProof,
+    pub prod_x_comm: PCS::Commitment,
 }
 
 impl<E, PCS> ProductCheck<E, PCS> for PolyIOP<E::Fr>
@@ -128,7 +127,6 @@ where
 {
     type ProductCheckSubClaim = ProductCheckSubClaim<E::Fr, Self>;
     type ProductCheckProof = ProductCheckProof<E, PCS, Self>;
-    type Polynomial = Rc<DenseMultilinearExtension<E::Fr>>;
 
     fn init_transcript() -> Self::Transcript {
         IOPTranscript::<E::Fr>::new(b"Initializing ProductCheck transcript")
@@ -136,10 +134,10 @@ where
 
     fn prove(
         pcs_param: &PCS::ProverParam,
-        fx: &Self::Polynomial,
-        gx: &Self::Polynomial,
+        fx: &Self::MultilinearExtension,
+        gx: &Self::MultilinearExtension,
         transcript: &mut IOPTranscript<E::Fr>,
-    ) -> Result<(Self::ProductCheckProof, Self::Polynomial), PolyIOPErrors> {
+    ) -> Result<(Self::ProductCheckProof, Self::MultilinearExtension), PolyIOPErrors> {
         let start = start_timer!(|| "prod_check prove");
 
         if fx.num_vars != gx.num_vars {
@@ -172,7 +170,7 @@ where
 
     fn verify(
         proof: &Self::ProductCheckProof,
-        num_vars: usize,
+        aux_info: &VPAuxInfo<E::Fr>,
         transcript: &mut Self::Transcript,
     ) -> Result<Self::ProductCheckSubClaim, PolyIOPErrors> {
         let start = start_timer!(|| "prod_check verify");
@@ -183,13 +181,8 @@ where
 
         // invoke the zero check on the iop_proof
         // the virtual poly info for Q(x)
-        let aux_info = VPAuxInfo {
-            max_degree: 2,
-            num_variables: num_vars,
-            phantom: PhantomData::default(),
-        };
         let zero_check_sub_claim =
-            <Self as ZeroCheck<E::Fr>>::verify(&proof.zero_check_proof, &aux_info, transcript)?;
+            <Self as ZeroCheck<E::Fr>>::verify(&proof.zero_check_proof, aux_info, transcript)?;
 
         // the final query is on prod_x, hence has length `num_vars` + 1
         let mut final_query = vec![E::Fr::one(); aux_info.num_variables + 1];
@@ -211,12 +204,13 @@ where
 mod test {
     use super::ProductCheck;
     use crate::{errors::PolyIOPErrors, PolyIOP};
+    use arithmetic::VPAuxInfo;
     use ark_bls12_381::{Bls12_381, Fr};
     use ark_ec::PairingEngine;
     use ark_poly::{DenseMultilinearExtension, MultilinearExtension};
     use ark_std::test_rng;
     use pcs::{prelude::KZGMultilinearPCS, PolynomialCommitmentScheme};
-    use std::rc::Rc;
+    use std::{marker::PhantomData, rc::Rc};
 
     // f and g are guaranteed to have the same product
     fn test_product_check_helper<E, PCS>(
@@ -241,8 +235,13 @@ mod test {
         let mut transcript = <PolyIOP<E::Fr> as ProductCheck<E, PCS>>::init_transcript();
         transcript.append_message(b"testing", b"initializing transcript for testing")?;
 
+        let aux_info = VPAuxInfo {
+            max_degree: 2,
+            num_variables: f.num_vars,
+            phantom: PhantomData::default(),
+        };
         let subclaim =
-            <PolyIOP<E::Fr> as ProductCheck<E, PCS>>::verify(&proof, f.num_vars, &mut transcript)?;
+            <PolyIOP<E::Fr> as ProductCheck<E, PCS>>::verify(&proof, &aux_info, &mut transcript)?;
         assert_eq!(
             prod_x.evaluate(&subclaim.final_query.0).unwrap(),
             subclaim.final_query.1,
@@ -265,7 +264,7 @@ mod test {
         transcript.append_message(b"testing", b"initializing transcript for testing")?;
         let bad_subclaim = <PolyIOP<E::Fr> as ProductCheck<E, PCS>>::verify(
             &bad_proof,
-            f.num_vars,
+            &aux_info,
             &mut transcript,
         )?;
         assert_ne!(

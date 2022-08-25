@@ -8,8 +8,7 @@ use ark_std::{end_timer, log2, start_timer, One, Zero};
 use errors::HyperPlonkErrors;
 use pcs::prelude::{compute_qx_degree, merge_polynomials, PCSErrors, PolynomialCommitmentScheme};
 use poly_iop::{
-    identity_permutation_mle,
-    prelude::{PermutationCheck, SumCheck, ZeroCheck},
+    prelude::{identity_permutation_mle, PermutationCheck, ZeroCheck},
     PolyIOP,
 };
 use selectors::SelectorColumn;
@@ -27,8 +26,7 @@ mod witness;
 
 /// A trait for HyperPlonk Poly-IOPs.
 /// A HyperPlonk is derived from SumChecks, ZeroChecks and PermutationChecks.
-pub trait HyperPlonkSNARK<E, PCS>:
-    SumCheck<E::Fr> + ZeroCheck<E::Fr> + PermutationCheck<E::Fr>
+pub trait HyperPlonkSNARK<E, PCS>: PermutationCheck<E, PCS>
 where
     E: PairingEngine,
     PCS: PolynomialCommitmentScheme<E>,
@@ -99,7 +97,7 @@ where
     type Parameters = HyperPlonkParams;
     type ProvingKey = HyperPlonkProvingKey<E, PCS>;
     type VerifyingKey = HyperPlonkVerifyingKey<E, PCS>;
-    type Proof = HyperPlonkProof<E, PCS, Self, Self>;
+    type Proof = HyperPlonkProof<E, Self, PCS>;
 
     /// Generate the preprocessed polynomials output by the indexer.
     ///
@@ -277,7 +275,7 @@ where
                 w_merged.num_vars, merged_nv
             )));
         }
-        let w_merged_com = PCS::commit(&pk.pcs_param, &Rc::new(w_merged.clone()))?;
+        let w_merged_com = PCS::commit(&pk.pcs_param, &w_merged)?;
 
         transcript.append_serializable_element(b"w", &w_merged_com)?;
         end_timer!(step);
@@ -309,51 +307,24 @@ where
         // =======================================================================
         // 3. Run permutation check on `\{w_i(x)\}` and `permutation_oracles`, and
         // obtain a PermCheckSubClaim.
-        //
-        // 3.1. `generate_challenge` from current transcript (generate beta, gamma)
-        // 3.2. `compute_product` to build `prod(x)` etc. from f, g and s_perm
-        // 3.3. push a commitment of `prod(x)` to the transcript
-        // 3.4. `update_challenge` with the updated transcript
-        // 3.5. `prove` to generate the proof
-        // 3.6. open `prod(0,x)`, `prod(1, x)`, `prod(x, 0)`, `prod(x, 1)` at
-        //      zero_check.point
         // =======================================================================
         let step = start_timer!(|| "Permutation check on w_i(x)");
 
-        // 3.1 `generate_challenge` from current transcript (generate beta, gamma)
-        let mut permutation_challenge = Self::generate_challenge(&mut transcript)?;
-
-        // 3.2. `compute_product` to build `prod(x)` etc. from f, g and s_perm
-
-        // This function returns 3 MLEs:
-        // - prod(x)
-        // - numerator
-        // - denominator
-        // See function signature for details.
-        let prod_x_and_aux_info = Self::compute_prod_evals(
-            &permutation_challenge,
+        let (perm_check_proof, prod_x) = <Self as PermutationCheck<E, PCS>>::prove(
+            &pk.pcs_param,
             &w_merged,
             &w_merged,
             &pk.permutation_oracles,
-        )?;
-        let prod_x = Rc::new(prod_x_and_aux_info[0].clone());
-
-        // 3.3 push a commitment of `prod(x)` to the transcript
-        let prod_com = PCS::commit(&pk.pcs_param, &prod_x)?;
-
-        // 3.4. `update_challenge` with the updated transcript
-        Self::update_challenge(&mut permutation_challenge, &mut transcript, &prod_com)?;
-
-        // 3.5. `prove` to generate the proof
-        let perm_check_proof = <Self as PermutationCheck<E::Fr>>::prove(
-            &prod_x_and_aux_info,
-            &permutation_challenge,
             &mut transcript,
         )?;
 
-        // 3.6 open prod(0,x), prod(1, x), prod(x, 0), prod(x, 1) at zero_check.point
+        // open prod(0,x), prod(1, x), prod(x, 0), prod(x, 1) at zero_check.point
         // prod(0, x)
-        let tmp_point = [perm_check_proof.point.as_slice(), &[E::Fr::zero()]].concat();
+        let tmp_point = [
+            perm_check_proof.zero_check_proof.point.as_slice(),
+            &[E::Fr::zero()],
+        ]
+        .concat();
         let (prod_0_x_opening, prod_0_x_eval) = PCS::open(&pk.pcs_param, &prod_x, &tmp_point)?;
         #[cfg(feature = "extensive_sanity_checks")]
         {
@@ -370,7 +341,11 @@ where
             }
         }
         // prod(1, x)
-        let tmp_point = [perm_check_proof.point.as_slice(), &[E::Fr::one()]].concat();
+        let tmp_point = [
+            perm_check_proof.zero_check_proof.point.as_slice(),
+            &[E::Fr::one()],
+        ]
+        .concat();
         let (prod_1_x_opening, prod_1_x_eval) = PCS::open(&pk.pcs_param, &prod_x, &tmp_point)?;
         #[cfg(feature = "extensive_sanity_checks")]
         {
@@ -387,7 +362,11 @@ where
             }
         }
         // prod(x, 0)
-        let tmp_point = [&[E::Fr::zero()], perm_check_proof.point.as_slice()].concat();
+        let tmp_point = [
+            &[E::Fr::zero()],
+            perm_check_proof.zero_check_proof.point.as_slice(),
+        ]
+        .concat();
         let (prod_x_0_opening, prod_x_0_eval) = PCS::open(&pk.pcs_param, &prod_x, &tmp_point)?;
         #[cfg(feature = "extensive_sanity_checks")]
         {
@@ -405,7 +384,11 @@ where
             }
         }
         // prod(x, 1)
-        let tmp_point = [&[E::Fr::one()], perm_check_proof.point.as_slice()].concat();
+        let tmp_point = [
+            &[E::Fr::one()],
+            perm_check_proof.zero_check_proof.point.as_slice(),
+        ]
+        .concat();
         let (prod_x_1_opening, prod_x_1_eval) = PCS::open(&pk.pcs_param, &prod_x, &tmp_point)?;
         #[cfg(feature = "extensive_sanity_checks")]
         {
@@ -447,18 +430,20 @@ where
         // open permutation check proof
         let (witness_perm_check_opening, witness_perm_check_eval) = PCS::open(
             &pk.pcs_param,
-            &Rc::new(w_merged.clone()),
-            &perm_check_proof.point,
+            &w_merged,
+            &perm_check_proof.zero_check_proof.point,
         )?;
 
         #[cfg(feature = "extensive_sanity_checks")]
         {
             // sanity checks
-            let eval = w_merged.evaluate(&perm_check_proof.point).ok_or_else(|| {
-                HyperPlonkErrors::InvalidParameters(
-                    "evaluation dimension does not match".to_string(),
-                )
-            })?;
+            let eval = w_merged
+                .evaluate(&perm_check_proof.zero_check_proof.point)
+                .ok_or_else(|| {
+                    HyperPlonkErrors::InvalidParameters(
+                        "evaluation dimension does not match".to_string(),
+                    )
+                })?;
             if eval != witness_perm_check_eval {
                 return Err(HyperPlonkErrors::InvalidProver(
                     "Evaluation is different from PCS opening".to_string(),
@@ -492,7 +477,7 @@ where
         let (s_perm_opening, s_perm_eval) = PCS::open(
             &pk.pcs_param,
             &pk.permutation_oracles,
-            &perm_check_proof.point,
+            &perm_check_proof.zero_check_proof.point,
         )?;
 
         #[cfg(feature = "extensive_sanity_checks")]
@@ -500,7 +485,7 @@ where
             // sanity check
             let eval = pk
                 .permutation_oracles
-                .evaluate(&perm_check_proof.point)
+                .evaluate(&perm_check_proof.zero_check_proof.point)
                 .ok_or_else(|| {
                     HyperPlonkErrors::InvalidParameters(
                         "evaluation dimension does not match".to_string(),
@@ -576,7 +561,6 @@ where
             // PCS components: permutation check
             // =======================================================================
             // We do not validate prod(x), this is checked by subclaim
-            prod_commit: prod_com,
             prod_evals: vec![prod_0_x_eval, prod_1_x_eval, prod_x_0_eval, prod_x_1_eval],
             prod_openings: vec![
                 prod_0_x_opening,
@@ -715,6 +699,7 @@ where
         // 2. Verify perm_check_proof on `\{w_i(x)\}` and `permutation_oracles`
         // =======================================================================
         let step = start_timer!(|| "verify permutation check");
+
         // Zero check and sum check have different AuxInfo because `w_merged` and
         // `Prod(x)` have degree and num_vars
         let perm_check_aux_info = VPAuxInfo::<E::Fr> {
@@ -724,22 +709,20 @@ where
             num_variables: merged_nv,
             phantom: PhantomData::default(),
         };
-        let mut challenge = <Self as PermutationCheck<E::Fr>>::generate_challenge(&mut transcript)?;
-        <Self as PermutationCheck<E::Fr>>::update_challenge(
-            &mut challenge,
-            &mut transcript,
-            &proof.prod_commit,
-        )?;
-
-        let perm_check_sub_claim = <Self as PermutationCheck<E::Fr>>::verify(
+        let perm_check_sub_claim = <Self as PermutationCheck<E, PCS>>::verify(
             &proof.perm_check_proof,
             &perm_check_aux_info,
             &mut transcript,
         )?;
+
         let perm_check_point = &perm_check_sub_claim
+            .product_check_sub_claim
             .zero_check_sub_claim
             .sum_check_sub_claim
             .point;
+
+        let alpha = perm_check_sub_claim.product_check_sub_claim.challenge;
+        let (beta, gamma) = perm_check_sub_claim.challenges;
 
         // check perm check subclaim:
         // proof.witness_perm_check_eval ?= perm_check_sub_claim.expected_eval
@@ -754,9 +737,6 @@ where
         // - g(x), f(x) are both w_merged over (zero_point)
         // - s_perm(x) and s_id(x) from vk_param.perm_oracle
         // - alpha, beta, gamma from challenge
-        let alpha = challenge
-            .alpha
-            .ok_or_else(|| HyperPlonkErrors::InvalidVerifier("alpha is not set".to_string()))?;
 
         let s_id = identity_permutation_mle::<E::Fr>(perm_check_point.len());
         let s_id_eval = s_id.evaluate(perm_check_point).ok_or_else(|| {
@@ -765,16 +745,13 @@ where
 
         let q_x_rec = proof.prod_evals[1] - proof.prod_evals[2] * proof.prod_evals[3]
             + alpha
-                * ((proof.witness_perm_check_eval
-                    + challenge.beta * proof.perm_oracle_eval
-                    + challenge.gamma)
+                * ((proof.witness_perm_check_eval + beta * proof.perm_oracle_eval + gamma)
                     * proof.prod_evals[0]
-                    - (proof.witness_perm_check_eval
-                        + challenge.beta * s_id_eval
-                        + challenge.gamma));
+                    - (proof.witness_perm_check_eval + beta * s_id_eval + gamma));
 
         if q_x_rec
             != perm_check_sub_claim
+                .product_check_sub_claim
                 .zero_check_sub_claim
                 .expected_evaluation
         {
@@ -823,7 +800,7 @@ where
         // prod(0, x)
         if !PCS::verify(
             &vk.pcs_param,
-            &proof.prod_commit,
+            &proof.perm_check_proof.prod_x_comm,
             &[perm_check_point.as_slice(), &[E::Fr::zero()]].concat(),
             &proof.prod_evals[0],
             &proof.prod_openings[0],
@@ -835,7 +812,7 @@ where
         // prod(1, x)
         if !PCS::verify(
             &vk.pcs_param,
-            &proof.prod_commit,
+            &proof.perm_check_proof.prod_x_comm,
             &[perm_check_point.as_slice(), &[E::Fr::one()]].concat(),
             &proof.prod_evals[1],
             &proof.prod_openings[1],
@@ -847,7 +824,7 @@ where
         // prod(x, 0)
         if !PCS::verify(
             &vk.pcs_param,
-            &proof.prod_commit,
+            &proof.perm_check_proof.prod_x_comm,
             &[&[E::Fr::zero()], perm_check_point.as_slice()].concat(),
             &proof.prod_evals[2],
             &proof.prod_openings[2],
@@ -859,7 +836,7 @@ where
         // prod(x, 1)
         if !PCS::verify(
             &vk.pcs_param,
-            &proof.prod_commit,
+            &proof.perm_check_proof.prod_x_comm,
             &[&[E::Fr::one()], perm_check_point.as_slice()].concat(),
             &proof.prod_evals[3],
             &proof.prod_openings[3],
@@ -940,7 +917,7 @@ mod tests {
     use ark_bls12_381::Bls12_381;
     use ark_std::test_rng;
     use pcs::prelude::KZGMultilinearPCS;
-    use poly_iop::random_permutation_mle;
+    use poly_iop::prelude::random_permutation_mle;
 
     #[test]
     fn test_hyperplonk_e2e() -> Result<(), HyperPlonkErrors> {
