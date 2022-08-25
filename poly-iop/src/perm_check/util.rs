@@ -72,6 +72,7 @@ pub(super) fn compute_prod_0<F: PrimeField>(
 ///
 /// - numerator is the MLE for `f(x) + \beta s_id(x) + \gamma`
 /// - denominator is the MLE for `g(x) + \beta s_perm(x) + \gamma`
+#[allow(clippy::type_complexity)]
 pub(super) fn computer_num_and_denom<F: PrimeField>(
     beta: &F,
     gamma: &F,
