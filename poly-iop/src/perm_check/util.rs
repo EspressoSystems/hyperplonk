@@ -26,8 +26,6 @@ use std::rc::Rc;
 ///
 /// The caller needs to check num_vars matches in f/g/s_id/s_perm
 /// Cost: linear in N.
-///
-/// TODO: replace `s_perm` with the merged poly `s`.
 #[cfg(test)]
 #[allow(clippy::type_complexity)]
 pub(super) fn compute_prod_0<F: PrimeField>(
@@ -91,8 +89,6 @@ pub(super) fn computer_num_and_denom<F: PrimeField>(
     let num_vars = fx.num_vars;
     let mut numerator_evals = vec![];
     let mut denominator_evals = vec![];
-
-    // TODO: remove this line after replacing `s_perm` with `s`.
     let s_id = identity_permutation_mle::<F>(num_vars);
 
     for (&fi, (&gi, (&s_id_i, &s_perm_i))) in
