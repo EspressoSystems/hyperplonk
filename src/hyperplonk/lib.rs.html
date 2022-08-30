@@ -1007,29 +1007,6 @@
 <span id="1001">1001</span>
 <span id="1002">1002</span>
 <span id="1003">1003</span>
-<span id="1004">1004</span>
-<span id="1005">1005</span>
-<span id="1006">1006</span>
-<span id="1007">1007</span>
-<span id="1008">1008</span>
-<span id="1009">1009</span>
-<span id="1010">1010</span>
-<span id="1011">1011</span>
-<span id="1012">1012</span>
-<span id="1013">1013</span>
-<span id="1014">1014</span>
-<span id="1015">1015</span>
-<span id="1016">1016</span>
-<span id="1017">1017</span>
-<span id="1018">1018</span>
-<span id="1019">1019</span>
-<span id="1020">1020</span>
-<span id="1021">1021</span>
-<span id="1022">1022</span>
-<span id="1023">1023</span>
-<span id="1024">1024</span>
-<span id="1025">1025</span>
-<span id="1026">1026</span>
 </pre><pre class="rust"><code><span class="doccomment">//! Main module for the HyperPlonk PolyIOP.</span>
 
 <span class="kw">use</span> <span class="ident"><span class="kw">crate</span>::utils::eval_f</span>;
@@ -1040,8 +1017,7 @@
 <span class="kw">use</span> <span class="ident">errors::HyperPlonkErrors</span>;
 <span class="kw">use</span> <span class="ident">pcs::prelude</span>::{<span class="ident">compute_qx_degree</span>, <span class="ident">merge_polynomials</span>, <span class="ident">PCSErrors</span>, <span class="ident">PolynomialCommitmentScheme</span>};
 <span class="kw">use</span> <span class="ident">poly_iop</span>::{
-    <span class="ident">identity_permutation_mle</span>,
-    <span class="ident">prelude</span>::{<span class="ident">PermutationCheck</span>, <span class="ident">SumCheck</span>, <span class="ident">ZeroCheck</span>},
+    <span class="ident">prelude</span>::{<span class="ident">identity_permutation_mle</span>, <span class="ident">PermutationCheck</span>, <span class="ident">ZeroCheck</span>},
     <span class="ident">PolyIOP</span>,
 };
 <span class="kw">use</span> <span class="ident">selectors::SelectorColumn</span>;
@@ -1057,10 +1033,9 @@
 <span class="kw">mod</span> <span class="ident">utils</span>;
 <span class="kw">mod</span> <span class="ident">witness</span>;
 
-<span class="doccomment">/// A trait for HyperPlonk Poly-IOPs.</span>
+<span class="doccomment">/// A trait for HyperPlonk SNARKs.</span>
 <span class="doccomment">/// A HyperPlonk is derived from SumChecks, ZeroChecks and PermutationChecks.</span>
-<span class="kw">pub</span> <span class="kw">trait</span> <span class="ident">HyperPlonkSNARK</span><span class="op">&lt;</span><span class="ident">E</span>, <span class="ident">PCS</span><span class="op">&gt;</span>:
-    <span class="ident">SumCheck</span><span class="op">&lt;</span><span class="ident">E::Fr</span><span class="op">&gt;</span> <span class="op">+</span> <span class="ident">ZeroCheck</span><span class="op">&lt;</span><span class="ident">E::Fr</span><span class="op">&gt;</span> <span class="op">+</span> <span class="ident">PermutationCheck</span><span class="op">&lt;</span><span class="ident">E::Fr</span><span class="op">&gt;</span>
+<span class="kw">pub</span> <span class="kw">trait</span> <span class="ident">HyperPlonkSNARK</span><span class="op">&lt;</span><span class="ident">E</span>, <span class="ident">PCS</span><span class="op">&gt;</span>: <span class="ident">PermutationCheck</span><span class="op">&lt;</span><span class="ident">E</span>, <span class="ident">PCS</span><span class="op">&gt;</span>
 <span class="kw">where</span>
     <span class="ident">E</span>: <span class="ident">PairingEngine</span>,
     <span class="ident">PCS</span>: <span class="ident">PolynomialCommitmentScheme</span><span class="op">&lt;</span><span class="ident">E</span><span class="op">&gt;</span>,
@@ -1131,7 +1106,7 @@
     <span class="kw">type</span> <span class="ident">Parameters</span> <span class="op">=</span> <span class="ident">HyperPlonkParams</span>;
     <span class="kw">type</span> <span class="ident">ProvingKey</span> <span class="op">=</span> <span class="ident">HyperPlonkProvingKey</span><span class="op">&lt;</span><span class="ident">E</span>, <span class="ident">PCS</span><span class="op">&gt;</span>;
     <span class="kw">type</span> <span class="ident">VerifyingKey</span> <span class="op">=</span> <span class="ident">HyperPlonkVerifyingKey</span><span class="op">&lt;</span><span class="ident">E</span>, <span class="ident">PCS</span><span class="op">&gt;</span>;
-    <span class="kw">type</span> <span class="ident">Proof</span> <span class="op">=</span> <span class="ident">HyperPlonkProof</span><span class="op">&lt;</span><span class="ident">E</span>, <span class="ident">PCS</span>, <span class="self">Self</span>, <span class="self">Self</span><span class="op">&gt;</span>;
+    <span class="kw">type</span> <span class="ident">Proof</span> <span class="op">=</span> <span class="ident">HyperPlonkProof</span><span class="op">&lt;</span><span class="ident">E</span>, <span class="self">Self</span>, <span class="ident">PCS</span><span class="op">&gt;</span>;
 
     <span class="doccomment">/// Generate the preprocessed polynomials output by the indexer.</span>
     <span class="doccomment">///</span>
@@ -1309,7 +1284,7 @@
                 <span class="ident">w_merged</span>.<span class="ident">num_vars</span>, <span class="ident">merged_nv</span>
             )));
         }
-        <span class="kw">let</span> <span class="ident">w_merged_com</span> <span class="op">=</span> <span class="ident">PCS::commit</span>(<span class="kw-2">&amp;</span><span class="ident">pk</span>.<span class="ident">pcs_param</span>, <span class="kw-2">&amp;</span><span class="ident">Rc::new</span>(<span class="ident">w_merged</span>.<span class="ident">clone</span>()))<span class="question-mark">?</span>;
+        <span class="kw">let</span> <span class="ident">w_merged_com</span> <span class="op">=</span> <span class="ident">PCS::commit</span>(<span class="kw-2">&amp;</span><span class="ident">pk</span>.<span class="ident">pcs_param</span>, <span class="kw-2">&amp;</span><span class="ident">w_merged</span>)<span class="question-mark">?</span>;
 
         <span class="ident">transcript</span>.<span class="ident">append_serializable_element</span>(<span class="string">b&quot;w&quot;</span>, <span class="kw-2">&amp;</span><span class="ident">w_merged_com</span>)<span class="question-mark">?</span>;
         <span class="macro">end_timer!</span>(<span class="ident">step</span>);
@@ -1341,51 +1316,24 @@
         <span class="comment">// =======================================================================</span>
         <span class="comment">// 3. Run permutation check on `\{w_i(x)\}` and `permutation_oracles`, and</span>
         <span class="comment">// obtain a PermCheckSubClaim.</span>
-        <span class="comment">//</span>
-        <span class="comment">// 3.1. `generate_challenge` from current transcript (generate beta, gamma)</span>
-        <span class="comment">// 3.2. `compute_product` to build `prod(x)` etc. from f, g and s_perm</span>
-        <span class="comment">// 3.3. push a commitment of `prod(x)` to the transcript</span>
-        <span class="comment">// 3.4. `update_challenge` with the updated transcript</span>
-        <span class="comment">// 3.5. `prove` to generate the proof</span>
-        <span class="comment">// 3.6. open `prod(0,x)`, `prod(1, x)`, `prod(x, 0)`, `prod(x, 1)` at</span>
-        <span class="comment">//      zero_check.point</span>
         <span class="comment">// =======================================================================</span>
         <span class="kw">let</span> <span class="ident">step</span> <span class="op">=</span> <span class="macro">start_timer!</span>(<span class="op">|</span><span class="op">|</span> <span class="string">&quot;Permutation check on w_i(x)&quot;</span>);
 
-        <span class="comment">// 3.1 `generate_challenge` from current transcript (generate beta, gamma)</span>
-        <span class="kw">let</span> <span class="kw-2">mut</span> <span class="ident">permutation_challenge</span> <span class="op">=</span> <span class="ident"><span class="self">Self</span>::generate_challenge</span>(<span class="kw-2">&amp;mut</span> <span class="ident">transcript</span>)<span class="question-mark">?</span>;
-
-        <span class="comment">// 3.2. `compute_product` to build `prod(x)` etc. from f, g and s_perm</span>
-
-        <span class="comment">// This function returns 3 MLEs:</span>
-        <span class="comment">// - prod(x)</span>
-        <span class="comment">// - numerator</span>
-        <span class="comment">// - denominator</span>
-        <span class="comment">// See function signature for details.</span>
-        <span class="kw">let</span> <span class="ident">prod_x_and_aux_info</span> <span class="op">=</span> <span class="ident"><span class="self">Self</span>::compute_prod_evals</span>(
-            <span class="kw-2">&amp;</span><span class="ident">permutation_challenge</span>,
+        <span class="kw">let</span> (<span class="ident">perm_check_proof</span>, <span class="ident">prod_x</span>) <span class="op">=</span> <span class="op">&lt;</span><span class="self">Self</span> <span class="kw">as</span> <span class="ident">PermutationCheck</span><span class="op">&lt;</span><span class="ident">E</span>, <span class="ident">PCS</span><span class="op">&gt;</span><span class="op">&gt;</span><span class="ident">::prove</span>(
+            <span class="kw-2">&amp;</span><span class="ident">pk</span>.<span class="ident">pcs_param</span>,
             <span class="kw-2">&amp;</span><span class="ident">w_merged</span>,
             <span class="kw-2">&amp;</span><span class="ident">w_merged</span>,
             <span class="kw-2">&amp;</span><span class="ident">pk</span>.<span class="ident">permutation_oracles</span>,
-        )<span class="question-mark">?</span>;
-        <span class="kw">let</span> <span class="ident">prod_x</span> <span class="op">=</span> <span class="ident">Rc::new</span>(<span class="ident">prod_x_and_aux_info</span>[<span class="number">0</span>].<span class="ident">clone</span>());
-
-        <span class="comment">// 3.3 push a commitment of `prod(x)` to the transcript</span>
-        <span class="kw">let</span> <span class="ident">prod_com</span> <span class="op">=</span> <span class="ident">PCS::commit</span>(<span class="kw-2">&amp;</span><span class="ident">pk</span>.<span class="ident">pcs_param</span>, <span class="kw-2">&amp;</span><span class="ident">prod_x</span>)<span class="question-mark">?</span>;
-
-        <span class="comment">// 3.4. `update_challenge` with the updated transcript</span>
-        <span class="ident"><span class="self">Self</span>::update_challenge</span>(<span class="kw-2">&amp;mut</span> <span class="ident">permutation_challenge</span>, <span class="kw-2">&amp;mut</span> <span class="ident">transcript</span>, <span class="kw-2">&amp;</span><span class="ident">prod_com</span>)<span class="question-mark">?</span>;
-
-        <span class="comment">// 3.5. `prove` to generate the proof</span>
-        <span class="kw">let</span> <span class="ident">perm_check_proof</span> <span class="op">=</span> <span class="op">&lt;</span><span class="self">Self</span> <span class="kw">as</span> <span class="ident">PermutationCheck</span><span class="op">&lt;</span><span class="ident">E::Fr</span><span class="op">&gt;</span><span class="op">&gt;</span><span class="ident">::prove</span>(
-            <span class="kw-2">&amp;</span><span class="ident">prod_x_and_aux_info</span>,
-            <span class="kw-2">&amp;</span><span class="ident">permutation_challenge</span>,
             <span class="kw-2">&amp;mut</span> <span class="ident">transcript</span>,
         )<span class="question-mark">?</span>;
 
-        <span class="comment">// 3.6 open prod(0,x), prod(1, x), prod(x, 0), prod(x, 1) at zero_check.point</span>
+        <span class="comment">// open prod(0,x), prod(1, x), prod(x, 0), prod(x, 1) at zero_check.point</span>
         <span class="comment">// prod(0, x)</span>
-        <span class="kw">let</span> <span class="ident">tmp_point</span> <span class="op">=</span> [<span class="ident">perm_check_proof</span>.<span class="ident">point</span>.<span class="ident">as_slice</span>(), <span class="kw-2">&amp;</span>[<span class="ident">E::Fr::zero</span>()]].<span class="ident">concat</span>();
+        <span class="kw">let</span> <span class="ident">tmp_point</span> <span class="op">=</span> [
+            <span class="ident">perm_check_proof</span>.<span class="ident">zero_check_proof</span>.<span class="ident">point</span>.<span class="ident">as_slice</span>(),
+            <span class="kw-2">&amp;</span>[<span class="ident">E::Fr::zero</span>()],
+        ]
+        .<span class="ident">concat</span>();
         <span class="kw">let</span> (<span class="ident">prod_0_x_opening</span>, <span class="ident">prod_0_x_eval</span>) <span class="op">=</span> <span class="ident">PCS::open</span>(<span class="kw-2">&amp;</span><span class="ident">pk</span>.<span class="ident">pcs_param</span>, <span class="kw-2">&amp;</span><span class="ident">prod_x</span>, <span class="kw-2">&amp;</span><span class="ident">tmp_point</span>)<span class="question-mark">?</span>;
         <span class="attribute">#[<span class="ident">cfg</span>(<span class="ident">feature</span> <span class="op">=</span> <span class="string">&quot;extensive_sanity_checks&quot;</span>)]</span>
         {
@@ -1402,7 +1350,11 @@
             }
         }
         <span class="comment">// prod(1, x)</span>
-        <span class="kw">let</span> <span class="ident">tmp_point</span> <span class="op">=</span> [<span class="ident">perm_check_proof</span>.<span class="ident">point</span>.<span class="ident">as_slice</span>(), <span class="kw-2">&amp;</span>[<span class="ident">E::Fr::one</span>()]].<span class="ident">concat</span>();
+        <span class="kw">let</span> <span class="ident">tmp_point</span> <span class="op">=</span> [
+            <span class="ident">perm_check_proof</span>.<span class="ident">zero_check_proof</span>.<span class="ident">point</span>.<span class="ident">as_slice</span>(),
+            <span class="kw-2">&amp;</span>[<span class="ident">E::Fr::one</span>()],
+        ]
+        .<span class="ident">concat</span>();
         <span class="kw">let</span> (<span class="ident">prod_1_x_opening</span>, <span class="ident">prod_1_x_eval</span>) <span class="op">=</span> <span class="ident">PCS::open</span>(<span class="kw-2">&amp;</span><span class="ident">pk</span>.<span class="ident">pcs_param</span>, <span class="kw-2">&amp;</span><span class="ident">prod_x</span>, <span class="kw-2">&amp;</span><span class="ident">tmp_point</span>)<span class="question-mark">?</span>;
         <span class="attribute">#[<span class="ident">cfg</span>(<span class="ident">feature</span> <span class="op">=</span> <span class="string">&quot;extensive_sanity_checks&quot;</span>)]</span>
         {
@@ -1419,7 +1371,11 @@
             }
         }
         <span class="comment">// prod(x, 0)</span>
-        <span class="kw">let</span> <span class="ident">tmp_point</span> <span class="op">=</span> [<span class="kw-2">&amp;</span>[<span class="ident">E::Fr::zero</span>()], <span class="ident">perm_check_proof</span>.<span class="ident">point</span>.<span class="ident">as_slice</span>()].<span class="ident">concat</span>();
+        <span class="kw">let</span> <span class="ident">tmp_point</span> <span class="op">=</span> [
+            <span class="kw-2">&amp;</span>[<span class="ident">E::Fr::zero</span>()],
+            <span class="ident">perm_check_proof</span>.<span class="ident">zero_check_proof</span>.<span class="ident">point</span>.<span class="ident">as_slice</span>(),
+        ]
+        .<span class="ident">concat</span>();
         <span class="kw">let</span> (<span class="ident">prod_x_0_opening</span>, <span class="ident">prod_x_0_eval</span>) <span class="op">=</span> <span class="ident">PCS::open</span>(<span class="kw-2">&amp;</span><span class="ident">pk</span>.<span class="ident">pcs_param</span>, <span class="kw-2">&amp;</span><span class="ident">prod_x</span>, <span class="kw-2">&amp;</span><span class="ident">tmp_point</span>)<span class="question-mark">?</span>;
         <span class="attribute">#[<span class="ident">cfg</span>(<span class="ident">feature</span> <span class="op">=</span> <span class="string">&quot;extensive_sanity_checks&quot;</span>)]</span>
         {
@@ -1437,7 +1393,11 @@
             }
         }
         <span class="comment">// prod(x, 1)</span>
-        <span class="kw">let</span> <span class="ident">tmp_point</span> <span class="op">=</span> [<span class="kw-2">&amp;</span>[<span class="ident">E::Fr::one</span>()], <span class="ident">perm_check_proof</span>.<span class="ident">point</span>.<span class="ident">as_slice</span>()].<span class="ident">concat</span>();
+        <span class="kw">let</span> <span class="ident">tmp_point</span> <span class="op">=</span> [
+            <span class="kw-2">&amp;</span>[<span class="ident">E::Fr::one</span>()],
+            <span class="ident">perm_check_proof</span>.<span class="ident">zero_check_proof</span>.<span class="ident">point</span>.<span class="ident">as_slice</span>(),
+        ]
+        .<span class="ident">concat</span>();
         <span class="kw">let</span> (<span class="ident">prod_x_1_opening</span>, <span class="ident">prod_x_1_eval</span>) <span class="op">=</span> <span class="ident">PCS::open</span>(<span class="kw-2">&amp;</span><span class="ident">pk</span>.<span class="ident">pcs_param</span>, <span class="kw-2">&amp;</span><span class="ident">prod_x</span>, <span class="kw-2">&amp;</span><span class="ident">tmp_point</span>)<span class="question-mark">?</span>;
         <span class="attribute">#[<span class="ident">cfg</span>(<span class="ident">feature</span> <span class="op">=</span> <span class="string">&quot;extensive_sanity_checks&quot;</span>)]</span>
         {
@@ -1479,18 +1439,20 @@
         <span class="comment">// open permutation check proof</span>
         <span class="kw">let</span> (<span class="ident">witness_perm_check_opening</span>, <span class="ident">witness_perm_check_eval</span>) <span class="op">=</span> <span class="ident">PCS::open</span>(
             <span class="kw-2">&amp;</span><span class="ident">pk</span>.<span class="ident">pcs_param</span>,
-            <span class="kw-2">&amp;</span><span class="ident">Rc::new</span>(<span class="ident">w_merged</span>.<span class="ident">clone</span>()),
-            <span class="kw-2">&amp;</span><span class="ident">perm_check_proof</span>.<span class="ident">point</span>,
+            <span class="kw-2">&amp;</span><span class="ident">w_merged</span>,
+            <span class="kw-2">&amp;</span><span class="ident">perm_check_proof</span>.<span class="ident">zero_check_proof</span>.<span class="ident">point</span>,
         )<span class="question-mark">?</span>;
 
         <span class="attribute">#[<span class="ident">cfg</span>(<span class="ident">feature</span> <span class="op">=</span> <span class="string">&quot;extensive_sanity_checks&quot;</span>)]</span>
         {
             <span class="comment">// sanity checks</span>
-            <span class="kw">let</span> <span class="ident">eval</span> <span class="op">=</span> <span class="ident">w_merged</span>.<span class="ident">evaluate</span>(<span class="kw-2">&amp;</span><span class="ident">perm_check_proof</span>.<span class="ident">point</span>).<span class="ident">ok_or_else</span>(<span class="op">|</span><span class="op">|</span> {
-                <span class="ident">HyperPlonkErrors::InvalidParameters</span>(
-                    <span class="string">&quot;evaluation dimension does not match&quot;</span>.<span class="ident">to_string</span>(),
-                )
-            })<span class="question-mark">?</span>;
+            <span class="kw">let</span> <span class="ident">eval</span> <span class="op">=</span> <span class="ident">w_merged</span>
+                .<span class="ident">evaluate</span>(<span class="kw-2">&amp;</span><span class="ident">perm_check_proof</span>.<span class="ident">zero_check_proof</span>.<span class="ident">point</span>)
+                .<span class="ident">ok_or_else</span>(<span class="op">|</span><span class="op">|</span> {
+                    <span class="ident">HyperPlonkErrors::InvalidParameters</span>(
+                        <span class="string">&quot;evaluation dimension does not match&quot;</span>.<span class="ident">to_string</span>(),
+                    )
+                })<span class="question-mark">?</span>;
             <span class="kw">if</span> <span class="ident">eval</span> <span class="op">!</span><span class="op">=</span> <span class="ident">witness_perm_check_eval</span> {
                 <span class="kw">return</span> <span class="prelude-val">Err</span>(<span class="ident">HyperPlonkErrors::InvalidProver</span>(
                     <span class="string">&quot;Evaluation is different from PCS opening&quot;</span>.<span class="ident">to_string</span>(),
@@ -1524,7 +1486,7 @@
         <span class="kw">let</span> (<span class="ident">s_perm_opening</span>, <span class="ident">s_perm_eval</span>) <span class="op">=</span> <span class="ident">PCS::open</span>(
             <span class="kw-2">&amp;</span><span class="ident">pk</span>.<span class="ident">pcs_param</span>,
             <span class="kw-2">&amp;</span><span class="ident">pk</span>.<span class="ident">permutation_oracles</span>,
-            <span class="kw-2">&amp;</span><span class="ident">perm_check_proof</span>.<span class="ident">point</span>,
+            <span class="kw-2">&amp;</span><span class="ident">perm_check_proof</span>.<span class="ident">zero_check_proof</span>.<span class="ident">point</span>,
         )<span class="question-mark">?</span>;
 
         <span class="attribute">#[<span class="ident">cfg</span>(<span class="ident">feature</span> <span class="op">=</span> <span class="string">&quot;extensive_sanity_checks&quot;</span>)]</span>
@@ -1532,7 +1494,7 @@
             <span class="comment">// sanity check</span>
             <span class="kw">let</span> <span class="ident">eval</span> <span class="op">=</span> <span class="ident">pk</span>
                 .<span class="ident">permutation_oracles</span>
-                .<span class="ident">evaluate</span>(<span class="kw-2">&amp;</span><span class="ident">perm_check_proof</span>.<span class="ident">point</span>)
+                .<span class="ident">evaluate</span>(<span class="kw-2">&amp;</span><span class="ident">perm_check_proof</span>.<span class="ident">zero_check_proof</span>.<span class="ident">point</span>)
                 .<span class="ident">ok_or_else</span>(<span class="op">|</span><span class="op">|</span> {
                     <span class="ident">HyperPlonkErrors::InvalidParameters</span>(
                         <span class="string">&quot;evaluation dimension does not match&quot;</span>.<span class="ident">to_string</span>(),
@@ -1608,7 +1570,6 @@
             <span class="comment">// PCS components: permutation check</span>
             <span class="comment">// =======================================================================</span>
             <span class="comment">// We do not validate prod(x), this is checked by subclaim</span>
-            <span class="ident">prod_commit</span>: <span class="ident">prod_com</span>,
             <span class="ident">prod_evals</span>: <span class="macro">vec!</span>[<span class="ident">prod_0_x_eval</span>, <span class="ident">prod_1_x_eval</span>, <span class="ident">prod_x_0_eval</span>, <span class="ident">prod_x_1_eval</span>],
             <span class="ident">prod_openings</span>: <span class="macro">vec!</span>[
                 <span class="ident">prod_0_x_opening</span>,
@@ -1747,6 +1708,7 @@
         <span class="comment">// 2. Verify perm_check_proof on `\{w_i(x)\}` and `permutation_oracles`</span>
         <span class="comment">// =======================================================================</span>
         <span class="kw">let</span> <span class="ident">step</span> <span class="op">=</span> <span class="macro">start_timer!</span>(<span class="op">|</span><span class="op">|</span> <span class="string">&quot;verify permutation check&quot;</span>);
+
         <span class="comment">// Zero check and sum check have different AuxInfo because `w_merged` and</span>
         <span class="comment">// `Prod(x)` have degree and num_vars</span>
         <span class="kw">let</span> <span class="ident">perm_check_aux_info</span> <span class="op">=</span> <span class="ident">VPAuxInfo</span>::<span class="op">&lt;</span><span class="ident">E::Fr</span><span class="op">&gt;</span> {
@@ -1756,22 +1718,20 @@
             <span class="ident">num_variables</span>: <span class="ident">merged_nv</span>,
             <span class="ident">phantom</span>: <span class="ident">PhantomData::default</span>(),
         };
-        <span class="kw">let</span> <span class="kw-2">mut</span> <span class="ident">challenge</span> <span class="op">=</span> <span class="op">&lt;</span><span class="self">Self</span> <span class="kw">as</span> <span class="ident">PermutationCheck</span><span class="op">&lt;</span><span class="ident">E::Fr</span><span class="op">&gt;</span><span class="op">&gt;</span><span class="ident">::generate_challenge</span>(<span class="kw-2">&amp;mut</span> <span class="ident">transcript</span>)<span class="question-mark">?</span>;
-        <span class="op">&lt;</span><span class="self">Self</span> <span class="kw">as</span> <span class="ident">PermutationCheck</span><span class="op">&lt;</span><span class="ident">E::Fr</span><span class="op">&gt;</span><span class="op">&gt;</span><span class="ident">::update_challenge</span>(
-            <span class="kw-2">&amp;mut</span> <span class="ident">challenge</span>,
-            <span class="kw-2">&amp;mut</span> <span class="ident">transcript</span>,
-            <span class="kw-2">&amp;</span><span class="ident">proof</span>.<span class="ident">prod_commit</span>,
-        )<span class="question-mark">?</span>;
-
-        <span class="kw">let</span> <span class="ident">perm_check_sub_claim</span> <span class="op">=</span> <span class="op">&lt;</span><span class="self">Self</span> <span class="kw">as</span> <span class="ident">PermutationCheck</span><span class="op">&lt;</span><span class="ident">E::Fr</span><span class="op">&gt;</span><span class="op">&gt;</span><span class="ident">::verify</span>(
+        <span class="kw">let</span> <span class="ident">perm_check_sub_claim</span> <span class="op">=</span> <span class="op">&lt;</span><span class="self">Self</span> <span class="kw">as</span> <span class="ident">PermutationCheck</span><span class="op">&lt;</span><span class="ident">E</span>, <span class="ident">PCS</span><span class="op">&gt;</span><span class="op">&gt;</span><span class="ident">::verify</span>(
             <span class="kw-2">&amp;</span><span class="ident">proof</span>.<span class="ident">perm_check_proof</span>,
             <span class="kw-2">&amp;</span><span class="ident">perm_check_aux_info</span>,
             <span class="kw-2">&amp;mut</span> <span class="ident">transcript</span>,
         )<span class="question-mark">?</span>;
+
         <span class="kw">let</span> <span class="ident">perm_check_point</span> <span class="op">=</span> <span class="kw-2">&amp;</span><span class="ident">perm_check_sub_claim</span>
+            .<span class="ident">product_check_sub_claim</span>
             .<span class="ident">zero_check_sub_claim</span>
             .<span class="ident">sum_check_sub_claim</span>
             .<span class="ident">point</span>;
+
+        <span class="kw">let</span> <span class="ident">alpha</span> <span class="op">=</span> <span class="ident">perm_check_sub_claim</span>.<span class="ident">product_check_sub_claim</span>.<span class="ident">challenge</span>;
+        <span class="kw">let</span> (<span class="ident">beta</span>, <span class="ident">gamma</span>) <span class="op">=</span> <span class="ident">perm_check_sub_claim</span>.<span class="ident">challenges</span>;
 
         <span class="comment">// check perm check subclaim:</span>
         <span class="comment">// proof.witness_perm_check_eval ?= perm_check_sub_claim.expected_eval</span>
@@ -1786,9 +1746,6 @@
         <span class="comment">// - g(x), f(x) are both w_merged over (zero_point)</span>
         <span class="comment">// - s_perm(x) and s_id(x) from vk_param.perm_oracle</span>
         <span class="comment">// - alpha, beta, gamma from challenge</span>
-        <span class="kw">let</span> <span class="ident">alpha</span> <span class="op">=</span> <span class="ident">challenge</span>
-            .<span class="ident">alpha</span>
-            .<span class="ident">ok_or_else</span>(<span class="op">|</span><span class="op">|</span> <span class="ident">HyperPlonkErrors::InvalidVerifier</span>(<span class="string">&quot;alpha is not set&quot;</span>.<span class="ident">to_string</span>()))<span class="question-mark">?</span>;
 
         <span class="kw">let</span> <span class="ident">s_id</span> <span class="op">=</span> <span class="ident">identity_permutation_mle</span>::<span class="op">&lt;</span><span class="ident">E::Fr</span><span class="op">&gt;</span>(<span class="ident">perm_check_point</span>.<span class="ident">len</span>());
         <span class="kw">let</span> <span class="ident">s_id_eval</span> <span class="op">=</span> <span class="ident">s_id</span>.<span class="ident">evaluate</span>(<span class="ident">perm_check_point</span>).<span class="ident">ok_or_else</span>(<span class="op">|</span><span class="op">|</span> {
@@ -1797,16 +1754,13 @@
 
         <span class="kw">let</span> <span class="ident">q_x_rec</span> <span class="op">=</span> <span class="ident">proof</span>.<span class="ident">prod_evals</span>[<span class="number">1</span>] <span class="op">-</span> <span class="ident">proof</span>.<span class="ident">prod_evals</span>[<span class="number">2</span>] <span class="op">*</span> <span class="ident">proof</span>.<span class="ident">prod_evals</span>[<span class="number">3</span>]
             <span class="op">+</span> <span class="ident">alpha</span>
-                <span class="op">*</span> ((<span class="ident">proof</span>.<span class="ident">witness_perm_check_eval</span>
-                    <span class="op">+</span> <span class="ident">challenge</span>.<span class="ident">beta</span> <span class="op">*</span> <span class="ident">proof</span>.<span class="ident">perm_oracle_eval</span>
-                    <span class="op">+</span> <span class="ident">challenge</span>.<span class="ident">gamma</span>)
+                <span class="op">*</span> ((<span class="ident">proof</span>.<span class="ident">witness_perm_check_eval</span> <span class="op">+</span> <span class="ident">beta</span> <span class="op">*</span> <span class="ident">proof</span>.<span class="ident">perm_oracle_eval</span> <span class="op">+</span> <span class="ident">gamma</span>)
                     <span class="op">*</span> <span class="ident">proof</span>.<span class="ident">prod_evals</span>[<span class="number">0</span>]
-                    <span class="op">-</span> (<span class="ident">proof</span>.<span class="ident">witness_perm_check_eval</span>
-                        <span class="op">+</span> <span class="ident">challenge</span>.<span class="ident">beta</span> <span class="op">*</span> <span class="ident">s_id_eval</span>
-                        <span class="op">+</span> <span class="ident">challenge</span>.<span class="ident">gamma</span>));
+                    <span class="op">-</span> (<span class="ident">proof</span>.<span class="ident">witness_perm_check_eval</span> <span class="op">+</span> <span class="ident">beta</span> <span class="op">*</span> <span class="ident">s_id_eval</span> <span class="op">+</span> <span class="ident">gamma</span>));
 
         <span class="kw">if</span> <span class="ident">q_x_rec</span>
             <span class="op">!</span><span class="op">=</span> <span class="ident">perm_check_sub_claim</span>
+                .<span class="ident">product_check_sub_claim</span>
                 .<span class="ident">zero_check_sub_claim</span>
                 .<span class="ident">expected_evaluation</span>
         {
@@ -1855,7 +1809,7 @@
         <span class="comment">// prod(0, x)</span>
         <span class="kw">if</span> <span class="op">!</span><span class="ident">PCS::verify</span>(
             <span class="kw-2">&amp;</span><span class="ident">vk</span>.<span class="ident">pcs_param</span>,
-            <span class="kw-2">&amp;</span><span class="ident">proof</span>.<span class="ident">prod_commit</span>,
+            <span class="kw-2">&amp;</span><span class="ident">proof</span>.<span class="ident">perm_check_proof</span>.<span class="ident">prod_x_comm</span>,
             <span class="kw-2">&amp;</span>[<span class="ident">perm_check_point</span>.<span class="ident">as_slice</span>(), <span class="kw-2">&amp;</span>[<span class="ident">E::Fr::zero</span>()]].<span class="ident">concat</span>(),
             <span class="kw-2">&amp;</span><span class="ident">proof</span>.<span class="ident">prod_evals</span>[<span class="number">0</span>],
             <span class="kw-2">&amp;</span><span class="ident">proof</span>.<span class="ident">prod_openings</span>[<span class="number">0</span>],
@@ -1867,7 +1821,7 @@
         <span class="comment">// prod(1, x)</span>
         <span class="kw">if</span> <span class="op">!</span><span class="ident">PCS::verify</span>(
             <span class="kw-2">&amp;</span><span class="ident">vk</span>.<span class="ident">pcs_param</span>,
-            <span class="kw-2">&amp;</span><span class="ident">proof</span>.<span class="ident">prod_commit</span>,
+            <span class="kw-2">&amp;</span><span class="ident">proof</span>.<span class="ident">perm_check_proof</span>.<span class="ident">prod_x_comm</span>,
             <span class="kw-2">&amp;</span>[<span class="ident">perm_check_point</span>.<span class="ident">as_slice</span>(), <span class="kw-2">&amp;</span>[<span class="ident">E::Fr::one</span>()]].<span class="ident">concat</span>(),
             <span class="kw-2">&amp;</span><span class="ident">proof</span>.<span class="ident">prod_evals</span>[<span class="number">1</span>],
             <span class="kw-2">&amp;</span><span class="ident">proof</span>.<span class="ident">prod_openings</span>[<span class="number">1</span>],
@@ -1879,7 +1833,7 @@
         <span class="comment">// prod(x, 0)</span>
         <span class="kw">if</span> <span class="op">!</span><span class="ident">PCS::verify</span>(
             <span class="kw-2">&amp;</span><span class="ident">vk</span>.<span class="ident">pcs_param</span>,
-            <span class="kw-2">&amp;</span><span class="ident">proof</span>.<span class="ident">prod_commit</span>,
+            <span class="kw-2">&amp;</span><span class="ident">proof</span>.<span class="ident">perm_check_proof</span>.<span class="ident">prod_x_comm</span>,
             <span class="kw-2">&amp;</span>[<span class="kw-2">&amp;</span>[<span class="ident">E::Fr::zero</span>()], <span class="ident">perm_check_point</span>.<span class="ident">as_slice</span>()].<span class="ident">concat</span>(),
             <span class="kw-2">&amp;</span><span class="ident">proof</span>.<span class="ident">prod_evals</span>[<span class="number">2</span>],
             <span class="kw-2">&amp;</span><span class="ident">proof</span>.<span class="ident">prod_openings</span>[<span class="number">2</span>],
@@ -1891,7 +1845,7 @@
         <span class="comment">// prod(x, 1)</span>
         <span class="kw">if</span> <span class="op">!</span><span class="ident">PCS::verify</span>(
             <span class="kw-2">&amp;</span><span class="ident">vk</span>.<span class="ident">pcs_param</span>,
-            <span class="kw-2">&amp;</span><span class="ident">proof</span>.<span class="ident">prod_commit</span>,
+            <span class="kw-2">&amp;</span><span class="ident">proof</span>.<span class="ident">perm_check_proof</span>.<span class="ident">prod_x_comm</span>,
             <span class="kw-2">&amp;</span>[<span class="kw-2">&amp;</span>[<span class="ident">E::Fr::one</span>()], <span class="ident">perm_check_point</span>.<span class="ident">as_slice</span>()].<span class="ident">concat</span>(),
             <span class="kw-2">&amp;</span><span class="ident">proof</span>.<span class="ident">prod_evals</span>[<span class="number">3</span>],
             <span class="kw-2">&amp;</span><span class="ident">proof</span>.<span class="ident">prod_openings</span>[<span class="number">3</span>],
@@ -1972,7 +1926,7 @@
     <span class="kw">use</span> <span class="ident">ark_bls12_381::Bls12_381</span>;
     <span class="kw">use</span> <span class="ident">ark_std::test_rng</span>;
     <span class="kw">use</span> <span class="ident">pcs::prelude::KZGMultilinearPCS</span>;
-    <span class="kw">use</span> <span class="ident">poly_iop::random_permutation_mle</span>;
+    <span class="kw">use</span> <span class="ident">poly_iop::prelude::random_permutation_mle</span>;
 
     <span class="attribute">#[<span class="ident">test</span>]</span>
     <span class="kw">fn</span> <span class="ident">test_hyperplonk_e2e</span>() -&gt; <span class="prelude-ty">Result</span><span class="op">&lt;</span>(), <span class="ident">HyperPlonkErrors</span><span class="op">&gt;</span> {

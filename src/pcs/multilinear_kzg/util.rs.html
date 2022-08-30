@@ -787,7 +787,7 @@
 <span class="doccomment">/// polynomials do not share a same number of nvs.</span>
 <span class="kw">pub</span> <span class="kw">fn</span> <span class="ident">merge_polynomials</span><span class="op">&lt;</span><span class="ident">F</span>: <span class="ident">PrimeField</span><span class="op">&gt;</span>(
     <span class="ident">polynomials</span>: <span class="kw-2">&amp;</span>[<span class="ident">Rc</span><span class="op">&lt;</span><span class="ident">DenseMultilinearExtension</span><span class="op">&lt;</span><span class="ident">F</span><span class="op">&gt;</span><span class="op">&gt;</span>],
-) -&gt; <span class="prelude-ty">Result</span><span class="op">&lt;</span><span class="ident">DenseMultilinearExtension</span><span class="op">&lt;</span><span class="ident">F</span><span class="op">&gt;</span>, <span class="ident">PCSErrors</span><span class="op">&gt;</span> {
+) -&gt; <span class="prelude-ty">Result</span><span class="op">&lt;</span><span class="ident">Rc</span><span class="op">&lt;</span><span class="ident">DenseMultilinearExtension</span><span class="op">&lt;</span><span class="ident">F</span><span class="op">&gt;</span><span class="op">&gt;</span>, <span class="ident">PCSErrors</span><span class="op">&gt;</span> {
     <span class="kw">let</span> <span class="ident">nv</span> <span class="op">=</span> <span class="ident">polynomials</span>[<span class="number">0</span>].<span class="ident">num_vars</span>();
     <span class="kw">for</span> <span class="ident">poly</span> <span class="kw">in</span> <span class="ident">polynomials</span>.<span class="ident">iter</span>() {
         <span class="kw">if</span> <span class="ident">nv</span> <span class="op">!</span><span class="op">=</span> <span class="ident">poly</span>.<span class="ident">num_vars</span>() {
@@ -803,9 +803,9 @@
         <span class="ident">scalars</span>.<span class="ident">extend_from_slice</span>(<span class="ident">poly</span>.<span class="ident">to_evaluations</span>().<span class="ident">as_slice</span>());
     }
     <span class="ident">scalars</span>.<span class="ident">extend_from_slice</span>(<span class="macro">vec!</span>[<span class="ident">F::zero</span>(); (<span class="number">1</span> <span class="op">&lt;</span><span class="op">&lt;</span> <span class="ident">merged_nv</span>) <span class="op">-</span> <span class="ident">scalars</span>.<span class="ident">len</span>()].<span class="ident">as_ref</span>());
-    <span class="prelude-val">Ok</span>(<span class="ident">DenseMultilinearExtension::from_evaluations_vec</span>(
+    <span class="prelude-val">Ok</span>(<span class="ident">Rc::new</span>(<span class="ident">DenseMultilinearExtension::from_evaluations_vec</span>(
         <span class="ident">merged_nv</span>, <span class="ident">scalars</span>,
-    ))
+    )))
 }
 
 <span class="doccomment">/// Given a list of points, build `l(points)` which is a list of univariate</span>
@@ -1017,7 +1017,7 @@
                 <span class="ident">F::from</span>(<span class="number">1u64</span>),
                 <span class="ident">F::from</span>(<span class="number">2u64</span>),
             ];
-            <span class="kw">let</span> <span class="ident">w_rec</span> <span class="op">=</span> <span class="ident">DenseMultilinearExtension::from_evaluations_vec</span>(<span class="number">3</span>, <span class="ident">w_eval</span>);
+            <span class="kw">let</span> <span class="ident">w_rec</span> <span class="op">=</span> <span class="ident">Rc::new</span>(<span class="ident">DenseMultilinearExtension::from_evaluations_vec</span>(<span class="number">3</span>, <span class="ident">w_eval</span>));
 
             <span class="macro">assert_eq!</span>(<span class="ident">w</span>, <span class="ident">w_rec</span>);
         }
@@ -1067,7 +1067,7 @@
                 <span class="ident">F::zero</span>(),
                 <span class="ident">F::zero</span>(),
             ];
-            <span class="kw">let</span> <span class="ident">w_rec</span> <span class="op">=</span> <span class="ident">DenseMultilinearExtension::from_evaluations_vec</span>(<span class="number">4</span>, <span class="ident">w_eval</span>);
+            <span class="kw">let</span> <span class="ident">w_rec</span> <span class="op">=</span> <span class="ident">Rc::new</span>(<span class="ident">DenseMultilinearExtension::from_evaluations_vec</span>(<span class="number">4</span>, <span class="ident">w_eval</span>));
 
             <span class="macro">assert_eq!</span>(<span class="ident">w</span>, <span class="ident">w_rec</span>);
         }

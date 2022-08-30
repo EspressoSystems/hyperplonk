@@ -232,7 +232,11 @@
 <span id="226">226</span>
 <span id="227">227</span>
 <span id="228">228</span>
+<span id="229">229</span>
+<span id="230">230</span>
 </pre><pre class="rust"><code><span class="doccomment">//! Main module for the ZeroCheck protocol.</span>
+
+<span class="kw">use</span> <span class="ident">std::fmt::Debug</span>;
 
 <span class="kw">use</span> <span class="kw">crate</span>::{<span class="ident">errors::PolyIOPErrors</span>, <span class="ident">sum_check::SumCheck</span>, <span class="ident">PolyIOP</span>};
 <span class="kw">use</span> <span class="ident">arithmetic::build_eq_x_r</span>;
@@ -256,8 +260,8 @@
 
 <span class="doccomment">/// A ZeroCheck is derived from SumCheck.</span>
 <span class="kw">pub</span> <span class="kw">trait</span> <span class="ident">ZeroCheck</span><span class="op">&lt;</span><span class="ident">F</span>: <span class="ident">PrimeField</span><span class="op">&gt;</span>: <span class="ident">SumCheck</span><span class="op">&lt;</span><span class="ident">F</span><span class="op">&gt;</span> {
-    <span class="kw">type</span> <span class="ident">ZeroCheckSubClaim</span>;
-    <span class="kw">type</span> <span class="ident">ZeroCheckProof</span>;
+    <span class="kw">type</span> <span class="ident">ZeroCheckSubClaim</span>: <span class="ident">Clone</span> <span class="op">+</span> <span class="ident">Debug</span> <span class="op">+</span> <span class="ident">Default</span> <span class="op">+</span> <span class="ident">PartialEq</span>;
+    <span class="kw">type</span> <span class="ident">ZeroCheckProof</span>: <span class="ident">Clone</span> <span class="op">+</span> <span class="ident">Debug</span> <span class="op">+</span> <span class="ident">Default</span> <span class="op">+</span> <span class="ident">PartialEq</span>;
 
     <span class="doccomment">/// Initialize the system with a transcript</span>
     <span class="doccomment">///</span>

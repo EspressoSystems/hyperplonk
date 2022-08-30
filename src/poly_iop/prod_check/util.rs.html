@@ -196,9 +196,20 @@
 <span id="190">190</span>
 <span id="191">191</span>
 <span id="192">192</span>
+<span id="193">193</span>
+<span id="194">194</span>
+<span id="195">195</span>
+<span id="196">196</span>
+<span id="197">197</span>
+<span id="198">198</span>
+<span id="199">199</span>
+<span id="200">200</span>
+<span id="201">201</span>
 </pre><pre class="rust"><code><span class="doccomment">//! This module implements useful functions for the product check protocol.</span>
 
-<span class="kw">use</span> <span class="kw">crate</span>::{<span class="ident">errors::PolyIOPErrors</span>, <span class="ident">structs::IOPProof</span>, <span class="ident">utils::get_index</span>, <span class="ident">PolyIOP</span>, <span class="ident">ZeroCheck</span>};
+<span class="kw">use</span> <span class="kw">crate</span>::{
+    <span class="ident">errors::PolyIOPErrors</span>, <span class="ident">structs::IOPProof</span>, <span class="ident">utils::get_index</span>, <span class="ident">zero_check::ZeroCheck</span>, <span class="ident">PolyIOP</span>,
+};
 <span class="kw">use</span> <span class="ident">arithmetic::VirtualPolynomial</span>;
 <span class="kw">use</span> <span class="ident">ark_ff::PrimeField</span>;
 <span class="kw">use</span> <span class="ident">ark_poly::DenseMultilinearExtension</span>;
@@ -217,9 +228,9 @@
 <span class="doccomment">/// The caller needs to check num_vars matches in f and g</span>
 <span class="doccomment">/// Cost: linear in N.</span>
 <span class="kw">pub</span>(<span class="kw">super</span>) <span class="kw">fn</span> <span class="ident">compute_product_poly</span><span class="op">&lt;</span><span class="ident">F</span>: <span class="ident">PrimeField</span><span class="op">&gt;</span>(
-    <span class="ident">fx</span>: <span class="kw-2">&amp;</span><span class="ident">DenseMultilinearExtension</span><span class="op">&lt;</span><span class="ident">F</span><span class="op">&gt;</span>,
-    <span class="ident">gx</span>: <span class="kw-2">&amp;</span><span class="ident">DenseMultilinearExtension</span><span class="op">&lt;</span><span class="ident">F</span><span class="op">&gt;</span>,
-) -&gt; <span class="prelude-ty">Result</span><span class="op">&lt;</span><span class="ident">DenseMultilinearExtension</span><span class="op">&lt;</span><span class="ident">F</span><span class="op">&gt;</span>, <span class="ident">PolyIOPErrors</span><span class="op">&gt;</span> {
+    <span class="ident">fx</span>: <span class="kw-2">&amp;</span><span class="ident">Rc</span><span class="op">&lt;</span><span class="ident">DenseMultilinearExtension</span><span class="op">&lt;</span><span class="ident">F</span><span class="op">&gt;</span><span class="op">&gt;</span>,
+    <span class="ident">gx</span>: <span class="kw-2">&amp;</span><span class="ident">Rc</span><span class="op">&lt;</span><span class="ident">DenseMultilinearExtension</span><span class="op">&lt;</span><span class="ident">F</span><span class="op">&gt;</span><span class="op">&gt;</span>,
+) -&gt; <span class="prelude-ty">Result</span><span class="op">&lt;</span><span class="ident">Rc</span><span class="op">&lt;</span><span class="ident">DenseMultilinearExtension</span><span class="op">&lt;</span><span class="ident">F</span><span class="op">&gt;</span><span class="op">&gt;</span>, <span class="ident">PolyIOPErrors</span><span class="op">&gt;</span> {
     <span class="kw">let</span> <span class="ident">start</span> <span class="op">=</span> <span class="macro">start_timer!</span>(<span class="op">|</span><span class="op">|</span> <span class="string">&quot;compute evaluations of prod polynomial&quot;</span>);
     <span class="kw">let</span> <span class="ident">num_vars</span> <span class="op">=</span> <span class="ident">fx</span>.<span class="ident">num_vars</span>;
 
@@ -267,7 +278,10 @@
     <span class="comment">// prod(x)&#39;s evaluation is indeed `e := [eval_0x[..], eval_1x[..]].concat()`</span>
     <span class="kw">let</span> <span class="ident">eval</span> <span class="op">=</span> [<span class="ident">prod_0x_eval</span>.<span class="ident">as_slice</span>(), <span class="ident">prod_1x_eval</span>.<span class="ident">as_slice</span>()].<span class="ident">concat</span>();
 
-    <span class="kw">let</span> <span class="ident">prod_x</span> <span class="op">=</span> <span class="ident">DenseMultilinearExtension::from_evaluations_vec</span>(<span class="ident">num_vars</span> <span class="op">+</span> <span class="number">1</span>, <span class="ident">eval</span>);
+    <span class="kw">let</span> <span class="ident">prod_x</span> <span class="op">=</span> <span class="ident">Rc::new</span>(<span class="ident">DenseMultilinearExtension::from_evaluations_vec</span>(
+        <span class="ident">num_vars</span> <span class="op">+</span> <span class="number">1</span>,
+        <span class="ident">eval</span>,
+    ));
 
     <span class="macro">end_timer!</span>(<span class="ident">start</span>);
     <span class="prelude-val">Ok</span>(<span class="ident">prod_x</span>)
@@ -280,21 +294,19 @@
 <span class="doccomment">///</span>
 <span class="doccomment">/// Cost: O(N)</span>
 <span class="kw">pub</span>(<span class="kw">super</span>) <span class="kw">fn</span> <span class="ident">prove_zero_check</span><span class="op">&lt;</span><span class="ident">F</span>: <span class="ident">PrimeField</span><span class="op">&gt;</span>(
-    <span class="ident">fx</span>: <span class="kw-2">&amp;</span><span class="ident">DenseMultilinearExtension</span><span class="op">&lt;</span><span class="ident">F</span><span class="op">&gt;</span>,
-    <span class="ident">gx</span>: <span class="kw-2">&amp;</span><span class="ident">DenseMultilinearExtension</span><span class="op">&lt;</span><span class="ident">F</span><span class="op">&gt;</span>,
-    <span class="ident">prod_x</span>: <span class="kw-2">&amp;</span><span class="ident">DenseMultilinearExtension</span><span class="op">&lt;</span><span class="ident">F</span><span class="op">&gt;</span>,
+    <span class="ident">fx</span>: <span class="kw-2">&amp;</span><span class="ident">Rc</span><span class="op">&lt;</span><span class="ident">DenseMultilinearExtension</span><span class="op">&lt;</span><span class="ident">F</span><span class="op">&gt;</span><span class="op">&gt;</span>,
+    <span class="ident">gx</span>: <span class="kw-2">&amp;</span><span class="ident">Rc</span><span class="op">&lt;</span><span class="ident">DenseMultilinearExtension</span><span class="op">&lt;</span><span class="ident">F</span><span class="op">&gt;</span><span class="op">&gt;</span>,
+    <span class="ident">prod_x</span>: <span class="kw-2">&amp;</span><span class="ident">Rc</span><span class="op">&lt;</span><span class="ident">DenseMultilinearExtension</span><span class="op">&lt;</span><span class="ident">F</span><span class="op">&gt;</span><span class="op">&gt;</span>,
     <span class="ident">alpha</span>: <span class="kw-2">&amp;</span><span class="ident">F</span>,
     <span class="ident">transcript</span>: <span class="kw-2">&amp;mut</span> <span class="ident">IOPTranscript</span><span class="op">&lt;</span><span class="ident">F</span><span class="op">&gt;</span>,
 ) -&gt; <span class="prelude-ty">Result</span><span class="op">&lt;</span>(<span class="ident">IOPProof</span><span class="op">&lt;</span><span class="ident">F</span><span class="op">&gt;</span>, <span class="ident">VirtualPolynomial</span><span class="op">&lt;</span><span class="ident">F</span><span class="op">&gt;</span>), <span class="ident">PolyIOPErrors</span><span class="op">&gt;</span> {
     <span class="kw">let</span> <span class="ident">start</span> <span class="op">=</span> <span class="macro">start_timer!</span>(<span class="op">|</span><span class="op">|</span> <span class="string">&quot;zerocheck in product check&quot;</span>);
 
     <span class="kw">let</span> <span class="ident">prod_partial_evals</span> <span class="op">=</span> <span class="ident">build_prod_partial_eval</span>(<span class="ident">prod_x</span>)<span class="question-mark">?</span>;
-    <span class="kw">let</span> <span class="ident">prod_0x</span> <span class="op">=</span> <span class="ident">Rc::new</span>(<span class="ident">prod_partial_evals</span>[<span class="number">0</span>].<span class="ident">clone</span>());
-    <span class="kw">let</span> <span class="ident">prod_1x</span> <span class="op">=</span> <span class="ident">Rc::new</span>(<span class="ident">prod_partial_evals</span>[<span class="number">1</span>].<span class="ident">clone</span>());
-    <span class="kw">let</span> <span class="ident">prod_x0</span> <span class="op">=</span> <span class="ident">Rc::new</span>(<span class="ident">prod_partial_evals</span>[<span class="number">2</span>].<span class="ident">clone</span>());
-    <span class="kw">let</span> <span class="ident">prod_x1</span> <span class="op">=</span> <span class="ident">Rc::new</span>(<span class="ident">prod_partial_evals</span>[<span class="number">3</span>].<span class="ident">clone</span>());
-    <span class="kw">let</span> <span class="ident">fx</span> <span class="op">=</span> <span class="ident">Rc::new</span>(<span class="ident">fx</span>.<span class="ident">clone</span>());
-    <span class="kw">let</span> <span class="ident">gx</span> <span class="op">=</span> <span class="ident">Rc::new</span>(<span class="ident">gx</span>.<span class="ident">clone</span>());
+    <span class="kw">let</span> <span class="ident">prod_0x</span> <span class="op">=</span> <span class="ident">prod_partial_evals</span>[<span class="number">0</span>].<span class="ident">clone</span>();
+    <span class="kw">let</span> <span class="ident">prod_1x</span> <span class="op">=</span> <span class="ident">prod_partial_evals</span>[<span class="number">1</span>].<span class="ident">clone</span>();
+    <span class="kw">let</span> <span class="ident">prod_x0</span> <span class="op">=</span> <span class="ident">prod_partial_evals</span>[<span class="number">2</span>].<span class="ident">clone</span>();
+    <span class="kw">let</span> <span class="ident">prod_x1</span> <span class="op">=</span> <span class="ident">prod_partial_evals</span>[<span class="number">3</span>].<span class="ident">clone</span>();
 
     <span class="comment">// compute g(x) * prod(0, x) * alpha</span>
     <span class="kw">let</span> <span class="kw-2">mut</span> <span class="ident">q_x</span> <span class="op">=</span> <span class="ident">VirtualPolynomial::new_from_mle</span>(<span class="ident">gx</span>, <span class="ident">F::one</span>());
@@ -302,7 +314,7 @@
 
     <span class="comment">//   g(x) * prod(0, x) * alpha</span>
     <span class="comment">// - f(x) * alpha</span>
-    <span class="ident">q_x</span>.<span class="ident">add_mle_list</span>([<span class="ident">fx</span>], <span class="op">-</span><span class="kw-2">*</span><span class="ident">alpha</span>)<span class="question-mark">?</span>;
+    <span class="ident">q_x</span>.<span class="ident">add_mle_list</span>([<span class="ident">fx</span>.<span class="ident">clone</span>()], <span class="op">-</span><span class="kw-2">*</span><span class="ident">alpha</span>)<span class="question-mark">?</span>;
 
     <span class="comment">// Q(x) := prod(1,x) - prod(x, 0) * prod(x, 1)</span>
     <span class="comment">//       + alpha * (</span>
@@ -328,21 +340,23 @@
 <span class="doccomment">/// - prod(x, 0)</span>
 <span class="doccomment">/// - prod(x, 1)</span>
 <span class="kw">fn</span> <span class="ident">build_prod_partial_eval</span><span class="op">&lt;</span><span class="ident">F</span>: <span class="ident">PrimeField</span><span class="op">&gt;</span>(
-    <span class="ident">prod_x</span>: <span class="kw-2">&amp;</span><span class="ident">DenseMultilinearExtension</span><span class="op">&lt;</span><span class="ident">F</span><span class="op">&gt;</span>,
-) -&gt; <span class="prelude-ty">Result</span><span class="op">&lt;</span>[<span class="ident">DenseMultilinearExtension</span><span class="op">&lt;</span><span class="ident">F</span><span class="op">&gt;</span>; <span class="number">4</span>], <span class="ident">PolyIOPErrors</span><span class="op">&gt;</span> {
+    <span class="ident">prod_x</span>: <span class="kw-2">&amp;</span><span class="ident">Rc</span><span class="op">&lt;</span><span class="ident">DenseMultilinearExtension</span><span class="op">&lt;</span><span class="ident">F</span><span class="op">&gt;</span><span class="op">&gt;</span>,
+) -&gt; <span class="prelude-ty">Result</span><span class="op">&lt;</span>[<span class="ident">Rc</span><span class="op">&lt;</span><span class="ident">DenseMultilinearExtension</span><span class="op">&lt;</span><span class="ident">F</span><span class="op">&gt;</span><span class="op">&gt;</span>; <span class="number">4</span>], <span class="ident">PolyIOPErrors</span><span class="op">&gt;</span> {
     <span class="kw">let</span> <span class="ident">start</span> <span class="op">=</span> <span class="macro">start_timer!</span>(<span class="op">|</span><span class="op">|</span> <span class="string">&quot;build partial prod polynomial&quot;</span>);
 
     <span class="kw">let</span> <span class="ident">prod_x_eval</span> <span class="op">=</span> <span class="kw-2">&amp;</span><span class="ident">prod_x</span>.<span class="ident">evaluations</span>;
     <span class="kw">let</span> <span class="ident">num_vars</span> <span class="op">=</span> <span class="ident">prod_x</span>.<span class="ident">num_vars</span> <span class="op">-</span> <span class="number">1</span>;
 
     <span class="comment">// prod(0, x)</span>
-    <span class="kw">let</span> <span class="ident">prod_0_x</span> <span class="op">=</span>
-        <span class="ident">DenseMultilinearExtension::from_evaluations_slice</span>(<span class="ident">num_vars</span>, <span class="kw-2">&amp;</span><span class="ident">prod_x_eval</span>[<span class="number">0</span>..<span class="number">1</span> <span class="op">&lt;</span><span class="op">&lt;</span> <span class="ident">num_vars</span>]);
+    <span class="kw">let</span> <span class="ident">prod_0_x</span> <span class="op">=</span> <span class="ident">Rc::new</span>(<span class="ident">DenseMultilinearExtension::from_evaluations_slice</span>(
+        <span class="ident">num_vars</span>,
+        <span class="kw-2">&amp;</span><span class="ident">prod_x_eval</span>[<span class="number">0</span>..<span class="number">1</span> <span class="op">&lt;</span><span class="op">&lt;</span> <span class="ident">num_vars</span>],
+    ));
     <span class="comment">// prod(1, x)</span>
-    <span class="kw">let</span> <span class="ident">prod_1_x</span> <span class="op">=</span> <span class="ident">DenseMultilinearExtension::from_evaluations_slice</span>(
+    <span class="kw">let</span> <span class="ident">prod_1_x</span> <span class="op">=</span> <span class="ident">Rc::new</span>(<span class="ident">DenseMultilinearExtension::from_evaluations_slice</span>(
         <span class="ident">num_vars</span>,
         <span class="kw-2">&amp;</span><span class="ident">prod_x_eval</span>[<span class="number">1</span> <span class="op">&lt;</span><span class="op">&lt;</span> <span class="ident">num_vars</span>..<span class="number">1</span> <span class="op">&lt;</span><span class="op">&lt;</span> (<span class="ident">num_vars</span> <span class="op">+</span> <span class="number">1</span>)],
-    );
+    ));
 
     <span class="comment">// ===================================</span>
     <span class="comment">// prod(x, 0) and prod(x, 1)</span>
@@ -360,8 +374,12 @@
             <span class="ident">eval_x1</span>.<span class="ident">push</span>(<span class="ident">prod_x</span>);
         }
     }
-    <span class="kw">let</span> <span class="ident">prod_x_0</span> <span class="op">=</span> <span class="ident">DenseMultilinearExtension::from_evaluations_vec</span>(<span class="ident">num_vars</span>, <span class="ident">eval_x0</span>);
-    <span class="kw">let</span> <span class="ident">prod_x_1</span> <span class="op">=</span> <span class="ident">DenseMultilinearExtension::from_evaluations_vec</span>(<span class="ident">num_vars</span>, <span class="ident">eval_x1</span>);
+    <span class="kw">let</span> <span class="ident">prod_x_0</span> <span class="op">=</span> <span class="ident">Rc::new</span>(<span class="ident">DenseMultilinearExtension::from_evaluations_vec</span>(
+        <span class="ident">num_vars</span>, <span class="ident">eval_x0</span>,
+    ));
+    <span class="kw">let</span> <span class="ident">prod_x_1</span> <span class="op">=</span> <span class="ident">Rc::new</span>(<span class="ident">DenseMultilinearExtension::from_evaluations_vec</span>(
+        <span class="ident">num_vars</span>, <span class="ident">eval_x1</span>,
+    ));
 
     <span class="macro">end_timer!</span>(<span class="ident">start</span>);
 

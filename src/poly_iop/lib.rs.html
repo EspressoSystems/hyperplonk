@@ -34,16 +34,6 @@
 <span id="28">28</span>
 <span id="29">29</span>
 <span id="30">30</span>
-<span id="31">31</span>
-<span id="32">32</span>
-<span id="33">33</span>
-<span id="34">34</span>
-<span id="35">35</span>
-<span id="36">36</span>
-<span id="37">37</span>
-<span id="38">38</span>
-<span id="39">39</span>
-<span id="40">40</span>
 </pre><pre class="rust"><code><span class="kw">use</span> <span class="ident">ark_ff::PrimeField</span>;
 <span class="kw">use</span> <span class="ident">std::marker::PhantomData</span>;
 
@@ -56,17 +46,7 @@
 <span class="kw">mod</span> <span class="ident">utils</span>;
 <span class="kw">mod</span> <span class="ident">zero_check</span>;
 
-<span class="kw">pub</span> <span class="kw">use</span> <span class="ident">errors::PolyIOPErrors</span>;
-<span class="kw">pub</span> <span class="kw">use</span> <span class="ident">perm_check</span>::{
-    <span class="ident">util</span>::{<span class="ident">identity_permutation_mle</span>, <span class="ident">random_permutation_mle</span>},
-    <span class="ident">PermutationCheck</span>,
-};
-<span class="kw">pub</span> <span class="kw">use</span> <span class="ident">prod_check::ProductCheck</span>;
-<span class="kw">pub</span> <span class="kw">use</span> <span class="ident">sum_check::SumCheck</span>;
-<span class="kw">pub</span> <span class="kw">use</span> <span class="ident">utils</span>::<span class="kw-2">*</span>;
-<span class="kw">pub</span> <span class="kw">use</span> <span class="ident">zero_check::ZeroCheck</span>;
-
-<span class="attribute">#[<span class="ident">derive</span>(<span class="ident">Clone</span>, <span class="ident">Debug</span>, <span class="ident">Default</span>, <span class="ident">Copy</span>)]</span>
+<span class="attribute">#[<span class="ident">derive</span>(<span class="ident">Clone</span>, <span class="ident">Debug</span>, <span class="ident">Default</span>, <span class="ident">Copy</span>, <span class="ident">PartialEq</span>, <span class="ident">Eq</span>)]</span>
 <span class="doccomment">/// Struct for PolyIOP protocol.</span>
 <span class="doccomment">/// It has an associated type `F` that defines the prime field the multi-variate</span>
 <span class="doccomment">/// polynomial operates on.</span>
