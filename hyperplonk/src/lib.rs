@@ -24,7 +24,7 @@ mod structs;
 mod utils;
 mod witness;
 
-/// A trait for HyperPlonk Poly-IOPs.
+/// A trait for HyperPlonk SNARKs.
 /// A HyperPlonk is derived from SumChecks, ZeroChecks and PermutationChecks.
 pub trait HyperPlonkSNARK<E, PCS>: PermutationCheck<E, PCS>
 where

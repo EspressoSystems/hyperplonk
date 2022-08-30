@@ -79,7 +79,7 @@ where
 ///   - binary log of the number of selectors
 ///   - binary log of the number of witness wires
 ///   - the customized gate function
-#[derive(Clone, Debug, Default, PartialEq)]
+#[derive(Clone, Debug, Default, PartialEq, Eq)]
 pub struct HyperPlonkParams {
     /// the number of variables in polys
     pub nv: usize,
