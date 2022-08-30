@@ -101,8 +101,8 @@ impl<F: PrimeField> VirtualPolynomial<F> {
     }
 
     /// Creates an new virtual polynomial from a MLE and its coefficient.
-    pub fn new_from_mle(mle: Rc<DenseMultilinearExtension<F>>, coefficient: F) -> Self {
-        let mle_ptr: *const DenseMultilinearExtension<F> = Rc::as_ptr(&mle);
+    pub fn new_from_mle(mle: &Rc<DenseMultilinearExtension<F>>, coefficient: F) -> Self {
+        let mle_ptr: *const DenseMultilinearExtension<F> = Rc::as_ptr(mle);
         let mut hm = HashMap::new();
         hm.insert(mle_ptr, 0);
 
@@ -115,7 +115,7 @@ impl<F: PrimeField> VirtualPolynomial<F> {
             },
             // here `0` points to the first polynomial of `flattened_ml_extensions`
             products: vec![(coefficient, vec![0])],
-            flattened_ml_extensions: vec![mle],
+            flattened_ml_extensions: vec![mle.clone()],
             raw_pointers_lookup_table: hm,
         }
     }
@@ -475,7 +475,7 @@ mod test {
                 let (b, _b_sum) = random_mle_list(nv, 1, &mut rng);
                 let b_mle = b[0].clone();
                 let coeff = Fr::rand(&mut rng);
-                let b_vp = VirtualPolynomial::new_from_mle(b_mle.clone(), coeff);
+                let b_vp = VirtualPolynomial::new_from_mle(&b_mle, coeff);
 
                 let mut c = a.clone();
 

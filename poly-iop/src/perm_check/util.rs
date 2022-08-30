@@ -1,9 +1,10 @@
 //! This module implements useful functions for the permutation check protocol.
 
-use crate::PolyIOPErrors;
+use crate::errors::PolyIOPErrors;
 use ark_ff::PrimeField;
 use ark_poly::DenseMultilinearExtension;
 use ark_std::{end_timer, rand::RngCore, start_timer};
+use std::rc::Rc;
 
 /// Returns the evaluations of three MLEs:
 /// - prod(0,x)
@@ -25,8 +26,7 @@ use ark_std::{end_timer, rand::RngCore, start_timer};
 ///
 /// The caller needs to check num_vars matches in f/g/s_id/s_perm
 /// Cost: linear in N.
-///
-/// TODO: replace `s_perm` with the merged poly `s`.
+#[cfg(test)]
 #[allow(clippy::type_complexity)]
 pub(super) fn compute_prod_0<F: PrimeField>(
     beta: &F,
@@ -60,17 +60,74 @@ pub(super) fn compute_prod_0<F: PrimeField>(
     Ok((prod_0x_evals, numerator_evals, denominator_evals))
 }
 
+/// Returns the evaluations of two MLEs:
+/// - numerator
+/// - denominator
+///
+///  where
+///  - beta and gamma are challenges
+///  - f(x), g(x), s_id(x), s_perm(x) are mle-s
+///
+/// - numerator is the MLE for `f(x) + \beta s_id(x) + \gamma`
+/// - denominator is the MLE for `g(x) + \beta s_perm(x) + \gamma`
+#[allow(clippy::type_complexity)]
+pub(super) fn computer_num_and_denom<F: PrimeField>(
+    beta: &F,
+    gamma: &F,
+    fx: &DenseMultilinearExtension<F>,
+    gx: &DenseMultilinearExtension<F>,
+    s_perm: &DenseMultilinearExtension<F>,
+) -> Result<
+    (
+        Rc<DenseMultilinearExtension<F>>,
+        Rc<DenseMultilinearExtension<F>>,
+    ),
+    PolyIOPErrors,
+> {
+    let start = start_timer!(|| "compute numerator and denominator");
+
+    let num_vars = fx.num_vars;
+    let mut numerator_evals = vec![];
+    let mut denominator_evals = vec![];
+    let s_id = identity_permutation_mle::<F>(num_vars);
+
+    for (&fi, (&gi, (&s_id_i, &s_perm_i))) in
+        fx.iter().zip(gx.iter().zip(s_id.iter().zip(s_perm.iter())))
+    {
+        let numerator = fi + *beta * s_id_i + gamma;
+        let denominator = gi + *beta * s_perm_i + gamma;
+
+        numerator_evals.push(numerator);
+        denominator_evals.push(denominator);
+    }
+    let numerator = Rc::new(DenseMultilinearExtension::from_evaluations_vec(
+        num_vars,
+        numerator_evals,
+    ));
+    let denominator = Rc::new(DenseMultilinearExtension::from_evaluations_vec(
+        num_vars,
+        denominator_evals,
+    ));
+
+    end_timer!(start);
+    Ok((numerator, denominator))
+}
+
 /// An MLE that represent an identity permutation: `f(index) \mapto index`
-pub fn identity_permutation_mle<F: PrimeField>(num_vars: usize) -> DenseMultilinearExtension<F> {
+pub fn identity_permutation_mle<F: PrimeField>(
+    num_vars: usize,
+) -> Rc<DenseMultilinearExtension<F>> {
     let s_id_vec = (0..1u64 << num_vars).map(F::from).collect();
-    DenseMultilinearExtension::from_evaluations_vec(num_vars, s_id_vec)
+    Rc::new(DenseMultilinearExtension::from_evaluations_vec(
+        num_vars, s_id_vec,
+    ))
 }
 
 /// An MLE that represent a random permutation
 pub fn random_permutation_mle<F: PrimeField, R: RngCore>(
     num_vars: usize,
     rng: &mut R,
-) -> DenseMultilinearExtension<F> {
+) -> Rc<DenseMultilinearExtension<F>> {
     let len = 1u64 << num_vars;
     let mut s_id_vec: Vec<F> = (0..len).map(F::from).collect();
     let mut s_perm_vec = vec![];
@@ -78,7 +135,9 @@ pub fn random_permutation_mle<F: PrimeField, R: RngCore>(
         let index = rng.next_u64() as usize % s_id_vec.len();
         s_perm_vec.push(s_id_vec.remove(index));
     }
-    DenseMultilinearExtension::from_evaluations_vec(num_vars, s_perm_vec)
+    Rc::new(DenseMultilinearExtension::from_evaluations_vec(
+        num_vars, s_perm_vec,
+    ))
 }
 
 /// Helper function of the IOP.
@@ -91,22 +150,25 @@ pub fn random_permutation_mle<F: PrimeField, R: RngCore>(
 /// - prod(1, x)
 /// - prod(x, 0)
 /// - prod(x, 1)
+#[cfg(test)]
 pub(super) fn build_prod_partial_eval<F: PrimeField>(
-    prod_x: &DenseMultilinearExtension<F>,
-) -> Result<[DenseMultilinearExtension<F>; 4], PolyIOPErrors> {
+    prod_x: &Rc<DenseMultilinearExtension<F>>,
+) -> Result<[Rc<DenseMultilinearExtension<F>>; 4], PolyIOPErrors> {
     let start = start_timer!(|| "build prod polynomial");
 
     let prod_x_eval = &prod_x.evaluations;
     let num_vars = prod_x.num_vars - 1;
 
     // prod(0, x)
-    let prod_0_x =
-        DenseMultilinearExtension::from_evaluations_slice(num_vars, &prod_x_eval[0..1 << num_vars]);
+    let prod_0_x = Rc::new(DenseMultilinearExtension::from_evaluations_slice(
+        num_vars,
+        &prod_x_eval[0..1 << num_vars],
+    ));
     // prod(1, x)
-    let prod_1_x = DenseMultilinearExtension::from_evaluations_slice(
+    let prod_1_x = Rc::new(DenseMultilinearExtension::from_evaluations_slice(
         num_vars,
         &prod_x_eval[1 << num_vars..1 << (num_vars + 1)],
-    );
+    ));
 
     // ===================================
     // prod(x, 0) and prod(x, 1)
@@ -124,8 +186,12 @@ pub(super) fn build_prod_partial_eval<F: PrimeField>(
             eval_x1.push(prod_x);
         }
     }
-    let prod_x_0 = DenseMultilinearExtension::from_evaluations_vec(num_vars, eval_x0);
-    let prod_x_1 = DenseMultilinearExtension::from_evaluations_vec(num_vars, eval_x1);
+    let prod_x_0 = Rc::new(DenseMultilinearExtension::from_evaluations_vec(
+        num_vars, eval_x0,
+    ));
+    let prod_x_1 = Rc::new(DenseMultilinearExtension::from_evaluations_vec(
+        num_vars, eval_x1,
+    ));
 
     end_timer!(start);
 
