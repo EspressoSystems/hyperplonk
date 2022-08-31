@@ -4,7 +4,8 @@ use ark_poly::{DenseMultilinearExtension, MultilinearExtension};
 use ark_std::test_rng;
 use pcs::{prelude::KZGMultilinearPCS, PolynomialCommitmentScheme};
 use poly_iop::prelude::{
-    identity_permutation_mle, PermutationCheck, PolyIOP, PolyIOPErrors, SumCheck, ZeroCheck,
+    identity_permutation_mle, PermutationCheck, PolyIOP, PolyIOPErrors, ProductCheck, SumCheck,
+    ZeroCheck,
 };
 use std::{marker::PhantomData, rc::Rc, time::Instant};
 
@@ -14,6 +15,8 @@ fn main() -> Result<(), PolyIOPErrors> {
     bench_permutation_check()?;
     println!("\n\n");
     bench_sum_check()?;
+    println!("\n\n");
+    bench_prod_check()?;
     println!("\n\n");
     bench_zero_check()
 }
@@ -113,11 +116,10 @@ fn bench_zero_check() -> Result<(), PolyIOPErrors> {
                 let start = Instant::now();
                 let mut transcript = <PolyIOP<Fr> as ZeroCheck<Fr>>::init_transcript();
                 transcript.append_message(b"testing", b"initializing transcript for testing")?;
-                let subclaim =
-                    <PolyIOP<Fr> as ZeroCheck<Fr>>::verify(&proof, &poly_info, &mut transcript)?
-                        .sum_check_sub_claim;
+                let zero_subclaim =
+                    <PolyIOP<Fr> as ZeroCheck<Fr>>::verify(&proof, &poly_info, &mut transcript)?;
                 assert!(
-                    poly.evaluate(&subclaim.point)? == subclaim.expected_evaluation,
+                    poly.evaluate(&zero_subclaim.point)? == zero_subclaim.expected_evaluation,
                     "wrong subclaim"
                 );
                 println!(
@@ -194,6 +196,75 @@ fn bench_permutation_check() -> Result<(), PolyIOPErrors> {
             )?;
             println!(
                 "permutation check verification time for {} variables: {} ns",
+                nv,
+                start.elapsed().as_nanos() / repetition as u128
+            );
+        }
+
+        println!("====================================");
+    }
+
+    Ok(())
+}
+
+fn bench_prod_check() -> Result<(), PolyIOPErrors> {
+    let mut rng = test_rng();
+
+    for nv in 4..20 {
+        let srs = KZG::gen_srs_for_testing(&mut rng, nv + 1)?;
+        let (pcs_param, _) = KZG::trim(&srs, nv + 1, Some(nv + 1))?;
+
+        let repetition = if nv < 10 {
+            100
+        } else if nv < 20 {
+            50
+        } else {
+            10
+        };
+
+        let f: DenseMultilinearExtension<Fr> = DenseMultilinearExtension::rand(nv, &mut rng);
+        let mut g = f.clone();
+        g.evaluations.reverse();
+        let f = Rc::new(f);
+        let g = Rc::new(g);
+
+        let proof = {
+            let start = Instant::now();
+            let mut transcript = <PolyIOP<Fr> as ProductCheck<Bls12_381, KZG>>::init_transcript();
+            transcript.append_message(b"testing", b"initializing transcript for testing")?;
+
+            let (proof, _prod_x) = <PolyIOP<Fr> as ProductCheck<Bls12_381, KZG>>::prove(
+                &pcs_param,
+                &f,
+                &g,
+                &mut transcript,
+            )?;
+
+            println!(
+                "product check proving time for {} variables: {} ns",
+                nv,
+                start.elapsed().as_nanos() / repetition as u128
+            );
+            proof
+        };
+
+        {
+            let poly_info = VPAuxInfo {
+                max_degree: 2,
+                num_variables: nv,
+                phantom: PhantomData::default(),
+            };
+
+            let start = Instant::now();
+            let mut transcript = <PolyIOP<Fr> as ProductCheck<Bls12_381, KZG>>::init_transcript();
+            transcript.append_message(b"testing", b"initializing transcript for testing")?;
+            let _perm_check_sum_claim = <PolyIOP<Fr> as ProductCheck<Bls12_381, KZG>>::verify(
+                &proof,
+                &poly_info,
+                &mut transcript,
+            )?;
+            println!(
+                "product check verification time for {} variables: {} ns",
                 nv,
                 start.elapsed().as_nanos() / repetition as u128
             );
