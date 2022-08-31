@@ -14,7 +14,7 @@ use transcript::IOPTranscript;
 ///     SumCheck
 ///   - the random vector `v` to be evaluated
 ///   - the claimed evaluation of `f(v)`
-#[derive(Clone, Debug, Default, PartialEq)]
+#[derive(Clone, Debug, Default, PartialEq, Eq)]
 pub struct ZeroCheckSubClaim<F: PrimeField> {
     // the evaluation point
     pub point: Vec<F>,
