@@ -27,7 +27,10 @@ where
 
 pub mod util;
 
-/// A PermutationCheck is derived from ZeroCheck.
+/// A PermutationCheck w.r.t. `(f, g, perm)`
+/// proves that g is a permutation of f under
+/// permutation `perm`
+/// It is derived from ProductCheck.
 ///
 /// A Permutation Check IOP takes the following steps:
 ///
@@ -58,7 +61,7 @@ where
     /// Outputs:
     /// - a permutation check proof proving that g is a permutation of f under
     ///   s_perm
-    /// - the Q(x) polynomial build during product check
+    /// - the product polynomial build during product check
     ///
     /// Cost: O(N)
     fn prove(
@@ -78,53 +81,18 @@ where
     ) -> Result<Self::PermutationCheckSubClaim, PolyIOPErrors>;
 }
 
-/// A PermutationCheck is derived from ZeroCheck.
-///
-/// A Permutation Check IOP takes the following steps:
-///
-/// Inputs:
-/// - f(x)
-/// - g(x)
-/// - permutation s_perm(x)
-///
-/// Steps:
-/// 1. `generate_challenge` from current transcript (generate beta, gamma)
-/// 2. `compute_product` to build `prod(x)` etc. from f, g and s_perm
-/// 3. push a commitment of `prod(x)` to the transcript (done by the snark
-/// caller)
-/// 4. `update_challenge` with the updated transcript (generate alpha)
-/// 5. `prove` to generate the proof
 impl<E, PCS> PermutationCheck<E, PCS> for PolyIOP<E::Fr>
 where
     E: PairingEngine,
     PCS: PolynomialCommitmentScheme<E, Polynomial = Rc<DenseMultilinearExtension<E::Fr>>>,
 {
-    /// A Permutation SubClaim is indeed a ZeroCheck SubClaim that consists of
-    /// - the SubClaim from the SumCheck
-    /// - the initial challenge r which is used to build eq(x, r)
     type PermutationCheckSubClaim = PermutationCheckSubClaim<E, PCS, Self>;
     type PermutationProof = Self::ProductCheckProof;
 
-    /// Initialize the system with a transcript
-    ///
-    /// This function is optional -- in the case where a PermutationCheck is
-    /// an building block for a more complex protocol, the transcript
-    /// may be initialized by this complex protocol, and passed to the
-    /// PermutationCheck prover/verifier.
     fn init_transcript() -> Self::Transcript {
         IOPTranscript::<E::Fr>::new(b"Initializing PermutationCheck transcript")
     }
 
-    /// Inputs:
-    /// - f(x)
-    /// - g(x)
-    /// - permutation s_perm(x)
-    /// Outputs:
-    /// - a permutation check proof proving that g is a permutation of f under
-    ///   s_perm
-    /// - the Q(x) polynomial build during product check
-    ///
-    /// Cost: O(N)
     fn prove(
         pcs_param: &PCS::ProverParam,
         fx: &Self::MultilinearExtension,
@@ -151,11 +119,11 @@ where
         let (numerator, denominator) = computer_num_and_denom(&beta, &gamma, fx, gx, s_perm)?;
 
         // invoke product check on numerator and denominator
-        let (proof, poly) =
+        let (proof, prod_poly) =
             <Self as ProductCheck<E, PCS>>::prove(pcs_param, &numerator, &denominator, transcript)?;
 
         end_timer!(start);
-        Ok((proof, poly))
+        Ok((proof, prod_poly))
     }
 
     /// Verify that an MLE g(x) is a permutation of an
@@ -184,18 +152,15 @@ where
 
 #[cfg(test)]
 mod test {
-    use super::{util::build_prod_partial_eval, PermutationCheck};
+    use super::PermutationCheck;
     use crate::{
         errors::PolyIOPErrors,
-        perm_check::util::computer_num_and_denom,
         prelude::{identity_permutation_mle, random_permutation_mle},
-        utils::bit_decompose,
         PolyIOP,
     };
-    use arithmetic::{VPAuxInfo, VirtualPolynomial};
+    use arithmetic::VPAuxInfo;
     use ark_bls12_381::Bls12_381;
     use ark_ec::PairingEngine;
-    use ark_ff::{One, Zero};
     use ark_poly::{DenseMultilinearExtension, MultilinearExtension};
     use ark_std::test_rng;
     use pcs::{prelude::KZGMultilinearPCS, PolynomialCommitmentScheme};
@@ -223,7 +188,7 @@ mod test {
         // prover
         let mut transcript = <PolyIOP<E::Fr> as PermutationCheck<E, PCS>>::init_transcript();
         transcript.append_message(b"testing", b"initializing transcript for testing")?;
-        let (proof, q_x) = <PolyIOP<E::Fr> as PermutationCheck<E, PCS>>::prove(
+        let (proof, prod_x) = <PolyIOP<E::Fr> as PermutationCheck<E, PCS>>::prove(
             pcs_param,
             fx,
             gx,
@@ -234,76 +199,21 @@ mod test {
         // verifier
         let mut transcript = <PolyIOP<E::Fr> as PermutationCheck<E, PCS>>::init_transcript();
         transcript.append_message(b"testing", b"initializing transcript for testing")?;
-        let perm_check_sum_claim = <PolyIOP<E::Fr> as PermutationCheck<E, PCS>>::verify(
+        let perm_check_sub_claim = <PolyIOP<E::Fr> as PermutationCheck<E, PCS>>::verify(
             &proof,
             &poly_info,
             &mut transcript,
         )?;
 
-        let prod_partial_evals = build_prod_partial_eval(&q_x)?;
-        let prod_0x = prod_partial_evals[0].clone();
-        let prod_1x = prod_partial_evals[1].clone();
-        let prod_x0 = prod_partial_evals[2].clone();
-        let prod_x1 = prod_partial_evals[3].clone();
-
-        let (numerator, denominator) = computer_num_and_denom(
-            &perm_check_sum_claim.challenges.0,
-            &perm_check_sum_claim.challenges.1,
-            fx,
-            gx,
-            &s_perm,
-        )?;
-
-        // compute (g(x) + beta * s_perm(x) + gamma) * prod(0, x) * alpha
-        // which is prods[6] * prod[1] * alpha
-        let mut q_x = VirtualPolynomial::new_from_mle(&denominator, E::Fr::one());
-        q_x.mul_by_mle(
-            prod_0x,
-            perm_check_sum_claim.product_check_sub_claim.challenge,
-        )?;
-
-        //   (g(x) + beta * s_perm(x) + gamma) * prod(0, x) * alpha
-        // - (f(x) + beta * s_id(x)   + gamma) * alpha
-        q_x.add_mle_list(
-            [numerator],
-            -perm_check_sum_claim.product_check_sub_claim.challenge,
-        )?;
-
-        // Q(x) := prod(1,x) - prod(x, 0) * prod(x, 1)
-        //       + alpha * (
-        //             (g(x) + beta * s_perm(x) + gamma) * prod(0, x)
-        //           - (f(x) + beta * s_id(x)   + gamma))
-        q_x.add_mle_list([prod_x0, prod_x1], -E::Fr::one())?;
-        q_x.add_mle_list([prod_1x], E::Fr::one())?;
-
-        if q_x
-            .evaluate(
-                &perm_check_sum_claim
-                    .product_check_sub_claim
-                    .zero_check_sub_claim
-                    .sum_check_sub_claim
-                    .point,
-            )
+        // check product subclaim
+        if prod_x
+            .evaluate(&perm_check_sub_claim.product_check_sub_claim.final_query.0)
             .unwrap()
-            != perm_check_sum_claim
-                .product_check_sub_claim
-                .zero_check_sub_claim
-                .sum_check_sub_claim
-                .expected_evaluation
+            != perm_check_sub_claim.product_check_sub_claim.final_query.1
         {
             return Err(PolyIOPErrors::InvalidVerifier("wrong subclaim".to_string()));
         };
 
-        // test q_x is a 0 over boolean hypercube
-        for i in 0..1 << nv {
-            let bit_sequence = bit_decompose(i, nv);
-            let eval: Vec<E::Fr> = bit_sequence
-                .iter()
-                .map(|x| E::Fr::from(*x as u64))
-                .collect();
-            let res = q_x.evaluate(&eval).unwrap();
-            if !res.is_zero() {}
-        }
         Ok(())
     }
 

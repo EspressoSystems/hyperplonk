@@ -9,20 +9,23 @@ use ark_poly::MultilinearExtension;
 use ark_std::{end_timer, start_timer};
 use transcript::IOPTranscript;
 
-/// A zero check IOP subclaim for \hat f(x) is 0, consists of the following:
-///   - the SubClaim from the SumCheck
-///   - the initial challenge r which is used to build eq(x, r) in ZeroCheck
+/// A zero check IOP subclaim for `f(x)` consists of the following:
+///   - the initial challenge vector r which is used to build eq(x, r) in
+///     SumCheck
+///   - the random vector `v` to be evaluated
+///   - the claimed evaluation of `f(v)`
 #[derive(Clone, Debug, Default, PartialEq)]
-pub struct ZeroCheckSubClaim<F: PrimeField, SC: SumCheck<F>> {
-    // the SubClaim from the SumCheck
-    pub sum_check_sub_claim: SC::SumCheckSubClaim,
+pub struct ZeroCheckSubClaim<F: PrimeField> {
+    // the evaluation point
+    pub point: Vec<F>,
     /// the expected evaluation
     pub expected_evaluation: F,
     // the initial challenge r which is used to build eq(x, r)
     pub init_challenge: Vec<F>,
 }
 
-/// A ZeroCheck is derived from SumCheck.
+/// A ZeroCheck for `f(x)` proves that `f(x) = 0` for all `x \in {0,1}^num_vars`
+/// It is derived from SumCheck.
 pub trait ZeroCheck<F: PrimeField>: SumCheck<F> {
     type ZeroCheckSubClaim: Clone + Debug + Default + PartialEq;
     type ZeroCheckProof: Clone + Debug + Default + PartialEq;
@@ -51,31 +54,13 @@ pub trait ZeroCheck<F: PrimeField>: SumCheck<F> {
 }
 
 impl<F: PrimeField> ZeroCheck<F> for PolyIOP<F> {
-    /// A ZeroCheck SubClaim consists of
-    /// - the SubClaim from the SumCheck
-    /// - the initial challenge r which is used to build eq(x, r)
-    type ZeroCheckSubClaim = ZeroCheckSubClaim<F, Self>;
-    /// A ZeroCheckProof is a SumCheckProof
+    type ZeroCheckSubClaim = ZeroCheckSubClaim<F>;
     type ZeroCheckProof = Self::SumCheckProof;
 
-    /// Initialize the system with a transcript
-    ///
-    /// This function is optional -- in the case where a ZeroCheck is
-    /// an building block for a more complex protocol, the transcript
-    /// may be initialized by this complex protocol, and passed to the
-    /// ZeroCheck prover/verifier.
     fn init_transcript() -> Self::Transcript {
         IOPTranscript::<F>::new(b"Initializing ZeroCheck transcript")
     }
 
-    /// Initialize the prover to argue for the sum of polynomial f(x) over
-    /// {0,1}^`num_vars` is zero.
-    ///
-    /// f(x) is zero if \hat f(x) := f(x) * eq(x,r) is also a zero polynomial
-    /// for a random r sampled from transcript.
-    ///
-    /// This function will build the \hat f(x) and then invoke the sumcheck
-    /// protocol to generate a proof for which the sum of \hat f(x) is zero
     fn prove(
         poly: &Self::VirtualPolynomial,
         transcript: &mut Self::Transcript,
@@ -91,15 +76,6 @@ impl<F: PrimeField> ZeroCheck<F> for PolyIOP<F> {
         res
     }
 
-    /// Verify that the polynomial's sum is zero using the proof.
-    /// Return a Self::Subclaim that consists of the
-    ///
-    /// - a Subclaim that the sum is zero
-    /// - the initial challenge `r` that is used to build `eq(x, r)`
-    ///
-    /// This function will check that \hat f(x)'s sum is zero. It does not check
-    /// `\hat f(x)` is build correctly. The caller needs to makes sure that
-    /// `\hat f(x) = f(x) * eq(x, r)`
     fn verify(
         proof: &Self::ZeroCheckProof,
         fx_aux_info: &Self::VPAuxInfo,
@@ -122,20 +98,20 @@ impl<F: PrimeField> ZeroCheck<F> for PolyIOP<F> {
         // hat_fx's max degree is increased by eq(x, r).degree() which is 1
         let mut hat_fx_aux_info = fx_aux_info.clone();
         hat_fx_aux_info.max_degree += 1;
-        let subclaim =
+        let sum_subclaim =
             <Self as SumCheck<F>>::verify(F::zero(), proof, &hat_fx_aux_info, transcript)?;
 
-        // expected_eval = sumcheck.expect_eval/eq(x, r)
-        // where x = sum_check_sub_claim.point
+        // expected_eval = sumcheck.expect_eval/eq(v, r)
+        // where v = sum_check_sub_claim.point
         let eq_x_r = build_eq_x_r(&r)?;
-        let expected_evaluation = subclaim.expected_evaluation
-            / eq_x_r.evaluate(&subclaim.point).ok_or_else(|| {
+        let expected_evaluation = sum_subclaim.expected_evaluation
+            / eq_x_r.evaluate(&sum_subclaim.point).ok_or_else(|| {
                 PolyIOPErrors::InvalidParameters("evaluation dimension does not match".to_string())
             })?;
 
         end_timer!(start);
         Ok(ZeroCheckSubClaim {
-            sum_check_sub_claim: subclaim,
+            point: sum_subclaim.point,
             expected_evaluation,
             init_challenge: r,
         })
@@ -170,11 +146,10 @@ mod test {
             let poly_info = poly.aux_info.clone();
             let mut transcript = <PolyIOP<Fr> as ZeroCheck<Fr>>::init_transcript();
             transcript.append_message(b"testing", b"initializing transcript for testing")?;
-            let subclaim =
-                <PolyIOP<Fr> as ZeroCheck<Fr>>::verify(&proof, &poly_info, &mut transcript)?
-                    .sum_check_sub_claim;
+            let zero_subclaim =
+                <PolyIOP<Fr> as ZeroCheck<Fr>>::verify(&proof, &poly_info, &mut transcript)?;
             assert!(
-                poly.evaluate(&subclaim.point)? == subclaim.expected_evaluation,
+                poly.evaluate(&zero_subclaim.point)? == zero_subclaim.expected_evaluation,
                 "wrong subclaim"
             );
         }

@@ -86,12 +86,10 @@ where
 
 /// A product check subclaim consists of
 /// - A zero check IOP subclaim for
-/// `Q(x) = prod(1, x) - prod(x, 0) * prod(x, 1) + challenge * (f(x) - prod(0,
-/// x) * g(x))` is 0, consists of the following:
-///   - the SubClaim from the SumCheck
-///   - the initial challenge r which is used to build eq(x, r) in ZeroCheck
-/// - The challenge `challenge`
-/// - A final query for `prod(1, ..., 1, 0) = claimed_product`.
+/// `Q(x) = prod(1, x) - prod(x, 0) * prod(x, 1) + alpha * (f(x) - prod(0,
+/// x) * g(x)) = 0`
+/// - The random challenge `alpha`
+/// - A final query for `prod(1, ..., 1, 0) = 1`.
 // Note that this final query is in fact a constant that
 // is independent from the proof. So we should avoid
 // (de)serialize it.
@@ -103,8 +101,8 @@ pub struct ProductCheckSubClaim<F: PrimeField, ZC: ZeroCheck<F>> {
     // - the vector `(1, ..., 1, 0)` (needs to be reversed because Arkwork's MLE uses big-endian
     //   format for points)
     // The expected final query evaluation is 1
-    final_query: (Vec<F>, F),
-    pub challenge: F,
+    pub final_query: (Vec<F>, F),
+    pub alpha: F,
 }
 
 /// A product check proof consists of
@@ -195,7 +193,7 @@ where
         Ok(ProductCheckSubClaim {
             zero_check_sub_claim,
             final_query: (final_query, final_eval),
-            challenge: alpha,
+            alpha,
         })
     }
 }
@@ -240,11 +238,11 @@ mod test {
             num_variables: f.num_vars,
             phantom: PhantomData::default(),
         };
-        let subclaim =
+        let prod_subclaim =
             <PolyIOP<E::Fr> as ProductCheck<E, PCS>>::verify(&proof, &aux_info, &mut transcript)?;
         assert_eq!(
-            prod_x.evaluate(&subclaim.final_query.0).unwrap(),
-            subclaim.final_query.1,
+            prod_x.evaluate(&prod_subclaim.final_query.0).unwrap(),
+            prod_subclaim.final_query.1,
             "different product"
         );
 

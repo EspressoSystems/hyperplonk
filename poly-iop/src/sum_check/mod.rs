@@ -131,7 +131,6 @@ impl<F: PrimeField> SumCheck<F> for PolyIOP<F> {
     type SumCheckSubClaim = SumCheckSubClaim<F>;
     type Transcript = IOPTranscript<F>;
 
-    /// Extract sum from the proof
     fn extract_sum(proof: &Self::SumCheckProof) -> F {
         let start = start_timer!(|| "extract sum");
         let res = proof.proofs[0].evaluations[0] + proof.proofs[0].evaluations[1];
@@ -139,12 +138,6 @@ impl<F: PrimeField> SumCheck<F> for PolyIOP<F> {
         res
     }
 
-    /// Initialize the system with a transcript
-    ///
-    /// This function is optional -- in the case where a SumCheck is
-    /// an building block for a more complex protocol, the transcript
-    /// may be initialized by this complex protocol, and passed to the
-    /// SumCheck prover/verifier.
     fn init_transcript() -> Self::Transcript {
         let start = start_timer!(|| "init transcript");
         let res = IOPTranscript::<F>::new(b"Initializing SumCheck transcript");
@@ -152,9 +145,6 @@ impl<F: PrimeField> SumCheck<F> for PolyIOP<F> {
         res
     }
 
-    /// Generate proof of the sum of polynomial over {0,1}^`num_vars`
-    ///
-    /// The polynomial is represented in the form of a VirtualPolynomial.
     fn prove(
         poly: &Self::VirtualPolynomial,
         transcript: &mut Self::Transcript,
@@ -185,7 +175,6 @@ impl<F: PrimeField> SumCheck<F> for PolyIOP<F> {
         })
     }
 
-    /// Verify the claimed sum using the proof
     fn verify(
         claimed_sum: F,
         proof: &Self::SumCheckProof,

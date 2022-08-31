@@ -680,7 +680,7 @@ where
             &mut transcript,
         )?;
 
-        let zero_check_point = &zero_check_sub_claim.sum_check_sub_claim.point;
+        let zero_check_point = &zero_check_sub_claim.point;
 
         // check zero check subclaim
         let f_eval = eval_f(
@@ -718,10 +718,9 @@ where
         let perm_check_point = &perm_check_sub_claim
             .product_check_sub_claim
             .zero_check_sub_claim
-            .sum_check_sub_claim
             .point;
 
-        let alpha = perm_check_sub_claim.product_check_sub_claim.challenge;
+        let alpha = perm_check_sub_claim.product_check_sub_claim.alpha;
         let (beta, gamma) = perm_check_sub_claim.challenges;
 
         // check perm check subclaim:
