@@ -71,6 +71,7 @@
 <span id="65">65</span>
 <span id="66">66</span>
 <span id="67">67</span>
+<span id="68">68</span>
 </pre><pre class="rust"><code><span class="kw">use</span> <span class="kw">crate</span>::{<span class="ident">build_mle</span>, <span class="ident">errors::HyperPlonkErrors</span>};
 <span class="kw">use</span> <span class="ident">ark_ff::PrimeField</span>;
 <span class="kw">use</span> <span class="ident">ark_poly::DenseMultilinearExtension</span>;
@@ -86,7 +87,8 @@
 <span class="kw">pub</span> <span class="kw">struct</span> <span class="ident">WitnessColumn</span><span class="op">&lt;</span><span class="ident">F</span>: <span class="ident">PrimeField</span><span class="op">&gt;</span>(<span class="kw">pub</span>(<span class="kw">crate</span>) <span class="ident">Vec</span><span class="op">&lt;</span><span class="ident">F</span><span class="op">&gt;</span>);
 
 <span class="kw">impl</span><span class="op">&lt;</span><span class="ident">F</span>: <span class="ident">PrimeField</span><span class="op">&gt;</span> <span class="ident">WitnessColumn</span><span class="op">&lt;</span><span class="ident">F</span><span class="op">&gt;</span> {
-    <span class="doccomment">/// the number of variables for MLE to present a column.</span>
+    <span class="doccomment">/// the number of variables of the multilinear polynomial that presents a</span>
+    <span class="doccomment">/// column.</span>
     <span class="kw">pub</span> <span class="kw">fn</span> <span class="ident">get_nv</span>(<span class="kw-2">&amp;</span><span class="self">self</span>) -&gt; <span class="ident">usize</span> {
         <span class="ident">log2</span>(<span class="self">self</span>.<span class="number">0</span>.<span class="ident">len</span>()) <span class="kw">as</span> <span class="ident">usize</span>
     }
@@ -102,9 +104,9 @@
         }
 
         <span class="kw">let</span> <span class="kw-2">mut</span> <span class="ident">res</span> <span class="op">=</span> <span class="ident">Vec::with_capacity</span>(<span class="ident">witness_rows</span>.<span class="ident">len</span>());
-        <span class="kw">let</span> <span class="ident">num_wires</span> <span class="op">=</span> <span class="ident">witness_rows</span>[<span class="number">0</span>].<span class="number">0</span>.<span class="ident">len</span>();
+        <span class="kw">let</span> <span class="ident">num_columns</span> <span class="op">=</span> <span class="ident">witness_rows</span>[<span class="number">0</span>].<span class="number">0</span>.<span class="ident">len</span>();
 
-        <span class="kw">for</span> <span class="ident">i</span> <span class="kw">in</span> <span class="number">0</span>..<span class="ident">num_wires</span> {
+        <span class="kw">for</span> <span class="ident">i</span> <span class="kw">in</span> <span class="number">0</span>..<span class="ident">num_columns</span> {
             <span class="kw">let</span> <span class="kw-2">mut</span> <span class="ident">cur_column</span> <span class="op">=</span> <span class="ident">Vec::new</span>();
             <span class="kw">for</span> <span class="ident">row</span> <span class="kw">in</span> <span class="ident">witness_rows</span>.<span class="ident">iter</span>() {
                 <span class="ident">cur_column</span>.<span class="ident">push</span>(<span class="ident">row</span>.<span class="number">0</span>[<span class="ident">i</span>])

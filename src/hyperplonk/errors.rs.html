@@ -66,8 +66,6 @@
 <span id="60">60</span>
 <span id="61">61</span>
 <span id="62">62</span>
-<span id="63">63</span>
-<span id="64">64</span>
 </pre><pre class="rust"><code><span class="doccomment">//! Error module.</span>
 
 <span class="kw">use</span> <span class="ident">arithmetic::ArithErrors</span>;
@@ -79,8 +77,6 @@
 <span class="kw">use</span> <span class="ident">transcript::TranscriptErrors</span>;
 
 <span class="doccomment">/// A `enum` specifying the possible failure modes of hyperplonk.</span>
-<span class="attribute">#[<span class="ident">allow</span>(<span class="ident">dead_code</span>)]</span>
-<span class="comment">// todo: REMOVE</span>
 <span class="attribute">#[<span class="ident">derive</span>(<span class="ident">Display</span>, <span class="ident">Debug</span>)]</span>
 <span class="kw">pub</span> <span class="kw">enum</span> <span class="ident">HyperPlonkErrors</span> {
     <span class="doccomment">/// Invalid Prover: {0}</span>

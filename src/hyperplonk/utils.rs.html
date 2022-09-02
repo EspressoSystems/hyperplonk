@@ -213,13 +213,80 @@
 <span id="207">207</span>
 <span id="208">208</span>
 <span id="209">209</span>
+<span id="210">210</span>
+<span id="211">211</span>
+<span id="212">212</span>
+<span id="213">213</span>
+<span id="214">214</span>
+<span id="215">215</span>
+<span id="216">216</span>
+<span id="217">217</span>
+<span id="218">218</span>
+<span id="219">219</span>
+<span id="220">220</span>
+<span id="221">221</span>
+<span id="222">222</span>
+<span id="223">223</span>
+<span id="224">224</span>
+<span id="225">225</span>
+<span id="226">226</span>
+<span id="227">227</span>
+<span id="228">228</span>
+<span id="229">229</span>
+<span id="230">230</span>
+<span id="231">231</span>
+<span id="232">232</span>
+<span id="233">233</span>
+<span id="234">234</span>
+<span id="235">235</span>
+<span id="236">236</span>
+<span id="237">237</span>
+<span id="238">238</span>
+<span id="239">239</span>
+<span id="240">240</span>
+<span id="241">241</span>
+<span id="242">242</span>
+<span id="243">243</span>
+<span id="244">244</span>
+<span id="245">245</span>
+<span id="246">246</span>
+<span id="247">247</span>
+<span id="248">248</span>
+<span id="249">249</span>
+<span id="250">250</span>
+<span id="251">251</span>
+<span id="252">252</span>
+<span id="253">253</span>
+<span id="254">254</span>
+<span id="255">255</span>
+<span id="256">256</span>
+<span id="257">257</span>
+<span id="258">258</span>
+<span id="259">259</span>
+<span id="260">260</span>
+<span id="261">261</span>
+<span id="262">262</span>
+<span id="263">263</span>
+<span id="264">264</span>
+<span id="265">265</span>
+<span id="266">266</span>
+<span id="267">267</span>
+<span id="268">268</span>
+<span id="269">269</span>
+<span id="270">270</span>
 </pre><pre class="rust"><code><span class="kw">use</span> <span class="ident">std::rc::Rc</span>;
 
 <span class="kw">use</span> <span class="ident">arithmetic::VirtualPolynomial</span>;
 <span class="kw">use</span> <span class="ident">ark_ff::PrimeField</span>;
 <span class="kw">use</span> <span class="ident">ark_poly::DenseMultilinearExtension</span>;
 
-<span class="kw">use</span> <span class="kw">crate</span>::{<span class="ident">errors::HyperPlonkErrors</span>, <span class="ident">structs::CustomizedGates</span>};
+<span class="kw">use</span> <span class="kw">crate</span>::{
+    <span class="ident">errors::HyperPlonkErrors</span>,
+    <span class="ident">structs</span>::{<span class="ident">CustomizedGates</span>, <span class="ident">HyperPlonkParams</span>},
+    <span class="ident">witness::WitnessColumn</span>,
+};
+
+<span class="kw">use</span> <span class="ident">poly_iop::prelude::bit_decompose</span>;
 
 <span class="doccomment">/// Build MLE from matrix of witnesses.</span>
 <span class="doccomment">///</span>
@@ -248,6 +315,51 @@
 
         <span class="prelude-val">Ok</span>(<span class="ident">res</span>)
     }};
+}
+
+<span class="doccomment">/// Sanity-check for HyperPlonk SNARK proving</span>
+<span class="kw">pub</span>(<span class="kw">crate</span>) <span class="kw">fn</span> <span class="ident">prove_sanity_check</span><span class="op">&lt;</span><span class="ident">F</span>: <span class="ident">PrimeField</span><span class="op">&gt;</span>(
+    <span class="ident">params</span>: <span class="kw-2">&amp;</span><span class="ident">HyperPlonkParams</span>,
+    <span class="ident">pub_input</span>: <span class="kw-2">&amp;</span>[<span class="ident">F</span>],
+    <span class="ident">witnesses</span>: <span class="kw-2">&amp;</span>[<span class="ident">WitnessColumn</span><span class="op">&lt;</span><span class="ident">F</span><span class="op">&gt;</span>],
+) -&gt; <span class="prelude-ty">Result</span><span class="op">&lt;</span>(), <span class="ident">HyperPlonkErrors</span><span class="op">&gt;</span> {
+    <span class="kw">let</span> <span class="ident">num_vars</span> <span class="op">=</span> <span class="ident">params</span>.<span class="ident">nv</span>;
+    <span class="kw">let</span> <span class="ident">ell</span> <span class="op">=</span> <span class="ident">params</span>.<span class="ident">log_pub_input_len</span>;
+
+    <span class="comment">// public input length</span>
+    <span class="kw">if</span> <span class="ident">pub_input</span>.<span class="ident">len</span>() <span class="op">!</span><span class="op">=</span> <span class="number">1</span> <span class="op">&lt;</span><span class="op">&lt;</span> <span class="ident">ell</span> {
+        <span class="kw">return</span> <span class="prelude-val">Err</span>(<span class="ident">HyperPlonkErrors::InvalidProver</span>(<span class="macro">format!</span>(
+            <span class="string">&quot;Public input length is not correct: got {}, expect {}&quot;</span>,
+            <span class="ident">pub_input</span>.<span class="ident">len</span>(),
+            <span class="number">1</span> <span class="op">&lt;</span><span class="op">&lt;</span> <span class="ident">ell</span>
+        )));
+    }
+    <span class="comment">// witnesses length</span>
+    <span class="kw">for</span> (<span class="ident">i</span>, <span class="ident">w</span>) <span class="kw">in</span> <span class="ident">witnesses</span>.<span class="ident">iter</span>().<span class="ident">enumerate</span>() {
+        <span class="kw">if</span> <span class="ident">w</span>.<span class="number">0</span>.<span class="ident">len</span>() <span class="op">!</span><span class="op">=</span> <span class="number">1</span> <span class="op">&lt;</span><span class="op">&lt;</span> <span class="ident">num_vars</span> {
+            <span class="kw">return</span> <span class="prelude-val">Err</span>(<span class="ident">HyperPlonkErrors::InvalidProver</span>(<span class="macro">format!</span>(
+                <span class="string">&quot;{}-th witness length is not correct: got {}, expect {}&quot;</span>,
+                <span class="ident">i</span>,
+                <span class="ident">pub_input</span>.<span class="ident">len</span>(),
+                <span class="number">1</span> <span class="op">&lt;</span><span class="op">&lt;</span> <span class="ident">ell</span>
+            )));
+        }
+    }
+    <span class="comment">// check public input matches witness[0]&#39;s first 2^ell elements</span>
+    <span class="kw">for</span> (<span class="ident">i</span>, (<span class="kw-2">&amp;</span><span class="ident">pi</span>, <span class="kw-2">&amp;</span><span class="ident">w</span>)) <span class="kw">in</span> <span class="ident">pub_input</span>
+        .<span class="ident">iter</span>()
+        .<span class="ident">zip</span>(<span class="ident">witnesses</span>[<span class="number">0</span>].<span class="number">0</span>.<span class="ident">iter</span>().<span class="ident">take</span>(<span class="ident">pub_input</span>.<span class="ident">len</span>()))
+        .<span class="ident">enumerate</span>()
+    {
+        <span class="kw">if</span> <span class="ident">pi</span> <span class="op">!</span><span class="op">=</span> <span class="ident">w</span> {
+            <span class="kw">return</span> <span class="prelude-val">Err</span>(<span class="ident">HyperPlonkErrors::InvalidProver</span>(<span class="macro">format!</span>(
+                <span class="string">&quot;The {:?}-th public input {:?} does not match witness[0] {:?}&quot;</span>,
+                <span class="ident">i</span>, <span class="ident">pi</span>, <span class="ident">w</span>
+            )));
+        }
+    }
+
+    <span class="prelude-val">Ok</span>(())
 }
 
 <span class="doccomment">/// build `f(w_0(x),...w_d(x))` where `f` is the constraint polynomial</span>
@@ -301,7 +413,6 @@
     <span class="prelude-val">Ok</span>(<span class="ident">res</span>)
 }
 
-<span class="attribute">#[<span class="ident">allow</span>(<span class="ident">dead_code</span>)]</span>
 <span class="kw">pub</span>(<span class="kw">crate</span>) <span class="kw">fn</span> <span class="ident">eval_f</span><span class="op">&lt;</span><span class="ident">F</span>: <span class="ident">PrimeField</span><span class="op">&gt;</span>(
     <span class="ident">gates</span>: <span class="kw-2">&amp;</span><span class="ident">CustomizedGates</span>,
     <span class="ident">selector_evals</span>: <span class="kw-2">&amp;</span>[<span class="ident">F</span>],
@@ -324,6 +435,17 @@
         <span class="ident">res</span> <span class="op">+</span><span class="op">=</span> <span class="ident">cur_value</span>;
     }
     <span class="prelude-val">Ok</span>(<span class="ident">res</span>)
+}
+
+<span class="doccomment">/// given the evaluation input `point` of the `index`-th polynomial,</span>
+<span class="doccomment">/// obtain the evaluation point in the merged polynomial</span>
+<span class="kw">pub</span>(<span class="kw">crate</span>) <span class="kw">fn</span> <span class="ident">gen_eval_point</span><span class="op">&lt;</span><span class="ident">F</span>: <span class="ident">PrimeField</span><span class="op">&gt;</span>(<span class="ident">index</span>: <span class="ident">usize</span>, <span class="ident">index_len</span>: <span class="ident">usize</span>, <span class="ident">point</span>: <span class="kw-2">&amp;</span>[<span class="ident">F</span>]) -&gt; <span class="ident">Vec</span><span class="op">&lt;</span><span class="ident">F</span><span class="op">&gt;</span> {
+    <span class="kw">let</span> <span class="kw-2">mut</span> <span class="ident">index_vec</span>: <span class="ident">Vec</span><span class="op">&lt;</span><span class="ident">F</span><span class="op">&gt;</span> <span class="op">=</span> <span class="ident">bit_decompose</span>(<span class="ident">index</span> <span class="kw">as</span> <span class="ident">u64</span>, <span class="ident">index_len</span>)
+        .<span class="ident">into_iter</span>()
+        .<span class="ident">map</span>(<span class="op">|</span><span class="ident">x</span><span class="op">|</span> <span class="ident">F::from</span>(<span class="ident">x</span>))
+        .<span class="ident">collect</span>();
+    <span class="ident">index_vec</span>.<span class="ident">reverse</span>();
+    [<span class="ident">point</span>, <span class="kw-2">&amp;</span><span class="ident">index_vec</span>].<span class="ident">concat</span>()
 }
 
 <span class="attribute">#[<span class="ident">cfg</span>(<span class="ident">test</span>)]</span>

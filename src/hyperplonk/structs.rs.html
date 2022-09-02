@@ -157,10 +157,38 @@
 <span id="151">151</span>
 <span id="152">152</span>
 <span id="153">153</span>
+<span id="154">154</span>
+<span id="155">155</span>
+<span id="156">156</span>
+<span id="157">157</span>
+<span id="158">158</span>
+<span id="159">159</span>
+<span id="160">160</span>
+<span id="161">161</span>
+<span id="162">162</span>
+<span id="163">163</span>
+<span id="164">164</span>
+<span id="165">165</span>
+<span id="166">166</span>
+<span id="167">167</span>
+<span id="168">168</span>
+<span id="169">169</span>
+<span id="170">170</span>
+<span id="171">171</span>
+<span id="172">172</span>
+<span id="173">173</span>
+<span id="174">174</span>
+<span id="175">175</span>
+<span id="176">176</span>
+<span id="177">177</span>
+<span id="178">178</span>
 </pre><pre class="rust"><code><span class="doccomment">//! Main module for the HyperPlonk PolyIOP.</span>
 
+<span class="kw">use</span> <span class="ident"><span class="kw">crate</span>::selectors::SelectorColumn</span>;
 <span class="kw">use</span> <span class="ident">ark_ec::PairingEngine</span>;
+<span class="kw">use</span> <span class="ident">ark_ff::PrimeField</span>;
 <span class="kw">use</span> <span class="ident">ark_poly::DenseMultilinearExtension</span>;
+<span class="kw">use</span> <span class="ident">ark_std::cmp::max</span>;
 <span class="kw">use</span> <span class="ident">pcs::PolynomialCommitmentScheme</span>;
 <span class="kw">use</span> <span class="ident">poly_iop::prelude</span>::{<span class="ident">PermutationCheck</span>, <span class="ident">ZeroCheck</span>};
 <span class="kw">use</span> <span class="ident">std::rc::Rc</span>;
@@ -181,17 +209,17 @@
     <span class="comment">// PCS components: common</span>
     <span class="comment">// =======================================================================</span>
     <span class="doccomment">/// PCS commit for witnesses</span>
-    <span class="comment">// TODO: replace me with a batch commitment</span>
-    <span class="kw">pub</span> <span class="ident">witness_commits</span>: <span class="ident">Vec</span><span class="op">&lt;</span><span class="ident">PCS::Commitment</span><span class="op">&gt;</span>,
     <span class="kw">pub</span> <span class="ident">w_merged_com</span>: <span class="ident">PCS::Commitment</span>,
     <span class="comment">// =======================================================================</span>
     <span class="comment">// PCS components: permutation check</span>
     <span class="comment">// =======================================================================</span>
     <span class="doccomment">/// prod(x)&#39;s evaluations</span>
-    <span class="doccomment">/// sequence: prod(0,x), prod(1, x), prod(x, 0), prod(x, 1)</span>
+    <span class="doccomment">/// sequence: prod(0,x), prod(1, x), prod(x, 0), prod(x, 1), prod(1, ..., 1,</span>
+    <span class="doccomment">/// 0)</span>
     <span class="kw">pub</span> <span class="ident">prod_evals</span>: <span class="ident">Vec</span><span class="op">&lt;</span><span class="ident">E::Fr</span><span class="op">&gt;</span>,
     <span class="doccomment">/// prod(x)&#39;s openings</span>
-    <span class="doccomment">/// sequence: prod(0,x), prod(1, x), prod(x, 0), prod(x, 1)</span>
+    <span class="doccomment">/// sequence: prod(0,x), prod(1, x), prod(x, 0), prod(x, 1), prod(1, ..., 1,</span>
+    <span class="doccomment">/// 0)</span>
     <span class="kw">pub</span> <span class="ident">prod_openings</span>: <span class="ident">Vec</span><span class="op">&lt;</span><span class="ident">PCS::Proof</span><span class="op">&gt;</span>,
     <span class="doccomment">/// PCS openings for witness on permutation check point</span>
     <span class="comment">// TODO: replace me with a batch opening</span>
@@ -252,6 +280,17 @@
     <span class="kw">pub</span> <span class="ident">gate_func</span>: <span class="ident">CustomizedGates</span>,
 }
 
+<span class="doccomment">/// The HyperPlonk index, consists of the following:</span>
+<span class="doccomment">///   - HyperPlonk parameters</span>
+<span class="doccomment">///   - the wire permutation</span>
+<span class="doccomment">///   - the selector vectors</span>
+<span class="attribute">#[<span class="ident">derive</span>(<span class="ident">Clone</span>, <span class="ident">Debug</span>, <span class="ident">Default</span>, <span class="ident">PartialEq</span>, <span class="ident">Eq</span>)]</span>
+<span class="kw">pub</span> <span class="kw">struct</span> <span class="ident">HyperPlonkIndex</span><span class="op">&lt;</span><span class="ident">F</span>: <span class="ident">PrimeField</span><span class="op">&gt;</span> {
+    <span class="kw">pub</span> <span class="ident">params</span>: <span class="ident">HyperPlonkParams</span>,
+    <span class="kw">pub</span> <span class="ident">permutation</span>: <span class="ident">Vec</span><span class="op">&lt;</span><span class="ident">F</span><span class="op">&gt;</span>,
+    <span class="kw">pub</span> <span class="ident">selectors</span>: <span class="ident">Vec</span><span class="op">&lt;</span><span class="ident">SelectorColumn</span><span class="op">&lt;</span><span class="ident">F</span><span class="op">&gt;</span><span class="op">&gt;</span>,
+}
+
 <span class="doccomment">/// The HyperPlonk proving key, consists of the following:</span>
 <span class="doccomment">///   - the hyperplonk instance parameters</span>
 <span class="doccomment">///   - the preprocessed polynomials output by the indexer</span>
@@ -260,7 +299,7 @@
     <span class="doccomment">/// hyperplonk instance parameters</span>
     <span class="kw">pub</span> <span class="ident">params</span>: <span class="ident">HyperPlonkParams</span>,
     <span class="doccomment">/// the preprocessed permutation polynomials</span>
-    <span class="kw">pub</span> <span class="ident">permutation_oracles</span>: <span class="ident">Rc</span><span class="op">&lt;</span><span class="ident">DenseMultilinearExtension</span><span class="op">&lt;</span><span class="ident">E::Fr</span><span class="op">&gt;</span><span class="op">&gt;</span>,
+    <span class="kw">pub</span> <span class="ident">permutation_oracle</span>: <span class="ident">Rc</span><span class="op">&lt;</span><span class="ident">DenseMultilinearExtension</span><span class="op">&lt;</span><span class="ident">E::Fr</span><span class="op">&gt;</span><span class="op">&gt;</span>,
     <span class="doccomment">/// the preprocessed selector polynomials</span>
     <span class="comment">// TODO: merge the list into a single MLE</span>
     <span class="kw">pub</span> <span class="ident">selector_oracles</span>: <span class="ident">Vec</span><span class="op">&lt;</span><span class="ident">Rc</span><span class="op">&lt;</span><span class="ident">DenseMultilinearExtension</span><span class="op">&lt;</span><span class="ident">E::Fr</span><span class="op">&gt;</span><span class="op">&gt;</span><span class="op">&gt;</span>,
@@ -309,6 +348,17 @@
 <span class="attribute">#[<span class="ident">derive</span>(<span class="ident">Clone</span>, <span class="ident">Debug</span>, <span class="ident">Default</span>, <span class="ident">PartialEq</span>, <span class="ident">Eq</span>)]</span>
 <span class="kw">pub</span> <span class="kw">struct</span> <span class="ident">CustomizedGates</span> {
     <span class="kw">pub</span>(<span class="kw">crate</span>) <span class="ident">gates</span>: <span class="ident">Vec</span><span class="op">&lt;</span>(<span class="ident">i64</span>, <span class="prelude-ty">Option</span><span class="op">&lt;</span><span class="ident">usize</span><span class="op">&gt;</span>, <span class="ident">Vec</span><span class="op">&lt;</span><span class="ident">usize</span><span class="op">&gt;</span>)<span class="op">&gt;</span>,
+}
+
+<span class="kw">impl</span> <span class="ident">CustomizedGates</span> {
+    <span class="doccomment">/// The degree of the algebraic customized gate</span>
+    <span class="kw">pub</span> <span class="kw">fn</span> <span class="ident">degree</span>(<span class="kw-2">&amp;</span><span class="self">self</span>) -&gt; <span class="ident">usize</span> {
+        <span class="kw">let</span> <span class="kw-2">mut</span> <span class="ident">res</span> <span class="op">=</span> <span class="number">0</span>;
+        <span class="kw">for</span> <span class="ident">x</span> <span class="kw">in</span> <span class="self">self</span>.<span class="ident">gates</span>.<span class="ident">iter</span>() {
+            <span class="ident">res</span> <span class="op">=</span> <span class="ident">max</span>(<span class="ident">res</span>, <span class="ident">x</span>.<span class="number">2</span>.<span class="ident">len</span>() <span class="op">+</span> (<span class="ident">x</span>.<span class="number">1</span>.<span class="ident">is_some</span>() <span class="kw">as</span> <span class="ident">usize</span>))
+        }
+        <span class="ident">res</span>
+    }
 }
 </code></pre></div>
 </section></div></main><div id="rustdoc-vars" data-root-path="../../" data-current-crate="hyperplonk" data-themes="ayu,dark,light" data-resource-suffix="" data-rustdoc-version="1.63.0 (4b91a6ea7 2022-08-08)" ></div>
