@@ -1,7 +1,10 @@
 //! Main module for the HyperPlonk PolyIOP.
 
+use crate::selectors::SelectorColumn;
 use ark_ec::PairingEngine;
+use ark_ff::PrimeField;
 use ark_poly::DenseMultilinearExtension;
+use ark_std::cmp::max;
 use pcs::PolynomialCommitmentScheme;
 use poly_iop::prelude::{PermutationCheck, ZeroCheck};
 use std::rc::Rc;
@@ -22,17 +25,17 @@ where
     // PCS components: common
     // =======================================================================
     /// PCS commit for witnesses
-    // TODO: replace me with a batch commitment
-    pub witness_commits: Vec<PCS::Commitment>,
     pub w_merged_com: PCS::Commitment,
     // =======================================================================
     // PCS components: permutation check
     // =======================================================================
     /// prod(x)'s evaluations
-    /// sequence: prod(0,x), prod(1, x), prod(x, 0), prod(x, 1)
+    /// sequence: prod(0,x), prod(1, x), prod(x, 0), prod(x, 1), prod(1, ..., 1,
+    /// 0)
     pub prod_evals: Vec<E::Fr>,
     /// prod(x)'s openings
-    /// sequence: prod(0,x), prod(1, x), prod(x, 0), prod(x, 1)
+    /// sequence: prod(0,x), prod(1, x), prod(x, 0), prod(x, 1), prod(1, ..., 1,
+    /// 0)
     pub prod_openings: Vec<PCS::Proof>,
     /// PCS openings for witness on permutation check point
     // TODO: replace me with a batch opening
@@ -93,6 +96,17 @@ pub struct HyperPlonkParams {
     pub gate_func: CustomizedGates,
 }
 
+/// The HyperPlonk index, consists of the following:
+///   - HyperPlonk parameters
+///   - the wire permutation
+///   - the selector vectors
+#[derive(Clone, Debug, Default, PartialEq, Eq)]
+pub struct HyperPlonkIndex<F: PrimeField> {
+    pub params: HyperPlonkParams,
+    pub permutation: Vec<F>,
+    pub selectors: Vec<SelectorColumn<F>>,
+}
+
 /// The HyperPlonk proving key, consists of the following:
 ///   - the hyperplonk instance parameters
 ///   - the preprocessed polynomials output by the indexer
@@ -101,7 +115,7 @@ pub struct HyperPlonkProvingKey<E: PairingEngine, PCS: PolynomialCommitmentSchem
     /// hyperplonk instance parameters
     pub params: HyperPlonkParams,
     /// the preprocessed permutation polynomials
-    pub permutation_oracles: Rc<DenseMultilinearExtension<E::Fr>>,
+    pub permutation_oracle: Rc<DenseMultilinearExtension<E::Fr>>,
     /// the preprocessed selector polynomials
     // TODO: merge the list into a single MLE
     pub selector_oracles: Vec<Rc<DenseMultilinearExtension<E::Fr>>>,
@@ -150,4 +164,15 @@ pub struct HyperPlonkVerifyingKey<E: PairingEngine, PCS: PolynomialCommitmentSch
 #[derive(Clone, Debug, Default, PartialEq, Eq)]
 pub struct CustomizedGates {
     pub(crate) gates: Vec<(i64, Option<usize>, Vec<usize>)>,
+}
+
+impl CustomizedGates {
+    /// The degree of the algebraic customized gate
+    pub fn degree(&self) -> usize {
+        let mut res = 0;
+        for x in self.gates.iter() {
+            res = max(res, x.2.len() + (x.1.is_some() as usize))
+        }
+        res
+    }
 }

@@ -13,7 +13,8 @@ pub struct WitnessRow<F: PrimeField>(pub(crate) Vec<F>);
 pub struct WitnessColumn<F: PrimeField>(pub(crate) Vec<F>);
 
 impl<F: PrimeField> WitnessColumn<F> {
-    /// the number of variables for MLE to present a column.
+    /// the number of variables of the multilinear polynomial that presents a
+    /// column.
     pub fn get_nv(&self) -> usize {
         log2(self.0.len()) as usize
     }
@@ -29,9 +30,9 @@ impl<F: PrimeField> WitnessColumn<F> {
         }
 
         let mut res = Vec::with_capacity(witness_rows.len());
-        let num_wires = witness_rows[0].0.len();
+        let num_columns = witness_rows[0].0.len();
 
-        for i in 0..num_wires {
+        for i in 0..num_columns {
             let mut cur_column = Vec::new();
             for row in witness_rows.iter() {
                 cur_column.push(row.0[i])

@@ -4,7 +4,13 @@ use arithmetic::VirtualPolynomial;
 use ark_ff::PrimeField;
 use ark_poly::DenseMultilinearExtension;
 
-use crate::{errors::HyperPlonkErrors, structs::CustomizedGates};
+use crate::{
+    errors::HyperPlonkErrors,
+    structs::{CustomizedGates, HyperPlonkParams},
+    witness::WitnessColumn,
+};
+
+use poly_iop::prelude::bit_decompose;
 
 /// Build MLE from matrix of witnesses.
 ///
@@ -33,6 +39,51 @@ macro_rules! build_mle {
 
         Ok(res)
     }};
+}
+
+/// Sanity-check for HyperPlonk SNARK proving
+pub(crate) fn prove_sanity_check<F: PrimeField>(
+    params: &HyperPlonkParams,
+    pub_input: &[F],
+    witnesses: &[WitnessColumn<F>],
+) -> Result<(), HyperPlonkErrors> {
+    let num_vars = params.nv;
+    let ell = params.log_pub_input_len;
+
+    // public input length
+    if pub_input.len() != 1 << ell {
+        return Err(HyperPlonkErrors::InvalidProver(format!(
+            "Public input length is not correct: got {}, expect {}",
+            pub_input.len(),
+            1 << ell
+        )));
+    }
+    // witnesses length
+    for (i, w) in witnesses.iter().enumerate() {
+        if w.0.len() != 1 << num_vars {
+            return Err(HyperPlonkErrors::InvalidProver(format!(
+                "{}-th witness length is not correct: got {}, expect {}",
+                i,
+                pub_input.len(),
+                1 << ell
+            )));
+        }
+    }
+    // check public input matches witness[0]'s first 2^ell elements
+    for (i, (&pi, &w)) in pub_input
+        .iter()
+        .zip(witnesses[0].0.iter().take(pub_input.len()))
+        .enumerate()
+    {
+        if pi != w {
+            return Err(HyperPlonkErrors::InvalidProver(format!(
+                "The {:?}-th public input {:?} does not match witness[0] {:?}",
+                i, pi, w
+            )));
+        }
+    }
+
+    Ok(())
 }
 
 /// build `f(w_0(x),...w_d(x))` where `f` is the constraint polynomial
@@ -86,7 +137,6 @@ pub(crate) fn build_f<F: PrimeField>(
     Ok(res)
 }
 
-#[allow(dead_code)]
 pub(crate) fn eval_f<F: PrimeField>(
     gates: &CustomizedGates,
     selector_evals: &[F],
@@ -109,6 +159,17 @@ pub(crate) fn eval_f<F: PrimeField>(
         res += cur_value;
     }
     Ok(res)
+}
+
+/// given the evaluation input `point` of the `index`-th polynomial,
+/// obtain the evaluation point in the merged polynomial
+pub(crate) fn gen_eval_point<F: PrimeField>(index: usize, index_len: usize, point: &[F]) -> Vec<F> {
+    let mut index_vec: Vec<F> = bit_decompose(index as u64, index_len)
+        .into_iter()
+        .map(|x| F::from(x))
+        .collect();
+    index_vec.reverse();
+    [point, &index_vec].concat()
 }
 
 #[cfg(test)]

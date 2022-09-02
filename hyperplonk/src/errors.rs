@@ -9,8 +9,6 @@ use poly_iop::prelude::PolyIOPErrors;
 use transcript::TranscriptErrors;
 
 /// A `enum` specifying the possible failure modes of hyperplonk.
-#[allow(dead_code)]
-// todo: REMOVE
 #[derive(Display, Debug)]
 pub enum HyperPlonkErrors {
     /// Invalid Prover: {0}
