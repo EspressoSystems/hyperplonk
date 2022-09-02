@@ -569,11 +569,12 @@ where
     ///
     /// 2. Verify perm_check_proof on `\{w_i(x)\}` and `permutation_oracle`
     ///
-    /// 3. Verify the opening against the commitment:
+    /// 3. check subclaim validity
+    ///
+    /// 4. Verify the opening against the commitment:
     /// - check permutation check evaluations
     /// - check zero check evaluations
     /// - public input consistency checks
-    /// 4. check subclaim validity // todo
     fn verify(
         vk: &Self::VerifyingKey,
         pub_input: &[E::Fr],
@@ -604,6 +605,20 @@ where
                 1 << ell
             )));
         }
+        if proof.selector_oracle_evals.len() != 1 << vk.params.log_n_selectors {
+            return Err(HyperPlonkErrors::InvalidProver(format!(
+                "Selector length is not correct: got {}, expect {}",
+                proof.selector_oracle_evals.len(),
+                1 << vk.params.log_n_selectors
+            )));
+        }
+        if proof.witness_zero_check_evals.len() != 1 << log_num_witness_polys {
+            return Err(HyperPlonkErrors::InvalidProver(format!(
+                "Witness length is not correct: got {}, expect {}",
+                proof.witness_zero_check_evals.len(),
+                1 << log_num_witness_polys
+            )));
+        }
 
         // =======================================================================
         // 1. Verify zero_check_proof on
@@ -618,8 +633,6 @@ where
         let step = start_timer!(|| "verify zero check");
         // Zero check and perm check have different AuxInfo
         let zero_check_aux_info = VPAuxInfo::<E::Fr> {
-            // TODO: get the real max degree from gate_func
-            // Here we use 6 is because the test has q[0] * w[0]^5 which is degree 6
             max_degree: vk.params.gate_func.degree(),
             num_variables: num_var,
             phantom: PhantomData::default(),
@@ -824,19 +837,13 @@ where
         }
 
         // selector for zero check
-        // TODO: for now we only support a single selector polynomial
-        for (opening, eval) in proof
-            .selector_oracle_openings
-            .iter()
-            .zip(proof.selector_oracle_evals.iter())
-        {
-            if !PCS::verify(
-                &vk.pcs_param,
-                &vk.selector_com[0],
-                perm_check_point,
-                eval,
-                opening,
-            )? {
+        for (commitment, (opening, eval)) in vk.selector_com.iter().zip(
+            proof
+                .selector_oracle_openings
+                .iter()
+                .zip(proof.selector_oracle_evals.iter()),
+        ) {
+            if !PCS::verify(&vk.pcs_param, commitment, perm_check_point, eval, opening)? {
                 return Err(HyperPlonkErrors::InvalidProof(
                     "selector pcs verification failed".to_string(),
                 ));
@@ -966,7 +973,7 @@ mod tests {
             &[w1, w2],
         )?;
 
-        let _sub_claim = <PolyIOP<E::Fr> as HyperPlonkSNARK<E, KZGMultilinearPCS<E>>>::verify(
+        let _verify = <PolyIOP<E::Fr> as HyperPlonkSNARK<E, KZGMultilinearPCS<E>>>::verify(
             &vk, &pi.0, &proof,
         )?;
 
