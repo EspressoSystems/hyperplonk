@@ -969,9 +969,6 @@ mod tests {
             gate_func,
         };
         let permutation = identity_permutation_mle(merged_nv).evaluations.clone();
-        let rand_perm = random_permutation_mle(merged_nv, &mut rng)
-            .evaluations
-            .clone();
         let q1 = SelectorColumn(vec![E::Fr::one(), E::Fr::one(), E::Fr::one(), E::Fr::one()]);
         let index = HyperPlonkIndex {
             params,
@@ -1005,7 +1002,7 @@ mod tests {
         let proof = <PolyIOP<E::Fr> as HyperPlonkSNARK<E, KZGMultilinearPCS<E>>>::prove(
             &pk,
             &pi.0,
-            &[w1, w2],
+            &[w1.clone(), w2.clone()],
         )?;
 
         let _verify = <PolyIOP<E::Fr> as HyperPlonkSNARK<E, KZGMultilinearPCS<E>>>::verify(
@@ -1013,6 +1010,33 @@ mod tests {
         )?;
 
         // bad path 1: wrong permutation
+        let rand_perm: Vec<E::Fr> = random_permutation_mle(merged_nv, &mut rng)
+            .evaluations
+            .clone();
+        let mut bad_index = index.clone();
+        bad_index.permutation = rand_perm;
+        // generate pk and vks
+        let (_, bad_vk) = <PolyIOP<E::Fr> as HyperPlonkSNARK<E, KZGMultilinearPCS<E>>>::preprocess(
+            &bad_index, &pcs_srs,
+        )?;
+        assert!(
+            <PolyIOP<E::Fr> as HyperPlonkSNARK<E, KZGMultilinearPCS<E>>>::verify(
+                &bad_vk, &pi.0, &proof,
+            )
+            .is_err()
+        );
+
+        // bad path 2: wrong witness
+        let mut w1_bad = w1.clone();
+        w1_bad.0[0] = E::Fr::one();
+        assert!(
+            <PolyIOP<E::Fr> as HyperPlonkSNARK<E, KZGMultilinearPCS<E>>>::prove(
+                &pk,
+                &pi.0,
+                &[w1_bad, w2],
+            )
+            .is_err()
+        );
 
         Ok(())
     }
