@@ -1,6 +1,6 @@
-//! Main module for the HyperPlonk PolyIOP.
+//! Main module for the HyperPlonk SNARK.
 
-use crate::utils::eval_f;
+use crate::utils::{eval_f, prove_sanity_check};
 use arithmetic::VPAuxInfo;
 use ark_ec::PairingEngine;
 use ark_poly::{DenseMultilinearExtension, MultilinearExtension};
@@ -11,9 +11,8 @@ use poly_iop::{
     prelude::{identity_permutation_mle, PermutationCheck, ZeroCheck},
     PolyIOP,
 };
-use selectors::SelectorColumn;
 use std::{marker::PhantomData, rc::Rc};
-use structs::{HyperPlonkParams, HyperPlonkProof, HyperPlonkProvingKey, HyperPlonkVerifyingKey};
+use structs::{HyperPlonkIndex, HyperPlonkProof, HyperPlonkProvingKey, HyperPlonkVerifyingKey};
 use transcript::IOPTranscript;
 use utils::build_f;
 use witness::WitnessColumn;
@@ -25,13 +24,13 @@ mod utils;
 mod witness;
 
 /// A trait for HyperPlonk SNARKs.
-/// A HyperPlonk is derived from SumChecks, ZeroChecks and PermutationChecks.
+/// A HyperPlonk is derived from ZeroChecks and PermutationChecks.
 pub trait HyperPlonkSNARK<E, PCS>: PermutationCheck<E, PCS>
 where
     E: PairingEngine,
     PCS: PolynomialCommitmentScheme<E>,
 {
-    type Parameters;
+    type Index;
     type ProvingKey;
     type VerifyingKey;
     type Proof;
@@ -39,17 +38,16 @@ where
     /// Generate the preprocessed polynomials output by the indexer.
     ///
     /// Inputs:
-    /// - `params`: HyperPlonk instance parameters
-    /// - `permutation`: the permutation for the copy constraints
-    /// - `selectors`: the list of selector vectors for custom gates
+    /// - `index`: HyperPlonk index
+    /// - `pcs_srs`: Polynomial commitment structured reference string
     /// Outputs:
     /// - The HyperPlonk proving key, which includes the preprocessed
     ///   polynomials.
+    /// - The HyperPlonk verifying key, which includes the preprocessed
+    ///   polynomial commitments
     fn preprocess(
-        params: &Self::Parameters,
+        index: &Self::Index,
         pcs_srs: &PCS::SRS,
-        permutation: &[E::Fr],
-        selectors: &[SelectorColumn<E::Fr>],
     ) -> Result<(Self::ProvingKey, Self::VerifyingKey), HyperPlonkErrors>;
 
     /// Generate HyperPlonk SNARK proof.
@@ -69,13 +67,13 @@ where
     /// Verify the HyperPlonk proof.
     ///
     /// Inputs:
-    /// - `params`: instance parameter
+    /// - `vk`: verifying key
     /// - `pub_input`: online public input
     /// - `proof`: HyperPlonk SNARK proof challenges
     /// Outputs:
     /// - Return a boolean on whether the verification is successful
     fn verify(
-        params: &Self::VerifyingKey,
+        vk: &Self::VerifyingKey,
         pub_input: &[E::Fr],
         proof: &Self::Proof,
     ) -> Result<bool, HyperPlonkErrors>;
@@ -94,28 +92,17 @@ where
         Evaluation = E::Fr,
     >,
 {
-    type Parameters = HyperPlonkParams;
+    type Index = HyperPlonkIndex<E::Fr>;
     type ProvingKey = HyperPlonkProvingKey<E, PCS>;
     type VerifyingKey = HyperPlonkVerifyingKey<E, PCS>;
     type Proof = HyperPlonkProof<E, Self, PCS>;
 
-    /// Generate the preprocessed polynomials output by the indexer.
-    ///
-    /// Inputs:
-    /// - `params`: HyperPlonk instance parameters
-    /// - `permutation`: the permutation for the copy constraints
-    /// - `selectors`: the list of selector vectors for custom gates
-    /// Outputs:
-    /// - The HyperPlonk proving key, which includes the preprocessed
-    ///   polynomials.
     fn preprocess(
-        params: &Self::Parameters,
+        index: &Self::Index,
         pcs_srs: &PCS::SRS,
-        permutation: &[E::Fr],
-        selectors: &[SelectorColumn<E::Fr>],
     ) -> Result<(Self::ProvingKey, Self::VerifyingKey), HyperPlonkErrors> {
-        let num_vars = params.nv;
-        let log_num_witness_polys = params.log_n_wires;
+        let num_vars = index.params.nv;
+        let log_num_witness_polys = index.params.log_n_wires;
 
         // number of variables in merged polynomial for Multilinear-KZG
         let merged_nv = num_vars + log_num_witness_polys;
@@ -130,14 +117,15 @@ where
         )?;
 
         // build permutation oracles
-        let permutation_oracles = Rc::new(DenseMultilinearExtension::from_evaluations_slice(
+        let permutation_oracle = Rc::new(DenseMultilinearExtension::from_evaluations_slice(
             merged_nv,
-            permutation,
+            &index.permutation,
         ));
-        let perm_com = PCS::commit(&pcs_prover_param, &permutation_oracles)?;
+        let perm_com = PCS::commit(&pcs_prover_param, &permutation_oracle)?;
 
         // build selector oracles and commit to it
-        let selector_oracles: Vec<Rc<DenseMultilinearExtension<E::Fr>>> = selectors
+        let selector_oracles: Vec<Rc<DenseMultilinearExtension<E::Fr>>> = index
+            .selectors
             .iter()
             .map(|s| Rc::new(DenseMultilinearExtension::from(s)))
             .collect();
@@ -149,13 +137,13 @@ where
 
         Ok((
             Self::ProvingKey {
-                params: params.clone(),
-                permutation_oracles,
+                params: index.params.clone(),
+                permutation_oracle,
                 selector_oracles,
                 pcs_param: pcs_prover_param,
             },
             Self::VerifyingKey {
-                params: params.clone(),
+                params: index.params.clone(),
                 pcs_param: pcs_verifier_param,
                 selector_com,
                 perm_com,
@@ -188,7 +176,7 @@ where
     /// ```
     /// in vanilla plonk, and obtain a ZeroCheckSubClaim
     ///
-    /// 3. Run permutation check on `\{w_i(x)\}` and `permutation_oracles`, and
+    /// 3. Run permutation check on `\{w_i(x)\}` and `permutation_oracle`, and
     /// obtain a PermCheckSubClaim.
     ///
     /// 4. Generate evaluations and corresponding proofs
@@ -204,6 +192,8 @@ where
     ) -> Result<Self::Proof, HyperPlonkErrors> {
         let start = start_timer!(|| "hyperplonk proving");
         let mut transcript = IOPTranscript::<E::Fr>::new(b"hyperplonk");
+
+        prove_sanity_check(&pk.params, pub_input, witnesses)?;
 
         // witness assignment of length 2^n
         let num_vars = pk.params.nv;
@@ -224,38 +214,6 @@ where
             pub_input,
         ));
 
-        // =======================================================================
-        // 0. sanity checks
-        // =======================================================================
-        // public input length
-        if pub_input.len() != 1 << ell {
-            return Err(HyperPlonkErrors::InvalidProver(format!(
-                "Public input length is not correct: got {}, expect {}",
-                pub_input.len(),
-                1 << ell
-            )));
-        }
-        // witnesses length
-        for (i, w) in witnesses.iter().enumerate() {
-            if w.0.len() != 1 << num_vars {
-                return Err(HyperPlonkErrors::InvalidProver(format!(
-                    "{}-th witness length is not correct: got {}, expect {}",
-                    i,
-                    pub_input.len(),
-                    1 << ell
-                )));
-            }
-        }
-        // check public input matches witness[0]'s first 2^ell elements
-        let pi_in_w0 =
-            Rc::new(witness_polys[0].fix_variables(vec![E::Fr::zero(); num_vars - ell].as_ref()));
-
-        if pi_in_w0 != pi_poly {
-            return Err(HyperPlonkErrors::InvalidProver(format!(
-                "Public input {:?} does not match witness[0] {:?}",
-                pi_poly, pi_in_w0,
-            )));
-        }
         // =======================================================================
         // 1. Commit Witness polynomials `w_i(x)` and append commitment to
         // transcript
@@ -305,7 +263,7 @@ where
         end_timer!(step);
 
         // =======================================================================
-        // 3. Run permutation check on `\{w_i(x)\}` and `permutation_oracles`, and
+        // 3. Run permutation check on `\{w_i(x)\}` and `permutation_oracle`, and
         // obtain a PermCheckSubClaim.
         // =======================================================================
         let step = start_timer!(|| "Permutation check on w_i(x)");
@@ -314,7 +272,7 @@ where
             &pk.pcs_param,
             &w_merged,
             &w_merged,
-            &pk.permutation_oracles,
+            &pk.permutation_oracle,
             &mut transcript,
         )?;
 
@@ -476,7 +434,7 @@ where
         // Open permutation polynomial at perm_check_point
         let (s_perm_opening, s_perm_eval) = PCS::open(
             &pk.pcs_param,
-            &pk.permutation_oracles,
+            &pk.permutation_oracle,
             &perm_check_proof.zero_check_proof.point,
         )?;
 
@@ -484,7 +442,7 @@ where
         {
             // sanity check
             let eval = pk
-                .permutation_oracles
+                .permutation_oracle
                 .evaluate(&perm_check_proof.zero_check_proof.point)
                 .ok_or_else(|| {
                     HyperPlonkErrors::InvalidParameters(
@@ -531,7 +489,7 @@ where
         // 4.3 public input consistency checks
         let r_pi = transcript.get_and_append_challenge_vectors(b"r_pi", ell)?;
 
-        let (pi_opening, pi_eval) = PCS::open(&pk.pcs_param, &pi_in_w0, &r_pi)?;
+        let (pi_opening, pi_eval) = PCS::open(&pk.pcs_param, &pi_poly, &r_pi)?;
 
         #[cfg(feature = "extensive_sanity_checks")]
         {
@@ -612,7 +570,7 @@ where
     /// ```
     /// in vanilla plonk, and obtain a ZeroCheckSubClaim
     ///
-    /// 2. Verify perm_check_proof on `\{w_i(x)\}` and `permutation_oracles`
+    /// 2. Verify perm_check_proof on `\{w_i(x)\}` and `permutation_oracle`
     ///
     /// 3. Verify the opening against the commitment:
     /// - check permutation check evaluations
@@ -696,7 +654,7 @@ where
 
         end_timer!(step);
         // =======================================================================
-        // 2. Verify perm_check_proof on `\{w_i(x)\}` and `permutation_oracles`
+        // 2. Verify perm_check_proof on `\{w_i(x)\}` and `permutation_oracle`
         // =======================================================================
         let step = start_timer!(|| "verify permutation check");
 
@@ -912,7 +870,11 @@ where
 #[cfg(test)]
 mod tests {
     use super::*;
-    use crate::{selectors::SelectorColumn, structs::CustomizedGates, witness::WitnessColumn};
+    use crate::{
+        selectors::SelectorColumn,
+        structs::{CustomizedGates, HyperPlonkParams},
+        witness::WitnessColumn,
+    };
     use ark_bls12_381::Bls12_381;
     use ark_std::test_rng;
     use pcs::prelude::KZGMultilinearPCS;
@@ -947,7 +909,10 @@ mod tests {
         gate_func: CustomizedGates,
     ) -> Result<(), HyperPlonkErrors> {
         let mut rng = test_rng();
-        // system parameters
+        let pcs_srs = KZGMultilinearPCS::<E>::gen_srs_for_testing(&mut rng, 15)?;
+        let merged_nv = nv + log_n_wires;
+
+        // generate index
         let params = HyperPlonkParams {
             nv,
             log_pub_input_len,
@@ -955,12 +920,21 @@ mod tests {
             log_n_wires,
             gate_func,
         };
-        let pcs_srs = KZGMultilinearPCS::<E>::gen_srs_for_testing(&mut rng, 15)?;
-        let merged_nv = nv + log_n_wires;
-
-        let s_perm = random_permutation_mle(merged_nv, &mut rng);
-
+        let permutation = random_permutation_mle(merged_nv, &mut rng)
+            .evaluations
+            .clone();
         let q1 = SelectorColumn(vec![E::Fr::one(), E::Fr::one(), E::Fr::one(), E::Fr::one()]);
+        let index = HyperPlonkIndex {
+            params,
+            permutation,
+            selectors: vec![q1],
+        };
+
+        // generate pk and vks
+        let (pk, vk) = <PolyIOP<E::Fr> as HyperPlonkSNARK<E, KZGMultilinearPCS<E>>>::preprocess(
+            &index, &pcs_srs,
+        )?;
+
         // w1 := [0, 1, 2, 3]
         let w1 = WitnessColumn(vec![
             E::Fr::zero(),
@@ -977,14 +951,6 @@ mod tests {
         ]);
         // public input = w1
         let pi = w1.clone();
-
-        // generate pk and vks
-        let (pk, vk) = <PolyIOP<E::Fr> as HyperPlonkSNARK<E, KZGMultilinearPCS<E>>>::preprocess(
-            &params,
-            &pcs_srs,
-            &s_perm.evaluations,
-            &[q1],
-        )?;
 
         // generate a proof and verify
         let proof = <PolyIOP<E::Fr> as HyperPlonkSNARK<E, KZGMultilinearPCS<E>>>::prove(

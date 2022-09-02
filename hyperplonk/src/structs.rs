@@ -1,6 +1,8 @@
 //! Main module for the HyperPlonk PolyIOP.
 
+use crate::selectors::SelectorColumn;
 use ark_ec::PairingEngine;
+use ark_ff::PrimeField;
 use ark_poly::DenseMultilinearExtension;
 use pcs::PolynomialCommitmentScheme;
 use poly_iop::prelude::{PermutationCheck, ZeroCheck};
@@ -93,6 +95,17 @@ pub struct HyperPlonkParams {
     pub gate_func: CustomizedGates,
 }
 
+/// The HyperPlonk index, consists of the following:
+///   - HyperPlonk parameters
+///   - the wire permutation
+///   - the selector vectors
+#[derive(Clone, Debug, Default, PartialEq, Eq)]
+pub struct HyperPlonkIndex<F: PrimeField> {
+    pub params: HyperPlonkParams,
+    pub permutation: Vec<F>,
+    pub selectors: Vec<SelectorColumn<F>>,
+}
+
 /// The HyperPlonk proving key, consists of the following:
 ///   - the hyperplonk instance parameters
 ///   - the preprocessed polynomials output by the indexer
@@ -101,7 +114,7 @@ pub struct HyperPlonkProvingKey<E: PairingEngine, PCS: PolynomialCommitmentSchem
     /// hyperplonk instance parameters
     pub params: HyperPlonkParams,
     /// the preprocessed permutation polynomials
-    pub permutation_oracles: Rc<DenseMultilinearExtension<E::Fr>>,
+    pub permutation_oracle: Rc<DenseMultilinearExtension<E::Fr>>,
     /// the preprocessed selector polynomials
     // TODO: merge the list into a single MLE
     pub selector_oracles: Vec<Rc<DenseMultilinearExtension<E::Fr>>>,
