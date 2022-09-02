@@ -619,12 +619,11 @@ where
         //
         // =======================================================================
         let step = start_timer!(|| "verify zero check");
-        // Zero check and sum check have different AuxInfo because `w_merged` and
-        // `Prod(x)` have degree and num_vars
+        // Zero check and perm check have different AuxInfo
         let zero_check_aux_info = VPAuxInfo::<E::Fr> {
             // TODO: get the real max degree from gate_func
             // Here we use 6 is because the test has q[0] * w[0]^5 which is degree 6
-            max_degree: 6,
+            max_degree: vk.params.gate_func.degree(),
             num_variables: num_var,
             phantom: PhantomData::default(),
         };
@@ -658,8 +657,7 @@ where
         // =======================================================================
         let step = start_timer!(|| "verify permutation check");
 
-        // Zero check and sum check have different AuxInfo because `w_merged` and
-        // `Prod(x)` have degree and num_vars
+        // Zero check and perm check have different AuxInfo
         let perm_check_aux_info = VPAuxInfo::<E::Fr> {
             // Prod(x) has a max degree of 2
             max_degree: 2,

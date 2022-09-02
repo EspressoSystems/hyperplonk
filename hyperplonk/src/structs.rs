@@ -4,6 +4,7 @@ use crate::selectors::SelectorColumn;
 use ark_ec::PairingEngine;
 use ark_ff::PrimeField;
 use ark_poly::DenseMultilinearExtension;
+use ark_std::cmp::max;
 use pcs::PolynomialCommitmentScheme;
 use poly_iop::prelude::{PermutationCheck, ZeroCheck};
 use std::rc::Rc;
@@ -163,4 +164,15 @@ pub struct HyperPlonkVerifyingKey<E: PairingEngine, PCS: PolynomialCommitmentSch
 #[derive(Clone, Debug, Default, PartialEq, Eq)]
 pub struct CustomizedGates {
     pub(crate) gates: Vec<(i64, Option<usize>, Vec<usize>)>,
+}
+
+impl CustomizedGates {
+    /// The degree of the algebraic customized gate
+    pub fn degree(&self) -> usize {
+        let mut res = 0;
+        for x in self.gates.iter() {
+            res = max(res, x.2.len() + (x.1.is_some() as usize))
+        }
+        res
+    }
 }
