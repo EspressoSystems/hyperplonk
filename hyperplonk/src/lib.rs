@@ -222,7 +222,7 @@ where
         let w_merged = merge_polynomials(&witness_polys)?;
         if w_merged.num_vars != merged_nv {
             return Err(HyperPlonkErrors::InvalidParameters(format!(
-                "merged witness poly has a different num_var ({}) from expected ({})",
+                "merged witness poly has a different num_vars ({}) from expected ({})",
                 w_merged.num_vars, merged_nv
             )));
         }
@@ -282,12 +282,12 @@ where
             // sanity check
             let eval = prod_x.evaluate(&tmp_point).ok_or_else(|| {
                 HyperPlonkErrors::InvalidParameters(
-                    "evaluation dimension does not match".to_string(),
+                    "prod_0_x evaluation dimension does not match".to_string(),
                 )
             })?;
             if eval != prod_0_x_eval {
                 return Err(HyperPlonkErrors::InvalidProver(
-                    "Evaluation is different from PCS opening".to_string(),
+                    "prod_0_x evaluation is different from PCS opening".to_string(),
                 ));
             }
         }
@@ -303,12 +303,12 @@ where
             // sanity check
             let eval = prod_x.evaluate(&tmp_point).ok_or_else(|| {
                 HyperPlonkErrors::InvalidParameters(
-                    "evaluation dimension does not match".to_string(),
+                    "prod_1_x evaluation dimension does not match".to_string(),
                 )
             })?;
             if eval != prod_1_x_eval {
                 return Err(HyperPlonkErrors::InvalidProver(
-                    "Evaluation is different from PCS opening".to_string(),
+                    "prod_1_x evaluation is different from PCS opening".to_string(),
                 ));
             }
         }
@@ -324,13 +324,13 @@ where
             // sanity check
             let eval = prod_x.evaluate(&tmp_point).ok_or_else(|| {
                 HyperPlonkErrors::InvalidParameters(
-                    "evaluation dimension does not match".to_string(),
+                    "prod_x_0 evaluation dimension does not match".to_string(),
                 )
             })?;
 
             if eval != prod_x_0_eval {
                 return Err(HyperPlonkErrors::InvalidProver(
-                    "Evaluation is different from PCS opening".to_string(),
+                    "prod_x_0 evaluation is different from PCS opening".to_string(),
                 ));
             }
         }
@@ -346,13 +346,26 @@ where
             // sanity check
             let eval = prod_x.evaluate(&tmp_point).ok_or_else(|| {
                 HyperPlonkErrors::InvalidParameters(
-                    "evaluation dimension does not match".to_string(),
+                    "prod_x_1 evaluation dimension does not match".to_string(),
                 )
             })?;
             if eval != prod_x_1_eval {
                 return Err(HyperPlonkErrors::InvalidProver(
-                    "Evaluation is different from PCS opening".to_string(),
+                    "prod_x_1 evaluation is different from PCS opening".to_string(),
                 ));
+            }
+        }
+        // prod(1, ..., 1, 0)
+        let tmp_point = [vec![E::Fr::zero()], vec![E::Fr::one(); merged_nv]].concat();
+        let (prod_1_0_opening, prod_1_0_eval) = PCS::open(&pk.pcs_param, &prod_x, &tmp_point)?;
+        #[cfg(feature = "extensive_sanity_checks")]
+        {
+            // sanity check
+            if prod_1_0_eval != E::Fr::one() {
+                return Err(HyperPlonkErrors::InvalidProver(format!(
+                    "prod_1_0 evaluation is not one: got {}",
+                    prod_1_0_eval,
+                )));
             }
         }
         end_timer!(step);
@@ -392,12 +405,12 @@ where
                 .evaluate(&perm_check_proof.zero_check_proof.point)
                 .ok_or_else(|| {
                     HyperPlonkErrors::InvalidParameters(
-                        "evaluation dimension does not match".to_string(),
+                        "witness_perm_check evaluation dimension does not match".to_string(),
                     )
                 })?;
             if eval != witness_perm_check_eval {
                 return Err(HyperPlonkErrors::InvalidProver(
-                    "Evaluation is different from PCS opening".to_string(),
+                    "witness_perm_check evaluation is different from PCS opening".to_string(),
                 ));
             }
         }
@@ -411,12 +424,12 @@ where
             {
                 let eval = wire_poly.evaluate(&zero_check_proof.point).ok_or_else(|| {
                     HyperPlonkErrors::InvalidParameters(
-                        "evaluation dimension does not match".to_string(),
+                        "witness_zero_check evaluation dimension does not match".to_string(),
                     )
                 })?;
                 if eval != zero_eval {
                     return Err(HyperPlonkErrors::InvalidProver(
-                        "Evaluation is different from PCS opening".to_string(),
+                        "witness_zero_check evaluation is different from PCS opening".to_string(),
                     ));
                 }
             }
@@ -439,12 +452,12 @@ where
                 .evaluate(&perm_check_proof.zero_check_proof.point)
                 .ok_or_else(|| {
                     HyperPlonkErrors::InvalidParameters(
-                        "evaluation dimension does not match".to_string(),
+                        "perm_oracle evaluation dimension does not match".to_string(),
                     )
                 })?;
             if eval != s_perm_eval {
                 return Err(HyperPlonkErrors::InvalidProver(
-                    "Evaluation is different from PCS opening".to_string(),
+                    "perm_oracle evaluation is different from PCS opening".to_string(),
                 ));
             }
         }
@@ -466,12 +479,12 @@ where
                     .evaluate(&zero_check_proof.point)
                     .ok_or_else(|| {
                         HyperPlonkErrors::InvalidParameters(
-                            "evaluation dimension does not match".to_string(),
+                            "selector evaluation dimension does not match".to_string(),
                         )
                     })?;
                 if eval != zero_eval {
                     return Err(HyperPlonkErrors::InvalidProver(
-                        "Evaluation is different from PCS opening".to_string(),
+                        "selector evaluation is different from PCS opening".to_string(),
                     ));
                 }
             }
@@ -494,12 +507,12 @@ where
             // sanity check
             let eval = pi_poly.evaluate(&r_pi).ok_or_else(|| {
                 HyperPlonkErrors::InvalidParameters(
-                    "evaluation dimension does not match".to_string(),
+                    "public input evaluation dimension does not match".to_string(),
                 )
             })?;
             if eval != pi_eval {
                 return Err(HyperPlonkErrors::InvalidProver(
-                    "Evaluation is different from PCS opening".to_string(),
+                    "public input evaluation is different from PCS opening".to_string(),
                 ));
             }
         }
@@ -522,6 +535,7 @@ where
                 prod_1_x_opening,
                 prod_x_0_opening,
                 prod_x_1_opening,
+                prod_1_0_opening,
             ],
             witness_perm_check_opening,
             witness_perm_check_eval,
@@ -584,10 +598,10 @@ where
 
         let mut transcript = IOPTranscript::<E::Fr>::new(b"hyperplonk");
         // witness assignment of length 2^n
-        let num_var = vk.params.nv;
+        let num_vars = vk.params.nv;
         let log_num_witness_polys = vk.params.log_n_wires;
         // number of variables in merged polynomial for Multilinear-KZG
-        let merged_nv = num_var + log_num_witness_polys;
+        let merged_nv = num_vars + log_num_witness_polys;
 
         //  online public input of length 2^\ell
         let ell = vk.params.log_pub_input_len;
@@ -619,6 +633,13 @@ where
                 1 << log_num_witness_polys
             )));
         }
+        if proof.prod_openings.len() != 5 {
+            return Err(HyperPlonkErrors::InvalidProver(format!(
+                "the number of product polynomial evaluations is not correct: got {}, expect {}",
+                proof.prod_openings.len(),
+                5
+            )));
+        }
 
         // =======================================================================
         // 1. Verify zero_check_proof on
@@ -634,7 +655,7 @@ where
         // Zero check and perm check have different AuxInfo
         let zero_check_aux_info = VPAuxInfo::<E::Fr> {
             max_degree: vk.params.gate_func.degree(),
-            num_variables: num_var,
+            num_variables: num_vars,
             phantom: PhantomData::default(),
         };
 
@@ -810,6 +831,19 @@ where
                 "prod(x, 1) pcs verification failed".to_string(),
             ));
         }
+        // prod(1, ..., 1, 0) = 1
+        let prod_final_query = perm_check_sub_claim.product_check_sub_claim.final_query;
+        if !PCS::verify(
+            &vk.pcs_param,
+            &proof.perm_check_proof.prod_x_comm,
+            &prod_final_query.0,
+            &prod_final_query.1,
+            &proof.prod_openings[4],
+        )? {
+            return Err(HyperPlonkErrors::InvalidProof(
+                "prod(1, ..., 1, 0) pcs verification failed".to_string(),
+            ));
+        }
 
         // =======================================================================
         // 3.2 check zero check evaluations
@@ -858,7 +892,7 @@ where
             HyperPlonkErrors::InvalidParameters("evaluation dimension does not match".to_string())
         })?;
         r_pi = [
-            vec![E::Fr::zero(); num_var - ell],
+            vec![E::Fr::zero(); num_vars - ell],
             r_pi,
             vec![E::Fr::zero(); log_num_witness_polys],
         ]
@@ -934,7 +968,8 @@ mod tests {
             log_n_wires,
             gate_func,
         };
-        let permutation = random_permutation_mle(merged_nv, &mut rng)
+        let permutation = identity_permutation_mle(merged_nv).evaluations.clone();
+        let rand_perm = random_permutation_mle(merged_nv, &mut rng)
             .evaluations
             .clone();
         let q1 = SelectorColumn(vec![E::Fr::one(), E::Fr::one(), E::Fr::one(), E::Fr::one()]);
@@ -976,6 +1011,8 @@ mod tests {
         let _verify = <PolyIOP<E::Fr> as HyperPlonkSNARK<E, KZGMultilinearPCS<E>>>::verify(
             &vk, &pi.0, &proof,
         )?;
+
+        // bad path 1: wrong permutation
 
         Ok(())
     }
