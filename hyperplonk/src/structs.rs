@@ -25,8 +25,6 @@ where
     // PCS components: common
     // =======================================================================
     /// PCS commit for witnesses
-    // TODO: replace me with a batch commitment
-    pub witness_commits: Vec<PCS::Commitment>,
     pub w_merged_com: PCS::Commitment,
     // =======================================================================
     // PCS components: permutation check

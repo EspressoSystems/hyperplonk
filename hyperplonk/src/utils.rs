@@ -10,6 +10,8 @@ use crate::{
     witness::WitnessColumn,
 };
 
+use poly_iop::prelude::bit_decompose;
+
 /// Build MLE from matrix of witnesses.
 ///
 /// Given a matrix := [row1, row2, ...] where
@@ -157,6 +159,17 @@ pub(crate) fn eval_f<F: PrimeField>(
         res += cur_value;
     }
     Ok(res)
+}
+
+/// given the evaluation input `point` of the `index`-th polynomial,
+/// obtain the evaluation point in the merged polynomial
+pub(crate) fn gen_eval_point<F: PrimeField>(index: usize, index_len: usize, point: &[F]) -> Vec<F> {
+    let mut index_vec: Vec<F> = bit_decompose(index as u64, index_len)
+        .into_iter()
+        .map(|x| F::from(x))
+        .collect();
+    index_vec.reverse();
+    [point, &index_vec].concat()
 }
 
 #[cfg(test)]

@@ -14,7 +14,7 @@ use poly_iop::{
 use std::{marker::PhantomData, rc::Rc};
 use structs::{HyperPlonkIndex, HyperPlonkProof, HyperPlonkProvingKey, HyperPlonkVerifyingKey};
 use transcript::IOPTranscript;
-use utils::build_f;
+use utils::{build_f, gen_eval_point};
 use witness::WitnessColumn;
 
 mod errors;
@@ -219,13 +219,6 @@ where
         // transcript
         // =======================================================================
         let step = start_timer!(|| "commit witnesses");
-        let mut witness_commits = vec![];
-        // TODO: batch commit
-        for wi_poly in witness_polys.iter() {
-            let wi_com = PCS::commit(&pk.pcs_param, wi_poly)?;
-            witness_commits.push(wi_com);
-        }
-
         let w_merged = merge_polynomials(&witness_polys)?;
         if w_merged.num_vars != merged_nv {
             return Err(HyperPlonkErrors::InvalidParameters(format!(
@@ -411,10 +404,10 @@ where
 
         // 4.2 open zero check proof
         // TODO: batch opening
-        for wire_poly in witness_polys {
+        for (i, wire_poly) in witness_polys.iter().enumerate() {
+            let tmp_point = gen_eval_point(i, log_num_witness_polys, &zero_check_proof.point);
             // Open zero check proof
-            let (zero_proof, zero_eval) =
-                PCS::open(&pk.pcs_param, &wire_poly, &zero_check_proof.point)?;
+            let (zero_proof, zero_eval) = PCS::open(&pk.pcs_param, &w_merged, &tmp_point)?;
             {
                 let eval = wire_poly.evaluate(&zero_check_proof.point).ok_or_else(|| {
                     HyperPlonkErrors::InvalidParameters(
@@ -488,8 +481,13 @@ where
 
         // 4.3 public input consistency checks
         let r_pi = transcript.get_and_append_challenge_vectors(b"r_pi", ell)?;
-
-        let (pi_opening, pi_eval) = PCS::open(&pk.pcs_param, &pi_poly, &r_pi)?;
+        let tmp_point = [
+            vec![E::Fr::zero(); num_vars - ell],
+            r_pi.clone(),
+            vec![E::Fr::zero(); log_num_witness_polys],
+        ]
+        .concat();
+        let (pi_opening, pi_eval) = PCS::open(&pk.pcs_param, &w_merged, &tmp_point)?;
 
         #[cfg(feature = "extensive_sanity_checks")]
         {
@@ -513,7 +511,6 @@ where
             // =======================================================================
             // PCS components: common
             // =======================================================================
-            witness_commits,
             w_merged_com,
             // =======================================================================
             // PCS components: permutation check
@@ -733,7 +730,7 @@ where
             &proof.witness_perm_check_opening,
         )? {
             return Err(HyperPlonkErrors::InvalidProof(
-                "pcs verification failed".to_string(),
+                "witness for permutation check pcs verification failed".to_string(),
             ));
         }
 
@@ -745,7 +742,7 @@ where
             &proof.perm_oracle_opening,
         )? {
             return Err(HyperPlonkErrors::InvalidProof(
-                "pcs verification failed".to_string(),
+                "perm oracle pcs verification failed".to_string(),
             ));
         }
 
@@ -761,7 +758,7 @@ where
             &proof.prod_openings[0],
         )? {
             return Err(HyperPlonkErrors::InvalidProof(
-                "pcs verification failed".to_string(),
+                "prod(0, x) pcs verification failed".to_string(),
             ));
         }
         // prod(1, x)
@@ -773,7 +770,7 @@ where
             &proof.prod_openings[1],
         )? {
             return Err(HyperPlonkErrors::InvalidProof(
-                "pcs verification failed".to_string(),
+                "prod(1, x) pcs verification failed".to_string(),
             ));
         }
         // prod(x, 0)
@@ -785,7 +782,7 @@ where
             &proof.prod_openings[2],
         )? {
             return Err(HyperPlonkErrors::InvalidProof(
-                "pcs verification failed".to_string(),
+                "prod(x, 0) pcs verification failed".to_string(),
             ));
         }
         // prod(x, 1)
@@ -797,7 +794,7 @@ where
             &proof.prod_openings[3],
         )? {
             return Err(HyperPlonkErrors::InvalidProof(
-                "pcs verification failed".to_string(),
+                "prod(x, 1) pcs verification failed".to_string(),
             ));
         }
 
@@ -806,15 +803,22 @@ where
         // =======================================================================
         // witness for zero check
         // TODO: batch verification
-        for (commitment, (opening, eval)) in proof.witness_commits.iter().zip(
-            proof
-                .witness_zero_check_openings
-                .iter()
-                .zip(proof.witness_zero_check_evals.iter()),
-        ) {
-            if !PCS::verify(&vk.pcs_param, commitment, zero_check_point, eval, opening)? {
+        for (i, (opening, eval)) in proof
+            .witness_zero_check_openings
+            .iter()
+            .zip(proof.witness_zero_check_evals.iter())
+            .enumerate()
+        {
+            let tmp_point = gen_eval_point(i, log_num_witness_polys, zero_check_point);
+            if !PCS::verify(
+                &vk.pcs_param,
+                &proof.w_merged_com,
+                &tmp_point,
+                eval,
+                opening,
+            )? {
                 return Err(HyperPlonkErrors::InvalidProof(
-                    "pcs verification failed".to_string(),
+                    "witness for zero_check pcs verification failed".to_string(),
                 ));
             }
         }
@@ -834,7 +838,7 @@ where
                 opening,
             )? {
                 return Err(HyperPlonkErrors::InvalidProof(
-                    "pcs verification failed".to_string(),
+                    "selector pcs verification failed".to_string(),
                 ));
             }
         }
@@ -846,16 +850,21 @@ where
         let pi_eval = pi_poly.evaluate(&r_pi).ok_or_else(|| {
             HyperPlonkErrors::InvalidParameters("evaluation dimension does not match".to_string())
         })?;
-        r_pi = [vec![E::Fr::zero(); num_var - ell], r_pi].concat();
+        r_pi = [
+            vec![E::Fr::zero(); num_var - ell],
+            r_pi,
+            vec![E::Fr::zero(); log_num_witness_polys],
+        ]
+        .concat();
         if !PCS::verify(
             &vk.pcs_param,
-            &proof.witness_commits[0],
+            &proof.w_merged_com,
             &r_pi,
             &pi_eval,
             &proof.pi_opening,
         )? {
             return Err(HyperPlonkErrors::InvalidProof(
-                "pcs verification failed".to_string(),
+                "public input pcs verification failed".to_string(),
             ));
         }
 
