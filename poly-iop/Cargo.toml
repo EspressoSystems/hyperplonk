@@ -20,7 +20,8 @@ rayon = { version = "1.5.2", default-features = false, optional = true }
 
 transcript = { path = "../transcript" }
 arithmetic = { path = "../arithmetic" }
-pcs = { path = "../pcs" }
+
+jf-primitives = { git = "https://github.com/EspressoSystems/jellyfish" }
 
 [dev-dependencies]
 ark-ec = { version = "^0.3.0", default-features = false }
@@ -40,10 +41,10 @@ parallel = [
     "ark-std/parallel", 
     "ark-ff/parallel",  
     "ark-poly/parallel", 
-    "pcs/parallel",
+    "jf-primitives/parallel",
     ]
 print-trace = [ 
     "arithmetic/print-trace",
     "ark-std/print-trace",
-    "pcs/print-trace",
+    "jf-primitives/print-trace",
     ] 

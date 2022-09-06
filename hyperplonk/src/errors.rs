@@ -4,7 +4,7 @@ use arithmetic::ArithErrors;
 use ark_serialize::SerializationError;
 use ark_std::string::String;
 use displaydoc::Display;
-use pcs::prelude::PCSErrors;
+use jf_primitives::pcs::prelude::PCSError;
 use poly_iop::prelude::PolyIOPErrors;
 use transcript::TranscriptErrors;
 
@@ -24,7 +24,7 @@ pub enum HyperPlonkErrors {
     /// PolyIOP error {0}
     PolyIOPErrors(PolyIOPErrors),
     /// PCS error {0}
-    PCSErrors(PCSErrors),
+    PCSError(PCSError),
     /// Transcript error {0}
     TranscriptError(TranscriptErrors),
     /// Arithmetic Error: {0}
@@ -43,9 +43,9 @@ impl From<PolyIOPErrors> for HyperPlonkErrors {
     }
 }
 
-impl From<PCSErrors> for HyperPlonkErrors {
-    fn from(e: PCSErrors) -> Self {
-        Self::PCSErrors(e)
+impl From<PCSError> for HyperPlonkErrors {
+    fn from(e: PCSError) -> Self {
+        Self::PCSError(e)
     }
 }
 

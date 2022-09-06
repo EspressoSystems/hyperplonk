@@ -5,7 +5,7 @@ use ark_ec::PairingEngine;
 use ark_ff::PrimeField;
 use ark_poly::DenseMultilinearExtension;
 use ark_std::cmp::max;
-use pcs::PolynomialCommitmentScheme;
+use jf_primitives::pcs::PolynomialCommitmentScheme;
 use poly_iop::prelude::{PermutationCheck, ZeroCheck};
 use std::rc::Rc;
 

@@ -7,7 +7,6 @@ edition = "2021"
 
 [dependencies]
 poly-iop = { path = "../poly-iop" }
-pcs = { path = "../pcs" }
 
 ark-std = { version = "^0.3.0", default-features = false }
 ark-ec = { version = "^0.3.0", default-features = false }
@@ -19,6 +18,7 @@ displaydoc = { version = "0.2.3", default-features = false }
 transcript = { path = "../transcript" }
 arithmetic = { path = "../arithmetic" }
 
+jf-primitives = { git = "https://github.com/EspressoSystems/jellyfish" }
 
 [dev-dependencies]
 ark-bls12-381 = { version = "0.3.0", default-features = false, features = [ "curve" ] }
@@ -36,12 +36,12 @@ parallel = [
     "ark-poly/parallel", 
     "ark-ec/parallel",
     "poly-iop/parallel",
-    "pcs/parallel",
     "arithmetic/parallel",
+    "jf-primitives/parallel",
     ]
 print-trace = [ 
     "ark-std/print-trace",
     "poly-iop/print-trace",
-    "pcs/print-trace",
     "arithmetic/print-trace",
+    "jf-primitives/print-trace",
     ] 
