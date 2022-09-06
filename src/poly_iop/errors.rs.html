@@ -65,7 +65,7 @@
 <span class="kw">use</span> <span class="ident">arithmetic::ArithErrors</span>;
 <span class="kw">use</span> <span class="ident">ark_std::string::String</span>;
 <span class="kw">use</span> <span class="ident">displaydoc::Display</span>;
-<span class="kw">use</span> <span class="ident">pcs::prelude::PCSErrors</span>;
+<span class="kw">use</span> <span class="ident">jf_primitives::pcs::errors::PCSError</span>;
 <span class="kw">use</span> <span class="ident">transcript::TranscriptErrors</span>;
 
 <span class="doccomment">/// A `enum` specifying the possible failure modes of the PolyIOP.</span>
@@ -90,7 +90,7 @@
     <span class="doccomment">/// Arithmetic Error: {0}</span>
     <span class="ident">ArithmeticErrors</span>(<span class="ident">ArithErrors</span>),
     <span class="doccomment">/// PCS error {0}</span>
-    <span class="ident">PCSErrors</span>(<span class="ident">PCSErrors</span>),
+    <span class="ident">PCSError</span>(<span class="ident">PCSError</span>),
 }
 
 <span class="kw">impl</span> <span class="ident">From</span><span class="op">&lt;</span><span class="ident">ark_serialize::SerializationError</span><span class="op">&gt;</span> <span class="kw">for</span> <span class="ident">PolyIOPErrors</span> {
@@ -111,9 +111,9 @@
     }
 }
 
-<span class="kw">impl</span> <span class="ident">From</span><span class="op">&lt;</span><span class="ident">PCSErrors</span><span class="op">&gt;</span> <span class="kw">for</span> <span class="ident">PolyIOPErrors</span> {
-    <span class="kw">fn</span> <span class="ident">from</span>(<span class="ident">e</span>: <span class="ident">PCSErrors</span>) -&gt; <span class="self">Self</span> {
-        <span class="ident"><span class="self">Self</span>::PCSErrors</span>(<span class="ident">e</span>)
+<span class="kw">impl</span> <span class="ident">From</span><span class="op">&lt;</span><span class="ident">PCSError</span><span class="op">&gt;</span> <span class="kw">for</span> <span class="ident">PolyIOPErrors</span> {
+    <span class="kw">fn</span> <span class="ident">from</span>(<span class="ident">e</span>: <span class="ident">PCSError</span>) -&gt; <span class="self">Self</span> {
+        <span class="ident"><span class="self">Self</span>::PCSError</span>(<span class="ident">e</span>)
     }
 }
 </code></pre></div>

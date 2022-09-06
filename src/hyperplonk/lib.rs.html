@@ -1047,20 +1047,29 @@
 <span id="1041">1041</span>
 <span id="1042">1042</span>
 <span id="1043">1043</span>
+<span id="1044">1044</span>
+<span id="1045">1045</span>
+<span id="1046">1046</span>
+<span id="1047">1047</span>
+<span id="1048">1048</span>
+<span id="1049">1049</span>
 </pre><pre class="rust"><code><span class="doccomment">//! Main module for the HyperPlonk SNARK.</span>
 
 <span class="kw">use</span> <span class="ident"><span class="kw">crate</span>::utils</span>::{<span class="ident">eval_f</span>, <span class="ident">prove_sanity_check</span>};
 <span class="kw">use</span> <span class="ident">arithmetic::VPAuxInfo</span>;
 <span class="kw">use</span> <span class="ident">ark_ec::PairingEngine</span>;
 <span class="kw">use</span> <span class="ident">ark_poly</span>::{<span class="ident">DenseMultilinearExtension</span>, <span class="ident">MultilinearExtension</span>};
-<span class="kw">use</span> <span class="ident">ark_std</span>::{<span class="ident">end_timer</span>, <span class="ident">log2</span>, <span class="ident">start_timer</span>, <span class="ident">One</span>, <span class="ident">Zero</span>};
+<span class="kw">use</span> <span class="ident">ark_std</span>::{
+    <span class="ident">borrow::Borrow</span>, <span class="ident">end_timer</span>, <span class="ident">log2</span>, <span class="ident">marker::PhantomData</span>, <span class="ident">rc::Rc</span>, <span class="ident">start_timer</span>, <span class="ident">One</span>, <span class="ident">Zero</span>,
+};
 <span class="kw">use</span> <span class="ident">errors::HyperPlonkErrors</span>;
-<span class="kw">use</span> <span class="ident">pcs::prelude</span>::{<span class="ident">compute_qx_degree</span>, <span class="ident">merge_polynomials</span>, <span class="ident">PCSErrors</span>, <span class="ident">PolynomialCommitmentScheme</span>};
+<span class="kw">use</span> <span class="ident">jf_primitives::pcs::prelude</span>::{
+    <span class="ident">compute_qx_degree</span>, <span class="ident">merge_polynomials</span>, <span class="ident">PCSError</span>, <span class="ident">PolynomialCommitmentScheme</span>,
+};
 <span class="kw">use</span> <span class="ident">poly_iop</span>::{
     <span class="ident">prelude</span>::{<span class="ident">identity_permutation_mle</span>, <span class="ident">PermutationCheck</span>, <span class="ident">ZeroCheck</span>},
     <span class="ident">PolyIOP</span>,
 };
-<span class="kw">use</span> <span class="ident">std</span>::{<span class="ident">marker::PhantomData</span>, <span class="ident">rc::Rc</span>};
 <span class="kw">use</span> <span class="ident">structs</span>::{<span class="ident">HyperPlonkIndex</span>, <span class="ident">HyperPlonkProof</span>, <span class="ident">HyperPlonkProvingKey</span>, <span class="ident">HyperPlonkVerifyingKey</span>};
 <span class="kw">use</span> <span class="ident">transcript::IOPTranscript</span>;
 <span class="kw">use</span> <span class="ident">utils</span>::{<span class="ident">build_f</span>, <span class="ident">gen_eval_point</span>};
@@ -1096,7 +1105,7 @@
     <span class="doccomment">///   polynomial commitments</span>
     <span class="kw">fn</span> <span class="ident">preprocess</span>(
         <span class="ident">index</span>: <span class="kw-2">&amp;</span><span class="ident"><span class="self">Self</span>::Index</span>,
-        <span class="ident">pcs_srs</span>: <span class="kw-2">&amp;</span><span class="ident">PCS::SRS</span>,
+        <span class="ident">pcs_srs</span>: <span class="kw">impl</span> <span class="ident">Borrow</span><span class="op">&lt;</span><span class="ident">PCS::SRS</span><span class="op">&gt;</span>,
     ) -&gt; <span class="prelude-ty">Result</span><span class="op">&lt;</span>(<span class="ident"><span class="self">Self</span>::ProvingKey</span>, <span class="ident"><span class="self">Self</span>::VerifyingKey</span>), <span class="ident">HyperPlonkErrors</span><span class="op">&gt;</span>;
 
     <span class="doccomment">/// Generate HyperPlonk SNARK proof.</span>
@@ -1108,7 +1117,7 @@
     <span class="doccomment">/// Outputs:</span>
     <span class="doccomment">/// - The HyperPlonk SNARK proof.</span>
     <span class="kw">fn</span> <span class="ident">prove</span>(
-        <span class="ident">pk</span>: <span class="kw-2">&amp;</span><span class="ident"><span class="self">Self</span>::ProvingKey</span>,
+        <span class="ident">pk</span>: <span class="kw">impl</span> <span class="ident">Borrow</span><span class="op">&lt;</span><span class="ident"><span class="self">Self</span>::ProvingKey</span><span class="op">&gt;</span>,
         <span class="ident">pub_input</span>: <span class="kw-2">&amp;</span>[<span class="ident">E::Fr</span>],
         <span class="ident">witnesses</span>: <span class="kw-2">&amp;</span>[<span class="ident">WitnessColumn</span><span class="op">&lt;</span><span class="ident">E::Fr</span><span class="op">&gt;</span>],
     ) -&gt; <span class="prelude-ty">Result</span><span class="op">&lt;</span><span class="ident"><span class="self">Self</span>::Proof</span>, <span class="ident">HyperPlonkErrors</span><span class="op">&gt;</span>;
@@ -1122,7 +1131,7 @@
     <span class="doccomment">/// Outputs:</span>
     <span class="doccomment">/// - Return a boolean on whether the verification is successful</span>
     <span class="kw">fn</span> <span class="ident">verify</span>(
-        <span class="ident">vk</span>: <span class="kw-2">&amp;</span><span class="ident"><span class="self">Self</span>::VerifyingKey</span>,
+        <span class="ident">vk</span>: <span class="kw">impl</span> <span class="ident">Borrow</span><span class="op">&lt;</span><span class="ident"><span class="self">Self</span>::VerifyingKey</span><span class="op">&gt;</span>,
         <span class="ident">pub_input</span>: <span class="kw-2">&amp;</span>[<span class="ident">E::Fr</span>],
         <span class="ident">proof</span>: <span class="kw-2">&amp;</span><span class="ident"><span class="self">Self</span>::Proof</span>,
     ) -&gt; <span class="prelude-ty">Result</span><span class="op">&lt;</span><span class="ident">bool</span>, <span class="ident">HyperPlonkErrors</span><span class="op">&gt;</span>;
@@ -1148,7 +1157,7 @@
 
     <span class="kw">fn</span> <span class="ident">preprocess</span>(
         <span class="ident">index</span>: <span class="kw-2">&amp;</span><span class="ident"><span class="self">Self</span>::Index</span>,
-        <span class="ident">pcs_srs</span>: <span class="kw-2">&amp;</span><span class="ident">PCS::SRS</span>,
+        <span class="ident">pcs_srs</span>: <span class="kw">impl</span> <span class="ident">Borrow</span><span class="op">&lt;</span><span class="ident">PCS::SRS</span><span class="op">&gt;</span>,
     ) -&gt; <span class="prelude-ty">Result</span><span class="op">&lt;</span>(<span class="ident"><span class="self">Self</span>::ProvingKey</span>, <span class="ident"><span class="self">Self</span>::VerifyingKey</span>), <span class="ident">HyperPlonkErrors</span><span class="op">&gt;</span> {
         <span class="kw">let</span> <span class="ident">num_vars</span> <span class="op">=</span> <span class="ident">index</span>.<span class="ident">params</span>.<span class="ident">nv</span>;
         <span class="kw">let</span> <span class="ident">log_num_witness_polys</span> <span class="op">=</span> <span class="ident">index</span>.<span class="ident">params</span>.<span class="ident">log_n_wires</span>;
@@ -1182,7 +1191,7 @@
         <span class="kw">let</span> <span class="ident">selector_com</span> <span class="op">=</span> <span class="ident">selector_oracles</span>
             .<span class="ident">iter</span>()
             .<span class="ident">map</span>(<span class="op">|</span><span class="ident">poly</span><span class="op">|</span> <span class="ident">PCS::commit</span>(<span class="kw-2">&amp;</span><span class="ident">pcs_prover_param</span>, <span class="ident">poly</span>))
-            .<span class="ident">collect</span>::<span class="op">&lt;</span><span class="prelude-ty">Result</span><span class="op">&lt;</span><span class="ident">Vec</span><span class="op">&lt;</span><span class="ident">PCS::Commitment</span><span class="op">&gt;</span>, <span class="ident">PCSErrors</span><span class="op">&gt;</span><span class="op">&gt;</span>()<span class="question-mark">?</span>;
+            .<span class="ident">collect</span>::<span class="op">&lt;</span><span class="prelude-ty">Result</span><span class="op">&lt;</span><span class="ident">Vec</span><span class="op">&lt;</span><span class="ident">PCS::Commitment</span><span class="op">&gt;</span>, <span class="ident">PCSError</span><span class="op">&gt;</span><span class="op">&gt;</span>()<span class="question-mark">?</span>;
 
         <span class="prelude-val">Ok</span>((
             <span class="ident"><span class="self">Self</span>::ProvingKey</span> {
@@ -1235,10 +1244,11 @@
     <span class="doccomment">///</span>
     <span class="doccomment">/// TODO: this function is gigantic -- refactor it to smaller ones</span>
     <span class="kw">fn</span> <span class="ident">prove</span>(
-        <span class="ident">pk</span>: <span class="kw-2">&amp;</span><span class="ident"><span class="self">Self</span>::ProvingKey</span>,
+        <span class="ident">pk</span>: <span class="kw">impl</span> <span class="ident">Borrow</span><span class="op">&lt;</span><span class="ident"><span class="self">Self</span>::ProvingKey</span><span class="op">&gt;</span>,
         <span class="ident">pub_input</span>: <span class="kw-2">&amp;</span>[<span class="ident">E::Fr</span>],
         <span class="ident">witnesses</span>: <span class="kw-2">&amp;</span>[<span class="ident">WitnessColumn</span><span class="op">&lt;</span><span class="ident">E::Fr</span><span class="op">&gt;</span>],
     ) -&gt; <span class="prelude-ty">Result</span><span class="op">&lt;</span><span class="ident"><span class="self">Self</span>::Proof</span>, <span class="ident">HyperPlonkErrors</span><span class="op">&gt;</span> {
+        <span class="kw">let</span> <span class="ident">pk</span> <span class="op">=</span> <span class="ident">pk</span>.<span class="ident">borrow</span>();
         <span class="kw">let</span> <span class="ident">start</span> <span class="op">=</span> <span class="macro">start_timer!</span>(<span class="op">|</span><span class="op">|</span> <span class="string">&quot;hyperplonk proving&quot;</span>);
         <span class="kw">let</span> <span class="kw-2">mut</span> <span class="ident">transcript</span> <span class="op">=</span> <span class="ident">IOPTranscript</span>::<span class="op">&lt;</span><span class="ident">E::Fr</span><span class="op">&gt;</span><span class="ident">::new</span>(<span class="string">b&quot;hyperplonk&quot;</span>);
 
@@ -1268,7 +1278,8 @@
         <span class="comment">// transcript</span>
         <span class="comment">// =======================================================================</span>
         <span class="kw">let</span> <span class="ident">step</span> <span class="op">=</span> <span class="macro">start_timer!</span>(<span class="op">|</span><span class="op">|</span> <span class="string">&quot;commit witnesses&quot;</span>);
-        <span class="kw">let</span> <span class="ident">w_merged</span> <span class="op">=</span> <span class="ident">merge_polynomials</span>(<span class="kw-2">&amp;</span><span class="ident">witness_polys</span>)<span class="question-mark">?</span>;
+        <span class="comment">// TODO(Chengyu): update `merge_polynomials` method in jellyfish repo.</span>
+        <span class="kw">let</span> <span class="ident">w_merged</span> <span class="op">=</span> <span class="ident">Rc::new</span>(<span class="ident">merge_polynomials</span>(<span class="kw-2">&amp;</span><span class="ident">witness_polys</span>)<span class="question-mark">?</span>);
         <span class="kw">if</span> <span class="ident">w_merged</span>.<span class="ident">num_vars</span> <span class="op">!</span><span class="op">=</span> <span class="ident">merged_nv</span> {
             <span class="kw">return</span> <span class="prelude-val">Err</span>(<span class="ident">HyperPlonkErrors::InvalidParameters</span>(<span class="macro">format!</span>(
                 <span class="string">&quot;merged witness poly has a different num_vars ({}) from expected ({})&quot;</span>,
@@ -1639,10 +1650,11 @@
     <span class="doccomment">/// - check zero check evaluations</span>
     <span class="doccomment">/// - public input consistency checks</span>
     <span class="kw">fn</span> <span class="ident">verify</span>(
-        <span class="ident">vk</span>: <span class="kw-2">&amp;</span><span class="ident"><span class="self">Self</span>::VerifyingKey</span>,
+        <span class="ident">vk</span>: <span class="kw">impl</span> <span class="ident">Borrow</span><span class="op">&lt;</span><span class="ident"><span class="self">Self</span>::VerifyingKey</span><span class="op">&gt;</span>,
         <span class="ident">pub_input</span>: <span class="kw-2">&amp;</span>[<span class="ident">E::Fr</span>],
         <span class="ident">proof</span>: <span class="kw-2">&amp;</span><span class="ident"><span class="self">Self</span>::Proof</span>,
     ) -&gt; <span class="prelude-ty">Result</span><span class="op">&lt;</span><span class="ident">bool</span>, <span class="ident">HyperPlonkErrors</span><span class="op">&gt;</span> {
+        <span class="kw">let</span> <span class="ident">vk</span> <span class="op">=</span> <span class="ident">vk</span>.<span class="ident">borrow</span>();
         <span class="kw">let</span> <span class="ident">start</span> <span class="op">=</span> <span class="macro">start_timer!</span>(<span class="op">|</span><span class="op">|</span> <span class="string">&quot;hyperplonk verification&quot;</span>);
 
         <span class="kw">let</span> <span class="kw-2">mut</span> <span class="ident">transcript</span> <span class="op">=</span> <span class="ident">IOPTranscript</span>::<span class="op">&lt;</span><span class="ident">E::Fr</span><span class="op">&gt;</span><span class="ident">::new</span>(<span class="string">b&quot;hyperplonk&quot;</span>);
@@ -1974,7 +1986,7 @@
     };
     <span class="kw">use</span> <span class="ident">ark_bls12_381::Bls12_381</span>;
     <span class="kw">use</span> <span class="ident">ark_std::test_rng</span>;
-    <span class="kw">use</span> <span class="ident">pcs::prelude::KZGMultilinearPCS</span>;
+    <span class="kw">use</span> <span class="ident">jf_primitives::pcs::prelude::MultilinearKzgPCS</span>;
     <span class="kw">use</span> <span class="ident">poly_iop::prelude::random_permutation_mle</span>;
 
     <span class="attribute">#[<span class="ident">test</span>]</span>
@@ -2006,7 +2018,7 @@
         <span class="ident">gate_func</span>: <span class="ident">CustomizedGates</span>,
     ) -&gt; <span class="prelude-ty">Result</span><span class="op">&lt;</span>(), <span class="ident">HyperPlonkErrors</span><span class="op">&gt;</span> {
         <span class="kw">let</span> <span class="kw-2">mut</span> <span class="ident">rng</span> <span class="op">=</span> <span class="ident">test_rng</span>();
-        <span class="kw">let</span> <span class="ident">pcs_srs</span> <span class="op">=</span> <span class="ident">KZGMultilinearPCS</span>::<span class="op">&lt;</span><span class="ident">E</span><span class="op">&gt;</span><span class="ident">::gen_srs_for_testing</span>(<span class="kw-2">&amp;mut</span> <span class="ident">rng</span>, <span class="number">15</span>)<span class="question-mark">?</span>;
+        <span class="kw">let</span> <span class="ident">pcs_srs</span> <span class="op">=</span> <span class="ident">MultilinearKzgPCS</span>::<span class="op">&lt;</span><span class="ident">E</span><span class="op">&gt;</span><span class="ident">::gen_srs_for_testing</span>(<span class="kw-2">&amp;mut</span> <span class="ident">rng</span>, <span class="number">15</span>)<span class="question-mark">?</span>;
         <span class="kw">let</span> <span class="ident">merged_nv</span> <span class="op">=</span> <span class="ident">nv</span> <span class="op">+</span> <span class="ident">log_n_wires</span>;
 
         <span class="comment">// generate index</span>
@@ -2026,7 +2038,7 @@
         };
 
         <span class="comment">// generate pk and vks</span>
-        <span class="kw">let</span> (<span class="ident">pk</span>, <span class="ident">vk</span>) <span class="op">=</span> <span class="op">&lt;</span><span class="ident">PolyIOP</span><span class="op">&lt;</span><span class="ident">E::Fr</span><span class="op">&gt;</span> <span class="kw">as</span> <span class="ident">HyperPlonkSNARK</span><span class="op">&lt;</span><span class="ident">E</span>, <span class="ident">KZGMultilinearPCS</span><span class="op">&lt;</span><span class="ident">E</span><span class="op">&gt;</span><span class="op">&gt;</span><span class="op">&gt;</span><span class="ident">::preprocess</span>(
+        <span class="kw">let</span> (<span class="ident">pk</span>, <span class="ident">vk</span>) <span class="op">=</span> <span class="op">&lt;</span><span class="ident">PolyIOP</span><span class="op">&lt;</span><span class="ident">E::Fr</span><span class="op">&gt;</span> <span class="kw">as</span> <span class="ident">HyperPlonkSNARK</span><span class="op">&lt;</span><span class="ident">E</span>, <span class="ident">MultilinearKzgPCS</span><span class="op">&lt;</span><span class="ident">E</span><span class="op">&gt;</span><span class="op">&gt;</span><span class="op">&gt;</span><span class="ident">::preprocess</span>(
             <span class="kw-2">&amp;</span><span class="ident">index</span>, <span class="kw-2">&amp;</span><span class="ident">pcs_srs</span>,
         )<span class="question-mark">?</span>;
 
@@ -2048,13 +2060,13 @@
         <span class="kw">let</span> <span class="ident">pi</span> <span class="op">=</span> <span class="ident">w1</span>.<span class="ident">clone</span>();
 
         <span class="comment">// generate a proof and verify</span>
-        <span class="kw">let</span> <span class="ident">proof</span> <span class="op">=</span> <span class="op">&lt;</span><span class="ident">PolyIOP</span><span class="op">&lt;</span><span class="ident">E::Fr</span><span class="op">&gt;</span> <span class="kw">as</span> <span class="ident">HyperPlonkSNARK</span><span class="op">&lt;</span><span class="ident">E</span>, <span class="ident">KZGMultilinearPCS</span><span class="op">&lt;</span><span class="ident">E</span><span class="op">&gt;</span><span class="op">&gt;</span><span class="op">&gt;</span><span class="ident">::prove</span>(
+        <span class="kw">let</span> <span class="ident">proof</span> <span class="op">=</span> <span class="op">&lt;</span><span class="ident">PolyIOP</span><span class="op">&lt;</span><span class="ident">E::Fr</span><span class="op">&gt;</span> <span class="kw">as</span> <span class="ident">HyperPlonkSNARK</span><span class="op">&lt;</span><span class="ident">E</span>, <span class="ident">MultilinearKzgPCS</span><span class="op">&lt;</span><span class="ident">E</span><span class="op">&gt;</span><span class="op">&gt;</span><span class="op">&gt;</span><span class="ident">::prove</span>(
             <span class="kw-2">&amp;</span><span class="ident">pk</span>,
             <span class="kw-2">&amp;</span><span class="ident">pi</span>.<span class="number">0</span>,
             <span class="kw-2">&amp;</span>[<span class="ident">w1</span>.<span class="ident">clone</span>(), <span class="ident">w2</span>.<span class="ident">clone</span>()],
         )<span class="question-mark">?</span>;
 
-        <span class="kw">let</span> <span class="ident">_verify</span> <span class="op">=</span> <span class="op">&lt;</span><span class="ident">PolyIOP</span><span class="op">&lt;</span><span class="ident">E::Fr</span><span class="op">&gt;</span> <span class="kw">as</span> <span class="ident">HyperPlonkSNARK</span><span class="op">&lt;</span><span class="ident">E</span>, <span class="ident">KZGMultilinearPCS</span><span class="op">&lt;</span><span class="ident">E</span><span class="op">&gt;</span><span class="op">&gt;</span><span class="op">&gt;</span><span class="ident">::verify</span>(
+        <span class="kw">let</span> <span class="ident">_verify</span> <span class="op">=</span> <span class="op">&lt;</span><span class="ident">PolyIOP</span><span class="op">&lt;</span><span class="ident">E::Fr</span><span class="op">&gt;</span> <span class="kw">as</span> <span class="ident">HyperPlonkSNARK</span><span class="op">&lt;</span><span class="ident">E</span>, <span class="ident">MultilinearKzgPCS</span><span class="op">&lt;</span><span class="ident">E</span><span class="op">&gt;</span><span class="op">&gt;</span><span class="op">&gt;</span><span class="ident">::verify</span>(
             <span class="kw-2">&amp;</span><span class="ident">vk</span>, <span class="kw-2">&amp;</span><span class="ident">pi</span>.<span class="number">0</span>, <span class="kw-2">&amp;</span><span class="ident">proof</span>,
         )<span class="question-mark">?</span>;
 
@@ -2062,24 +2074,24 @@
         <span class="kw">let</span> <span class="ident">rand_perm</span>: <span class="ident">Vec</span><span class="op">&lt;</span><span class="ident">E::Fr</span><span class="op">&gt;</span> <span class="op">=</span> <span class="ident">random_permutation_mle</span>(<span class="ident">merged_nv</span>, <span class="kw-2">&amp;mut</span> <span class="ident">rng</span>)
             .<span class="ident">evaluations</span>
             .<span class="ident">clone</span>();
-        <span class="kw">let</span> <span class="kw-2">mut</span> <span class="ident">bad_index</span> <span class="op">=</span> <span class="ident">index</span>.<span class="ident">clone</span>();
+        <span class="kw">let</span> <span class="kw-2">mut</span> <span class="ident">bad_index</span> <span class="op">=</span> <span class="ident">index</span>;
         <span class="ident">bad_index</span>.<span class="ident">permutation</span> <span class="op">=</span> <span class="ident">rand_perm</span>;
         <span class="comment">// generate pk and vks</span>
-        <span class="kw">let</span> (<span class="kw">_</span>, <span class="ident">bad_vk</span>) <span class="op">=</span> <span class="op">&lt;</span><span class="ident">PolyIOP</span><span class="op">&lt;</span><span class="ident">E::Fr</span><span class="op">&gt;</span> <span class="kw">as</span> <span class="ident">HyperPlonkSNARK</span><span class="op">&lt;</span><span class="ident">E</span>, <span class="ident">KZGMultilinearPCS</span><span class="op">&lt;</span><span class="ident">E</span><span class="op">&gt;</span><span class="op">&gt;</span><span class="op">&gt;</span><span class="ident">::preprocess</span>(
+        <span class="kw">let</span> (<span class="kw">_</span>, <span class="ident">bad_vk</span>) <span class="op">=</span> <span class="op">&lt;</span><span class="ident">PolyIOP</span><span class="op">&lt;</span><span class="ident">E::Fr</span><span class="op">&gt;</span> <span class="kw">as</span> <span class="ident">HyperPlonkSNARK</span><span class="op">&lt;</span><span class="ident">E</span>, <span class="ident">MultilinearKzgPCS</span><span class="op">&lt;</span><span class="ident">E</span><span class="op">&gt;</span><span class="op">&gt;</span><span class="op">&gt;</span><span class="ident">::preprocess</span>(
             <span class="kw-2">&amp;</span><span class="ident">bad_index</span>, <span class="kw-2">&amp;</span><span class="ident">pcs_srs</span>,
         )<span class="question-mark">?</span>;
         <span class="macro">assert!</span>(
-            <span class="op">&lt;</span><span class="ident">PolyIOP</span><span class="op">&lt;</span><span class="ident">E::Fr</span><span class="op">&gt;</span> <span class="kw">as</span> <span class="ident">HyperPlonkSNARK</span><span class="op">&lt;</span><span class="ident">E</span>, <span class="ident">KZGMultilinearPCS</span><span class="op">&lt;</span><span class="ident">E</span><span class="op">&gt;</span><span class="op">&gt;</span><span class="op">&gt;</span><span class="ident">::verify</span>(
+            <span class="op">&lt;</span><span class="ident">PolyIOP</span><span class="op">&lt;</span><span class="ident">E::Fr</span><span class="op">&gt;</span> <span class="kw">as</span> <span class="ident">HyperPlonkSNARK</span><span class="op">&lt;</span><span class="ident">E</span>, <span class="ident">MultilinearKzgPCS</span><span class="op">&lt;</span><span class="ident">E</span><span class="op">&gt;</span><span class="op">&gt;</span><span class="op">&gt;</span><span class="ident">::verify</span>(
                 <span class="kw-2">&amp;</span><span class="ident">bad_vk</span>, <span class="kw-2">&amp;</span><span class="ident">pi</span>.<span class="number">0</span>, <span class="kw-2">&amp;</span><span class="ident">proof</span>,
             )
             .<span class="ident">is_err</span>()
         );
 
         <span class="comment">// bad path 2: wrong witness</span>
-        <span class="kw">let</span> <span class="kw-2">mut</span> <span class="ident">w1_bad</span> <span class="op">=</span> <span class="ident">w1</span>.<span class="ident">clone</span>();
+        <span class="kw">let</span> <span class="kw-2">mut</span> <span class="ident">w1_bad</span> <span class="op">=</span> <span class="ident">w1</span>;
         <span class="ident">w1_bad</span>.<span class="number">0</span>[<span class="number">0</span>] <span class="op">=</span> <span class="ident">E::Fr::one</span>();
         <span class="macro">assert!</span>(
-            <span class="op">&lt;</span><span class="ident">PolyIOP</span><span class="op">&lt;</span><span class="ident">E::Fr</span><span class="op">&gt;</span> <span class="kw">as</span> <span class="ident">HyperPlonkSNARK</span><span class="op">&lt;</span><span class="ident">E</span>, <span class="ident">KZGMultilinearPCS</span><span class="op">&lt;</span><span class="ident">E</span><span class="op">&gt;</span><span class="op">&gt;</span><span class="op">&gt;</span><span class="ident">::prove</span>(
+            <span class="op">&lt;</span><span class="ident">PolyIOP</span><span class="op">&lt;</span><span class="ident">E::Fr</span><span class="op">&gt;</span> <span class="kw">as</span> <span class="ident">HyperPlonkSNARK</span><span class="op">&lt;</span><span class="ident">E</span>, <span class="ident">MultilinearKzgPCS</span><span class="op">&lt;</span><span class="ident">E</span><span class="op">&gt;</span><span class="op">&gt;</span><span class="op">&gt;</span><span class="ident">::prove</span>(
                 <span class="kw-2">&amp;</span><span class="ident">pk</span>,
                 <span class="kw-2">&amp;</span><span class="ident">pi</span>.<span class="number">0</span>,
                 <span class="kw-2">&amp;</span>[<span class="ident">w1_bad</span>, <span class="ident">w2</span>],
