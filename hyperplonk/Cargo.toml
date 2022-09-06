@@ -18,7 +18,7 @@ displaydoc = { version = "0.2.3", default-features = false }
 transcript = { path = "../transcript" }
 arithmetic = { path = "../arithmetic" }
 
-jf-primitives = { git = "https://github.com/EspressoSystems/jellyfish" }
+jf-primitives = { git = "https://github.com/EspressoSystems/jellyfish", rev = "ff43209" }
 
 [dev-dependencies]
 ark-bls12-381 = { version = "0.3.0", default-features = false, features = [ "curve" ] }
