@@ -223,6 +223,7 @@ where
         // transcript
         // =======================================================================
         let step = start_timer!(|| "commit witnesses");
+        // TODO(Chengyu): update `merge_polynomials` method in jellyfish repo.
         let w_merged = Rc::new(merge_polynomials(&witness_polys)?);
         if w_merged.num_vars != merged_nv {
             return Err(HyperPlonkErrors::InvalidParameters(format!(
