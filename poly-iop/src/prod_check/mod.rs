@@ -11,7 +11,7 @@ use ark_ec::PairingEngine;
 use ark_ff::{One, PrimeField, Zero};
 use ark_poly::DenseMultilinearExtension;
 use ark_std::{end_timer, start_timer};
-use pcs::prelude::PolynomialCommitmentScheme;
+use jf_primitives::pcs::prelude::PolynomialCommitmentScheme;
 use std::rc::Rc;
 use transcript::IOPTranscript;
 
@@ -207,7 +207,7 @@ mod test {
     use ark_ec::PairingEngine;
     use ark_poly::{DenseMultilinearExtension, MultilinearExtension};
     use ark_std::test_rng;
-    use pcs::{prelude::KZGMultilinearPCS, PolynomialCommitmentScheme};
+    use jf_primitives::pcs::{prelude::MultilinearKzgPCS, PolynomialCommitmentScheme};
     use std::{marker::PhantomData, rc::Rc};
 
     // f and g are guaranteed to have the same product
@@ -254,7 +254,7 @@ mod test {
         let (bad_proof, prod_x_bad) = <PolyIOP<E::Fr> as ProductCheck<E, PCS>>::prove(
             pcs_param,
             &Rc::new(f.clone()),
-            &Rc::new(h.clone()),
+            &Rc::new(h),
             &mut transcript,
         )?;
 
@@ -281,10 +281,10 @@ mod test {
         let mut g = f.clone();
         g.evaluations.reverse();
 
-        let srs = KZGMultilinearPCS::<Bls12_381>::gen_srs_for_testing(&mut rng, nv + 1)?;
-        let (pcs_param, _) = KZGMultilinearPCS::<Bls12_381>::trim(&srs, nv + 1, Some(nv + 1))?;
+        let srs = MultilinearKzgPCS::<Bls12_381>::gen_srs_for_testing(&mut rng, nv + 1)?;
+        let (pcs_param, _) = MultilinearKzgPCS::<Bls12_381>::trim(&srs, nv + 1, Some(nv + 1))?;
 
-        test_product_check_helper::<Bls12_381, KZGMultilinearPCS<Bls12_381>>(&f, &g, &pcs_param)?;
+        test_product_check_helper::<Bls12_381, MultilinearKzgPCS<Bls12_381>>(&f, &g, &pcs_param)?;
 
         Ok(())
     }
