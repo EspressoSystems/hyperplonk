@@ -1,10 +1,10 @@
 //! Main module for the HyperPlonk SNARK.
 
-use crate::utils::{eval_f, prove_sanity_check};
+use crate::utils::{eval_f, prove_sanity_check, PcsAccumulator};
 use arithmetic::VPAuxInfo;
 use ark_ec::PairingEngine;
 use ark_poly::{DenseMultilinearExtension, MultilinearExtension};
-use ark_std::{end_timer, log2, start_timer, One, Zero};
+use ark_std::{end_timer, start_timer, One, Zero};
 use errors::HyperPlonkErrors;
 use pcs::prelude::{compute_qx_degree, merge_polynomials, PCSError, PolynomialCommitmentScheme};
 use poly_iop::{
@@ -112,8 +112,11 @@ where
         // extract PCS prover and verifier keys from SRS
         let (pcs_prover_param, pcs_verifier_param) = PCS::trim(
             pcs_srs,
-            log2(supported_uni_degree) as usize,
-            Some(merged_nv + 1),
+            // We are merging prod(x) at 5 points
+            supported_uni_degree as usize * 32usize,
+            // We are merging prod(x) at 5 points which requires
+            // log(num_constraints) + log_num_witness_polys + 1 + log(#points)
+            Some(merged_nv + 4),
         )?;
 
         // build permutation oracles
@@ -202,8 +205,12 @@ where
         let merged_nv = num_vars + log_num_witness_polys;
         // degree of q(x) for Univariate-KZG
         let _supported_uni_degree = compute_qx_degree(num_vars, 1 << log_num_witness_polys);
-        //  online public input of length 2^\ell
+        // online public input of length 2^\ell
         let ell = pk.params.log_pub_input_len;
+        // Accumulator for w_merged and its points
+        let mut w_merged_pcs_acc = PcsAccumulator::<E, PCS>::new();
+        // Accumulator for prod(x) and its points
+        let mut prod_pcs_acc = PcsAccumulator::<E, PCS>::new();
 
         let witness_polys: Vec<Rc<DenseMultilinearExtension<E::Fr>>> = witnesses
             .iter()
@@ -227,7 +234,7 @@ where
             )));
         }
         let w_merged_com = PCS::commit(&pk.pcs_param, &w_merged)?;
-
+        w_merged_pcs_acc.init_poly(w_merged.clone(), w_merged_com.clone())?;
         transcript.append_serializable_element(b"w", &w_merged_com)?;
         end_timer!(step);
 
@@ -268,6 +275,7 @@ where
             &pk.permutation_oracle,
             &mut transcript,
         )?;
+        prod_pcs_acc.init_poly(prod_x.clone(), perm_check_proof.prod_x_comm.clone())?;
 
         // open prod(0,x), prod(1, x), prod(x, 0), prod(x, 1) at zero_check.point
         // prod(0, x)
@@ -277,6 +285,7 @@ where
         ]
         .concat();
         let (prod_0_x_opening, prod_0_x_eval) = PCS::open(&pk.pcs_param, &prod_x, &tmp_point)?;
+        prod_pcs_acc.insert_point(&tmp_point);
         #[cfg(feature = "extensive_sanity_checks")]
         {
             // sanity check
@@ -298,6 +307,7 @@ where
         ]
         .concat();
         let (prod_1_x_opening, prod_1_x_eval) = PCS::open(&pk.pcs_param, &prod_x, &tmp_point)?;
+        prod_pcs_acc.insert_point(&tmp_point);
         #[cfg(feature = "extensive_sanity_checks")]
         {
             // sanity check
@@ -319,6 +329,7 @@ where
         ]
         .concat();
         let (prod_x_0_opening, prod_x_0_eval) = PCS::open(&pk.pcs_param, &prod_x, &tmp_point)?;
+        prod_pcs_acc.insert_point(&tmp_point);
         #[cfg(feature = "extensive_sanity_checks")]
         {
             // sanity check
@@ -335,6 +346,7 @@ where
             }
         }
         // prod(x, 1)
+        prod_pcs_acc.insert_point(&tmp_point);
         let tmp_point = [
             &[E::Fr::one()],
             perm_check_proof.zero_check_proof.point.as_slice(),
@@ -358,6 +370,7 @@ where
         // prod(1, ..., 1, 0)
         let tmp_point = [vec![E::Fr::zero()], vec![E::Fr::one(); merged_nv]].concat();
         let (prod_1_0_opening, prod_1_0_eval) = PCS::open(&pk.pcs_param, &prod_x, &tmp_point)?;
+        prod_pcs_acc.insert_point(&tmp_point);
         #[cfg(feature = "extensive_sanity_checks")]
         {
             // sanity check
@@ -397,7 +410,7 @@ where
             &w_merged,
             &perm_check_proof.zero_check_proof.point,
         )?;
-
+        w_merged_pcs_acc.insert_point(&perm_check_proof.zero_check_proof.point);
         #[cfg(feature = "extensive_sanity_checks")]
         {
             // sanity checks
@@ -421,6 +434,8 @@ where
             let tmp_point = gen_eval_point(i, log_num_witness_polys, &zero_check_proof.point);
             // Open zero check proof
             let (zero_proof, zero_eval) = PCS::open(&pk.pcs_param, &w_merged, &tmp_point)?;
+            w_merged_pcs_acc.insert_point(&tmp_point);
+            #[cfg(feature = "extensive_sanity_checks")]
             {
                 let eval = wire_poly.evaluate(&zero_check_proof.point).ok_or_else(|| {
                     HyperPlonkErrors::InvalidParameters(
@@ -518,6 +533,14 @@ where
         }
 
         end_timer!(step);
+
+        // =======================================================================
+        // 3.3 deferred batch opening
+        // =======================================================================
+        let (w_merged_batch_opening, w_merged_batch_evals) =
+            w_merged_pcs_acc.batch_open(&pk.pcs_param)?;
+        let (prod_batch_openings, prod_batch_evals) = prod_pcs_acc.batch_open(&pk.pcs_param)?;
+
         end_timer!(start);
 
         Ok(HyperPlonkProof {
@@ -525,11 +548,14 @@ where
             // PCS components: common
             // =======================================================================
             w_merged_com,
+            w_merged_batch_opening,
+            w_merged_batch_evals,
             // =======================================================================
             // PCS components: permutation check
             // =======================================================================
             // We do not validate prod(x), this is checked by subclaim
             prod_evals: vec![prod_0_x_eval, prod_1_x_eval, prod_x_0_eval, prod_x_1_eval],
+            prod_batch_evals,
             prod_openings: vec![
                 prod_0_x_opening,
                 prod_1_x_opening,
@@ -537,6 +563,7 @@ where
                 prod_x_1_opening,
                 prod_1_0_opening,
             ],
+            prod_batch_openings,
             witness_perm_check_opening,
             witness_perm_check_eval,
             perm_oracle_opening: s_perm_opening,
@@ -957,7 +984,7 @@ mod tests {
         gate_func: CustomizedGates,
     ) -> Result<(), HyperPlonkErrors> {
         let mut rng = test_rng();
-        let pcs_srs = MultilinearKzgPCS::<E>::gen_srs_for_testing(&mut rng, 15)?;
+        let pcs_srs = MultilinearKzgPCS::<E>::gen_srs_for_testing(&mut rng, 16)?;
         let merged_nv = nv + log_n_wires;
 
         // generate index

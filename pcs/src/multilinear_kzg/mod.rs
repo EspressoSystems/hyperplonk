@@ -97,7 +97,7 @@ impl<E: PairingEngine> PolynomialCommitmentScheme<E> for MultilinearKzgPCS<E> {
     ) -> Result<Self::SRS, PCSError> {
         Ok((
             MultilinearUniversalParams::<E>::gen_srs_for_testing(rng, log_size)?,
-            UnivariateUniversalParams::<E>::gen_srs_for_testing(rng, log_size)?,
+            UnivariateUniversalParams::<E>::gen_srs_for_testing(rng, 1 << log_size)?,
         ))
     }
 
@@ -106,7 +106,7 @@ impl<E: PairingEngine> PolynomialCommitmentScheme<E> for MultilinearKzgPCS<E> {
     /// `supported_num_vars` for multilinear.
     fn trim(
         srs: impl Borrow<Self::SRS>,
-        supported_log_degree: usize,
+        supported_degree: usize,
         supported_num_vars: Option<usize>,
     ) -> Result<(Self::ProverParam, Self::VerifierParam), PCSError> {
         let supported_num_vars = match supported_num_vars {
@@ -117,7 +117,8 @@ impl<E: PairingEngine> PolynomialCommitmentScheme<E> for MultilinearKzgPCS<E> {
                 ))
             },
         };
-        let (uni_ck, uni_vk) = srs.borrow().1.trim(supported_log_degree)?;
+        println!("{}", supported_degree);
+        let (uni_ck, uni_vk) = srs.borrow().1.trim(supported_degree)?;
         let (ml_ck, ml_vk) = srs.borrow().0.trim(supported_num_vars)?;
 
         Ok(((ml_ck, uni_ck), (ml_vk, uni_vk)))
@@ -135,7 +136,7 @@ impl<E: PairingEngine> PolynomialCommitmentScheme<E> for MultilinearKzgPCS<E> {
         let commit_timer = start_timer!(|| "commit");
         if prover_param.0.num_vars < poly.num_vars {
             return Err(PCSError::InvalidParameters(format!(
-                "Poly length ({}) exceeds param limit ({})",
+                "MlE length ({}) exceeds param limit ({})",
                 poly.num_vars, prover_param.0.num_vars
             )));
         }
@@ -246,6 +247,24 @@ impl<E: PairingEngine> PolynomialCommitmentScheme<E> for MultilinearKzgPCS<E> {
         )
     }
 
+    /// Input a multilinear extension, and a number of points, and
+    /// a transcript, compute a multi-opening for all the polynomials.
+    fn multi_open_single_poly(
+        prover_param: impl Borrow<Self::ProverParam>,
+        multi_commitment: &Self::Commitment,
+        polynomials: Self::Polynomial,
+        points: &[Self::Point],
+    ) -> Result<(Self::BatchProof, Vec<Self::Evaluation>), PCSError> {
+        let poly_list = vec![polynomials; points.len()];
+        multi_open_internal::<E>(
+            &prover_param.borrow().1,
+            &prover_param.borrow().0,
+            &poly_list,
+            multi_commitment,
+            points,
+        )
+    }
+
     /// Verifies that `value` is the evaluation at `x` of the polynomial
     /// committed inside `comm`.
     ///
@@ -285,6 +304,26 @@ impl<E: PairingEngine> PolynomialCommitmentScheme<E> for MultilinearKzgPCS<E> {
             &verifier_param.1,
             &verifier_param.0,
             multi_commitment,
+            points,
+            values,
+            batch_proof,
+        )
+    }
+
+    /// Verifies that `value_i` is the evaluation at `x_i` of the polynomial
+    /// `poly` committed inside `comm`.
+    fn batch_verify_single_poly<R: RngCore + CryptoRng>(
+        verifier_param: &Self::VerifierParam,
+        commitment: &Self::Commitment,
+        points: &[Self::Point],
+        values: &[E::Fr],
+        batch_proof: &Self::BatchProof,
+        _rng: &mut R,
+    ) -> Result<bool, PCSError> {
+        batch_verify_internal(
+            &verifier_param.1,
+            &verifier_param.0,
+            commitment,
             points,
             values,
             batch_proof,

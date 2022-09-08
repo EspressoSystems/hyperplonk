@@ -14,79 +14,79 @@ use crate::{
 
 use poly_iop::prelude::bit_decompose;
 
-// /// An accumulator structure that holds the polynomial and
-// /// its opening place
-// #[derive(Debug)]
-// pub(super) struct PCSAccumulator<E: PairingEngine, PCS:
-// PolynomialCommitmentScheme<E>> {     pub(crate) polynomial:
-// Option<PCS::Polynomial>,     pub(crate) poly_commit: Option<PCS::Commitment>,
-//     pub(crate) points: Vec<PCS::Point>,
-// }
+/// An accumulator structure that holds a polynomial and
+/// its opening points
+#[derive(Debug)]
+pub(super) struct PcsAccumulator<E: PairingEngine, PCS: PolynomialCommitmentScheme<E>> {
+    pub(crate) polynomial: Option<PCS::Polynomial>,
+    pub(crate) poly_commit: Option<PCS::Commitment>,
+    pub(crate) points: Vec<PCS::Point>,
+}
 
-// impl<E: PairingEngine, PCS: PolynomialCommitmentScheme<E>> PCSAccumulator<E,
-// PCS> {     /// Create an empty accumulator.
-//     pub(super) fn new() -> Self {
-//         Self {
-//             polynomial: None,
-//             poly_commit: None,
-//             points: vec![],
-//         }
-//     }
+impl<E: PairingEngine, PCS: PolynomialCommitmentScheme<E>> PcsAccumulator<E, PCS> {
+    /// Create an empty accumulator.
+    pub(super) fn new() -> Self {
+        Self {
+            polynomial: None,
+            poly_commit: None,
+            points: vec![],
+        }
+    }
 
-//     /// Initialize the polynomial; requires both the polynomial
-//     /// and its commitment.
-//     pub(super) fn init_poly(
-//         &mut self,
-//         polynomial: PCS::Polynomial,
-//         commitment: PCS::Commitment,
-//     ) -> Result<(), HyperPlonkErrors> {
-//         if self.polynomial.is_some() || self.poly_commit.is_some() {
-//             return Err(HyperPlonkErrors::InvalidProver(
-//                 "poly already set for accumulator".to_string(),
-//             ));
-//         }
+    /// Initialize the polynomial; requires both the polynomial
+    /// and its commitment.
+    pub(super) fn init_poly(
+        &mut self,
+        polynomial: PCS::Polynomial,
+        commitment: PCS::Commitment,
+    ) -> Result<(), HyperPlonkErrors> {
+        if self.polynomial.is_some() || self.poly_commit.is_some() {
+            return Err(HyperPlonkErrors::InvalidProver(
+                "poly already set for accumulator".to_string(),
+            ));
+        }
 
-//         self.polynomial = Some(polynomial);
-//         self.poly_commit = Some(commitment);
-//         Ok(())
-//     }
+        self.polynomial = Some(polynomial);
+        self.poly_commit = Some(commitment);
+        Ok(())
+    }
 
-//     /// Push a new evaluation point into the accumulator
-//     pub(super) fn insert_point(&mut self, point: &PCS::Point) {
-//         self.points.push(point.clone())
-//     }
+    /// Push a new evaluation point into the accumulator
+    pub(super) fn insert_point(&mut self, point: &PCS::Point) {
+        self.points.push(point.clone())
+    }
 
-//     /// Batch open all the points over a merged polynomial.
-//     /// A simple wrapper of PCS::multi_open
-//     pub(super) fn batch_open(
-//         &self,
-//         prover_param: impl Borrow<PCS::ProverParam>,
-//     ) -> Result<(PCS::BatchProof, Vec<PCS::Evaluation>), HyperPlonkErrors> {
-//         let poly = match self.polynomial {
-//             Some(p) => p,
-//             None => {
-//                 return Err(HyperPlonkErrors::InvalidProver(
-//                     "poly is set for accumulator".to_string(),
-//                 ))
-//             },
-//         };
+    /// Batch open all the points over a merged polynomial.
+    /// A simple wrapper of PCS::multi_open
+    pub(super) fn batch_open(
+        &self,
+        prover_param: impl Borrow<PCS::ProverParam>,
+    ) -> Result<(PCS::BatchProof, Vec<PCS::Evaluation>), HyperPlonkErrors> {
+        let poly = match &self.polynomial {
+            Some(p) => p,
+            None => {
+                return Err(HyperPlonkErrors::InvalidProver(
+                    "poly is set for accumulator".to_string(),
+                ))
+            },
+        };
 
-//         let commitment = match self.poly_commit {
-//             Some(p) => p,
-//             None => {
-//                 return Err(HyperPlonkErrors::InvalidProver(
-//                     "poly is set for accumulator".to_string(),
-//                 ))
-//             },
-//         };
-//         Ok(PCS::multi_open(
-//             prover_param.borrow(),
-//             commitment,
-//             vec![poly; self.points.len()].as_ref(),
-//             &self.points,
-//         )?)
-//     }
-// }
+        let commitment = match &self.poly_commit {
+            Some(p) => p,
+            None => {
+                return Err(HyperPlonkErrors::InvalidProver(
+                    "poly is set for accumulator".to_string(),
+                ))
+            },
+        };
+        Ok(PCS::multi_open_single_poly(
+            prover_param.borrow(),
+            commitment,
+            poly.clone(),
+            &self.points,
+        )?)
+    }
+}
 
 /// Build MLE from matrix of witnesses.
 ///

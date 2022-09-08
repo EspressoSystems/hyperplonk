@@ -100,7 +100,7 @@ impl<E: PairingEngine> PolynomialCommitmentScheme<E> for UnivariateKzgPCS<E> {
 
         if poly.degree() > prover_param.powers_of_g.len() {
             return Err(PCSError::InvalidParameters(format!(
-                "poly degree {} is larger than allowed {}",
+                "uni poly degree {} is larger than allowed {}",
                 poly.degree(),
                 prover_param.powers_of_g.len()
             )));

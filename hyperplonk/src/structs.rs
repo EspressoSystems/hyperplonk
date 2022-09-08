@@ -26,6 +26,8 @@ where
     // =======================================================================
     /// PCS commit for witnesses
     pub w_merged_com: PCS::Commitment,
+    pub w_merged_batch_opening: PCS::BatchProof,
+    pub w_merged_batch_evals: Vec<E::Fr>,
     // =======================================================================
     // PCS components: permutation check
     // =======================================================================
@@ -33,10 +35,12 @@ where
     /// sequence: prod(0,x), prod(1, x), prod(x, 0), prod(x, 1), prod(1, ..., 1,
     /// 0)
     pub prod_evals: Vec<E::Fr>,
+    pub prod_batch_evals: Vec<E::Fr>,
     /// prod(x)'s openings
     /// sequence: prod(0,x), prod(1, x), prod(x, 0), prod(x, 1), prod(1, ..., 1,
     /// 0)
     pub prod_openings: Vec<PCS::Proof>,
+    pub prod_batch_openings: PCS::BatchProof,
     /// PCS openings for witness on permutation check point
     // TODO: replace me with a batch opening
     pub witness_perm_check_opening: PCS::Proof,
