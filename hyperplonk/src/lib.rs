@@ -6,7 +6,7 @@ use ark_ec::PairingEngine;
 use ark_poly::{DenseMultilinearExtension, MultilinearExtension};
 use ark_std::{end_timer, log2, start_timer, One, Zero};
 use errors::HyperPlonkErrors;
-use pcs::prelude::{compute_qx_degree, merge_polynomials, PCSErrors, PolynomialCommitmentScheme};
+use pcs::prelude::{compute_qx_degree, merge_polynomials, PCSError, PolynomialCommitmentScheme};
 use poly_iop::{
     prelude::{identity_permutation_mle, PermutationCheck, ZeroCheck},
     PolyIOP,
@@ -133,7 +133,7 @@ where
         let selector_com = selector_oracles
             .iter()
             .map(|poly| PCS::commit(&pcs_prover_param, poly))
-            .collect::<Result<Vec<PCS::Commitment>, PCSErrors>>()?;
+            .collect::<Result<Vec<PCS::Commitment>, PCSError>>()?;
 
         Ok((
             Self::ProvingKey {
@@ -925,7 +925,7 @@ mod tests {
     };
     use ark_bls12_381::Bls12_381;
     use ark_std::test_rng;
-    use pcs::prelude::KZGMultilinearPCS;
+    use pcs::prelude::MultilinearKzgPCS;
     use poly_iop::prelude::random_permutation_mle;
 
     #[test]
@@ -957,7 +957,7 @@ mod tests {
         gate_func: CustomizedGates,
     ) -> Result<(), HyperPlonkErrors> {
         let mut rng = test_rng();
-        let pcs_srs = KZGMultilinearPCS::<E>::gen_srs_for_testing(&mut rng, 15)?;
+        let pcs_srs = MultilinearKzgPCS::<E>::gen_srs_for_testing(&mut rng, 15)?;
         let merged_nv = nv + log_n_wires;
 
         // generate index
@@ -977,7 +977,7 @@ mod tests {
         };
 
         // generate pk and vks
-        let (pk, vk) = <PolyIOP<E::Fr> as HyperPlonkSNARK<E, KZGMultilinearPCS<E>>>::preprocess(
+        let (pk, vk) = <PolyIOP<E::Fr> as HyperPlonkSNARK<E, MultilinearKzgPCS<E>>>::preprocess(
             &index, &pcs_srs,
         )?;
 
@@ -999,13 +999,13 @@ mod tests {
         let pi = w1.clone();
 
         // generate a proof and verify
-        let proof = <PolyIOP<E::Fr> as HyperPlonkSNARK<E, KZGMultilinearPCS<E>>>::prove(
+        let proof = <PolyIOP<E::Fr> as HyperPlonkSNARK<E, MultilinearKzgPCS<E>>>::prove(
             &pk,
             &pi.0,
             &[w1.clone(), w2.clone()],
         )?;
 
-        let _verify = <PolyIOP<E::Fr> as HyperPlonkSNARK<E, KZGMultilinearPCS<E>>>::verify(
+        let _verify = <PolyIOP<E::Fr> as HyperPlonkSNARK<E, MultilinearKzgPCS<E>>>::verify(
             &vk, &pi.0, &proof,
         )?;
 
@@ -1016,11 +1016,11 @@ mod tests {
         let mut bad_index = index.clone();
         bad_index.permutation = rand_perm;
         // generate pk and vks
-        let (_, bad_vk) = <PolyIOP<E::Fr> as HyperPlonkSNARK<E, KZGMultilinearPCS<E>>>::preprocess(
+        let (_, bad_vk) = <PolyIOP<E::Fr> as HyperPlonkSNARK<E, MultilinearKzgPCS<E>>>::preprocess(
             &bad_index, &pcs_srs,
         )?;
         assert!(
-            <PolyIOP<E::Fr> as HyperPlonkSNARK<E, KZGMultilinearPCS<E>>>::verify(
+            <PolyIOP<E::Fr> as HyperPlonkSNARK<E, MultilinearKzgPCS<E>>>::verify(
                 &bad_vk, &pi.0, &proof,
             )
             .is_err()
@@ -1030,7 +1030,7 @@ mod tests {
         let mut w1_bad = w1.clone();
         w1_bad.0[0] = E::Fr::one();
         assert!(
-            <PolyIOP<E::Fr> as HyperPlonkSNARK<E, KZGMultilinearPCS<E>>>::prove(
+            <PolyIOP<E::Fr> as HyperPlonkSNARK<E, MultilinearKzgPCS<E>>>::prove(
                 &pk,
                 &pi.0,
                 &[w1_bad, w2],

@@ -1,12 +1,25 @@
-//! Implementing Structured Reference Strings for multilinear polynomial KZG
+// Copyright (c) 2022 Espresso Systems (espressosys.com)
+// This file is part of the Jellyfish library.
 
-use crate::{prelude::PCSErrors, StructuredReferenceString};
+// You should have received a copy of the MIT License
+// along with the Jellyfish library. If not, see <https://mit-license.org/>.
+
+//! Implementing Structured Reference Strings for multilinear polynomial KZG
+use crate::{prelude::PCSError, StructuredReferenceString};
 use ark_ec::{msm::FixedBaseMSM, AffineCurve, PairingEngine, ProjectiveCurve};
 use ark_ff::{Field, PrimeField};
 use ark_poly::DenseMultilinearExtension;
 use ark_serialize::{CanonicalDeserialize, CanonicalSerialize, Read, SerializationError, Write};
-use ark_std::{end_timer, rand::RngCore, start_timer, vec::Vec, UniformRand};
-use std::collections::LinkedList;
+use ark_std::{
+    collections::LinkedList,
+    end_timer, format,
+    rand::{CryptoRng, RngCore},
+    start_timer,
+    string::ToString,
+    vec::Vec,
+    UniformRand,
+};
+use core::iter::FromIterator;
 
 /// Evaluations over {0,1}^n for G1 or G2
 #[derive(CanonicalSerialize, CanonicalDeserialize, Clone, Debug)]
@@ -85,9 +98,9 @@ impl<E: PairingEngine> StructuredReferenceString<E> for MultilinearUniversalPara
     fn trim(
         &self,
         supported_num_vars: usize,
-    ) -> Result<(Self::ProverParam, Self::VerifierParam), PCSErrors> {
+    ) -> Result<(Self::ProverParam, Self::VerifierParam), PCSError> {
         if supported_num_vars > self.prover_param.num_vars {
-            return Err(PCSErrors::InvalidParameters(format!(
+            return Err(PCSError::InvalidParameters(format!(
                 "SRS does not support target number of vars {}",
                 supported_num_vars
             )));
@@ -112,9 +125,12 @@ impl<E: PairingEngine> StructuredReferenceString<E> for MultilinearUniversalPara
     /// Build SRS for testing.
     /// WARNING: THIS FUNCTION IS FOR TESTING PURPOSE ONLY.
     /// THE OUTPUT SRS SHOULD NOT BE USED IN PRODUCTION.
-    fn gen_srs_for_testing<R: RngCore>(rng: &mut R, num_vars: usize) -> Result<Self, PCSErrors> {
+    fn gen_srs_for_testing<R: RngCore + CryptoRng>(
+        rng: &mut R,
+        num_vars: usize,
+    ) -> Result<Self, PCSError> {
         if num_vars == 0 {
-            return Err(PCSErrors::InvalidParameters(
+            return Err(PCSError::InvalidParameters(
                 "constant polynomial not supported".to_string(),
             ));
         }
@@ -203,12 +219,12 @@ impl<E: PairingEngine> StructuredReferenceString<E> for MultilinearUniversalPara
 }
 
 /// fix first `pad` variables of `poly` represented in evaluation form to zero
-fn remove_dummy_variable<F: Field>(poly: &[F], pad: usize) -> Result<Vec<F>, PCSErrors> {
+fn remove_dummy_variable<F: Field>(poly: &[F], pad: usize) -> Result<Vec<F>, PCSError> {
     if pad == 0 {
         return Ok(poly.to_vec());
     }
     if !poly.len().is_power_of_two() {
-        return Err(PCSErrors::InvalidParameters(
+        return Err(PCSError::InvalidParameters(
             "Size of polynomial should be power of two.".to_string(),
         ));
     }
@@ -247,7 +263,7 @@ mod tests {
     type E = Bls12_381;
 
     #[test]
-    fn test_srs_gen() -> Result<(), PCSErrors> {
+    fn test_srs_gen() -> Result<(), PCSError> {
         let mut rng = test_rng();
         for nv in 4..10 {
             let _ = MultilinearUniversalParams::<E>::gen_srs_for_testing(&mut rng, nv)?;

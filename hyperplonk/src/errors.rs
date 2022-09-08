@@ -4,9 +4,9 @@ use arithmetic::ArithErrors;
 use ark_serialize::SerializationError;
 use ark_std::string::String;
 use displaydoc::Display;
-use pcs::prelude::PCSErrors;
+use pcs::prelude::PCSError;
 use poly_iop::prelude::PolyIOPErrors;
-use transcript::TranscriptErrors;
+use transcript::TranscriptError;
 
 /// A `enum` specifying the possible failure modes of hyperplonk.
 #[derive(Display, Debug)]
@@ -24,9 +24,9 @@ pub enum HyperPlonkErrors {
     /// PolyIOP error {0}
     PolyIOPErrors(PolyIOPErrors),
     /// PCS error {0}
-    PCSErrors(PCSErrors),
+    PCSErrors(PCSError),
     /// Transcript error {0}
-    TranscriptError(TranscriptErrors),
+    TranscriptError(TranscriptError),
     /// Arithmetic Error: {0}
     ArithmeticErrors(ArithErrors),
 }
@@ -43,14 +43,14 @@ impl From<PolyIOPErrors> for HyperPlonkErrors {
     }
 }
 
-impl From<PCSErrors> for HyperPlonkErrors {
-    fn from(e: PCSErrors) -> Self {
+impl From<PCSError> for HyperPlonkErrors {
+    fn from(e: PCSError) -> Self {
         Self::PCSErrors(e)
     }
 }
 
-impl From<TranscriptErrors> for HyperPlonkErrors {
-    fn from(e: TranscriptErrors) -> Self {
+impl From<TranscriptError> for HyperPlonkErrors {
+    fn from(e: TranscriptError) -> Self {
         Self::TranscriptError(e)
     }
 }

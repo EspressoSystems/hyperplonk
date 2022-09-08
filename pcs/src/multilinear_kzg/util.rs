@@ -1,12 +1,18 @@
+// Copyright (c) 2022 Espresso Systems (espressosys.com)
+// This file is part of the Jellyfish library.
+
+// You should have received a copy of the MIT License
+// along with the Jellyfish library. If not, see <https://mit-license.org/>.
+
 //! Useful utilities for KZG PCS
 
-use crate::PCSErrors;
+use crate::prelude::PCSError;
 use ark_ff::PrimeField;
 use ark_poly::{
     univariate::DensePolynomial, DenseMultilinearExtension, EvaluationDomain, Evaluations,
     MultilinearExtension, Polynomial, Radix2EvaluationDomain,
 };
-use ark_std::{end_timer, log2, rc::Rc, start_timer};
+use ark_std::{end_timer, format, log2, rc::Rc, start_timer, string::ToString, vec, vec::Vec};
 
 /// Decompose an integer into a binary vector in little endian.
 #[allow(dead_code)]
@@ -28,6 +34,7 @@ pub(crate) fn bit_decompose(input: u64, num_var: usize) -> Vec<bool> {
 // - mle has degree one
 // - worst case is `\prod_{i=0}^{mle_num_vars-1} l_i(x) < point_len * mle_num_vars`
 #[inline]
+#[allow(dead_code)]
 pub fn compute_qx_degree(mle_num_vars: usize, point_len: usize) -> usize {
     mle_num_vars * point_len
 }
@@ -36,11 +43,11 @@ pub fn compute_qx_degree(mle_num_vars: usize, point_len: usize) -> usize {
 #[inline]
 pub(crate) fn get_uni_domain<F: PrimeField>(
     uni_poly_degree: usize,
-) -> Result<Radix2EvaluationDomain<F>, PCSErrors> {
+) -> Result<Radix2EvaluationDomain<F>, PCSError> {
     let domain = match Radix2EvaluationDomain::<F>::new(uni_poly_degree) {
         Some(p) => p,
         None => {
-            return Err(PCSErrors::InvalidParameters(
+            return Err(PCSError::InvalidParameters(
                 "failed to build radix 2 domain".to_string(),
             ))
         },
@@ -57,11 +64,11 @@ pub(crate) fn get_uni_domain<F: PrimeField>(
 pub(crate) fn compute_w_circ_l<F: PrimeField>(
     w: &DenseMultilinearExtension<F>,
     l: &[DensePolynomial<F>],
-) -> Result<DensePolynomial<F>, PCSErrors> {
+) -> Result<DensePolynomial<F>, PCSError> {
     let timer = start_timer!(|| "compute W \\circ l");
 
     if w.num_vars != l.len() {
-        return Err(PCSErrors::InvalidParameters(format!(
+        return Err(PCSError::InvalidParameters(format!(
             "l's length ({}) does not match num_variables ({})",
             l.len(),
             w.num_vars(),
@@ -78,7 +85,7 @@ pub(crate) fn compute_w_circ_l<F: PrimeField>(
     let domain = match Radix2EvaluationDomain::<F>::new(uni_degree) {
         Some(p) => p,
         None => {
-            return Err(PCSErrors::InvalidParameters(
+            return Err(PCSError::InvalidParameters(
                 "failed to build radix 2 domain".to_string(),
             ))
         },
@@ -107,11 +114,11 @@ pub fn get_batched_nv(num_var: usize, polynomials_len: usize) -> usize {
 /// polynomials do not share a same number of nvs.
 pub fn merge_polynomials<F: PrimeField>(
     polynomials: &[Rc<DenseMultilinearExtension<F>>],
-) -> Result<Rc<DenseMultilinearExtension<F>>, PCSErrors> {
+) -> Result<Rc<DenseMultilinearExtension<F>>, PCSError> {
     let nv = polynomials[0].num_vars();
     for poly in polynomials.iter() {
         if nv != poly.num_vars() {
-            return Err(PCSErrors::InvalidParameters(
+            return Err(PCSError::InvalidParameters(
                 "num_vars do not match for polynomials".to_string(),
             ));
         }
@@ -134,7 +141,7 @@ pub(crate) fn build_l<F: PrimeField>(
     num_var: usize,
     points: &[Vec<F>],
     domain: &Radix2EvaluationDomain<F>,
-) -> Result<Vec<DensePolynomial<F>>, PCSErrors> {
+) -> Result<Vec<DensePolynomial<F>>, PCSError> {
     let prefix_len = log2(points.len()) as usize;
     let mut uni_polys = Vec::new();
 
@@ -170,9 +177,9 @@ pub(crate) fn build_l<F: PrimeField>(
 pub(crate) fn generate_evaluations<F: PrimeField>(
     polynomials: &[Rc<DenseMultilinearExtension<F>>],
     points: &[Vec<F>],
-) -> Result<Vec<F>, PCSErrors> {
+) -> Result<Vec<F>, PCSError> {
     if polynomials.len() != points.len() {
-        return Err(PCSErrors::InvalidParameters(
+        return Err(PCSError::InvalidParameters(
             "polynomial length does not match point length".to_string(),
         ));
     }
@@ -207,11 +214,11 @@ mod test {
     use ark_std::{One, Zero};
 
     #[test]
-    fn test_w_circ_l() -> Result<(), PCSErrors> {
+    fn test_w_circ_l() -> Result<(), PCSError> {
         test_w_circ_l_helper::<Fr>()
     }
 
-    fn test_w_circ_l_helper<F: PrimeField>() -> Result<(), PCSErrors> {
+    fn test_w_circ_l_helper<F: PrimeField>() -> Result<(), PCSError> {
         {
             // Example from page 53:
             // W = 3x1x2 + 2x2 whose evaluations are
@@ -281,10 +288,10 @@ mod test {
     }
 
     #[test]
-    fn test_merge_poly() -> Result<(), PCSErrors> {
+    fn test_merge_poly() -> Result<(), PCSError> {
         test_merge_poly_helper::<Fr>()
     }
-    fn test_merge_poly_helper<F: PrimeField>() -> Result<(), PCSErrors> {
+    fn test_merge_poly_helper<F: PrimeField>() -> Result<(), PCSError> {
         // Example from page 53:
         // W1 = 3x1x2 + 2x2 whose evaluations are
         // 0, 0 |-> 0
@@ -395,11 +402,11 @@ mod test {
     }
 
     #[test]
-    fn test_build_l() -> Result<(), PCSErrors> {
+    fn test_build_l() -> Result<(), PCSError> {
         test_build_l_helper::<Fr>()
     }
 
-    fn test_build_l_helper<F: PrimeField>() -> Result<(), PCSErrors> {
+    fn test_build_l_helper<F: PrimeField>() -> Result<(), PCSError> {
         // point 1 is [1, 2]
         let point1 = vec![Fr::from(1u64), Fr::from(2u64)];
 
@@ -557,7 +564,7 @@ mod test {
     }
 
     #[test]
-    fn test_qx() -> Result<(), PCSErrors> {
+    fn test_qx() -> Result<(), PCSError> {
         // Example from page 53:
         // W1 = 3x1x2 + 2x2
         let w_eval = vec![Fr::zero(), Fr::from(2u64), Fr::zero(), Fr::from(5u64)];

@@ -19,6 +19,9 @@ displaydoc = { version = "0.2.3", default-features = false }
 derivative = { version = "2", features = ["use_core"] }
 
 transcript = { path = "../transcript" }
+util = { path = "../util" }
+
+rayon = { version = "1.5.2", default-features = false, optional = true }
 
 # Benchmarks
 [[bench]]
@@ -30,10 +33,12 @@ harness = false
 # default = [ "parallel", "print-trace" ]
 default = [ "parallel" ]
 parallel = [ 
+    "rayon",
     "ark-std/parallel", 
     "ark-ff/parallel",  
     "ark-poly/parallel", 
     "ark-ec/parallel",
+    "util/parallel"
     ]
 print-trace = [ 
     "ark-std/print-trace",

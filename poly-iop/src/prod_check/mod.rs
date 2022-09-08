@@ -207,7 +207,7 @@ mod test {
     use ark_ec::PairingEngine;
     use ark_poly::{DenseMultilinearExtension, MultilinearExtension};
     use ark_std::test_rng;
-    use pcs::{prelude::KZGMultilinearPCS, PolynomialCommitmentScheme};
+    use pcs::{prelude::MultilinearKzgPCS, PolynomialCommitmentScheme};
     use std::{marker::PhantomData, rc::Rc};
 
     // f and g are guaranteed to have the same product
@@ -281,10 +281,10 @@ mod test {
         let mut g = f.clone();
         g.evaluations.reverse();
 
-        let srs = KZGMultilinearPCS::<Bls12_381>::gen_srs_for_testing(&mut rng, nv + 1)?;
-        let (pcs_param, _) = KZGMultilinearPCS::<Bls12_381>::trim(&srs, nv + 1, Some(nv + 1))?;
+        let srs = MultilinearKzgPCS::<Bls12_381>::gen_srs_for_testing(&mut rng, nv + 1)?;
+        let (pcs_param, _) = MultilinearKzgPCS::<Bls12_381>::trim(&srs, nv + 1, Some(nv + 1))?;
 
-        test_product_check_helper::<Bls12_381, KZGMultilinearPCS<Bls12_381>>(&f, &g, &pcs_param)?;
+        test_product_check_helper::<Bls12_381, MultilinearKzgPCS<Bls12_381>>(&f, &g, &pcs_param)?;
 
         Ok(())
     }

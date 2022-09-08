@@ -6,8 +6,6 @@ edition = "2021"
 # See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
 
 [dependencies]
-poly-iop = { path = "../poly-iop" }
-pcs = { path = "../pcs" }
 
 ark-std = { version = "^0.3.0", default-features = false }
 ark-ec = { version = "^0.3.0", default-features = false }
@@ -16,9 +14,12 @@ ark-poly = { version = "^0.3.0", default-features = false }
 ark-serialize = { version = "^0.3.0", default-features = false, features = [ "derive" ] }
 
 displaydoc = { version = "0.2.3", default-features = false }
+
+poly-iop = { path = "../poly-iop" }
+pcs = { path = "../pcs" }
 transcript = { path = "../transcript" }
 arithmetic = { path = "../arithmetic" }
-
+util = { path = "../util" }
 
 [dev-dependencies]
 ark-bls12-381 = { version = "0.3.0", default-features = false, features = [ "curve" ] }
@@ -35,9 +36,11 @@ parallel = [
     "ark-ff/parallel",  
     "ark-poly/parallel", 
     "ark-ec/parallel",
+    
     "poly-iop/parallel",
-    "pcs/parallel",
     "arithmetic/parallel",
+    "pcs/parallel",
+    "util/parallel"
     ]
 print-trace = [ 
     "ark-std/print-trace",

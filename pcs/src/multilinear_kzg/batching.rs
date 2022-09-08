@@ -1,18 +1,24 @@
+// Copyright (c) 2022 Espresso Systems (espressosys.com)
+// This file is part of the Jellyfish library.
+
+// You should have received a copy of the MIT License
+// along with the Jellyfish library. If not, see <https://mit-license.org/>.
+
 use super::{
     open_internal,
     srs::{MultilinearProverParam, MultilinearVerifierParam},
     util::{build_l, compute_w_circ_l, merge_polynomials},
-    verify_internal, BatchProof,
+    verify_internal, MultilinearKzgBatchProof,
 };
 use crate::{
     multilinear_kzg::util::get_uni_domain,
     prelude::{Commitment, UnivariateProverParam, UnivariateVerifierParam},
-    univariate_kzg::KZGUnivariatePCS,
-    PCSErrors, PolynomialCommitmentScheme,
+    univariate_kzg::UnivariateKzgPCS,
+    PCSError, PolynomialCommitmentScheme,
 };
 use ark_ec::PairingEngine;
 use ark_poly::{DenseMultilinearExtension, EvaluationDomain, MultilinearExtension, Polynomial};
-use ark_std::{end_timer, rc::Rc, start_timer, vec::Vec};
+use ark_std::{end_timer, format, rc::Rc, start_timer, string::ToString, vec, vec::Vec};
 use transcript::IOPTranscript;
 
 /// Input
@@ -52,7 +58,7 @@ pub(super) fn multi_open_internal<E: PairingEngine>(
     polynomials: &[Rc<DenseMultilinearExtension<E::Fr>>],
     multi_commitment: &Commitment<E>,
     points: &[Vec<E::Fr>],
-) -> Result<(BatchProof<E>, Vec<E::Fr>), PCSErrors> {
+) -> Result<(MultilinearKzgBatchProof<E>, Vec<E::Fr>), PCSError> {
     let open_timer = start_timer!(|| "multi open");
 
     // ===================================
@@ -60,11 +66,11 @@ pub(super) fn multi_open_internal<E: PairingEngine>(
     // ===================================
     let points_len = points.len();
     if points_len == 0 {
-        return Err(PCSErrors::InvalidParameters("points is empty".to_string()));
+        return Err(PCSError::InvalidParameters("points is empty".to_string()));
     }
 
     if points_len != polynomials.len() {
-        return Err(PCSErrors::InvalidParameters(
+        return Err(PCSError::InvalidParameters(
             "polynomial length does not match point length".to_string(),
         ));
     }
@@ -72,14 +78,14 @@ pub(super) fn multi_open_internal<E: PairingEngine>(
     let num_var = polynomials[0].num_vars();
     for poly in polynomials.iter().skip(1) {
         if poly.num_vars() != num_var {
-            return Err(PCSErrors::InvalidParameters(
+            return Err(PCSError::InvalidParameters(
                 "polynomials do not have same num_vars".to_string(),
             ));
         }
     }
     for point in points.iter() {
         if point.len() != num_var {
-            return Err(PCSErrors::InvalidParameters(
+            return Err(PCSError::InvalidParameters(
                 "points do not have same num_vars".to_string(),
             ));
         }
@@ -105,7 +111,7 @@ pub(super) fn multi_open_internal<E: PairingEngine>(
         transcript.append_serializable_element(b"w", point)?;
     }
 
-    let q_x_commit = KZGUnivariatePCS::<E>::commit(uni_prover_param, &q_x)?;
+    let q_x_commit = UnivariateKzgPCS::<E>::commit(uni_prover_param, &q_x)?;
     transcript.append_serializable_element(b"q(x)", &q_x_commit)?;
     let r = transcript.get_and_append_challenge(b"r")?;
 
@@ -114,7 +120,7 @@ pub(super) fn multi_open_internal<E: PairingEngine>(
     let mut q_x_evals = vec![];
     for i in 0..points_len {
         let (q_x_open, q_x_eval) =
-            KZGUnivariatePCS::<E>::open(uni_prover_param, &q_x, &domain.element(i))?;
+            UnivariateKzgPCS::<E>::open(uni_prover_param, &q_x, &domain.element(i))?;
         q_x_opens.push(q_x_open);
         q_x_evals.push(q_x_eval);
 
@@ -126,14 +132,14 @@ pub(super) fn multi_open_internal<E: PairingEngine>(
             .collect();
         let mle_eval = merge_poly.evaluate(&point).unwrap();
         if mle_eval != q_x_eval {
-            return Err(PCSErrors::InvalidProver(
+            return Err(PCSError::InvalidProver(
                 "Q(omega) does not match W(l(omega))".to_string(),
             ));
         }
     }
 
     // 6. build q(r) and its opening
-    let (q_x_open, q_r_value) = KZGUnivariatePCS::<E>::open(uni_prover_param, &q_x, &r)?;
+    let (q_x_open, q_r_value) = UnivariateKzgPCS::<E>::open(uni_prover_param, &q_x, &r)?;
     q_x_opens.push(q_x_open);
     q_x_evals.push(q_r_value);
 
@@ -149,14 +155,14 @@ pub(super) fn multi_open_internal<E: PairingEngine>(
 
     // 9. output value that is `w` evaluated at `p` (which should match `q(r)`)
     if mle_eval != q_r_value {
-        return Err(PCSErrors::InvalidProver(
+        return Err(PCSError::InvalidProver(
             "Q(r) does not match W(l(r))".to_string(),
         ));
     }
     end_timer!(open_timer);
 
     Ok((
-        BatchProof {
+        MultilinearKzgBatchProof {
             proof: mle_opening,
             q_x_commit,
             q_x_opens,
@@ -185,8 +191,8 @@ pub(super) fn batch_verify_internal<E: PairingEngine>(
     multi_commitment: &Commitment<E>,
     points: &[Vec<E::Fr>],
     values: &[E::Fr],
-    batch_proof: &BatchProof<E>,
-) -> Result<bool, PCSErrors> {
+    batch_proof: &MultilinearKzgBatchProof<E>,
+) -> Result<bool, PCSError> {
     let verify_timer = start_timer!(|| "batch verify");
 
     // ===================================
@@ -194,18 +200,18 @@ pub(super) fn batch_verify_internal<E: PairingEngine>(
     // ===================================
     let points_len = points.len();
     if points_len == 0 {
-        return Err(PCSErrors::InvalidParameters("points is empty".to_string()));
+        return Err(PCSError::InvalidParameters("points is empty".to_string()));
     }
 
     // add one here because we also have q(r) and its opening
     if points_len + 1 != batch_proof.q_x_opens.len() {
-        return Err(PCSErrors::InvalidParameters(
+        return Err(PCSError::InvalidParameters(
             "openings length does not match point length".to_string(),
         ));
     }
 
     if points_len + 1 != values.len() {
-        return Err(PCSErrors::InvalidParameters(
+        return Err(PCSError::InvalidParameters(
             "values length does not match point length".to_string(),
         ));
     }
@@ -213,7 +219,7 @@ pub(super) fn batch_verify_internal<E: PairingEngine>(
     let num_var = points[0].len();
     for point in points.iter().skip(1) {
         if point.len() != num_var {
-            return Err(PCSErrors::InvalidParameters(format!(
+            return Err(PCSError::InvalidParameters(format!(
                 "points do not have same num_vars ({} vs {})",
                 point.len(),
                 num_var,
@@ -238,7 +244,7 @@ pub(super) fn batch_verify_internal<E: PairingEngine>(
     // 3. check `q(r) == batch_proof.q_x_value.last` and `q(omega^i) =
     // batch_proof.q_x_value[i]`
     for (i, value) in values.iter().enumerate().take(points_len) {
-        if !KZGUnivariatePCS::verify(
+        if !UnivariateKzgPCS::verify(
             uni_verifier_param,
             &batch_proof.q_x_commit,
             &domain.element(i),
@@ -251,7 +257,7 @@ pub(super) fn batch_verify_internal<E: PairingEngine>(
         }
     }
 
-    if !KZGUnivariatePCS::verify(
+    if !UnivariateKzgPCS::verify(
         uni_verifier_param,
         &batch_proof.q_x_commit,
         &r,
@@ -306,17 +312,17 @@ mod tests {
     use ark_std::{log2, rand::RngCore, test_rng, vec::Vec, UniformRand};
     type Fr = <E as PairingEngine>::Fr;
 
-    fn test_multi_commit_helper<R: RngCore>(
+    fn test_multi_commit_helper<R: RngCore + CryptoRng>(
         uni_params: &UnivariateUniversalParams<E>,
         ml_params: &MultilinearUniversalParams<E>,
         polys: &[Rc<DenseMultilinearExtension<Fr>>],
         rng: &mut R,
-    ) -> Result<(), PCSErrors> {
+    ) -> Result<(), PCSError> {
         let merged_nv = get_batched_nv(polys[0].num_vars(), polys.len());
         let qx_degree = compute_qx_degree(merged_nv, polys.len());
-        let log_qx_degree = log2(qx_degree) as usize;
+        let padded_qx_degree = 1usize << log2(qx_degree);
 
-        let (uni_ck, uni_vk) = uni_params.trim(log_qx_degree)?;
+        let (uni_ck, uni_vk) = uni_params.trim(padded_qx_degree)?;
         let (ml_ck, ml_vk) = ml_params.trim(merged_nv)?;
 
         let mut points = Vec::new();
@@ -329,7 +335,7 @@ mod tests {
 
         let evals = generate_evaluations(polys, &points)?;
 
-        let com = KZGMultilinearPCS::multi_commit(&(ml_ck.clone(), uni_ck.clone()), polys)?;
+        let com = MultilinearKzgPCS::multi_commit(&(ml_ck.clone(), uni_ck.clone()), polys)?;
         let (batch_proof, evaluations) =
             multi_open_internal(&uni_ck, &ml_ck, polys, &com, &points)?;
 
@@ -351,9 +357,7 @@ mod tests {
         assert!(!batch_verify_internal(
             &uni_vk,
             &ml_vk,
-            &Commitment {
-                commitment: <E as PairingEngine>::G1Affine::default()
-            },
+            &Commitment(<E as PairingEngine>::G1Affine::default()),
             &points,
             &evaluations,
             &batch_proof,
@@ -371,11 +375,9 @@ mod tests {
             &com,
             &points,
             &evaluations,
-            &BatchProof {
-                proof: Proof { proofs: Vec::new() },
-                q_x_commit: Commitment {
-                    commitment: <E as PairingEngine>::G1Affine::default()
-                },
+            &MultilinearKzgBatchProof {
+                proof: MultilinearKzgProof { proofs: Vec::new() },
+                q_x_commit: Commitment(<E as PairingEngine>::G1Affine::default()),
                 q_x_opens: vec![],
             },
         )
@@ -394,10 +396,8 @@ mod tests {
         )?);
 
         // bad q(x) commit
-        let mut wrong_proof = batch_proof.clone();
-        wrong_proof.q_x_commit = Commitment {
-            commitment: <E as PairingEngine>::G1Affine::default(),
-        };
+        let mut wrong_proof = batch_proof;
+        wrong_proof.q_x_commit = Commitment(<E as PairingEngine>::G1Affine::default());
         assert!(!batch_verify_internal(
             &uni_vk,
             &ml_vk,
@@ -410,10 +410,11 @@ mod tests {
     }
 
     #[test]
-    fn test_multi_commit_internal() -> Result<(), PCSErrors> {
+    fn test_multi_commit_internal() -> Result<(), PCSError> {
         let mut rng = test_rng();
 
-        let uni_params = UnivariateUniversalParams::<E>::gen_srs_for_testing(&mut rng, 15)?;
+        let uni_params =
+            UnivariateUniversalParams::<E>::gen_srs_for_testing(&mut rng, 1usize << 15)?;
         let ml_params = MultilinearUniversalParams::<E>::gen_srs_for_testing(&mut rng, 15)?;
 
         // normal polynomials

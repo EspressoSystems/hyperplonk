@@ -163,10 +163,10 @@ mod test {
     use ark_ec::PairingEngine;
     use ark_poly::{DenseMultilinearExtension, MultilinearExtension};
     use ark_std::test_rng;
-    use pcs::{prelude::KZGMultilinearPCS, PolynomialCommitmentScheme};
+    use pcs::{prelude::MultilinearKzgPCS, PolynomialCommitmentScheme};
     use std::{marker::PhantomData, rc::Rc};
 
-    type KZG = KZGMultilinearPCS<Bls12_381>;
+    type KZG = MultilinearKzgPCS<Bls12_381>;
 
     fn test_permutation_check_helper<E, PCS>(
         pcs_param: &PCS::ProverParam,
@@ -220,8 +220,8 @@ mod test {
     fn test_permutation_check(nv: usize) -> Result<(), PolyIOPErrors> {
         let mut rng = test_rng();
 
-        let srs = KZGMultilinearPCS::<Bls12_381>::gen_srs_for_testing(&mut rng, nv + 1)?;
-        let (pcs_param, _) = KZGMultilinearPCS::<Bls12_381>::trim(&srs, nv + 1, Some(nv + 1))?;
+        let srs = MultilinearKzgPCS::<Bls12_381>::gen_srs_for_testing(&mut rng, nv + 1)?;
+        let (pcs_param, _) = MultilinearKzgPCS::<Bls12_381>::trim(&srs, nv + 1, Some(nv + 1))?;
 
         {
             // good path: w is a permutation of w itself under the identify map

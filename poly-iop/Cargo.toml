@@ -21,6 +21,7 @@ rayon = { version = "1.5.2", default-features = false, optional = true }
 transcript = { path = "../transcript" }
 arithmetic = { path = "../arithmetic" }
 pcs = { path = "../pcs" }
+util = { path = "../util" }
 
 [dev-dependencies]
 ark-ec = { version = "^0.3.0", default-features = false }
@@ -41,6 +42,7 @@ parallel = [
     "ark-ff/parallel",  
     "ark-poly/parallel", 
     "pcs/parallel",
+    "util/parallel"
     ]
 print-trace = [ 
     "arithmetic/print-trace",
