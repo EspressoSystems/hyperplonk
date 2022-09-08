@@ -1,10 +1,10 @@
 //! Main module for the HyperPlonk SNARK.
 
-use crate::utils::{eval_f, prove_sanity_check, PcsAccumulator};
+use crate::utils::{eval_f, prover_sanity_check, PcsAccumulator};
 use arithmetic::VPAuxInfo;
 use ark_ec::PairingEngine;
 use ark_poly::{DenseMultilinearExtension, MultilinearExtension};
-use ark_std::{end_timer, start_timer, One, Zero};
+use ark_std::{end_timer, start_timer, test_rng, One, Zero};
 use errors::HyperPlonkErrors;
 use pcs::prelude::{compute_qx_degree, merge_polynomials, PCSError, PolynomialCommitmentScheme};
 use poly_iop::{
@@ -196,7 +196,7 @@ where
         let start = start_timer!(|| "hyperplonk proving");
         let mut transcript = IOPTranscript::<E::Fr>::new(b"hyperplonk");
 
-        prove_sanity_check(&pk.params, pub_input, witnesses)?;
+        prover_sanity_check(&pk.params, pub_input, witnesses)?;
 
         // witness assignment of length 2^n
         let num_vars = pk.params.nv;
@@ -279,17 +279,17 @@ where
 
         // open prod(0,x), prod(1, x), prod(x, 0), prod(x, 1) at zero_check.point
         // prod(0, x)
-        let tmp_point = [
+        let tmp_point1 = [
             perm_check_proof.zero_check_proof.point.as_slice(),
             &[E::Fr::zero()],
         ]
         .concat();
-        let (prod_0_x_opening, prod_0_x_eval) = PCS::open(&pk.pcs_param, &prod_x, &tmp_point)?;
-        prod_pcs_acc.insert_point(&tmp_point);
+        let (prod_0_x_opening, prod_0_x_eval) = PCS::open(&pk.pcs_param, &prod_x, &tmp_point1)?;
+        prod_pcs_acc.insert_point(&tmp_point1);
         #[cfg(feature = "extensive_sanity_checks")]
         {
             // sanity check
-            let eval = prod_x.evaluate(&tmp_point).ok_or_else(|| {
+            let eval = prod_x.evaluate(&tmp_point1).ok_or_else(|| {
                 HyperPlonkErrors::InvalidParameters(
                     "prod_0_x evaluation dimension does not match".to_string(),
                 )
@@ -301,17 +301,17 @@ where
             }
         }
         // prod(1, x)
-        let tmp_point = [
+        let tmp_point2 = [
             perm_check_proof.zero_check_proof.point.as_slice(),
             &[E::Fr::one()],
         ]
         .concat();
-        let (prod_1_x_opening, prod_1_x_eval) = PCS::open(&pk.pcs_param, &prod_x, &tmp_point)?;
-        prod_pcs_acc.insert_point(&tmp_point);
+        let (prod_1_x_opening, prod_1_x_eval) = PCS::open(&pk.pcs_param, &prod_x, &tmp_point2)?;
+        prod_pcs_acc.insert_point(&tmp_point2);
         #[cfg(feature = "extensive_sanity_checks")]
         {
             // sanity check
-            let eval = prod_x.evaluate(&tmp_point).ok_or_else(|| {
+            let eval = prod_x.evaluate(&tmp_point2).ok_or_else(|| {
                 HyperPlonkErrors::InvalidParameters(
                     "prod_1_x evaluation dimension does not match".to_string(),
                 )
@@ -323,17 +323,17 @@ where
             }
         }
         // prod(x, 0)
-        let tmp_point = [
+        let tmp_point3 = [
             &[E::Fr::zero()],
             perm_check_proof.zero_check_proof.point.as_slice(),
         ]
         .concat();
-        let (prod_x_0_opening, prod_x_0_eval) = PCS::open(&pk.pcs_param, &prod_x, &tmp_point)?;
-        prod_pcs_acc.insert_point(&tmp_point);
+        let (prod_x_0_opening, prod_x_0_eval) = PCS::open(&pk.pcs_param, &prod_x, &tmp_point3)?;
+        // prod_pcs_acc.insert_point(&tmp_point3);
         #[cfg(feature = "extensive_sanity_checks")]
         {
             // sanity check
-            let eval = prod_x.evaluate(&tmp_point).ok_or_else(|| {
+            let eval = prod_x.evaluate(&tmp_point3).ok_or_else(|| {
                 HyperPlonkErrors::InvalidParameters(
                     "prod_x_0 evaluation dimension does not match".to_string(),
                 )
@@ -346,17 +346,17 @@ where
             }
         }
         // prod(x, 1)
-        prod_pcs_acc.insert_point(&tmp_point);
-        let tmp_point = [
+        let tmp_point4 = [
             &[E::Fr::one()],
             perm_check_proof.zero_check_proof.point.as_slice(),
         ]
         .concat();
-        let (prod_x_1_opening, prod_x_1_eval) = PCS::open(&pk.pcs_param, &prod_x, &tmp_point)?;
+        let (prod_x_1_opening, prod_x_1_eval) = PCS::open(&pk.pcs_param, &prod_x, &tmp_point4)?;
+        // prod_pcs_acc.insert_point(&tmp_point4);
         #[cfg(feature = "extensive_sanity_checks")]
         {
             // sanity check
-            let eval = prod_x.evaluate(&tmp_point).ok_or_else(|| {
+            let eval = prod_x.evaluate(&tmp_point4).ok_or_else(|| {
                 HyperPlonkErrors::InvalidParameters(
                     "prod_x_1 evaluation dimension does not match".to_string(),
                 )
@@ -368,9 +368,9 @@ where
             }
         }
         // prod(1, ..., 1, 0)
-        let tmp_point = [vec![E::Fr::zero()], vec![E::Fr::one(); merged_nv]].concat();
-        let (prod_1_0_opening, prod_1_0_eval) = PCS::open(&pk.pcs_param, &prod_x, &tmp_point)?;
-        prod_pcs_acc.insert_point(&tmp_point);
+        let tmp_point5 = [vec![E::Fr::zero()], vec![E::Fr::one(); merged_nv]].concat();
+        let (prod_1_0_opening, prod_1_0_eval) = PCS::open(&pk.pcs_param, &prod_x, &tmp_point5)?;
+        // prod_pcs_acc.insert_point(&tmp_point);
         #[cfg(feature = "extensive_sanity_checks")]
         {
             // sanity check
@@ -539,10 +539,17 @@ where
         // =======================================================================
         let (w_merged_batch_opening, w_merged_batch_evals) =
             w_merged_pcs_acc.batch_open(&pk.pcs_param)?;
+
         let (prod_batch_openings, prod_batch_evals) = prod_pcs_acc.batch_open(&pk.pcs_param)?;
 
-        end_timer!(start);
+        println!("------- {:?}", prod_batch_evals);
+        println!(
+            "------- {:?}",
+            vec![prod_0_x_eval, prod_1_x_eval, prod_x_0_eval, prod_x_1_eval]
+        );
 
+        end_timer!(start);
+        println!("-------");
         Ok(HyperPlonkProof {
             // =======================================================================
             // PCS components: common
@@ -804,6 +811,25 @@ where
         )? {
             return Err(HyperPlonkErrors::InvalidProof(
                 "perm oracle pcs verification failed".to_string(),
+            ));
+        }
+        let mut rng = test_rng();
+        if !PCS::batch_verify_single_poly(
+            &vk.pcs_param,
+            &proof.perm_check_proof.prod_x_comm,
+            &[
+                [perm_check_point.as_slice(), &[E::Fr::zero()]].concat(),
+                [perm_check_point.as_slice(), &[E::Fr::one()]].concat(),
+                // [&[E::Fr::zero()], perm_check_point.as_slice()].concat(),
+                // [&[E::Fr::one()], perm_check_point.as_slice()].concat(),
+                // perm_check_sub_claim.product_check_sub_claim.final_query.0.clone(),
+            ],
+            &proof.prod_batch_evals,
+            &proof.prod_batch_openings,
+            &mut rng,
+        )? {
+            return Err(HyperPlonkErrors::InvalidProof(
+                "prod(0, x) pcs verification failed".to_string(),
             ));
         }
 

@@ -118,7 +118,7 @@ macro_rules! build_mle {
 }
 
 /// Sanity-check for HyperPlonk SNARK proving
-pub(crate) fn prove_sanity_check<F: PrimeField>(
+pub(crate) fn prover_sanity_check<F: PrimeField>(
     params: &HyperPlonkParams,
     pub_input: &[F],
     witnesses: &[WitnessColumn<F>],

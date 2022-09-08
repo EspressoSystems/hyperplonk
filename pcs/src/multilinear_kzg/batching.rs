@@ -107,14 +107,17 @@ pub(super) fn multi_open_internal<E: PairingEngine>(
     // transcript contains: w commitment, points, q(x)'s commitment
     let mut transcript = IOPTranscript::new(b"ml kzg");
     transcript.append_serializable_element(b"w", multi_commitment)?;
+    println!("com proving {:?}", multi_commitment);
     for point in points {
+        // println!("points proving {:?}", points);
         transcript.append_serializable_element(b"w", point)?;
     }
 
     let q_x_commit = UnivariateKzgPCS::<E>::commit(uni_prover_param, &q_x)?;
+    println!("qx proving {:?}", q_x_commit);
     transcript.append_serializable_element(b"q(x)", &q_x_commit)?;
     let r = transcript.get_and_append_challenge(b"r")?;
-
+    println!("r proving {}", r);
     // 5. build q(omega^i) and their openings
     let mut q_x_opens = vec![];
     let mut q_x_evals = vec![];
@@ -149,7 +152,7 @@ pub(super) fn multi_open_internal<E: PairingEngine>(
         .rev()
         .map(|poly| poly.evaluate(&r))
         .collect();
-
+    println!("point {:?}", point);
     // 8. output an opening of `w` over point `p`
     let (mle_opening, mle_eval) = open_internal(ml_prover_param, &merge_poly, &point)?;
 
@@ -160,7 +163,7 @@ pub(super) fn multi_open_internal<E: PairingEngine>(
         ));
     }
     end_timer!(open_timer);
-
+    println!("eval {:?}", q_x_evals);
     Ok((
         MultilinearKzgBatchProof {
             proof: mle_opening,
@@ -193,6 +196,7 @@ pub(super) fn batch_verify_internal<E: PairingEngine>(
     values: &[E::Fr],
     batch_proof: &MultilinearKzgBatchProof<E>,
 ) -> Result<bool, PCSError> {
+    println!("-----");
     let verify_timer = start_timer!(|| "batch verify");
 
     // ===================================
@@ -205,15 +209,19 @@ pub(super) fn batch_verify_internal<E: PairingEngine>(
 
     // add one here because we also have q(r) and its opening
     if points_len + 1 != batch_proof.q_x_opens.len() {
-        return Err(PCSError::InvalidParameters(
-            "openings length does not match point length".to_string(),
-        ));
+        return Err(PCSError::InvalidParameters(format!(
+            "openings length {} does not match point length {}",
+            points_len + 1,
+            batch_proof.q_x_opens.len()
+        )));
     }
 
     if points_len + 1 != values.len() {
-        return Err(PCSError::InvalidParameters(
-            "values length does not match point length".to_string(),
-        ));
+        return Err(PCSError::InvalidParameters(format!(
+            "values length {} does not match point length {}",
+            points_len + 1,
+            values.len()
+        )));
     }
 
     let num_var = points[0].len();
@@ -232,15 +240,18 @@ pub(super) fn batch_verify_internal<E: PairingEngine>(
     // 1. push w, points and q_com into transcript
     let mut transcript = IOPTranscript::new(b"ml kzg");
     transcript.append_serializable_element(b"w", multi_commitment)?;
+    println!("com verifying {:?}", multi_commitment);
+
     for point in points {
+        // println!("points verifying {:?}", points);
         transcript.append_serializable_element(b"w", point)?;
     }
 
     transcript.append_serializable_element(b"q(x)", &batch_proof.q_x_commit)?;
-
+    println!("qx verifying {:?}", batch_proof.q_x_commit);
     // 2. sample `r` from transcript
     let r = transcript.get_and_append_challenge(b"r")?;
-
+    println!("r verifying {}", r);
     // 3. check `q(r) == batch_proof.q_x_value.last` and `q(omega^i) =
     // batch_proof.q_x_value[i]`
     for (i, value) in values.iter().enumerate().take(points_len) {
@@ -268,14 +279,14 @@ pub(super) fn batch_verify_internal<E: PairingEngine>(
         println!("q(r) verification failed");
         return Ok(false);
     }
-
+    println!("here");
     // 4. build `l(points)` which is a list of univariate polynomials that goes
     // through the points
     let uni_polys = build_l(num_var, points, &domain)?;
 
     // 5. get a point `p := l(r)`
     let point: Vec<E::Fr> = uni_polys.iter().rev().map(|x| x.evaluate(&r)).collect();
-
+    println!("point {:?}", point);
     // 6. verifies `p` is valid against multilinear KZG proof
     let res = verify_internal(
         ml_verifier_param,
@@ -284,7 +295,9 @@ pub(super) fn batch_verify_internal<E: PairingEngine>(
         &values[points_len],
         &batch_proof.proof,
     )?;
-
+    println!("point len {:?}", points_len);
+    println!("values {:?}", values);
+    println!("here");
     #[cfg(debug_assertion)]
     if !res {
         println!("multilinear KZG verification failed");
