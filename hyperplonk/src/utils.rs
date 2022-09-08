@@ -1,16 +1,87 @@
-use std::rc::Rc;
-
-use arithmetic::VirtualPolynomial;
-use ark_ff::PrimeField;
-use ark_poly::DenseMultilinearExtension;
-
 use crate::{
-    errors::HyperPlonkErrors,
-    structs::{CustomizedGates, HyperPlonkParams},
+    custom_gate::CustomizedGates, errors::HyperPlonkErrors, structs::HyperPlonkParams,
     witness::WitnessColumn,
 };
+use arithmetic::VirtualPolynomial;
+use ark_ec::PairingEngine;
+use ark_ff::PrimeField;
+use ark_poly::DenseMultilinearExtension;
+use pcs::PolynomialCommitmentScheme;
+use std::{borrow::Borrow, rc::Rc};
 
-use poly_iop::prelude::bit_decompose;
+/// An accumulator structure that holds a polynomial and
+/// its opening points
+#[derive(Debug)]
+pub(super) struct PcsAccumulator<E: PairingEngine, PCS: PolynomialCommitmentScheme<E>> {
+    pub(crate) polynomial: Option<PCS::Polynomial>,
+    pub(crate) poly_commit: Option<PCS::Commitment>,
+    pub(crate) points: Vec<PCS::Point>,
+}
+
+impl<E: PairingEngine, PCS: PolynomialCommitmentScheme<E>> PcsAccumulator<E, PCS> {
+    /// Create an empty accumulator.
+    pub(super) fn new() -> Self {
+        Self {
+            polynomial: None,
+            poly_commit: None,
+            points: vec![],
+        }
+    }
+
+    /// Initialize the polynomial; requires both the polynomial
+    /// and its commitment.
+    pub(super) fn init_poly(
+        &mut self,
+        polynomial: PCS::Polynomial,
+        commitment: PCS::Commitment,
+    ) -> Result<(), HyperPlonkErrors> {
+        if self.polynomial.is_some() || self.poly_commit.is_some() {
+            return Err(HyperPlonkErrors::InvalidProver(
+                "poly already set for accumulator".to_string(),
+            ));
+        }
+
+        self.polynomial = Some(polynomial);
+        self.poly_commit = Some(commitment);
+        Ok(())
+    }
+
+    /// Push a new evaluation point into the accumulator
+    pub(super) fn insert_point(&mut self, point: &PCS::Point) {
+        self.points.push(point.clone())
+    }
+
+    /// Batch open all the points over a merged polynomial.
+    /// A simple wrapper of PCS::multi_open
+    pub(super) fn batch_open(
+        &self,
+        prover_param: impl Borrow<PCS::ProverParam>,
+    ) -> Result<(PCS::BatchProof, Vec<PCS::Evaluation>), HyperPlonkErrors> {
+        let poly = match &self.polynomial {
+            Some(p) => p,
+            None => {
+                return Err(HyperPlonkErrors::InvalidProver(
+                    "poly is set for accumulator".to_string(),
+                ))
+            },
+        };
+
+        let commitment = match &self.poly_commit {
+            Some(p) => p,
+            None => {
+                return Err(HyperPlonkErrors::InvalidProver(
+                    "poly is set for accumulator".to_string(),
+                ))
+            },
+        };
+        Ok(PCS::multi_open_single_poly(
+            prover_param.borrow(),
+            commitment,
+            poly,
+            &self.points,
+        )?)
+    }
+}
 
 /// Build MLE from matrix of witnesses.
 ///
@@ -42,30 +113,37 @@ macro_rules! build_mle {
 }
 
 /// Sanity-check for HyperPlonk SNARK proving
-pub(crate) fn prove_sanity_check<F: PrimeField>(
+pub(crate) fn prover_sanity_check<F: PrimeField>(
     params: &HyperPlonkParams,
     pub_input: &[F],
     witnesses: &[WitnessColumn<F>],
 ) -> Result<(), HyperPlonkErrors> {
-    let num_vars = params.nv;
-    let ell = params.log_pub_input_len;
+    // public input length must be no greater than num_constraints
+
+    if pub_input.len() > params.num_constraints {
+        return Err(HyperPlonkErrors::InvalidProver(format!(
+            "Public input length {} is greater than num constraits {}",
+            pub_input.len(),
+            params.num_pub_input
+        )));
+    }
 
     // public input length
-    if pub_input.len() != 1 << ell {
+    if pub_input.len() != params.num_pub_input {
         return Err(HyperPlonkErrors::InvalidProver(format!(
             "Public input length is not correct: got {}, expect {}",
             pub_input.len(),
-            1 << ell
+            params.num_pub_input
         )));
     }
     // witnesses length
     for (i, w) in witnesses.iter().enumerate() {
-        if w.0.len() != 1 << num_vars {
+        if w.0.len() != params.num_constraints {
             return Err(HyperPlonkErrors::InvalidProver(format!(
                 "{}-th witness length is not correct: got {}, expect {}",
                 i,
-                pub_input.len(),
-                1 << ell
+                w.0.len(),
+                params.num_constraints
             )));
         }
     }
@@ -159,17 +237,6 @@ pub(crate) fn eval_f<F: PrimeField>(
         res += cur_value;
     }
     Ok(res)
-}
-
-/// given the evaluation input `point` of the `index`-th polynomial,
-/// obtain the evaluation point in the merged polynomial
-pub(crate) fn gen_eval_point<F: PrimeField>(index: usize, index_len: usize, point: &[F]) -> Vec<F> {
-    let mut index_vec: Vec<F> = bit_decompose(index as u64, index_len)
-        .into_iter()
-        .map(|x| F::from(x))
-        .collect();
-    index_vec.reverse();
-    [point, &index_vec].concat()
 }
 
 #[cfg(test)]

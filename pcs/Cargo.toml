@@ -18,7 +18,12 @@ ark-bls12-381 = { version = "0.3.0", default-features = false, features = [ "cur
 displaydoc = { version = "0.2.3", default-features = false }
 derivative = { version = "2", features = ["use_core"] }
 
+arithmetic = { path = "../arithmetic" }
 transcript = { path = "../transcript" }
+util = { path = "../util" }
+
+rayon = { version = "1.5.2", default-features = false, optional = true }
+itertools = { version = "0.10.4", optional = true }
 
 # Benchmarks
 [[bench]]
@@ -28,13 +33,19 @@ harness = false
 
 [features]
 # default = [ "parallel", "print-trace" ]
-default = [ "parallel" ]
+default = [ "parallel",]
+extensive_sanity_checks = [ ]
 parallel = [ 
+    "rayon",
+    "itertools",
     "ark-std/parallel", 
     "ark-ff/parallel",  
     "ark-poly/parallel", 
     "ark-ec/parallel",
+    "util/parallel",
+    "arithmetic/parallel", 
     ]
 print-trace = [ 
     "ark-std/print-trace",
+    "arithmetic/print-trace",
     ] 

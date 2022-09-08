@@ -1,15 +1,14 @@
-use arithmetic::{VPAuxInfo, VirtualPolynomial};
+use arithmetic::{identity_permutation_mle, VPAuxInfo, VirtualPolynomial};
 use ark_bls12_381::{Bls12_381, Fr};
 use ark_poly::{DenseMultilinearExtension, MultilinearExtension};
 use ark_std::test_rng;
-use pcs::{prelude::KZGMultilinearPCS, PolynomialCommitmentScheme};
+use pcs::{prelude::MultilinearKzgPCS, PolynomialCommitmentScheme};
 use poly_iop::prelude::{
-    identity_permutation_mle, PermutationCheck, PolyIOP, PolyIOPErrors, ProductCheck, SumCheck,
-    ZeroCheck,
+    PermutationCheck, PolyIOP, PolyIOPErrors, ProductCheck, SumCheck, ZeroCheck,
 };
 use std::{marker::PhantomData, rc::Rc, time::Instant};
 
-type KZG = KZGMultilinearPCS<Bls12_381>;
+type KZG = MultilinearKzgPCS<Bls12_381>;
 
 fn main() -> Result<(), PolyIOPErrors> {
     bench_permutation_check()?;

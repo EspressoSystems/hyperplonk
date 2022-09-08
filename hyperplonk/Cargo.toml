@@ -6,8 +6,6 @@ edition = "2021"
 # See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
 
 [dependencies]
-poly-iop = { path = "../poly-iop" }
-pcs = { path = "../pcs" }
 
 ark-std = { version = "^0.3.0", default-features = false }
 ark-ec = { version = "^0.3.0", default-features = false }
@@ -16,28 +14,46 @@ ark-poly = { version = "^0.3.0", default-features = false }
 ark-serialize = { version = "^0.3.0", default-features = false, features = [ "derive" ] }
 
 displaydoc = { version = "0.2.3", default-features = false }
+
+poly-iop = { path = "../poly-iop" }
+pcs = { path = "../pcs" }
 transcript = { path = "../transcript" }
 arithmetic = { path = "../arithmetic" }
+util = { path = "../util" }
 
+rayon = { version = "1.5.2", default-features = false, optional = true }
 
 [dev-dependencies]
 ark-bls12-381 = { version = "0.3.0", default-features = false, features = [ "curve" ] }
 
+# Benchmarks
+[[bench]]
+name = "hyperplonk-benches"
+path = "benches/bench.rs"
+harness = false
 
 [features]
-# default = [ "parallel", "print-trace", "extensive_sanity_checks" ]
-default = [ "parallel", "extensive_sanity_checks" ]
-
+# default = [ ] 
+default = [ "parallel" ]
+# default = [ "parallel", "print-trace" ]
+# default = [ "parallel",  "extensive_sanity_checks" ]
+bench = [ "parallel" ]
 # extensive sanity checks that are useful for debugging
-extensive_sanity_checks = [ ]
+extensive_sanity_checks = [
+    "poly-iop/extensive_sanity_checks",
+    "pcs/extensive_sanity_checks",
+ ]
 parallel = [ 
+    "rayon",
     "ark-std/parallel", 
     "ark-ff/parallel",  
     "ark-poly/parallel", 
     "ark-ec/parallel",
+    
     "poly-iop/parallel",
-    "pcs/parallel",
     "arithmetic/parallel",
+    "pcs/parallel",
+    "util/parallel"
     ]
 print-trace = [ 
     "ark-std/print-trace",

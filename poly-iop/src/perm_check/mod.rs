@@ -153,20 +153,16 @@ where
 #[cfg(test)]
 mod test {
     use super::PermutationCheck;
-    use crate::{
-        errors::PolyIOPErrors,
-        prelude::{identity_permutation_mle, random_permutation_mle},
-        PolyIOP,
-    };
-    use arithmetic::VPAuxInfo;
+    use crate::{errors::PolyIOPErrors, PolyIOP};
+    use arithmetic::{evaluate_opt, identity_permutation_mle, random_permutation_mle, VPAuxInfo};
     use ark_bls12_381::Bls12_381;
     use ark_ec::PairingEngine;
     use ark_poly::{DenseMultilinearExtension, MultilinearExtension};
     use ark_std::test_rng;
-    use pcs::{prelude::KZGMultilinearPCS, PolynomialCommitmentScheme};
+    use pcs::{prelude::MultilinearKzgPCS, PolynomialCommitmentScheme};
     use std::{marker::PhantomData, rc::Rc};
 
-    type KZG = KZGMultilinearPCS<Bls12_381>;
+    type KZG = MultilinearKzgPCS<Bls12_381>;
 
     fn test_permutation_check_helper<E, PCS>(
         pcs_param: &PCS::ProverParam,
@@ -206,10 +202,10 @@ mod test {
         )?;
 
         // check product subclaim
-        if prod_x
-            .evaluate(&perm_check_sub_claim.product_check_sub_claim.final_query.0)
-            .unwrap()
-            != perm_check_sub_claim.product_check_sub_claim.final_query.1
+        if evaluate_opt(
+            &prod_x,
+            &perm_check_sub_claim.product_check_sub_claim.final_query.0,
+        ) != perm_check_sub_claim.product_check_sub_claim.final_query.1
         {
             return Err(PolyIOPErrors::InvalidVerifier("wrong subclaim".to_string()));
         };
@@ -220,8 +216,8 @@ mod test {
     fn test_permutation_check(nv: usize) -> Result<(), PolyIOPErrors> {
         let mut rng = test_rng();
 
-        let srs = KZGMultilinearPCS::<Bls12_381>::gen_srs_for_testing(&mut rng, nv + 1)?;
-        let (pcs_param, _) = KZGMultilinearPCS::<Bls12_381>::trim(&srs, nv + 1, Some(nv + 1))?;
+        let srs = MultilinearKzgPCS::<Bls12_381>::gen_srs_for_testing(&mut rng, nv + 1)?;
+        let (pcs_param, _) = MultilinearKzgPCS::<Bls12_381>::trim(&srs, nv + 1, Some(nv + 1))?;
 
         {
             // good path: w is a permutation of w itself under the identify map
