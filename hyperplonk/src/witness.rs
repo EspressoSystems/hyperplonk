@@ -9,7 +9,7 @@ use std::rc::Rc;
 pub struct WitnessRow<F: PrimeField>(pub(crate) Vec<F>);
 
 /// A column of witnesses of length `#constraints`
-#[derive(Debug, Clone)]
+#[derive(Debug, Clone, Default)]
 pub struct WitnessColumn<F: PrimeField>(pub(crate) Vec<F>);
 
 impl<F: PrimeField> WitnessColumn<F> {
@@ -17,6 +17,10 @@ impl<F: PrimeField> WitnessColumn<F> {
     /// column.
     pub fn get_nv(&self) -> usize {
         log2(self.0.len()) as usize
+    }
+    /// Append a new element to the witness column
+    pub fn append(&mut self, new_element: F) {
+        self.0.push(new_element)
     }
 
     /// Build witness columns from rows

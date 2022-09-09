@@ -50,7 +50,7 @@ impl CustomizedGates {
     }
 
     /// The number of witnesses in a customized gate
-    pub fn num_witness(&self) -> usize {
+    pub fn num_witnesses(&self) -> usize {
         let mut res = 0;
         for (_coeff, _q, ws) in self.gates.iter() {
             // witness list must be ordered

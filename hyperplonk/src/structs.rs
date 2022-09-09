@@ -91,7 +91,7 @@ pub struct HyperPlonkParams {
     pub nv: usize,
     /// binary log of the public input length
     pub log_pub_input_len: usize,
-    // binary log of the number of selectors
+    /// binary log of the number of selectors
     pub log_n_selectors: usize,
     /// binary log of the number of witness wires
     pub log_n_wires: usize,
