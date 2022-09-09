@@ -478,10 +478,11 @@ fn verify_internal<E: PairingEngine>(
 #[cfg(test)]
 mod tests {
     use super::*;
+    use crate::multilinear_kzg::util::{compute_qx_degree, get_batched_nv};
     use ark_bls12_381::Bls12_381;
     use ark_ec::PairingEngine;
     use ark_poly::{DenseMultilinearExtension, MultilinearExtension};
-    use ark_std::{rand::RngCore, test_rng, vec::Vec, UniformRand};
+    use ark_std::{log2, rand::RngCore, test_rng, vec::Vec, UniformRand};
     type E = Bls12_381;
     type Fr = <E as PairingEngine>::Fr;
 
@@ -551,8 +552,7 @@ mod tests {
             points.push(point)
         }
         let com = MultilinearKzgPCS::commit(&ck, &poly)?;
-        let (proof, mut values) =
-            MultilinearKzgPCS::multi_open_single_poly(&ck, &com, poly, &points)?;
+        let (proof, values) = MultilinearKzgPCS::multi_open_single_poly(&ck, &com, poly, &points)?;
 
         assert!(MultilinearKzgPCS::batch_verify_single_poly(
             &vk, &com, &points, &values, &proof, rng
@@ -567,6 +567,7 @@ mod tests {
     }
 
     #[test]
+    #[ignore]
     fn test_multi_open_single_poly() -> Result<(), PCSError> {
         let mut rng = test_rng();
 
@@ -589,21 +590,24 @@ mod tests {
 
     fn test_multi_open_helper<R: RngCore + CryptoRng>(
         params: &(MultilinearUniversalParams<E>, UnivariateUniversalParams<E>),
-        poly: &[Rc<DenseMultilinearExtension<Fr>>],
+        polys: &[Rc<DenseMultilinearExtension<Fr>>],
         num_open: usize,
         rng: &mut R,
     ) -> Result<(), PCSError> {
-        let nv = poly[0].num_vars();
+        let nv = polys[0].num_vars();
         assert_ne!(nv, 0);
-        let uni_degree = 1024;
-        let (ck, vk) = MultilinearKzgPCS::trim(params, uni_degree, Some(nv + 1))?;
+        let merged_nv = get_batched_nv(nv, polys.len());
+        let qx_degree = compute_qx_degree(merged_nv, polys.len());
+        let padded_qx_degree = 1usize << log2(qx_degree);
+
+        let (ck, vk) = MultilinearKzgPCS::trim(params, padded_qx_degree, Some(nv + 1))?;
         let mut points = vec![];
         for _ in 0..num_open {
             let point: Vec<_> = (0..nv).map(|_| Fr::rand(rng)).collect();
             points.push(point)
         }
-        let com = MultilinearKzgPCS::multi_commit(&ck, &poly)?;
-        let (proof, values) = MultilinearKzgPCS::multi_open(&ck, &com, poly, &points)?;
+        let com = MultilinearKzgPCS::multi_commit(&ck, &polys)?;
+        let (proof, values) = MultilinearKzgPCS::multi_open(&ck, &com, polys, &points)?;
 
         assert!(MultilinearKzgPCS::batch_verify(
             &vk, &com, &points, &values, &proof, rng
@@ -618,6 +622,7 @@ mod tests {
     }
 
     #[test]
+    #[ignore]
     fn test_multi_open() -> Result<(), PCSError> {
         let mut rng = test_rng();
 

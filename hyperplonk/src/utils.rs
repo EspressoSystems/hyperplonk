@@ -1,10 +1,11 @@
-use std::{borrow::Borrow, rc::Rc};
+#![allow(dead_code)]
 
 use arithmetic::VirtualPolynomial;
 use ark_ec::PairingEngine;
 use ark_ff::PrimeField;
 use ark_poly::DenseMultilinearExtension;
 use pcs::PolynomialCommitmentScheme;
+use std::{borrow::Borrow, rc::Rc};
 
 use crate::{
     errors::HyperPlonkErrors,
