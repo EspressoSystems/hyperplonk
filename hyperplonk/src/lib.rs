@@ -18,7 +18,9 @@ use transcript::IOPTranscript;
 use utils::{build_f, gen_eval_point};
 use witness::WitnessColumn;
 
+mod custom_gate;
 mod errors;
+mod mock;
 mod selectors;
 mod structs;
 mod utils;
@@ -975,8 +977,7 @@ where
 mod tests {
     use super::*;
     use crate::{
-        selectors::SelectorColumn,
-        structs::{CustomizedGates, HyperPlonkParams},
+        custom_gate::CustomizedGates, selectors::SelectorColumn, structs::HyperPlonkParams,
         witness::WitnessColumn,
     };
     use ark_bls12_381::Bls12_381;

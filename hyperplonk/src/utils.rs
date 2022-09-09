@@ -8,8 +8,7 @@ use pcs::PolynomialCommitmentScheme;
 use std::{borrow::Borrow, rc::Rc};
 
 use crate::{
-    errors::HyperPlonkErrors,
-    structs::{CustomizedGates, HyperPlonkParams},
+    custom_gate::CustomizedGates, errors::HyperPlonkErrors, structs::HyperPlonkParams,
     witness::WitnessColumn,
 };
 
