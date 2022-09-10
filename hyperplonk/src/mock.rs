@@ -120,12 +120,14 @@ impl<F: PrimeField> MockCircuit<F> {
 
 #[cfg(test)]
 mod test {
-    use ark_bls12_381::Fr;
-
     use super::*;
+    use crate::{errors::HyperPlonkErrors, HyperPlonkSNARK};
+    use ark_bls12_381::{Bls12_381, Fr};
+    use pcs::{prelude::MultilinearKzgPCS, PolynomialCommitmentScheme};
+    use poly_iop::PolyIOP;
 
     #[test]
-    fn test_mock_circuit() {
+    fn test_mock_circuit_sat() {
         for i in 1..10 {
             let vanilla_gate = CustomizedGates::vanilla_plonk_gate();
             let circuit = MockCircuit::<Fr>::mock_circuit(1 << i, &vanilla_gate);
@@ -135,5 +137,40 @@ mod test {
             let circuit = MockCircuit::<Fr>::mock_circuit(1 << i, &jf_gate);
             assert!(circuit.is_satisfied());
         }
+    }
+
+    #[test]
+    fn test_mock_circuit_zkp() -> Result<(), HyperPlonkErrors> {
+        for nv in 1..10 {
+            println!("nv: {}", nv);
+            let vanilla_gate = CustomizedGates::vanilla_plonk_gate();
+            let circuit = MockCircuit::<Fr>::mock_circuit(1 << nv, &vanilla_gate);
+            assert!(circuit.is_satisfied());
+
+            let index = circuit.index;
+
+            let mut rng = test_rng();
+            let pcs_srs = MultilinearKzgPCS::<Bls12_381>::gen_srs_for_testing(&mut rng, 16)?;
+
+            // generate pk and vks
+            let (pk, vk) = <PolyIOP<Fr> as HyperPlonkSNARK<
+                Bls12_381,
+                MultilinearKzgPCS<Bls12_381>,
+            >>::preprocess(&index, &pcs_srs)?;
+
+            // generate a proof and verify
+            let proof = <PolyIOP<Fr> as HyperPlonkSNARK<
+                Bls12_381,
+                MultilinearKzgPCS<Bls12_381>,
+            >>::prove(
+                &pk, &[circuit.witnesses[0].0[0]], &circuit.witnesses
+            )?;
+
+            let _verify = <PolyIOP<Fr> as HyperPlonkSNARK<
+                Bls12_381,
+                MultilinearKzgPCS<Bls12_381>,
+            >>::verify(&vk, &[circuit.witnesses[0].0[0]], &proof)?;
+        }
+        Ok(())
     }
 }
