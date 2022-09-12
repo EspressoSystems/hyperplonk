@@ -117,7 +117,6 @@ impl<E: PairingEngine> PolynomialCommitmentScheme<E> for MultilinearKzgPCS<E> {
                 ))
             },
         };
-        println!("{}", supported_degree);
         let (uni_ck, uni_vk) = srs.borrow().1.trim(supported_degree)?;
         let (ml_ck, ml_vk) = srs.borrow().0.trim(supported_num_vars)?;
 
@@ -575,7 +574,6 @@ mod tests {
 
         // normal polynomials
         for num_open in 1..4 {
-            println!("\n\n\n");
             let poly1 = Rc::new(DenseMultilinearExtension::rand(8, &mut rng));
             test_multi_open_single_poly_helper(&params, poly1, num_open, &mut rng)?;
 

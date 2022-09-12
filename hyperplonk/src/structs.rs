@@ -4,6 +4,7 @@ use crate::{custom_gate::CustomizedGates, selectors::SelectorColumn};
 use ark_ec::PairingEngine;
 use ark_ff::PrimeField;
 use ark_poly::DenseMultilinearExtension;
+use ark_std::log2;
 use pcs::PolynomialCommitmentScheme;
 use poly_iop::prelude::{PermutationCheck, ZeroCheck};
 use std::rc::Rc;
@@ -80,23 +81,38 @@ where
 }
 
 /// The HyperPlonk instance parameters, consists of the following:
-///   - the number of variables in the poly-IOP
-///   - binary log of the number of public input variables
-///   - binary log of the number of selectors
-///   - binary log of the number of witness wires
+///   - the number of constraints
+///   - number of public input columns
+///   - number of selector columns
+///   - number of witness columns
 ///   - the customized gate function
 #[derive(Clone, Debug, Default, PartialEq, Eq)]
 pub struct HyperPlonkParams {
-    /// the number of variables in polys
-    pub nv: usize,
-    /// binary log of the public input length
-    pub log_pub_input_len: usize,
-    /// binary log of the number of selectors
-    pub log_n_selectors: usize,
-    /// binary log of the number of witness wires
-    pub log_n_wires: usize,
+    /// the number of constraints
+    pub num_constraints: usize,
+    /// number of public input
+    // public input is only 1 column and is implicitly the first witness column.
+    // this size must not exceed number of constraints.
+    pub num_pub_input: usize,
     /// customized gate function
     pub gate_func: CustomizedGates,
+}
+
+impl HyperPlonkParams {
+    /// Number of variables in a multilinear system
+    pub fn num_variables(&self) -> usize {
+        log2(self.num_constraints) as usize
+    }
+
+    /// number of selector columns
+    pub fn num_selector_columns(&self) -> usize {
+        self.gate_func.num_selector_columns()
+    }
+
+    /// number of witness columns
+    pub fn num_witness_columns(&self) -> usize {
+        self.gate_func.num_witness_columns()
+    }
 }
 
 /// The HyperPlonk index, consists of the following:
@@ -108,6 +124,23 @@ pub struct HyperPlonkIndex<F: PrimeField> {
     pub params: HyperPlonkParams,
     pub permutation: Vec<F>,
     pub selectors: Vec<SelectorColumn<F>>,
+}
+
+impl<F: PrimeField> HyperPlonkIndex<F> {
+    /// Number of variables in a multilinear system
+    pub fn num_variables(&self) -> usize {
+        self.params.num_variables()
+    }
+
+    /// number of selector columns
+    pub fn num_selector_columns(&self) -> usize {
+        self.params.num_selector_columns()
+    }
+
+    /// number of witness columns
+    pub fn num_witness_columns(&self) -> usize {
+        self.params.num_witness_columns()
+    }
 }
 
 /// The HyperPlonk proving key, consists of the following:

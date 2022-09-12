@@ -123,25 +123,32 @@ pub(crate) fn prover_sanity_check<F: PrimeField>(
     pub_input: &[F],
     witnesses: &[WitnessColumn<F>],
 ) -> Result<(), HyperPlonkErrors> {
-    let num_vars = params.nv;
-    let ell = params.log_pub_input_len;
+    // public input length must be no greater than num_constraints
+
+    if pub_input.len() > params.num_constraints {
+        return Err(HyperPlonkErrors::InvalidProver(format!(
+            "Public input length {} is greater than num constraits {}",
+            pub_input.len(),
+            params.num_pub_input
+        )));
+    }
 
     // public input length
-    if pub_input.len() != 1 << ell {
+    if pub_input.len() != params.num_pub_input {
         return Err(HyperPlonkErrors::InvalidProver(format!(
             "Public input length is not correct: got {}, expect {}",
             pub_input.len(),
-            1 << ell
+            params.num_pub_input
         )));
     }
     // witnesses length
     for (i, w) in witnesses.iter().enumerate() {
-        if w.0.len() != 1 << num_vars {
+        if w.0.len() != params.num_constraints {
             return Err(HyperPlonkErrors::InvalidProver(format!(
                 "{}-th witness length is not correct: got {}, expect {}",
                 i,
-                pub_input.len(),
-                1 << ell
+                w.0.len(),
+                params.num_constraints
             )));
         }
     }
@@ -240,11 +247,10 @@ pub(crate) fn eval_f<F: PrimeField>(
 /// given the evaluation input `point` of the `index`-th polynomial,
 /// obtain the evaluation point in the merged polynomial
 pub(crate) fn gen_eval_point<F: PrimeField>(index: usize, index_len: usize, point: &[F]) -> Vec<F> {
-    let mut index_vec: Vec<F> = bit_decompose(index as u64, index_len)
+    let index_vec: Vec<F> = bit_decompose(index as u64, index_len)
         .into_iter()
         .map(|x| F::from(x))
         .collect();
-    index_vec.reverse();
     [point, &index_vec].concat()
 }
 

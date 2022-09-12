@@ -5,7 +5,7 @@ use crate::utils::{eval_f, prover_sanity_check};
 use arithmetic::VPAuxInfo;
 use ark_ec::PairingEngine;
 use ark_poly::{DenseMultilinearExtension, MultilinearExtension};
-use ark_std::{end_timer, start_timer, One, Zero};
+use ark_std::{end_timer, log2, start_timer, One, Zero};
 use errors::HyperPlonkErrors;
 use pcs::prelude::{compute_qx_degree, merge_polynomials, PCSError, PolynomialCommitmentScheme};
 use poly_iop::{
@@ -104,8 +104,8 @@ where
         index: &Self::Index,
         pcs_srs: &PCS::SRS,
     ) -> Result<(Self::ProvingKey, Self::VerifyingKey), HyperPlonkErrors> {
-        let num_vars = index.params.nv;
-        let log_num_witness_polys = index.params.log_n_wires;
+        let num_vars = index.num_variables();
+        let log_num_witness_polys = log2(index.num_witness_columns()) as usize;
 
         // number of variables in merged polynomial for Multilinear-KZG
         let merged_nv = num_vars + log_num_witness_polys;
@@ -202,14 +202,14 @@ where
         prover_sanity_check(&pk.params, pub_input, witnesses)?;
 
         // witness assignment of length 2^n
-        let num_vars = pk.params.nv;
-        let log_num_witness_polys = pk.params.log_n_wires;
+        let num_vars = pk.params.num_variables();
+        let log_num_witness_polys = log2(pk.params.num_witness_columns()) as usize;
         // number of variables in merged polynomial for Multilinear-KZG
         let merged_nv = num_vars + log_num_witness_polys;
         // degree of q(x) for Univariate-KZG
         let _supported_uni_degree = compute_qx_degree(num_vars, 1 << log_num_witness_polys);
         // online public input of length 2^\ell
-        let ell = pk.params.log_pub_input_len;
+        let ell = log2(pk.params.num_pub_input) as usize;
         // // Accumulator for w_merged and its points
         // let mut w_merged_pcs_acc = PcsAccumulator::<E, PCS>::new();
         // // Accumulator for prod(x) and its points
@@ -220,10 +220,8 @@ where
             .map(|w| Rc::new(DenseMultilinearExtension::from(w)))
             .collect();
         let pi_poly = Rc::new(DenseMultilinearExtension::from_evaluations_slice(
-            ell as usize,
-            pub_input,
+            ell, pub_input,
         ));
-
         // =======================================================================
         // 1. Commit Witness polynomials `w_i(x)` and append commitment to
         // transcript
@@ -240,7 +238,6 @@ where
         // w_merged_pcs_acc.init_poly(w_merged.clone(), w_merged_com.clone())?;
         transcript.append_serializable_element(b"w", &w_merged_com)?;
         end_timer!(step);
-
         // =======================================================================
         // 2 Run ZeroCheck on
         //
@@ -257,14 +254,13 @@ where
 
         let fx = build_f(
             &pk.params.gate_func,
-            pk.params.nv,
+            pk.params.num_variables(),
             &pk.selector_oracles,
             &witness_polys,
         )?;
 
         let zero_check_proof = <Self as ZeroCheck<E::Fr>>::prove(&fx, &mut transcript)?;
         end_timer!(step);
-
         // =======================================================================
         // 3. Run permutation check on `\{w_i(x)\}` and `permutation_oracle`, and
         // obtain a PermCheckSubClaim.
@@ -407,7 +403,6 @@ where
         let mut witness_zero_check_openings = vec![];
         // TODO: parallelization
         // TODO: Batch opening
-
         // open permutation check proof
         let (witness_perm_check_opening, witness_perm_check_eval) = PCS::open(
             &pk.pcs_param,
@@ -431,14 +426,12 @@ where
                 ));
             }
         }
-
         // 4.2 open zero check proof
         // TODO: batch opening
         for (i, wire_poly) in witness_polys.iter().enumerate() {
             let tmp_point = gen_eval_point(i, log_num_witness_polys, &zero_check_proof.point);
             // Open zero check proof
             let (zero_proof, zero_eval) = PCS::open(&pk.pcs_param, &w_merged, &tmp_point)?;
-            // w_merged_pcs_acc.insert_point(&tmp_point);
             #[cfg(feature = "extensive_sanity_checks")]
             {
                 let eval = wire_poly.evaluate(&zero_check_proof.point).ok_or_else(|| {
@@ -480,7 +473,6 @@ where
                 ));
             }
         }
-
         // Open selector polynomial at zero_check_point
         let mut selector_oracle_openings = vec![];
         let mut selector_oracle_evals = vec![];
@@ -520,7 +512,6 @@ where
         ]
         .concat();
         let (pi_opening, pi_eval) = PCS::open(&pk.pcs_param, &w_merged, &tmp_point)?;
-
         #[cfg(feature = "extensive_sanity_checks")]
         {
             // sanity check
@@ -636,43 +627,43 @@ where
 
         let mut transcript = IOPTranscript::<E::Fr>::new(b"hyperplonk");
         // witness assignment of length 2^n
-        let num_vars = vk.params.nv;
-        let log_num_witness_polys = vk.params.log_n_wires;
+        let num_vars = vk.params.num_variables();
+        let log_num_witness_polys = log2(vk.params.num_witness_columns()) as usize;
         // number of variables in merged polynomial for Multilinear-KZG
         let merged_nv = num_vars + log_num_witness_polys;
 
         //  online public input of length 2^\ell
-        let ell = vk.params.log_pub_input_len;
+        let ell = log2(vk.params.num_pub_input) as usize;
 
         let pi_poly = DenseMultilinearExtension::from_evaluations_slice(ell as usize, pub_input);
 
         // =======================================================================
         // 0. sanity checks
         // =======================================================================
-        // public input length
-        if pub_input.len() != 1 << ell {
-            return Err(HyperPlonkErrors::InvalidProver(format!(
-                "Public input length is not correct: got {}, expect {}",
-                pub_input.len(),
-                1 << ell
-            )));
-        }
-        if proof.selector_oracle_evals.len() != 1 << vk.params.log_n_selectors {
-            return Err(HyperPlonkErrors::InvalidProver(format!(
+        // // public input length
+        // if pub_input.len() != 1 << ell {
+        //     return Err(HyperPlonkErrors::InvalidProver(format!(
+        //         "Public input length is not correct: got {}, expect {}",
+        //         pub_input.len(),
+        //         1 << ell
+        //     )));
+        // }
+        if proof.selector_oracle_evals.len() != vk.params.num_selector_columns() {
+            return Err(HyperPlonkErrors::InvalidVerifier(format!(
                 "Selector length is not correct: got {}, expect {}",
                 proof.selector_oracle_evals.len(),
-                1 << vk.params.log_n_selectors
+                1 << vk.params.num_selector_columns()
             )));
         }
-        if proof.witness_zero_check_evals.len() != 1 << log_num_witness_polys {
-            return Err(HyperPlonkErrors::InvalidProver(format!(
-                "Witness length is not correct: got {}, expect {}",
-                proof.witness_zero_check_evals.len(),
-                1 << log_num_witness_polys
-            )));
-        }
+        // if proof.witness_zero_check_evals.len() != vk.params.num_witness_columns() {
+        //     return Err(HyperPlonkErrors::InvalidVerifier(format!(
+        //         "Witness length is not correct: got {}, expect {}",
+        //         proof.witness_zero_check_evals.len(),
+        //         vk.params.num_witness_columns()
+        //     )));
+        // }
         if proof.prod_openings.len() != 5 {
-            return Err(HyperPlonkErrors::InvalidProver(format!(
+            return Err(HyperPlonkErrors::InvalidVerifier(format!(
                 "the number of product polynomial evaluations is not correct: got {}, expect {}",
                 proof.prod_openings.len(),
                 5
@@ -696,7 +687,6 @@ where
             num_variables: num_vars,
             phantom: PhantomData::default(),
         };
-
         // push witness to transcript
         transcript.append_serializable_element(b"w", &proof.w_merged_com)?;
 
@@ -915,6 +905,7 @@ where
             .enumerate()
         {
             let tmp_point = gen_eval_point(i, log_num_witness_polys, zero_check_point);
+
             if !PCS::verify(
                 &vk.pcs_param,
                 &proof.w_merged_com,
@@ -935,7 +926,7 @@ where
                 .iter()
                 .zip(proof.selector_oracle_evals.iter()),
         ) {
-            if !PCS::verify(&vk.pcs_param, commitment, perm_check_point, eval, opening)? {
+            if !PCS::verify(&vk.pcs_param, commitment, zero_check_point, eval, opening)? {
                 return Err(HyperPlonkErrors::InvalidProof(
                     "selector pcs verification failed".to_string(),
                 ));
@@ -1003,26 +994,24 @@ mod tests {
         let gates = CustomizedGates {
             gates: vec![(1, Some(0), vec![0, 0, 0, 0, 0]), (-1, None, vec![1])],
         };
-        test_hyperplonk_helper::<Bls12_381>(2, 2, 0, 1, gates)
+        test_hyperplonk_helper::<Bls12_381>(gates)
     }
 
     fn test_hyperplonk_helper<E: PairingEngine>(
-        nv: usize,
-        log_pub_input_len: usize,
-        log_n_selectors: usize,
-        log_n_wires: usize,
         gate_func: CustomizedGates,
     ) -> Result<(), HyperPlonkErrors> {
         let mut rng = test_rng();
         let pcs_srs = MultilinearKzgPCS::<E>::gen_srs_for_testing(&mut rng, 16)?;
-        let merged_nv = nv + log_n_wires;
+
+        let num_constraints = 4;
+        let num_pub_input = 4;
+        let nv = log2(num_constraints) as usize;
+        let merged_nv = nv + log2(gate_func.num_witness_columns()) as usize;
 
         // generate index
         let params = HyperPlonkParams {
-            nv,
-            log_pub_input_len,
-            log_n_selectors,
-            log_n_wires,
+            num_constraints,
+            num_pub_input,
             gate_func,
         };
         let permutation = identity_permutation_mle(merged_nv).evaluations.clone();

@@ -229,7 +229,6 @@ fn remove_dummy_variable<F: Field>(poly: &[F], pad: usize) -> Result<Vec<F>, PCS
         ));
     }
     let nv = ark_std::log2(poly.len()) as usize - pad;
-    println!("{} {} {}", nv, poly.len(), pad);
     Ok((0..(1 << nv)).map(|x| poly[x << pad]).collect())
 }
 

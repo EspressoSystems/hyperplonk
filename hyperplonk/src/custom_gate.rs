@@ -38,7 +38,7 @@ impl CustomizedGates {
     }
 
     /// The number of selectors in a customized gate
-    pub fn num_selectors(&self) -> usize {
+    pub fn num_selector_columns(&self) -> usize {
         let mut res = 0;
         for (_coeff, q, _ws) in self.gates.iter() {
             // a same selector must not be used for multiple monomials.
@@ -50,18 +50,15 @@ impl CustomizedGates {
     }
 
     /// The number of witnesses in a customized gate
-    pub fn num_witnesses(&self) -> usize {
+    pub fn num_witness_columns(&self) -> usize {
         let mut res = 0;
         for (_coeff, _q, ws) in self.gates.iter() {
             // witness list must be ordered
             // so we just need to compare with the last one
-            match ws.last() {
-                Some(&p) => {
-                    if res < p {
-                        res = p
-                    }
-                },
-                None => (),
+            if let Some(&p) = ws.last() {
+                if res < p {
+                    res = p
+                }
             }
         }
         // add one here because index starts from 0
