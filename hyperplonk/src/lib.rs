@@ -640,14 +640,14 @@ where
         // =======================================================================
         // 0. sanity checks
         // =======================================================================
-        // // public input length
-        // if pub_input.len() != 1 << ell {
-        //     return Err(HyperPlonkErrors::InvalidProver(format!(
-        //         "Public input length is not correct: got {}, expect {}",
-        //         pub_input.len(),
-        //         1 << ell
-        //     )));
-        // }
+        // public input length
+        if pub_input.len() != vk.params.num_pub_input {
+            return Err(HyperPlonkErrors::InvalidProver(format!(
+                "Public input length is not correct: got {}, expect {}",
+                pub_input.len(),
+                1 << ell
+            )));
+        }
         if proof.selector_oracle_evals.len() != vk.params.num_selector_columns() {
             return Err(HyperPlonkErrors::InvalidVerifier(format!(
                 "Selector length is not correct: got {}, expect {}",
@@ -655,13 +655,13 @@ where
                 1 << vk.params.num_selector_columns()
             )));
         }
-        // if proof.witness_zero_check_evals.len() != vk.params.num_witness_columns() {
-        //     return Err(HyperPlonkErrors::InvalidVerifier(format!(
-        //         "Witness length is not correct: got {}, expect {}",
-        //         proof.witness_zero_check_evals.len(),
-        //         vk.params.num_witness_columns()
-        //     )));
-        // }
+        if proof.witness_zero_check_evals.len() != vk.params.num_witness_columns() {
+            return Err(HyperPlonkErrors::InvalidVerifier(format!(
+                "Witness length is not correct: got {}, expect {}",
+                proof.witness_zero_check_evals.len(),
+                vk.params.num_witness_columns()
+            )));
+        }
         if proof.prod_openings.len() != 5 {
             return Err(HyperPlonkErrors::InvalidVerifier(format!(
                 "the number of product polynomial evaluations is not correct: got {}, expect {}",
