@@ -187,13 +187,13 @@ pub fn merge_polynomials<F: PrimeField>(
 /// polynomials that goes through the points; extend the dimension of the points
 /// by `log(points.len())`.
 pub(crate) fn build_l_with_prefix<F: PrimeField>(
-    num_var: usize,
     points: &[Vec<F>],
     domain: &Radix2EvaluationDomain<F>,
 ) -> Result<Vec<DensePolynomial<F>>, PCSError> {
     let prefix_len = log2(points.len()) as usize;
     let mut uni_polys = Vec::new();
 
+    println!("with prefix domain size {}", domain.size());
     // 1.1 build the indexes and the univariate polys that go through the indexes
     let indexes: Vec<Vec<bool>> = (0..points.len())
         .map(|x| bit_decompose(x as u64, prefix_len))
@@ -208,7 +208,7 @@ pub(crate) fn build_l_with_prefix<F: PrimeField>(
     }
 
     // 1.2 build the actual univariate polys that go through the points
-    uni_polys.extend_from_slice(build_l(num_var, points, domain)?.as_slice());
+    uni_polys.extend_from_slice(build_l(points, domain)?.as_slice());
 
     Ok(uni_polys)
 }
@@ -216,12 +216,13 @@ pub(crate) fn build_l_with_prefix<F: PrimeField>(
 /// Given a list of points, build `l(points)` which is a list of univariate
 /// polynomials that goes through the points.
 pub(crate) fn build_l<F: PrimeField>(
-    num_var: usize,
     points: &[Vec<F>],
     domain: &Radix2EvaluationDomain<F>,
 ) -> Result<Vec<DensePolynomial<F>>, PCSError> {
-    let mut uni_polys = Vec::new();
+    println!("without prefix domain size {}", domain.size());
 
+    let mut uni_polys = Vec::new();
+    let num_var = points[0].len();
     // build the actual univariate polys that go through the points
     for i in 0..num_var {
         let mut eval: Vec<F> = points.iter().map(|x| x[i]).collect();
@@ -247,13 +248,11 @@ pub(crate) fn generate_evaluations<F: PrimeField>(
             "polynomial length does not match point length".to_string(),
         ));
     }
-
-    let num_var = polynomials[0].num_vars;
     let uni_poly_degree = points.len();
     let merge_poly = merge_polynomials(polynomials)?;
 
     let domain = get_uni_domain::<F>(uni_poly_degree)?;
-    let uni_polys = build_l_with_prefix(num_var, points, &domain)?;
+    let uni_polys = build_l_with_prefix(points, &domain)?;
     let mut mle_values = vec![];
 
     for i in 0..uni_poly_degree {
@@ -279,11 +278,10 @@ pub(crate) fn generate_evaluations_single_poly<F: PrimeField>(
     polynomial: &Rc<DenseMultilinearExtension<F>>,
     points: &[Vec<F>],
 ) -> Result<Vec<F>, PCSError> {
-    let num_var = polynomial.num_vars;
     let uni_poly_degree = points.len();
 
     let domain = get_uni_domain::<F>(uni_poly_degree)?;
-    let uni_polys = build_l(num_var, points, &domain)?;
+    let uni_polys = build_l(points, &domain)?;
     let mut mle_values = vec![];
 
     for i in 0..uni_poly_degree {
@@ -586,7 +584,7 @@ mod test {
 
         {
             let domain = get_uni_domain::<Fr>(2)?;
-            let l = build_l_with_prefix(2, &[point1.clone(), point2.clone()], &domain)?;
+            let l = build_l_with_prefix(&[point1.clone(), point2.clone()], &domain)?;
 
             // roots: [1, -1]
             // l0 = -1/2 * x + 1/2
@@ -606,7 +604,7 @@ mod test {
 
         {
             let domain = get_uni_domain::<Fr>(3)?;
-            let l = build_l_with_prefix(2, &[point1, point2, point3], &domain)?;
+            let l = build_l_with_prefix(&[point1, point2, point3], &domain)?;
 
             // sage: q = 52435875175126190479447740508185965837690552500527637822603658699938581184513
             // sage: P.<x> = PolynomialRing(Zmod(q))
@@ -748,7 +746,7 @@ mod test {
 
         {
             let domain = get_uni_domain::<Fr>(2)?;
-            let l = build_l(2, &[point1.clone(), point2.clone()], &domain)?;
+            let l = build_l(&[point1.clone(), point2.clone()], &domain)?;
 
             // roots: [1, -1]
             // l0 = -x + 2
@@ -762,7 +760,7 @@ mod test {
 
         {
             let domain = get_uni_domain::<Fr>(3)?;
-            let l = build_l(2, &[point1, point2, point3], &domain)?;
+            let l = build_l(&[point1, point2, point3], &domain)?;
 
             // sage: q = 52435875175126190479447740508185965837690552500527637822603658699938581184513
             // sage: P.<x> = PolynomialRing(Zmod(q))
@@ -861,7 +859,7 @@ mod test {
             // with evaluations: [0,2,0,5,0,0,1,2]
             let w = merge_polynomials(&[w1.clone(), w2.clone()])?;
 
-            let l = build_l_with_prefix(2, &[point1.clone(), point2.clone()], &domain)?;
+            let l = build_l_with_prefix(&[point1.clone(), point2.clone()], &domain)?;
 
             // sage: P.<x> = PolynomialRing(ZZ)
             // sage: l0 = -1/2 * x + 1/2
@@ -890,7 +888,7 @@ mod test {
             //   + (x1 + x2)        * y1        * (1-y2)
             let w = merge_polynomials(&[w1, w2, w3])?;
 
-            let l = build_l_with_prefix(2, &[point1, point2, point3], &domain)?;
+            let l = build_l_with_prefix(&[point1, point2, point3], &domain)?;
 
             // l0 =
             // 13108968793781547619861935127046491459422638125131909455650914674984645296128*x^3 +

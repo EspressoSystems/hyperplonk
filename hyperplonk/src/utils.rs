@@ -82,7 +82,7 @@ impl<E: PairingEngine, PCS: PolynomialCommitmentScheme<E>> PcsAccumulator<E, PCS
         Ok(PCS::multi_open_single_poly(
             prover_param.borrow(),
             commitment,
-            poly.clone(),
+            poly,
             &self.points,
         )?)
     }

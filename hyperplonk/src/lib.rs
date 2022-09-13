@@ -753,6 +753,7 @@ where
         // - s_perm(x) and s_id(x) from vk_param.perm_oracle
         // - alpha, beta, gamma from challenge
 
+        // TODO: s_id PCS verify instead of evaluation
         let s_id = identity_permutation_mle::<E::Fr>(perm_check_point.len());
         let s_id_eval = s_id.evaluate(perm_check_point).ok_or_else(|| {
             HyperPlonkErrors::InvalidVerifier("unable to evaluate s_id(x)".to_string())
