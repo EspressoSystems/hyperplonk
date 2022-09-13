@@ -31,7 +31,8 @@ harness = false
 
 [features]
 # default = [ "parallel", "print-trace" ]
-default = [ "parallel" ]
+default = [ "parallel", "extensive_sanity_checks" ]
+extensive_sanity_checks = [ ]
 parallel = [ 
     "rayon",
     "ark-std/parallel", 

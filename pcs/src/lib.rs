@@ -113,7 +113,7 @@ pub trait PolynomialCommitmentScheme<E: PairingEngine> {
     fn multi_open_single_poly(
         _prover_param: impl Borrow<Self::ProverParam>,
         _commitment: &Self::Commitment,
-        _polynomials: Self::Polynomial,
+        _polynomials: &Self::Polynomial,
         _points: &[Self::Point],
     ) -> Result<(Self::BatchProof, Vec<Self::Evaluation>), PCSError> {
         unimplemented!()

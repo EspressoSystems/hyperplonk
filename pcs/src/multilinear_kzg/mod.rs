@@ -10,7 +10,7 @@ mod batching;
 pub(crate) mod srs;
 pub(crate) mod util;
 
-use self::util::merge_polynomials;
+use self::{batching::multi_open_same_poly_internal, util::merge_polynomials};
 use crate::{
     prelude::{
         Commitment, UnivariateProverParam, UnivariateUniversalParams, UnivariateVerifierParam,
@@ -250,16 +250,15 @@ impl<E: PairingEngine> PolynomialCommitmentScheme<E> for MultilinearKzgPCS<E> {
     /// a transcript, compute a multi-opening for all the polynomials.
     fn multi_open_single_poly(
         prover_param: impl Borrow<Self::ProverParam>,
-        multi_commitment: &Self::Commitment,
-        polynomials: Self::Polynomial,
+        commitment: &Self::Commitment,
+        polynomial: &Self::Polynomial,
         points: &[Self::Point],
     ) -> Result<(Self::BatchProof, Vec<Self::Evaluation>), PCSError> {
-        let poly_list = vec![polynomials; points.len()];
-        multi_open_internal::<E>(
+        multi_open_same_poly_internal::<E>(
             &prover_param.borrow().1,
             &prover_param.borrow().0,
-            &poly_list,
-            multi_commitment,
+            polynomial,
+            commitment,
             points,
         )
     }
@@ -551,7 +550,7 @@ mod tests {
             points.push(point)
         }
         let com = MultilinearKzgPCS::commit(&ck, &poly)?;
-        let (proof, values) = MultilinearKzgPCS::multi_open_single_poly(&ck, &com, poly, &points)?;
+        let (proof, values) = MultilinearKzgPCS::multi_open_single_poly(&ck, &com, &poly, &points)?;
 
         assert!(MultilinearKzgPCS::batch_verify_single_poly(
             &vk, &com, &points, &values, &proof, rng
