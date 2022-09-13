@@ -35,7 +35,7 @@ pub(crate) fn bit_decompose(input: u64, num_var: usize) -> Vec<bool> {
 #[inline]
 #[allow(dead_code)]
 pub fn compute_qx_degree(mle_num_vars: usize, point_len: usize) -> usize {
-    mle_num_vars * point_len
+    mle_num_vars * (1 << log2(point_len))
 }
 
 /// get the domain for the univariate polynomial
@@ -128,7 +128,7 @@ pub(crate) fn compute_w_circ_l<F: PrimeField>(
     // TODO: consider to pass this in from caller
     // uni_degree is (2 * MLEs)
     // = (l.len() - num_vars + 2) * (l[0].degree+1)
-    let uni_degree = 2 * (l[0].degree() + 1);
+    let uni_degree = 2 * l[0].degree() + 1;
 
     let domain = match Radix2EvaluationDomain::<F>::new(uni_degree) {
         Some(p) => p,
@@ -138,6 +138,8 @@ pub(crate) fn compute_w_circ_l<F: PrimeField>(
             ))
         },
     };
+    println!("uni degree {}", uni_degree);
+    println!("domain size {}", domain.size());
     for point in domain.elements() {
         // we reverse the order here because the coefficient vec are stored in
         // bit-reversed order
