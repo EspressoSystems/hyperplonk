@@ -18,6 +18,7 @@ impl<F: PrimeField> WitnessColumn<F> {
     pub fn get_nv(&self) -> usize {
         log2(self.0.len()) as usize
     }
+
     /// Append a new element to the witness column
     pub fn append(&mut self, new_element: F) {
         self.0.push(new_element)
@@ -45,6 +46,10 @@ impl<F: PrimeField> WitnessColumn<F> {
         }
 
         Ok(res)
+    }
+
+    pub fn coeff_ref<'a>(&'a self) -> &[F] {
+        self.0.as_ref()
     }
 }
 

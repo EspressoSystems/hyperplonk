@@ -1,6 +1,3 @@
-// todo: remove
-#![allow(dead_code)]
-
 use ark_ff::PrimeField;
 use ark_poly::MultilinearExtension;
 use ark_std::{log2, test_rng};
@@ -13,9 +10,9 @@ use crate::{
     witness::WitnessColumn,
 };
 
-pub(crate) struct MockCircuit<F: PrimeField> {
-    witnesses: Vec<WitnessColumn<F>>,
-    index: HyperPlonkIndex<F>,
+pub struct MockCircuit<F: PrimeField> {
+    pub witnesses: Vec<WitnessColumn<F>>,
+    pub index: HyperPlonkIndex<F>,
 }
 
 impl<F: PrimeField> MockCircuit<F> {
@@ -37,7 +34,7 @@ impl<F: PrimeField> MockCircuit<F> {
 
 impl<F: PrimeField> MockCircuit<F> {
     /// Generate a mock plonk circuit for the input constraint size.
-    pub(crate) fn new(num_constraints: usize, gate: &CustomizedGates) -> MockCircuit<F> {
+    pub fn new(num_constraints: usize, gate: &CustomizedGates) -> MockCircuit<F> {
         let mut rng = test_rng();
         let nv = log2(num_constraints);
         let num_selectors = gate.num_selector_columns();
@@ -106,7 +103,7 @@ impl<F: PrimeField> MockCircuit<F> {
         Self { witnesses, index }
     }
 
-    pub(crate) fn is_satisfied(&self) -> bool {
+    pub fn is_satisfied(&self) -> bool {
         for current_row in 0..self.num_variables() {
             let mut cur = F::zero();
             for (coeff, q, wit) in self.index.params.gate_func.gates.iter() {
@@ -138,7 +135,10 @@ mod test {
     use super::*;
     use crate::{errors::HyperPlonkErrors, HyperPlonkSNARK};
     use ark_bls12_381::{Bls12_381, Fr};
-    use pcs::{prelude::MultilinearKzgPCS, PolynomialCommitmentScheme};
+    use pcs::{
+        prelude::{MultilinearKzgPCS, MultilinearUniversalParams, UnivariateUniversalParams},
+        PolynomialCommitmentScheme,
+    };
     use poly_iop::PolyIOP;
 
     #[test]
@@ -157,14 +157,15 @@ mod test {
     fn test_mock_circuit_zkp_helper(
         nv: usize,
         gate: &CustomizedGates,
+        pcs_srs: &(
+            MultilinearUniversalParams<Bls12_381>,
+            UnivariateUniversalParams<Bls12_381>,
+        ),
     ) -> Result<(), HyperPlonkErrors> {
         let circuit = MockCircuit::<Fr>::new(1 << nv, gate);
         assert!(circuit.is_satisfied());
 
         let index = circuit.index;
-
-        let mut rng = test_rng();
-        let pcs_srs = MultilinearKzgPCS::<Bls12_381>::gen_srs_for_testing(&mut rng, 16)?;
 
         // generate pk and vks
         let (pk, vk) =
@@ -191,13 +192,15 @@ mod test {
 
     #[test]
     fn test_mock_circuit_zkp() -> Result<(), HyperPlonkErrors> {
+        let mut rng = test_rng();
+        let pcs_srs = MultilinearKzgPCS::<Bls12_381>::gen_srs_for_testing(&mut rng, 16)?;
         for nv in 1..10 {
             let vanilla_gate = CustomizedGates::vanilla_plonk_gate();
-            test_mock_circuit_zkp_helper(nv, &vanilla_gate)?;
+            test_mock_circuit_zkp_helper(nv, &vanilla_gate, &pcs_srs)?;
         }
         for nv in 1..10 {
             let tubro_gate = CustomizedGates::jellyfish_turbo_plonk_gate();
-            test_mock_circuit_zkp_helper(nv, &tubro_gate)?;
+            test_mock_circuit_zkp_helper(nv, &tubro_gate, &pcs_srs)?;
         }
 
         Ok(())

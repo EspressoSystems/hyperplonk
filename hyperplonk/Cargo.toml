@@ -24,11 +24,16 @@ util = { path = "../util" }
 [dev-dependencies]
 ark-bls12-381 = { version = "0.3.0", default-features = false, features = [ "curve" ] }
 
+# Benchmarks
+[[bench]]
+name = "hyperplonk-benches"
+path = "benches/bench.rs"
+harness = false
 
 [features]
 # default = [ "parallel", "print-trace", "extensive_sanity_checks" ]
 default = [ "parallel", "extensive_sanity_checks" ]
-
+bench = [ "parallel" ]
 # extensive sanity checks that are useful for debugging
 extensive_sanity_checks = [ ]
 parallel = [ 

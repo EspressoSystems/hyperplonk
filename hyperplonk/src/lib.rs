@@ -21,6 +21,7 @@ use witness::WitnessColumn;
 mod custom_gate;
 mod errors;
 mod mock;
+pub mod prelude;
 mod selectors;
 mod structs;
 mod utils;
