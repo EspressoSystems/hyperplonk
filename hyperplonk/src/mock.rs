@@ -151,6 +151,14 @@ mod test {
             let jf_gate = CustomizedGates::jellyfish_turbo_plonk_gate();
             let circuit = MockCircuit::<Fr>::new(1 << i, &jf_gate);
             assert!(circuit.is_satisfied());
+
+            for num_witness in 2..10 {
+                for degree in 1..10 {
+                    let mock_gate = CustomizedGates::mock_gate(num_witness, degree);
+                    let circuit = MockCircuit::<Fr>::new(1 << i, &mock_gate);
+                    assert!(circuit.is_satisfied());
+                }
+            }
         }
     }
 
@@ -201,6 +209,13 @@ mod test {
         for nv in 1..10 {
             let tubro_gate = CustomizedGates::jellyfish_turbo_plonk_gate();
             test_mock_circuit_zkp_helper(nv, &tubro_gate, &pcs_srs)?;
+        }
+        let nv = 5;
+        for num_witness in 2..10 {
+            for degree in 1..10 {
+                let mock_gate = CustomizedGates::mock_gate(num_witness, degree);
+                test_mock_circuit_zkp_helper(nv, &mock_gate, &pcs_srs)?;
+            }
         }
 
         Ok(())

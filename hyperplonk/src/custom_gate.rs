@@ -139,4 +139,20 @@ impl CustomizedGates {
             ],
         }
     }
+
+    /// Generate a random gate for `num_witness` with a highest degree =
+    /// `degree`
+    pub fn mock_gate(num_witness: usize, degree: usize) -> Self {
+        let mut gates = vec![];
+
+        let high_degree_term = vec![0; degree];
+
+        gates.push((1, Some(0), high_degree_term));
+        for i in 1..num_witness {
+            gates.push((1, Some(i), vec![i]))
+        }
+        gates.push((1, Some(num_witness), vec![]));
+
+        CustomizedGates { gates }
+    }
 }
