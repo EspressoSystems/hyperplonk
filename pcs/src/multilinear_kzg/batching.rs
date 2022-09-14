@@ -714,8 +714,10 @@ mod tests {
         let (ml_ck, ml_vk) = ml_params.trim(nv)?;
 
         let mut points = Vec::new();
+        let mut eval = Vec::new();
         for _ in 0..point_len {
             let point = (0..nv).map(|_| Fr::rand(rng)).collect::<Vec<Fr>>();
+            eval.push(poly.evaluate(&point).unwrap());
             points.push(point);
         }
 
@@ -737,6 +739,10 @@ mod tests {
             &evaluations,
             &batch_proof,
         )?);
+
+        for (a, b) in evals.iter().zip(evaluations.iter()) {
+            assert_eq!(a, b)
+        }
 
         // // bad commitment
         // assert!(!batch_verify_internal(

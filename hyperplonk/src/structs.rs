@@ -34,12 +34,10 @@ where
     /// prod(x)'s evaluations
     /// sequence: prod(0,x), prod(1, x), prod(x, 0), prod(x, 1), prod(1, ..., 1,
     /// 0)
-    pub prod_evals: Vec<E::Fr>,
     pub prod_batch_evals: Vec<E::Fr>,
     /// prod(x)'s openings
     /// sequence: prod(0,x), prod(1, x), prod(x, 0), prod(x, 1), prod(1, ..., 1,
     /// 0)
-    pub prod_openings: Vec<PCS::Proof>,
     pub prod_batch_openings: PCS::BatchProof,
     /// PCS openings for witness on permutation check point
     // TODO: replace me with a batch opening
