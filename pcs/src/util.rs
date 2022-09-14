@@ -6,12 +6,9 @@ pub fn multi_scalar_mul<G: AffineCurve>(
     bases: &[G],
     scalars: &[<G::ScalarField as PrimeField>::BigInt],
 ) -> G::Projective {
-    #[cfg(feature = "parallel")]
-    return parallel_msm(bases, scalars);
-    #[cfg(not(feature = "parallel"))]
     VariableBaseMSM::multi_scalar_mul(bases, scalars)
 }
-
+#[allow(dead_code)]
 fn parallel_msm<G: AffineCurve>(
     bases: &[G],
     scalars: &[<G::ScalarField as PrimeField>::BigInt],

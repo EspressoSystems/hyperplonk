@@ -220,4 +220,17 @@ mod test {
 
         Ok(())
     }
+
+    #[test]
+    fn test_mock_circuit_e2e() -> Result<(), HyperPlonkErrors> {
+        let mut rng = test_rng();
+        let pcs_srs = MultilinearKzgPCS::<Bls12_381>::gen_srs_for_testing(&mut rng, 11)?;
+        let nv = 2;
+
+        let vanilla_gate = CustomizedGates::vanilla_plonk_gate();
+        test_mock_circuit_zkp_helper(nv, &vanilla_gate, &pcs_srs)?;
+    
+
+        Ok(())
+    }
 }
