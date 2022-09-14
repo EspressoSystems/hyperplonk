@@ -98,7 +98,7 @@ impl<E: PairingEngine> PolynomialCommitmentScheme<E> for UnivariateKzgPCS<E> {
         let commit_time =
             start_timer!(|| format!("Committing to polynomial of degree {} ", poly.degree()));
 
-        if poly.degree() > prover_param.powers_of_g.len() {
+        if poly.degree() >= prover_param.powers_of_g.len() {
             return Err(PCSError::InvalidParameters(format!(
                 "uni poly degree {} is larger than allowed {}",
                 poly.degree(),

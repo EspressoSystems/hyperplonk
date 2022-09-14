@@ -801,26 +801,18 @@ mod tests {
         let uni_params =
             UnivariateUniversalParams::<E>::gen_srs_for_testing(&mut rng, 1usize << 15)?;
         let ml_params = MultilinearUniversalParams::<E>::gen_srs_for_testing(&mut rng, 15)?;
-        for point_len in 3..10 {
-            // normal polynomials
-            let polys1 = Rc::new(DenseMultilinearExtension::rand(4, &mut rng));
-            test_same_poly_multi_open_internal_helper(
-                &uni_params,
-                &ml_params,
-                &polys1,
-                point_len,
-                &mut rng,
-            )?;
-
-            // single-variate polynomials
-            let polys1 = Rc::new(DenseMultilinearExtension::rand(4, &mut rng));
-            test_same_poly_multi_open_internal_helper(
-                &uni_params,
-                &ml_params,
-                &polys1,
-                point_len,
-                &mut rng,
-            )?;
+        for nv in 1..5 {
+            for point_len in 3..10 {
+                // normal polynomials
+                let polys1 = Rc::new(DenseMultilinearExtension::rand(nv, &mut rng));
+                test_same_poly_multi_open_internal_helper(
+                    &uni_params,
+                    &ml_params,
+                    &polys1,
+                    point_len,
+                    &mut rng,
+                )?;
+            }
         }
         Ok(())
     }
