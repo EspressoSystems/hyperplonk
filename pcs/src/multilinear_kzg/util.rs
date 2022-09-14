@@ -33,7 +33,6 @@ pub(crate) fn bit_decompose(input: u64, num_var: usize) -> Vec<bool> {
 // - mle has degree one
 // - worst case is `\prod_{i=0}^{mle_num_vars-1} l_i(x) < point_len * mle_num_vars`
 #[inline]
-#[allow(dead_code)]
 pub fn compute_qx_degree(mle_num_vars: usize, point_len: usize) -> usize {
     mle_num_vars * (1 << log2(point_len))
 }

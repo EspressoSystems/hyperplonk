@@ -233,7 +233,6 @@ pub(super) fn batch_verify_internal<E: PairingEngine>(
     }
 
     let domain = get_uni_domain::<E::Fr>(points_len)?;
-    println!("here");
     // 1. push w, points and q_com into transcript
     let mut transcript = IOPTranscript::new(b"ml kzg");
     transcript.append_serializable_element(b"w", multi_commitment)?;
@@ -256,7 +255,7 @@ pub(super) fn batch_verify_internal<E: PairingEngine>(
             value,
             &batch_proof.q_x_opens[i],
         )? {
-            #[cfg(debug_assertion)]
+            // #[cfg(debug_assertion)]
             println!("q(omega^{}) verification failed", i);
             return Ok(false);
         }
@@ -269,7 +268,7 @@ pub(super) fn batch_verify_internal<E: PairingEngine>(
         &values[points_len],
         &batch_proof.q_x_opens[points_len],
     )? {
-        #[cfg(debug_assertion)]
+        // #[cfg(debug_assertion)]
         println!("q(r) verification failed");
         return Ok(false);
     }
@@ -287,7 +286,7 @@ pub(super) fn batch_verify_internal<E: PairingEngine>(
         &values[points_len],
         &batch_proof.proof,
     )?;
-    #[cfg(debug_assertion)]
+    // #[cfg(debug_assertion)]
     if !res {
         println!("multilinear KZG verification failed");
     }
@@ -504,13 +503,11 @@ pub(super) fn batch_verify_same_poly_internal<E: PairingEngine>(
     }
 
     let domain = get_uni_domain::<E::Fr>(points_len)?;
-    println!("here");
     // 1. push w, points and q_com into transcript
     let mut transcript = IOPTranscript::new(b"ml kzg");
     transcript.append_serializable_element(b"w", multi_commitment)?;
 
     for point in points {
-        // println!("points verifying {:?}", points);
         transcript.append_serializable_element(b"w", point)?;
     }
 
@@ -527,7 +524,7 @@ pub(super) fn batch_verify_same_poly_internal<E: PairingEngine>(
             value,
             &batch_proof.q_x_opens[i],
         )? {
-            // #[cfg(debug_assertion)]
+            #[cfg(debug_assertion)]
             println!("q(omega^{}) verification failed", i);
             return Ok(false);
         }
@@ -540,7 +537,7 @@ pub(super) fn batch_verify_same_poly_internal<E: PairingEngine>(
         &values[points_len],
         &batch_proof.q_x_opens[points_len],
     )? {
-        // #[cfg(debug_assertion)]
+        #[cfg(debug_assertion)]
         println!("q(r) verification failed");
         return Ok(false);
     }
@@ -558,7 +555,7 @@ pub(super) fn batch_verify_same_poly_internal<E: PairingEngine>(
         &values[points_len],
         &batch_proof.proof,
     )?;
-    // #[cfg(debug_assertion)]
+    #[cfg(debug_assertion)]
     if !res {
         println!("multilinear KZG verification failed");
     }
@@ -723,9 +720,6 @@ mod tests {
         }
 
         let evals = generate_evaluations_single_poly(poly, &points)?;
-        for e in evals.iter() {
-            println!("evals {}", e);
-        }
         let com = MultilinearKzgPCS::commit(&(ml_ck.clone(), uni_ck.clone()), poly)?;
         let (batch_proof, evaluations) =
             multi_open_same_poly_internal(&uni_ck, &ml_ck, poly, &com, &points)?;
@@ -808,7 +802,6 @@ mod tests {
             UnivariateUniversalParams::<E>::gen_srs_for_testing(&mut rng, 1usize << 15)?;
         let ml_params = MultilinearUniversalParams::<E>::gen_srs_for_testing(&mut rng, 15)?;
         for point_len in 3..10 {
-            println!("i {}", point_len);
             // normal polynomials
             let polys1 = Rc::new(DenseMultilinearExtension::rand(4, &mut rng));
             test_same_poly_multi_open_internal_helper(

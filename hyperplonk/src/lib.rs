@@ -5,7 +5,7 @@ use crate::utils::{eval_f, prover_sanity_check, PcsAccumulator};
 use arithmetic::VPAuxInfo;
 use ark_ec::PairingEngine;
 use ark_poly::{DenseMultilinearExtension, MultilinearExtension};
-use ark_std::{end_timer, log2, start_timer, One, Zero};
+use ark_std::{end_timer, log2, start_timer, test_rng, One, Zero};
 use errors::HyperPlonkErrors;
 use pcs::prelude::{compute_qx_degree, merge_polynomials, PCSError, PolynomialCommitmentScheme};
 use poly_iop::{
@@ -432,6 +432,8 @@ where
             let tmp_point = gen_eval_point(i, log_num_witness_polys, &zero_check_proof.point);
             // Open zero check proof
             let (zero_proof, zero_eval) = PCS::open(&pk.pcs_param, &w_merged, &tmp_point)?;
+            w_merged_pcs_acc.insert_point(&tmp_point);
+
             #[cfg(feature = "extensive_sanity_checks")]
             {
                 let eval = wire_poly.evaluate(&zero_check_proof.point).ok_or_else(|| {
@@ -622,6 +624,8 @@ where
         pub_input: &[E::Fr],
         proof: &Self::Proof,
     ) -> Result<bool, HyperPlonkErrors> {
+        let mut rng = test_rng();
+
         let start = start_timer!(|| "hyperplonk verification");
 
         let mut transcript = IOPTranscript::<E::Fr>::new(b"hyperplonk");
@@ -807,78 +811,76 @@ where
                 "perm oracle pcs verification failed".to_string(),
             ));
         }
-        // let mut rng = test_rng();
-        // if !PCS::batch_verify_single_poly(
-        //     &vk.pcs_param,
-        //     &proof.perm_check_proof.prod_x_comm,
-        //     &[
-        //         [perm_check_point.as_slice(), &[E::Fr::zero()]].concat(),
-        //         [perm_check_point.as_slice(), &[E::Fr::one()]].concat(),
-        //         // [&[E::Fr::zero()], perm_check_point.as_slice()].concat(),
-        //         // [&[E::Fr::one()], perm_check_point.as_slice()].concat(),
-        //         //
-        // perm_check_sub_claim.product_check_sub_claim.final_query.0.clone(),
-        //     ],
-        //     &proof.prod_batch_evals,
-        //     &proof.prod_batch_openings,
-        //     &mut rng,
-        // )? {
-        //     return Err(HyperPlonkErrors::InvalidProof(
-        //         "prod(0, x) pcs verification failed".to_string(),
-        //     ));
-        // }
 
         // prod(x) for permutation check
-        // TODO: batch verification
+        let points = [
+            [perm_check_point.as_slice(), &[E::Fr::zero()]].concat(),
+            [perm_check_point.as_slice(), &[E::Fr::one()]].concat(),
+            [&[E::Fr::zero()], perm_check_point.as_slice()].concat(),
+            [&[E::Fr::one()], perm_check_point.as_slice()].concat(),
+        ];
 
-        // prod(0, x)
-        if !PCS::verify(
+        if !PCS::batch_verify_single_poly(
             &vk.pcs_param,
             &proof.perm_check_proof.prod_x_comm,
-            &[perm_check_point.as_slice(), &[E::Fr::zero()]].concat(),
-            &proof.prod_evals[0],
-            &proof.prod_openings[0],
+            &points,
+            &proof.prod_batch_evals,
+            &proof.prod_batch_openings,
+            &mut rng,
         )? {
             return Err(HyperPlonkErrors::InvalidProof(
                 "prod(0, x) pcs verification failed".to_string(),
             ));
         }
-        // prod(1, x)
-        if !PCS::verify(
-            &vk.pcs_param,
-            &proof.perm_check_proof.prod_x_comm,
-            &[perm_check_point.as_slice(), &[E::Fr::one()]].concat(),
-            &proof.prod_evals[1],
-            &proof.prod_openings[1],
-        )? {
-            return Err(HyperPlonkErrors::InvalidProof(
-                "prod(1, x) pcs verification failed".to_string(),
-            ));
-        }
-        // prod(x, 0)
-        if !PCS::verify(
-            &vk.pcs_param,
-            &proof.perm_check_proof.prod_x_comm,
-            &[&[E::Fr::zero()], perm_check_point.as_slice()].concat(),
-            &proof.prod_evals[2],
-            &proof.prod_openings[2],
-        )? {
-            return Err(HyperPlonkErrors::InvalidProof(
-                "prod(x, 0) pcs verification failed".to_string(),
-            ));
-        }
-        // prod(x, 1)
-        if !PCS::verify(
-            &vk.pcs_param,
-            &proof.perm_check_proof.prod_x_comm,
-            &[&[E::Fr::one()], perm_check_point.as_slice()].concat(),
-            &proof.prod_evals[3],
-            &proof.prod_openings[3],
-        )? {
-            return Err(HyperPlonkErrors::InvalidProof(
-                "prod(x, 1) pcs verification failed".to_string(),
-            ));
-        }
+
+        // // prod(0, x)
+        // if !PCS::verify(
+        //     &vk.pcs_param,
+        //     &proof.perm_check_proof.prod_x_comm,
+        //     &[perm_check_point.as_slice(), &[E::Fr::zero()]].concat(),
+        //     &proof.prod_evals[0],
+        //     &proof.prod_openings[0],
+        // )? {
+        //     return Err(HyperPlonkErrors::InvalidProof(
+        //         "prod(0, x) pcs verification failed".to_string(),
+        //     ));
+        // }
+        // // prod(1, x)
+        // if !PCS::verify(
+        //     &vk.pcs_param,
+        //     &proof.perm_check_proof.prod_x_comm,
+        //     &[perm_check_point.as_slice(), &[E::Fr::one()]].concat(),
+        //     &proof.prod_evals[1],
+        //     &proof.prod_openings[1],
+        // )? {
+        //     return Err(HyperPlonkErrors::InvalidProof(
+        //         "prod(1, x) pcs verification failed".to_string(),
+        //     ));
+        // }
+        // // prod(x, 0)
+        // if !PCS::verify(
+        //     &vk.pcs_param,
+        //     &proof.perm_check_proof.prod_x_comm,
+        //     &[&[E::Fr::zero()], perm_check_point.as_slice()].concat(),
+        //     &proof.prod_evals[2],
+        //     &proof.prod_openings[2],
+        // )? {
+        //     return Err(HyperPlonkErrors::InvalidProof(
+        //         "prod(x, 0) pcs verification failed".to_string(),
+        //     ));
+        // }
+        // // prod(x, 1)
+        // if !PCS::verify(
+        //     &vk.pcs_param,
+        //     &proof.perm_check_proof.prod_x_comm,
+        //     &[&[E::Fr::one()], perm_check_point.as_slice()].concat(),
+        //     &proof.prod_evals[3],
+        //     &proof.prod_openings[3],
+        // )? {
+        //     return Err(HyperPlonkErrors::InvalidProof(
+        //         "prod(x, 1) pcs verification failed".to_string(),
+        //     ));
+        // }
         // prod(1, ..., 1, 0) = 1
         let prod_final_query = perm_check_sub_claim.product_check_sub_claim.final_query;
         if !PCS::verify(

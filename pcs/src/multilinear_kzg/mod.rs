@@ -10,7 +10,10 @@ mod batching;
 pub(crate) mod srs;
 pub(crate) mod util;
 
-use self::{batching::multi_open_same_poly_internal, util::merge_polynomials};
+use self::{
+    batching::{batch_verify_same_poly_internal, multi_open_same_poly_internal},
+    util::merge_polynomials,
+};
 use crate::{
     prelude::{
         Commitment, UnivariateProverParam, UnivariateUniversalParams, UnivariateVerifierParam,
@@ -313,7 +316,7 @@ impl<E: PairingEngine> PolynomialCommitmentScheme<E> for MultilinearKzgPCS<E> {
         batch_proof: &Self::BatchProof,
         _rng: &mut R,
     ) -> Result<bool, PCSError> {
-        batch_verify_internal(
+        batch_verify_same_poly_internal(
             &verifier_param.1,
             &verifier_param.0,
             commitment,
@@ -545,22 +548,22 @@ mod tests {
             points.push(point)
         }
         let com = MultilinearKzgPCS::commit(&ck, &poly)?;
-        let (proof, values) = MultilinearKzgPCS::multi_open_single_poly(&ck, &com, &poly, &points)?;
+        let (proof, mut values) =
+            MultilinearKzgPCS::multi_open_single_poly(&ck, &com, &poly, &points)?;
 
         assert!(MultilinearKzgPCS::batch_verify_single_poly(
             &vk, &com, &points, &values, &proof, rng
         )?);
 
-        // values[0] = Fr::rand(rng);
-        // assert!(!MultilinearKzgPCS::batch_verify_single_poly(
-        //     &vk, &com, &points, &values, &proof, rng
-        // )?);
+        values[0] = Fr::rand(rng);
+        assert!(!MultilinearKzgPCS::batch_verify_single_poly(
+            &vk, &com, &points, &values, &proof, rng
+        )?);
 
         Ok(())
     }
 
     #[test]
-    #[ignore]
     fn test_multi_open_single_poly() -> Result<(), PCSError> {
         let mut rng = test_rng();
 
@@ -571,10 +574,9 @@ mod tests {
             let poly1 = Rc::new(DenseMultilinearExtension::rand(8, &mut rng));
             test_multi_open_single_poly_helper(&params, poly1, num_open, &mut rng)?;
 
-            // // single-variate polynomials
-            // let poly2 = Rc::new(DenseMultilinearExtension::rand(1, &mut
-            // rng)); test_mul_com_single_open_helper(&params,
-            // poly2, num_open,&mut rng)?;
+            // single-variate polynomials
+            let poly2 = Rc::new(DenseMultilinearExtension::rand(1, &mut rng));
+            test_multi_open_single_poly_helper(&params, poly2, num_open, &mut rng)?;
         }
 
         Ok(())
@@ -592,29 +594,28 @@ mod tests {
         let qx_degree = compute_qx_degree(merged_nv, polys.len());
         let padded_qx_degree = 1usize << log2(qx_degree);
 
-        let (ck, vk) = MultilinearKzgPCS::trim(params, padded_qx_degree, Some(nv + 1))?;
+        let (ck, vk) = MultilinearKzgPCS::trim(params, padded_qx_degree, Some(merged_nv))?;
         let mut points = vec![];
         for _ in 0..num_open {
             let point: Vec<_> = (0..nv).map(|_| Fr::rand(rng)).collect();
             points.push(point)
         }
         let com = MultilinearKzgPCS::multi_commit(&ck, &polys)?;
-        let (proof, values) = MultilinearKzgPCS::multi_open(&ck, &com, polys, &points)?;
+        let (proof, mut values) = MultilinearKzgPCS::multi_open(&ck, &com, polys, &points)?;
 
         assert!(MultilinearKzgPCS::batch_verify(
             &vk, &com, &points, &values, &proof, rng
         )?);
 
-        // values[0] = Fr::rand(rng);
-        // assert!(!MultilinearKzgPCS::batch_verify_single_poly(
-        //     &vk, &com, &points, &values, &proof, rng
-        // )?);
+        values[0] = Fr::rand(rng);
+        assert!(!MultilinearKzgPCS::batch_verify_single_poly(
+            &vk, &com, &points, &values, &proof, rng
+        )?);
 
         Ok(())
     }
 
     #[test]
-    #[ignore]
     fn test_multi_open() -> Result<(), PCSError> {
         let mut rng = test_rng();
 
@@ -622,7 +623,6 @@ mod tests {
 
         // normal polynomials
         for num_open in 1..4 {
-            println!("\n\n\n");
             let mut polys = vec![];
             for _ in 0..num_open {
                 let poly = Rc::new(DenseMultilinearExtension::rand(4, &mut rng));
@@ -630,11 +630,6 @@ mod tests {
             }
 
             test_multi_open_helper(&params, &polys, num_open, &mut rng)?;
-
-            // // single-variate polynomials
-            // let poly2 = Rc::new(DenseMultilinearExtension::rand(1, &mut
-            // rng)); test_mul_com_single_open_helper(&params,
-            // poly2, num_open,&mut rng)?;
         }
 
         Ok(())
