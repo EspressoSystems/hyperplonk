@@ -277,7 +277,9 @@ where
         )?;
         // prod_pcs_acc.init_poly(prod_x.clone(),
         // perm_check_proof.prod_x_comm.clone())?;
+        end_timer!(step);
 
+        let step = start_timer!(|| "open prod(x)");
         // open prod(0,x), prod(1, x), prod(x, 0), prod(x, 1) at zero_check.point
         // prod(0, x)
         let tmp_point1 = [
@@ -397,7 +399,7 @@ where
         // - public input consistency checks
         //   - pi_poly(r_pi) where r_pi is sampled from transcript
         // =======================================================================
-        let step = start_timer!(|| "opening and evaluations");
+        let step = start_timer!(|| "opening witness");
 
         // 4.1 permutation check
         let mut witness_zero_check_evals = vec![];
@@ -449,7 +451,9 @@ where
             witness_zero_check_evals.push(zero_eval);
             witness_zero_check_openings.push(zero_proof);
         }
+        end_timer!(step);
 
+        let step = start_timer!(|| "opening permutation poly");
         // Open permutation polynomial at perm_check_point
         let (s_perm_opening, s_perm_eval) = PCS::open(
             &pk.pcs_param,
@@ -474,6 +478,8 @@ where
                 ));
             }
         }
+        end_timer!(step);
+        let step = start_timer!(|| "opening selector poly");
         // Open selector polynomial at zero_check_point
         let mut selector_oracle_openings = vec![];
         let mut selector_oracle_evals = vec![];
@@ -503,8 +509,10 @@ where
             selector_oracle_openings.push(zero_proof);
             selector_oracle_evals.push(zero_eval);
         }
-
+        end_timer!(step);
         // 4.3 public input consistency checks
+
+        let step = start_timer!(|| "opening public input poly");
         let r_pi = transcript.get_and_append_challenge_vectors(b"r_pi", ell)?;
         let tmp_point = [
             vec![E::Fr::zero(); num_vars - ell],

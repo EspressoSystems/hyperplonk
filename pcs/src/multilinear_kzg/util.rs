@@ -213,7 +213,6 @@ pub(crate) fn build_l<F: PrimeField>(
     points: &[Vec<F>],
     domain: &Radix2EvaluationDomain<F>,
 ) -> Result<Vec<DensePolynomial<F>>, PCSError> {
-
     let mut uni_polys = Vec::new();
     let num_var = points[0].len();
     // build the actual univariate polys that go through the points

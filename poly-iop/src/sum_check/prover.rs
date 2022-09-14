@@ -110,6 +110,9 @@ impl<F: PrimeField> SumCheckProver<F> for IOPProverState<F> {
 
         #[cfg(feature = "parallel")]
         products_sum.par_iter_mut().enumerate().for_each(|(t, e)| {
+            let t = F::from(t as u64);
+            let one_minus_t = F::one() - t;
+
             for b in 0..1 << (self.poly.aux_info.num_variables - self.round) {
                 // evaluate P_round(t)
                 for (coefficient, products) in products_list.iter() {
@@ -117,8 +120,8 @@ impl<F: PrimeField> SumCheckProver<F> for IOPProverState<F> {
                     let mut product = *coefficient;
                     for &f in products.iter().take(num_mles) {
                         let table = &flattened_ml_extensions[f]; // f's range is checked in init
-                        product *= table[b << 1] * (F::one() - F::from(t as u64))
-                            + table[(b << 1) + 1] * F::from(t as u64);
+                        product *= table[b << 1] * one_minus_t
+                            + table[(b << 1) + 1] * t;
                     }
                     *e += product;
                 }
