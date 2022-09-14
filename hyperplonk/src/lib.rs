@@ -209,8 +209,8 @@ where
         let merged_nv = num_vars + log_num_witness_polys;
         // online public input of length 2^\ell
         let ell = log2(pk.params.num_pub_input) as usize;
-        // Accumulator for w_merged and its points
-        let mut w_merged_pcs_acc = PcsAccumulator::<E, PCS>::new();
+        // // Accumulator for w_merged and its points
+        // let mut w_merged_pcs_acc = PcsAccumulator::<E, PCS>::new();
         // Accumulator for prod(x) and its points
         let mut prod_pcs_acc = PcsAccumulator::<E, PCS>::new();
 
@@ -218,9 +218,9 @@ where
             .iter()
             .map(|w| Rc::new(DenseMultilinearExtension::from(w)))
             .collect();
-        let pi_poly = Rc::new(DenseMultilinearExtension::from_evaluations_slice(
-            ell, pub_input,
-        ));
+        // let pi_poly = Rc::new(DenseMultilinearExtension::from_evaluations_slice(
+        //     ell, pub_input,
+        // ));
         // =======================================================================
         // 1. Commit Witness polynomials `w_i(x)` and append commitment to
         // transcript
@@ -234,7 +234,7 @@ where
             )));
         }
         let w_merged_com = PCS::commit(&pk.pcs_param, &w_merged)?;
-        w_merged_pcs_acc.init_poly(w_merged.clone(), w_merged_com.clone())?;
+        // w_merged_pcs_acc.init_poly(w_merged.clone(), w_merged_com.clone())?;
         transcript.append_serializable_element(b"w", &w_merged_com)?;
         end_timer!(step);
         // =======================================================================
@@ -322,7 +322,16 @@ where
         // open permutation check proof
         let (witness_perm_check_opening, witness_perm_check_eval) =
             PCS::open(&pk.pcs_param, &w_merged, &perm_check_point)?;
-        w_merged_pcs_acc.insert_point(&perm_check_point);
+        // w_merged_pcs_acc.insert_point(&perm_check_point);
+        // let mut acc = PcsAccumulator::<E, PCS>::new();
+        // acc.init_poly(w_merged.clone(), w_merged_com.clone())?;
+        // acc.insert_point(&perm_check_point);
+        // let (w_merged_batch_opening, w_merged_batch_evals) =
+        // acc.batch_open(&pk.pcs_param)?;
+
+        // println!("w_merged(perm_check_point) {}", witness_perm_check_eval);
+
+        // println!("w_merged(perm_check_point) {}", w_merged_batch_evals[0]);
         #[cfg(feature = "extensive_sanity_checks")]
         {
             // sanity checks
@@ -341,31 +350,32 @@ where
         }
         // 4.2 open zero check proof
         // TODO: batch opening
-        for (i, wire_poly) in witness_polys.iter().enumerate() {
+        // for (i, wire_poly) in witness_polys.iter().enumerate() {
+        for i  in 0..witness_polys.len() {
             let tmp_point = gen_eval_point(i, log_num_witness_polys, &zero_check_proof.point);
             // Open zero check proof
             let (zero_proof, zero_eval) = PCS::open(&pk.pcs_param, &w_merged, &tmp_point)?;
-            w_merged_pcs_acc.insert_point(&tmp_point);
+            // w_merged_pcs_acc.insert_point(&tmp_point);
 
-            println!(
-                "w_merged equal: {} {}",
-                w_merged.evaluate(&tmp_point).unwrap(),
-                wire_poly.evaluate(&zero_check_proof.point).unwrap()
-            );
+            // println!(
+            //     "w_merged equal: {} {}",
+            //     w_merged.evaluate(&tmp_point).unwrap(),
+            //     wire_poly.evaluate(&zero_check_proof.point).unwrap()
+            // );
 
-            #[cfg(feature = "extensive_sanity_checks")]
-            {
-                let eval = wire_poly.evaluate(&zero_check_proof.point).ok_or_else(|| {
-                    HyperPlonkErrors::InvalidParameters(
-                        "witness_zero_check evaluation dimension does not match".to_string(),
-                    )
-                })?;
-                if eval != zero_eval {
-                    return Err(HyperPlonkErrors::InvalidProver(
-                        "witness_zero_check evaluation is different from PCS opening".to_string(),
-                    ));
-                }
-            }
+            // #[cfg(feature = "extensive_sanity_checks")]
+            // {
+            //     let eval = wire_poly.evaluate(&zero_check_proof.point).ok_or_else(|| {
+            //         HyperPlonkErrors::InvalidParameters(
+            //             "witness_zero_check evaluation dimension does not match".to_string(),
+            //         )
+            //     })?;
+            //     if eval != zero_eval {
+            //         return Err(HyperPlonkErrors::InvalidProver(
+            //             "witness_zero_check evaluation is different from PCS opening".to_string(),
+            //         ));
+            //     }
+            // }
             witness_zero_check_evals.push(zero_eval);
             witness_zero_check_openings.push(zero_proof);
         }
@@ -374,23 +384,23 @@ where
         let (s_perm_opening, s_perm_eval) =
             PCS::open(&pk.pcs_param, &pk.permutation_oracle, &perm_check_point)?;
 
-        #[cfg(feature = "extensive_sanity_checks")]
-        {
-            // sanity check
-            let eval = pk
-                .permutation_oracle
-                .evaluate(&perm_check_proof.zero_check_proof.point)
-                .ok_or_else(|| {
-                    HyperPlonkErrors::InvalidParameters(
-                        "perm_oracle evaluation dimension does not match".to_string(),
-                    )
-                })?;
-            if eval != s_perm_eval {
-                return Err(HyperPlonkErrors::InvalidProver(
-                    "perm_oracle evaluation is different from PCS opening".to_string(),
-                ));
-            }
-        }
+        // #[cfg(feature = "extensive_sanity_checks")]
+        // {
+        //     // sanity check
+        //     let eval = pk
+        //         .permutation_oracle
+        //         .evaluate(&perm_check_proof.zero_check_proof.point)
+        //         .ok_or_else(|| {
+        //             HyperPlonkErrors::InvalidParameters(
+        //                 "perm_oracle evaluation dimension does not match".to_string(),
+        //             )
+        //         })?;
+        //     if eval != s_perm_eval {
+        //         return Err(HyperPlonkErrors::InvalidProver(
+        //             "perm_oracle evaluation is different from PCS opening".to_string(),
+        //         ));
+        //     }
+        // }
         // Open selector polynomial at zero_check_point
         let mut selector_oracle_openings = vec![];
         let mut selector_oracle_evals = vec![];
@@ -402,21 +412,21 @@ where
             let (zero_proof, zero_eval) =
                 PCS::open(&pk.pcs_param, selector_poly, &zero_check_proof.point)?;
 
-            #[cfg(feature = "extensive_sanity_checks")]
-            {
-                let eval = selector_poly
-                    .evaluate(&zero_check_proof.point)
-                    .ok_or_else(|| {
-                        HyperPlonkErrors::InvalidParameters(
-                            "selector evaluation dimension does not match".to_string(),
-                        )
-                    })?;
-                if eval != zero_eval {
-                    return Err(HyperPlonkErrors::InvalidProver(
-                        "selector evaluation is different from PCS opening".to_string(),
-                    ));
-                }
-            }
+            // #[cfg(feature = "extensive_sanity_checks")]
+            // {
+            //     let eval = selector_poly
+            //         .evaluate(&zero_check_proof.point)
+            //         .ok_or_else(|| {
+            //             HyperPlonkErrors::InvalidParameters(
+            //                 "selector evaluation dimension does not match".to_string(),
+            //             )
+            //         })?;
+            //     if eval != zero_eval {
+            //         return Err(HyperPlonkErrors::InvalidProver(
+            //             "selector evaluation is different from PCS opening".to_string(),
+            //         ));
+            //     }
+            // }
             selector_oracle_openings.push(zero_proof);
             selector_oracle_evals.push(zero_eval);
         }
@@ -430,20 +440,20 @@ where
         ]
         .concat();
         let (pi_opening, pi_eval) = PCS::open(&pk.pcs_param, &w_merged, &tmp_point)?;
-        #[cfg(feature = "extensive_sanity_checks")]
-        {
-            // sanity check
-            let eval = pi_poly.evaluate(&r_pi).ok_or_else(|| {
-                HyperPlonkErrors::InvalidParameters(
-                    "public input evaluation dimension does not match".to_string(),
-                )
-            })?;
-            if eval != pi_eval {
-                return Err(HyperPlonkErrors::InvalidProver(
-                    "public input evaluation is different from PCS opening".to_string(),
-                ));
-            }
-        }
+        // #[cfg(feature = "extensive_sanity_checks")]
+        // {
+        //     // sanity check
+        //     let eval = pi_poly.evaluate(&r_pi).ok_or_else(|| {
+        //         HyperPlonkErrors::InvalidParameters(
+        //             "public input evaluation dimension does not match".to_string(),
+        //         )
+        //     })?;
+        //     if eval != pi_eval {
+        //         return Err(HyperPlonkErrors::InvalidProver(
+        //             "public input evaluation is different from PCS opening".to_string(),
+        //         ));
+        //     }
+        // }
 
         end_timer!(step);
 
