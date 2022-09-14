@@ -569,14 +569,11 @@ mod tests {
 
         let params = MultilinearKzgPCS::<E>::gen_srs_for_testing(&mut rng, 10)?;
 
-        // normal polynomials
-        for num_open in 1..4 {
-            let poly1 = Rc::new(DenseMultilinearExtension::rand(8, &mut rng));
-            test_multi_open_single_poly_helper(&params, poly1, num_open, &mut rng)?;
-
-            // single-variate polynomials
-            let poly2 = Rc::new(DenseMultilinearExtension::rand(1, &mut rng));
-            test_multi_open_single_poly_helper(&params, poly2, num_open, &mut rng)?;
+        for nv in 1..5 {
+            for num_open in 1..4 {
+                let poly1 = Rc::new(DenseMultilinearExtension::rand(nv, &mut rng));
+                test_multi_open_single_poly_helper(&params, poly1, num_open, &mut rng)?;
+            }
         }
 
         Ok(())
