@@ -26,8 +26,8 @@ where
     // =======================================================================
     /// PCS commit for witnesses
     pub w_merged_com: PCS::Commitment,
-    pub w_merged_batch_opening: PCS::BatchProof,
-    pub w_merged_batch_evals: Vec<E::Fr>,
+    // pub w_merged_batch_opening: PCS::BatchProof,
+    // pub w_merged_batch_evals: Vec<E::Fr>,
     // =======================================================================
     // PCS components: permutation check
     // =======================================================================

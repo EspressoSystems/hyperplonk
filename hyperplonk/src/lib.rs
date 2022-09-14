@@ -447,32 +447,32 @@ where
 
         end_timer!(step);
 
-        // // =======================================================================
-        // // 3.3 deferred batch opening
-        // // =======================================================================
-        let (w_merged_batch_opening, w_merged_batch_evals) =
-            w_merged_pcs_acc.batch_open(&pk.pcs_param)?;
+        // =======================================================================
+        // 3.3 deferred batch opening
+        // =======================================================================
+        // let (w_merged_batch_opening, w_merged_batch_evals) =
+        //     w_merged_pcs_acc.batch_open(&pk.pcs_param)?;
 
         let (prod_batch_openings, prod_batch_evals) = prod_pcs_acc.batch_open(&pk.pcs_param)?;
 
         end_timer!(start);
-        println!();
-        for (i, w) in w_merged_batch_evals.iter().enumerate() {
-            println!("batch {} {}", i, w)
-        }
-        for (i, w) in witness_zero_check_evals.iter().enumerate() {
-            println!("zero check {} {}", i, w)
-        }
-        println!("witness_perm_check_eval {}", witness_perm_check_eval);
-        println!();
+        // println!();
+        // for (i, w) in w_merged_batch_evals.iter().enumerate() {
+        //     println!("batch {} {}", i, w)
+        // }
+        // for (i, w) in witness_zero_check_evals.iter().enumerate() {
+        //     println!("zero check {} {}", i, w)
+        // }
+        // println!("witness_perm_check_eval {}", witness_perm_check_eval);
+        // println!();
 
         Ok(HyperPlonkProof {
             // =======================================================================
             // PCS components: common
             // =======================================================================
             w_merged_com,
-            w_merged_batch_opening,
-            w_merged_batch_evals,
+            // w_merged_batch_opening,
+            // w_merged_batch_evals,
             // =======================================================================
             // PCS components: permutation check
             // =======================================================================
