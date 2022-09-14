@@ -16,12 +16,10 @@ use crate::{
         Commitment, UnivariateProverParam, UnivariateUniversalParams, UnivariateVerifierParam,
     },
     univariate_kzg::UnivariateKzgProof,
+    util::multi_scalar_mul,
     PCSError, PolynomialCommitmentScheme, StructuredReferenceString,
 };
-use ark_ec::{
-    msm::{FixedBaseMSM, VariableBaseMSM},
-    AffineCurve, PairingEngine, ProjectiveCurve,
-};
+use ark_ec::{msm::FixedBaseMSM, AffineCurve, PairingEngine, ProjectiveCurve};
 use ark_ff::PrimeField;
 use ark_poly::{DenseMultilinearExtension, MultilinearExtension};
 use ark_serialize::{CanonicalDeserialize, CanonicalSerialize, Read, SerializationError, Write};
@@ -145,7 +143,7 @@ impl<E: PairingEngine> PolynomialCommitmentScheme<E> for MultilinearKzgPCS<E> {
             .into_iter()
             .map(|x| x.into_repr())
             .collect();
-        let commitment = VariableBaseMSM::multi_scalar_mul(
+        let commitment = multi_scalar_mul(
             &prover_param.0.powers_of_g[ignored].evals,
             scalars.as_slice(),
         )
@@ -173,11 +171,8 @@ impl<E: PairingEngine> PolynomialCommitmentScheme<E> for MultilinearKzgPCS<E> {
             .map(|x| x.into_repr())
             .collect();
 
-        let commitment = VariableBaseMSM::multi_scalar_mul(
-            &prover_param.0.powers_of_g[0].evals,
-            scalars.as_slice(),
-        )
-        .into_affine();
+        let commitment = multi_scalar_mul(&prover_param.0.powers_of_g[0].evals, scalars.as_slice())
+            .into_affine();
 
         end_timer!(commit_timer);
         Ok(Commitment(commitment))
@@ -397,7 +392,7 @@ fn open_internal<E: PairingEngine>(
         r[k - 1] = cur_r;
 
         // this is a MSM over G1 and is likely to be the bottleneck
-        proofs.push(VariableBaseMSM::multi_scalar_mul(&gi.evals, &scalars).into_affine());
+        proofs.push(multi_scalar_mul(&gi.evals, &scalars).into_affine());
         end_timer!(ith_round);
     }
     let eval = polynomial.evaluate(point).ok_or_else(|| {

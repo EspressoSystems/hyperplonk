@@ -22,6 +22,7 @@ transcript = { path = "../transcript" }
 util = { path = "../util" }
 
 rayon = { version = "1.5.2", default-features = false, optional = true }
+itertools = { version = "0.10.4", optional = true }
 
 # Benchmarks
 [[bench]]
@@ -35,6 +36,7 @@ default = [ "parallel", "extensive_sanity_checks" ]
 extensive_sanity_checks = [ ]
 parallel = [ 
     "rayon",
+    "itertools",
     "ark-std/parallel", 
     "ark-ff/parallel",  
     "ark-poly/parallel", 

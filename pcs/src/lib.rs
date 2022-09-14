@@ -2,6 +2,7 @@ mod errors;
 mod multilinear_kzg;
 mod structs;
 mod univariate_kzg;
+mod util;
 
 pub mod prelude;
 

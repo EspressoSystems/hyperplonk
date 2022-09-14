@@ -1,6 +1,7 @@
-use std::time::Instant;
+use std::{env, fs::File, time::Instant};
 
 use ark_bls12_381::{Bls12_381, Fr};
+use ark_serialize::Write;
 use ark_std::test_rng;
 use hyperplonk::{
     prelude::{CustomizedGates, HyperPlonkErrors, MockCircuit},
@@ -11,31 +12,44 @@ use pcs::{
     PolynomialCommitmentScheme,
 };
 use poly_iop::PolyIOP;
+use rayon::ThreadPoolBuilder;
 
 fn main() -> Result<(), HyperPlonkErrors> {
-    bench_vanilla_plonk()?;
+    let args: Vec<String> = env::args().collect();
+    let thread = args[1].parse().unwrap_or(12);
+
+    ThreadPoolBuilder::new()
+        .num_threads(thread)
+        .build_global()
+        .unwrap();
+    bench_vanilla_plonk(thread)?;
 
     Ok(())
 }
 
-fn bench_vanilla_plonk() -> Result<(), HyperPlonkErrors> {
+fn bench_vanilla_plonk(thread: usize) -> Result<(), HyperPlonkErrors> {
     let mut rng = test_rng();
-    let pcs_srs = MultilinearKzgPCS::<Bls12_381>::gen_srs_for_testing(&mut rng, 16)?;
+    let pcs_srs = MultilinearKzgPCS::<Bls12_381>::gen_srs_for_testing(&mut rng, 22)?;
 
-    for nv in 1..10 {
+    let filename = format!("vanilla {}.txt", thread);
+    let mut file = File::create(filename).unwrap();
+    for nv in 1..20 {
         let vanilla_gate = CustomizedGates::vanilla_plonk_gate();
-        bench_mock_circuit_zkp_helper(nv, &vanilla_gate, &pcs_srs)?;
+        bench_mock_circuit_zkp_helper(&mut file, nv, &vanilla_gate, &pcs_srs)?;
     }
 
-    for nv in 1..10 {
+    let filename = format!("turbo {}.txt", thread);
+    let mut file = File::create(filename).unwrap();
+    for nv in 1..20 {
         let vanilla_gate = CustomizedGates::jellyfish_turbo_plonk_gate();
-        bench_mock_circuit_zkp_helper(nv, &vanilla_gate, &pcs_srs)?;
+        bench_mock_circuit_zkp_helper(&mut file, nv, &vanilla_gate, &pcs_srs)?;
     }
 
     Ok(())
 }
 
 fn bench_mock_circuit_zkp_helper(
+    file: &mut File,
     nv: usize,
     gate: &CustomizedGates,
     pcs_srs: &(
@@ -44,11 +58,11 @@ fn bench_mock_circuit_zkp_helper(
     ),
 ) -> Result<(), HyperPlonkErrors> {
     let repetition = if nv < 10 {
-        100
-    } else if nv < 20 {
-        50
-    } else {
         10
+    } else if nv < 20 {
+        5
+    } else {
+        2
     };
 
     //==========================================================
@@ -95,11 +109,10 @@ fn bench_mock_circuit_zkp_helper(
                 &circuit.witnesses,
             )?;
     }
-    println!(
-        "proving for {} variables: {} us",
-        nv,
-        start.elapsed().as_micros() / repetition as u128
-    );
+    let t = start.elapsed().as_micros() / repetition as u128;
+    println!("proving for {} variables: {} us", nv, t);
+    file.write_all(format!("{} {}\n", nv, t).as_ref()).unwrap();
+
     let proof = <PolyIOP<Fr> as HyperPlonkSNARK<Bls12_381, MultilinearKzgPCS<Bls12_381>>>::prove(
         &pk,
         &circuit.witnesses[0].coeff_ref(),

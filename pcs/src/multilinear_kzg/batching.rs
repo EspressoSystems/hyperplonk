@@ -455,6 +455,7 @@ pub(super) fn multi_open_same_poly_internal<E: PairingEngine>(
 /// polynomials that goes through the points
 /// 5. get a point `p := l(r)`
 /// 6. verifies `p` is valid against multilinear KZG proof
+#[allow(dead_code)]
 pub(super) fn batch_verify_same_poly_internal<E: PairingEngine>(
     uni_verifier_param: &UnivariateVerifierParam<E>,
     ml_verifier_param: &MultilinearVerifierParam<E>,
@@ -799,6 +800,7 @@ mod tests {
     }
 
     #[test]
+    #[ignore]
     fn test_same_poly_multi_open_internal() -> Result<(), PCSError> {
         let mut rng = test_rng();
 

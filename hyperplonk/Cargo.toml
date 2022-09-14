@@ -21,6 +21,8 @@ transcript = { path = "../transcript" }
 arithmetic = { path = "../arithmetic" }
 util = { path = "../util" }
 
+rayon = { version = "1.5.2", default-features = false, optional = true }
+
 [dev-dependencies]
 ark-bls12-381 = { version = "0.3.0", default-features = false, features = [ "curve" ] }
 
@@ -37,6 +39,7 @@ bench = [ "parallel" ]
 # extensive sanity checks that are useful for debugging
 extensive_sanity_checks = [ ]
 parallel = [ 
+    "rayon",
     "ark-std/parallel", 
     "ark-ff/parallel",  
     "ark-poly/parallel", 
