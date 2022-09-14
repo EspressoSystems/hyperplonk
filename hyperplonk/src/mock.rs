@@ -212,7 +212,7 @@ mod test {
         }
         let nv = 5;
         for num_witness in 2..10 {
-            for degree in 1..10 {
+            for degree in [1, 2, 4, 8, 16] {
                 let mock_gate = CustomizedGates::mock_gate(num_witness, degree);
                 test_mock_circuit_zkp_helper(nv, &mock_gate, &pcs_srs)?;
             }

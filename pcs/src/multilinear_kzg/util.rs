@@ -77,7 +77,7 @@ pub(crate) fn compute_w_circ_l_with_prefix<F: PrimeField>(
 
     let mut res_eval: Vec<F> = vec![];
 
-    let uni_degree = w.num_vars * num_points;
+    let uni_degree = (w.num_vars + log2(num_points) as usize) * num_points;
 
     let domain = match Radix2EvaluationDomain::<F>::new(uni_degree) {
         Some(p) => p,

@@ -23,6 +23,9 @@ fn main() -> Result<(), HyperPlonkErrors> {
         .build_global()
         .unwrap();
     bench_vanilla_plonk(thread)?;
+    for degree in [1, 2, 4, 8, 16, 32] {
+        bench_high_degree_plonk(degree, thread)?;
+    }
 
     Ok(())
 }
@@ -31,17 +34,24 @@ fn bench_vanilla_plonk(thread: usize) -> Result<(), HyperPlonkErrors> {
     let mut rng = test_rng();
     let pcs_srs = MultilinearKzgPCS::<Bls12_381>::gen_srs_for_testing(&mut rng, 22)?;
 
-    let filename = format!("vanilla {}.txt", thread);
+    let filename = format!("vanilla nv {}.txt", thread);
     let mut file = File::create(filename).unwrap();
-    for nv in 1..20 {
+    for nv in 1..16 {
         let vanilla_gate = CustomizedGates::vanilla_plonk_gate();
         bench_mock_circuit_zkp_helper(&mut file, nv, &vanilla_gate, &pcs_srs)?;
     }
 
-    let filename = format!("turbo {}.txt", thread);
+    Ok(())
+}
+
+fn bench_high_degree_plonk(degree: usize, thread: usize) -> Result<(), HyperPlonkErrors> {
+    let mut rng = test_rng();
+    let pcs_srs = MultilinearKzgPCS::<Bls12_381>::gen_srs_for_testing(&mut rng, 22)?;
+
+    let filename = format!("high degree {} thread {}.txt", degree, thread);
     let mut file = File::create(filename).unwrap();
-    for nv in 1..20 {
-        let vanilla_gate = CustomizedGates::jellyfish_turbo_plonk_gate();
+    for nv in 1..16 {
+        let vanilla_gate = CustomizedGates::vanilla_plonk_gate();
         bench_mock_circuit_zkp_helper(&mut file, nv, &vanilla_gate, &pcs_srs)?;
     }
 
