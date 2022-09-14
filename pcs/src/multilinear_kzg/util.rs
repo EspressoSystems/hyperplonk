@@ -133,8 +133,6 @@ pub(crate) fn compute_w_circ_l<F: PrimeField>(
             ))
         },
     };
-    println!("uni degree {}", uni_degree);
-    println!("domain size {}", domain.size());
     for point in domain.elements() {
         // we reverse the order here because the coefficient vec are stored in
         // bit-reversed order
@@ -190,7 +188,6 @@ pub(crate) fn build_l_with_prefix<F: PrimeField>(
     let prefix_len = log2(points.len()) as usize;
     let mut uni_polys = Vec::new();
 
-    println!("with prefix domain size {}", domain.size());
     // 1.1 build the indexes and the univariate polys that go through the indexes
     let indexes: Vec<Vec<bool>> = (0..points.len())
         .map(|x| bit_decompose(x as u64, prefix_len))
@@ -216,7 +213,6 @@ pub(crate) fn build_l<F: PrimeField>(
     points: &[Vec<F>],
     domain: &Radix2EvaluationDomain<F>,
 ) -> Result<Vec<DensePolynomial<F>>, PCSError> {
-    println!("without prefix domain size {}", domain.size());
 
     let mut uni_polys = Vec::new();
     let num_var = points[0].len();

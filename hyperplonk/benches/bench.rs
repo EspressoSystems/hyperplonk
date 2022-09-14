@@ -22,11 +22,10 @@ fn main() -> Result<(), HyperPlonkErrors> {
         .num_threads(thread)
         .build_global()
         .unwrap();
-    bench_vanilla_plonk(thread)?;
     for degree in [1, 2, 4, 8, 16, 32] {
         bench_high_degree_plonk(degree, thread)?;
     }
-
+    bench_vanilla_plonk(thread)?;
     Ok(())
 }
 
@@ -48,7 +47,7 @@ fn bench_high_degree_plonk(degree: usize, thread: usize) -> Result<(), HyperPlon
     let mut rng = test_rng();
     let pcs_srs = MultilinearKzgPCS::<Bls12_381>::gen_srs_for_testing(&mut rng, 22)?;
 
-    let filename = format!("high degree {} thread {}.txt", degree, thread);
+    let filename = format!("degree {} thread {}.txt", degree, thread);
     let mut file = File::create(filename).unwrap();
     for nv in 1..16 {
         let vanilla_gate = CustomizedGates::vanilla_plonk_gate();

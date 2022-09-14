@@ -109,7 +109,6 @@ pub(super) fn multi_open_internal<E: PairingEngine>(
     let mut transcript = IOPTranscript::new(b"ml kzg");
     transcript.append_serializable_element(b"w", multi_commitment)?;
     for point in points {
-        // println!("points proving {:?}", points);
         transcript.append_serializable_element(b"w", point)?;
     }
 
@@ -233,13 +232,11 @@ pub(super) fn batch_verify_internal<E: PairingEngine>(
     }
 
     let domain = get_uni_domain::<E::Fr>(points_len)?;
-    println!("here");
     // 1. push w, points and q_com into transcript
     let mut transcript = IOPTranscript::new(b"ml kzg");
     transcript.append_serializable_element(b"w", multi_commitment)?;
 
     for point in points {
-        // println!("points verifying {:?}", points);
         transcript.append_serializable_element(b"w", point)?;
     }
 
@@ -345,7 +342,6 @@ pub(super) fn multi_open_same_poly_internal<E: PairingEngine>(
     }
 
     let num_var = polynomial.num_vars();
-    println!("num_vars = {}, num_points = {}", num_var, points.len());
 
     for point in points.iter() {
         if point.len() != num_var {
@@ -356,26 +352,19 @@ pub(super) fn multi_open_same_poly_internal<E: PairingEngine>(
     }
 
     let domain = get_uni_domain::<E::Fr>(points_len)?;
-    println!("domain: {}", domain.size());
 
     // 1. build `l(points)` which is a list of univariate polynomials that goes
     // through the points
     let uni_polys = build_l(points, &domain)?;
-    println!(
-        "uni poly len: {}, degree: {}, {:?}",
-        uni_polys.len(),
-        uni_polys[0].degree(),
-        uni_polys[0]
-    );
+
     // 3. build `q(x)` which is a univariate polynomial `W circ l`
     let q_x = compute_w_circ_l(&polynomial, &uni_polys, points.len())?;
-    println!("q(x) degree {}", q_x.degree());
+
     // 4. commit to q(x) and sample r from transcript
     // transcript contains: w commitment, points, q(x)'s commitment
     let mut transcript = IOPTranscript::new(b"ml kzg");
     transcript.append_serializable_element(b"w", commitment)?;
     for point in points {
-        // println!("points proving {:?}", points);
         transcript.append_serializable_element(b"w", point)?;
     }
 
@@ -390,7 +379,6 @@ pub(super) fn multi_open_same_poly_internal<E: PairingEngine>(
             UnivariateKzgPCS::<E>::open(uni_prover_param, &q_x, &domain.element(i))?;
         q_x_opens.push(q_x_open);
         q_x_evals.push(q_x_eval);
-        println!("q_x_eval {}", q_x_eval);
 
         // #[cfg(feature = "extensive_sanity_checks")]
         {
@@ -413,7 +401,6 @@ pub(super) fn multi_open_same_poly_internal<E: PairingEngine>(
     let (q_x_open, q_r_value) = UnivariateKzgPCS::<E>::open(uni_prover_param, &q_x, &r)?;
     q_x_opens.push(q_x_open);
     q_x_evals.push(q_r_value);
-    println!("q(r) {}", q_r_value);
 
     // 7. get a point `p := l(r)`
     let point: Vec<E::Fr> = uni_polys
@@ -424,7 +411,6 @@ pub(super) fn multi_open_same_poly_internal<E: PairingEngine>(
     // 8. output an opening of `w` over point `p`
     let (mle_opening, mle_eval) = open_internal(ml_prover_param, &polynomial, &point)?;
 
-    println!("mle(r) {}", mle_eval);
     // 9. output value that is `w` evaluated at `p` (which should match `q(r)`)
     if mle_eval != q_r_value {
         return Err(PCSError::InvalidProver(
@@ -504,13 +490,11 @@ pub(super) fn batch_verify_same_poly_internal<E: PairingEngine>(
     }
 
     let domain = get_uni_domain::<E::Fr>(points_len)?;
-    println!("here");
     // 1. push w, points and q_com into transcript
     let mut transcript = IOPTranscript::new(b"ml kzg");
     transcript.append_serializable_element(b"w", multi_commitment)?;
 
     for point in points {
-        // println!("points verifying {:?}", points);
         transcript.append_serializable_element(b"w", point)?;
     }
 
@@ -527,7 +511,7 @@ pub(super) fn batch_verify_same_poly_internal<E: PairingEngine>(
             value,
             &batch_proof.q_x_opens[i],
         )? {
-            // #[cfg(debug_assertion)]
+            #[cfg(debug_assertion)]
             println!("q(omega^{}) verification failed", i);
             return Ok(false);
         }
@@ -540,7 +524,7 @@ pub(super) fn batch_verify_same_poly_internal<E: PairingEngine>(
         &values[points_len],
         &batch_proof.q_x_opens[points_len],
     )? {
-        // #[cfg(debug_assertion)]
+        #[cfg(debug_assertion)]
         println!("q(r) verification failed");
         return Ok(false);
     }
@@ -558,7 +542,7 @@ pub(super) fn batch_verify_same_poly_internal<E: PairingEngine>(
         &values[points_len],
         &batch_proof.proof,
     )?;
-    // #[cfg(debug_assertion)]
+    #[cfg(debug_assertion)]
     if !res {
         println!("multilinear KZG verification failed");
     }
@@ -723,9 +707,7 @@ mod tests {
         }
 
         let evals = generate_evaluations_single_poly(poly, &points)?;
-        for e in evals.iter() {
-            println!("evals {}", e);
-        }
+
         let com = MultilinearKzgPCS::commit(&(ml_ck.clone(), uni_ck.clone()), poly)?;
         let (batch_proof, evaluations) =
             multi_open_same_poly_internal(&uni_ck, &ml_ck, poly, &com, &points)?;
@@ -808,7 +790,6 @@ mod tests {
             UnivariateUniversalParams::<E>::gen_srs_for_testing(&mut rng, 1usize << 15)?;
         let ml_params = MultilinearUniversalParams::<E>::gen_srs_for_testing(&mut rng, 15)?;
         for point_len in 3..10 {
-            println!("i {}", point_len);
             // normal polynomials
             let polys1 = Rc::new(DenseMultilinearExtension::rand(4, &mut rng));
             test_same_poly_multi_open_internal_helper(
