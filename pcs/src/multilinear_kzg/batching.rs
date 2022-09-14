@@ -102,7 +102,7 @@ pub(super) fn multi_open_internal<E: PairingEngine>(
     let merge_poly = merge_polynomials(polynomials)?;
 
     // 3. build `q(x)` which is a univariate polynomial `W circ l`
-    let q_x = compute_w_circ_l_with_prefix(&merge_poly, &uni_polys)?;
+    let q_x = compute_w_circ_l_with_prefix(&merge_poly, &uni_polys, points.len())?;
 
     // 4. commit to q(x) and sample r from transcript
     // transcript contains: w commitment, points, q(x)'s commitment
@@ -345,6 +345,7 @@ pub(super) fn multi_open_same_poly_internal<E: PairingEngine>(
     }
 
     let num_var = polynomial.num_vars();
+    println!("num_vars = {}, num_points = {}", num_var, points.len());
 
     for point in points.iter() {
         if point.len() != num_var {
@@ -367,7 +368,7 @@ pub(super) fn multi_open_same_poly_internal<E: PairingEngine>(
         uni_polys[0]
     );
     // 3. build `q(x)` which is a univariate polynomial `W circ l`
-    let q_x = compute_w_circ_l(&polynomial, &uni_polys)?;
+    let q_x = compute_w_circ_l(&polynomial, &uni_polys, points.len())?;
     println!("q(x) degree {}", q_x.degree());
     // 4. commit to q(x) and sample r from transcript
     // transcript contains: w commitment, points, q(x)'s commitment
@@ -800,7 +801,6 @@ mod tests {
     }
 
     #[test]
-    #[ignore]
     fn test_same_poly_multi_open_internal() -> Result<(), PCSError> {
         let mut rng = test_rng();
 

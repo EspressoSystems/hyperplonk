@@ -63,6 +63,7 @@ pub(crate) fn get_uni_domain<F: PrimeField>(
 pub(crate) fn compute_w_circ_l_with_prefix<F: PrimeField>(
     w: &DenseMultilinearExtension<F>,
     l: &[DensePolynomial<F>],
+    num_points: usize,
 ) -> Result<DensePolynomial<F>, PCSError> {
     let timer = start_timer!(|| "compute W \\circ l");
 
@@ -76,11 +77,7 @@ pub(crate) fn compute_w_circ_l_with_prefix<F: PrimeField>(
 
     let mut res_eval: Vec<F> = vec![];
 
-    // TODO: consider to pass this in from caller
-    // uni_degree is (product of each prefix's) + (2 * MLEs)
-    // = (l.len() - (num_vars - log(l.len())) + 2) * l[0].degree
-    // = (log(l.len()) + 2) * l[0].degree
-    let uni_degree = (log2(l.len()) as usize + 2) * (l[0].degree() + 1);
+    let uni_degree = w.num_vars * num_points;
 
     let domain = match Radix2EvaluationDomain::<F>::new(uni_degree) {
         Some(p) => p,
@@ -112,6 +109,7 @@ pub(crate) fn compute_w_circ_l_with_prefix<F: PrimeField>(
 pub(crate) fn compute_w_circ_l<F: PrimeField>(
     w: &DenseMultilinearExtension<F>,
     l: &[DensePolynomial<F>],
+    num_points: usize,
 ) -> Result<DensePolynomial<F>, PCSError> {
     let timer = start_timer!(|| "compute W \\circ l");
 
@@ -125,10 +123,7 @@ pub(crate) fn compute_w_circ_l<F: PrimeField>(
 
     let mut res_eval: Vec<F> = vec![];
 
-    // TODO: consider to pass this in from caller
-    // uni_degree is (2 * MLEs)
-    // = (l.len() - num_vars + 2) * (l[0].degree+1)
-    let uni_degree = 2 * l[0].degree() + 1;
+    let uni_degree = w.num_vars() * num_points;
 
     let domain = match Radix2EvaluationDomain::<F>::new(uni_degree) {
         Some(p) => p,
@@ -329,7 +324,7 @@ mod test {
             let l1 = DensePolynomial::from_coefficients_vec(vec![F::from(4u64), -F::from(2u64)]);
 
             // res = -6t^2 - 4t + 32
-            let res = compute_w_circ_l(&w, [l0, l1].as_ref())?;
+            let res = compute_w_circ_l(&w, [l0, l1].as_ref(), 4)?;
             let res_rec = DensePolynomial::from_coefficients_vec(vec![
                 F::from(32u64),
                 -F::from(4u64),
@@ -366,7 +361,7 @@ mod test {
             let l0 = DensePolynomial::from_coefficients_vec(vec![F::from(2u64), F::one()]);
             let l1 = DensePolynomial::from_coefficients_vec(vec![-F::from(4u64), F::from(3u64)]);
             let l2 = DensePolynomial::from_coefficients_vec(vec![F::from(6u64), -F::from(5u64)]);
-            let res = compute_w_circ_l(&w, [l0, l1, l2].as_ref())?;
+            let res = compute_w_circ_l(&w, [l0, l1, l2].as_ref(), 8)?;
 
             // res = -15t^3 - 23t^2 + 130t - 76
             let res_rec = DensePolynomial::from_coefficients_vec(vec![
@@ -403,7 +398,7 @@ mod test {
             let l1 = DensePolynomial::from_coefficients_vec(vec![F::from(4u64), -F::from(2u64)]);
 
             // res = -6t^2 - 4t + 32
-            let res = compute_w_circ_l_with_prefix(&w, [l0, l1].as_ref())?;
+            let res = compute_w_circ_l_with_prefix(&w, [l0, l1].as_ref(), 4)?;
             let res_rec = DensePolynomial::from_coefficients_vec(vec![
                 F::from(32u64),
                 -F::from(4u64),
@@ -440,7 +435,7 @@ mod test {
             let l0 = DensePolynomial::from_coefficients_vec(vec![F::from(2u64), F::one()]);
             let l1 = DensePolynomial::from_coefficients_vec(vec![-F::from(4u64), F::from(3u64)]);
             let l2 = DensePolynomial::from_coefficients_vec(vec![F::from(6u64), -F::from(5u64)]);
-            let res = compute_w_circ_l_with_prefix(&w, [l0, l1, l2].as_ref())?;
+            let res = compute_w_circ_l_with_prefix(&w, [l0, l1, l2].as_ref(), 8)?;
 
             // res = -15t^3 - 23t^2 + 130t - 76
             let res_rec = DensePolynomial::from_coefficients_vec(vec![
@@ -872,7 +867,7 @@ mod test {
             // x^3 - 7/2*x^2 - 7/2*x + 16
             //
             // q(x) = x^3 - 7/2*x^2 - 7/2*x + 16
-            let q_x = compute_w_circ_l_with_prefix(&w, &l)?;
+            let q_x = compute_w_circ_l_with_prefix(&w, &l, 2)?;
 
             let point: Vec<Fr> = l.iter().rev().map(|poly| poly.evaluate(&r)).collect();
 
@@ -920,7 +915,7 @@ mod test {
             //     + (l2*l3+l2)*(1-l0)*l1
             //     + (l2+l3)*l0*(1-l1)
             // q_x(42) = 42675783400755005965526147011103024780845819057955866345013183657072368533932
-            let q_x = compute_w_circ_l_with_prefix(&w, &l)?;
+            let q_x = compute_w_circ_l_with_prefix(&w, &l, 3)?;
 
             let point: Vec<Fr> = vec![
                 l[3].evaluate(&r),
