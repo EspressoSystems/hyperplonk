@@ -1,6 +1,6 @@
 //! Main module for the HyperPlonk SNARK.
 
-use crate::utils::{eval_f, prover_sanity_check};
+use crate::utils::{eval_f, prover_sanity_check, PcsAccumulator};
 // use crate::utils::PcsAccumulator;
 use arithmetic::VPAuxInfo;
 use ark_ec::PairingEngine;
@@ -211,10 +211,10 @@ where
         let _supported_uni_degree = compute_qx_degree(num_vars, 1 << log_num_witness_polys);
         // online public input of length 2^\ell
         let ell = log2(pk.params.num_pub_input) as usize;
-        // // Accumulator for w_merged and its points
-        // let mut w_merged_pcs_acc = PcsAccumulator::<E, PCS>::new();
-        // // Accumulator for prod(x) and its points
-        // let mut prod_pcs_acc = PcsAccumulator::<E, PCS>::new();
+        // Accumulator for w_merged and its points
+        let mut w_merged_pcs_acc = PcsAccumulator::<E, PCS>::new();
+        // Accumulator for prod(x) and its points
+        let mut prod_pcs_acc = PcsAccumulator::<E, PCS>::new();
 
         let witness_polys: Vec<Rc<DenseMultilinearExtension<E::Fr>>> = witnesses
             .iter()
@@ -236,7 +236,7 @@ where
             )));
         }
         let w_merged_com = PCS::commit(&pk.pcs_param, &w_merged)?;
-        // w_merged_pcs_acc.init_poly(w_merged.clone(), w_merged_com.clone())?;
+        w_merged_pcs_acc.init_poly(w_merged.clone(), w_merged_com.clone())?;
         transcript.append_serializable_element(b"w", &w_merged_com)?;
         end_timer!(step);
         // =======================================================================
@@ -275,8 +275,7 @@ where
             &pk.permutation_oracle,
             &mut transcript,
         )?;
-        // prod_pcs_acc.init_poly(prod_x.clone(),
-        // perm_check_proof.prod_x_comm.clone())?;
+        prod_pcs_acc.init_poly(prod_x.clone(), perm_check_proof.prod_x_comm.clone())?;
 
         // open prod(0,x), prod(1, x), prod(x, 0), prod(x, 1) at zero_check.point
         // prod(0, x)
@@ -286,7 +285,7 @@ where
         ]
         .concat();
         let (prod_0_x_opening, prod_0_x_eval) = PCS::open(&pk.pcs_param, &prod_x, &tmp_point1)?;
-        // prod_pcs_acc.insert_point(&tmp_point1);
+        prod_pcs_acc.insert_point(&tmp_point1);
         #[cfg(feature = "extensive_sanity_checks")]
         {
             // sanity check
@@ -308,7 +307,7 @@ where
         ]
         .concat();
         let (prod_1_x_opening, prod_1_x_eval) = PCS::open(&pk.pcs_param, &prod_x, &tmp_point2)?;
-        // prod_pcs_acc.insert_point(&tmp_point2);
+        prod_pcs_acc.insert_point(&tmp_point2);
         #[cfg(feature = "extensive_sanity_checks")]
         {
             // sanity check
@@ -330,7 +329,7 @@ where
         ]
         .concat();
         let (prod_x_0_opening, prod_x_0_eval) = PCS::open(&pk.pcs_param, &prod_x, &tmp_point3)?;
-        // prod_pcs_acc.insert_point(&tmp_point3);
+        prod_pcs_acc.insert_point(&tmp_point3);
         #[cfg(feature = "extensive_sanity_checks")]
         {
             // sanity check
@@ -353,7 +352,7 @@ where
         ]
         .concat();
         let (prod_x_1_opening, prod_x_1_eval) = PCS::open(&pk.pcs_param, &prod_x, &tmp_point4)?;
-        // prod_pcs_acc.insert_point(&tmp_point4);
+        prod_pcs_acc.insert_point(&tmp_point4);
         #[cfg(feature = "extensive_sanity_checks")]
         {
             // sanity check
@@ -371,7 +370,7 @@ where
         // prod(1, ..., 1, 0)
         let tmp_point5 = [vec![E::Fr::zero()], vec![E::Fr::one(); merged_nv]].concat();
         let (prod_1_0_opening, prod_1_0_eval) = PCS::open(&pk.pcs_param, &prod_x, &tmp_point5)?;
-        // prod_pcs_acc.insert_point(&tmp_point);
+        // prod_pcs_acc.insert_point(&tmp_point5);
         #[cfg(feature = "extensive_sanity_checks")]
         {
             // sanity check
@@ -410,7 +409,7 @@ where
             &w_merged,
             &perm_check_proof.zero_check_proof.point,
         )?;
-        // w_merged_pcs_acc.insert_point(&perm_check_proof.zero_check_proof.point);
+        w_merged_pcs_acc.insert_point(&perm_check_proof.zero_check_proof.point);
         #[cfg(feature = "extensive_sanity_checks")]
         {
             // sanity checks
@@ -533,11 +532,10 @@ where
         // // =======================================================================
         // // 3.3 deferred batch opening
         // // =======================================================================
-        // let (w_merged_batch_opening, w_merged_batch_evals) =
-        //     w_merged_pcs_acc.batch_open(&pk.pcs_param)?;
+        let (w_merged_batch_opening, w_merged_batch_evals) =
+            w_merged_pcs_acc.batch_open(&pk.pcs_param)?;
 
-        // let (prod_batch_openings, prod_batch_evals) =
-        // prod_pcs_acc.batch_open(&pk.pcs_param)?;
+        let (prod_batch_openings, prod_batch_evals) = prod_pcs_acc.batch_open(&pk.pcs_param)?;
 
         // println!("------- {:?}", prod_batch_evals);
         // println!(
@@ -551,14 +549,14 @@ where
             // PCS components: common
             // =======================================================================
             w_merged_com,
-            // w_merged_batch_opening,
-            // w_merged_batch_evals,
+            w_merged_batch_opening,
+            w_merged_batch_evals,
             // =======================================================================
             // PCS components: permutation check
             // =======================================================================
             // We do not validate prod(x), this is checked by subclaim
             prod_evals: vec![prod_0_x_eval, prod_1_x_eval, prod_x_0_eval, prod_x_1_eval],
-            // prod_batch_evals,
+            prod_batch_evals,
             prod_openings: vec![
                 prod_0_x_opening,
                 prod_1_x_opening,
@@ -566,7 +564,7 @@ where
                 prod_x_1_opening,
                 prod_1_0_opening,
             ],
-            // prod_batch_openings,
+            prod_batch_openings,
             witness_perm_check_opening,
             witness_perm_check_eval,
             perm_oracle_opening: s_perm_opening,
