@@ -11,7 +11,12 @@ pub(crate) mod srs;
 pub(crate) mod util;
 
 use self::{
-    batching::{batch_verify_same_poly_internal, multi_open_same_poly_internal},
+    batching::{
+        // batch_verify_internal, 
+        batch_verify_same_poly_internal, 
+        // multi_open_internal,
+        multi_open_same_poly_internal,
+    },
     util::merge_polynomials,
 };
 use crate::{
@@ -19,10 +24,12 @@ use crate::{
         Commitment, UnivariateProverParam, UnivariateUniversalParams, UnivariateVerifierParam,
     },
     univariate_kzg::UnivariateKzgProof,
-    util::multi_scalar_mul,
     PCSError, PolynomialCommitmentScheme, StructuredReferenceString,
 };
-use ark_ec::{msm::FixedBaseMSM, AffineCurve, PairingEngine, ProjectiveCurve};
+use ark_ec::{
+    msm::{FixedBaseMSM, VariableBaseMSM},
+    AffineCurve, PairingEngine, ProjectiveCurve,
+};
 use ark_ff::PrimeField;
 use ark_poly::{DenseMultilinearExtension, MultilinearExtension};
 use ark_serialize::{CanonicalDeserialize, CanonicalSerialize, Read, SerializationError, Write};
@@ -38,7 +45,7 @@ use ark_std::{
     vec::Vec,
     One, Zero,
 };
-use batching::{batch_verify_internal, multi_open_internal};
+// use batching::{batch_verify_internal, multi_open_internal};
 use srs::{MultilinearProverParam, MultilinearUniversalParams, MultilinearVerifierParam};
 
 /// KZG Polynomial Commitment Scheme on multilinear polynomials.
@@ -146,7 +153,7 @@ impl<E: PairingEngine> PolynomialCommitmentScheme<E> for MultilinearKzgPCS<E> {
             .into_iter()
             .map(|x| x.into_repr())
             .collect();
-        let commitment = multi_scalar_mul(
+        let commitment = VariableBaseMSM::multi_scalar_mul(
             &prover_param.0.powers_of_g[ignored].evals,
             scalars.as_slice(),
         )
@@ -174,8 +181,11 @@ impl<E: PairingEngine> PolynomialCommitmentScheme<E> for MultilinearKzgPCS<E> {
             .map(|x| x.into_repr())
             .collect();
 
-        let commitment = multi_scalar_mul(&prover_param.0.powers_of_g[0].evals, scalars.as_slice())
-            .into_affine();
+        let commitment = VariableBaseMSM::multi_scalar_mul(
+            &prover_param.0.powers_of_g[0].evals,
+            scalars.as_slice(),
+        )
+        .into_affine();
 
         end_timer!(commit_timer);
         Ok(Commitment(commitment))
@@ -235,13 +245,14 @@ impl<E: PairingEngine> PolynomialCommitmentScheme<E> for MultilinearKzgPCS<E> {
         polynomials: &[Self::Polynomial],
         points: &[Self::Point],
     ) -> Result<(Self::BatchProof, Vec<Self::Evaluation>), PCSError> {
-        multi_open_internal::<E>(
-            &prover_param.borrow().1,
-            &prover_param.borrow().0,
-            polynomials,
-            multi_commitment,
-            points,
-        )
+        unimplemented!()
+        // multi_open_internal::<E>(
+        //     &prover_param.borrow().1,
+        //     &prover_param.borrow().0,
+        //     polynomials,
+        //     multi_commitment,
+        //     points,
+        // )
     }
 
     /// Input a multilinear extension, and a number of points, and
@@ -296,14 +307,15 @@ impl<E: PairingEngine> PolynomialCommitmentScheme<E> for MultilinearKzgPCS<E> {
         batch_proof: &Self::BatchProof,
         _rng: &mut R,
     ) -> Result<bool, PCSError> {
-        batch_verify_internal(
-            &verifier_param.1,
-            &verifier_param.0,
-            multi_commitment,
-            points,
-            values,
-            batch_proof,
-        )
+        unimplemented!()
+        // batch_verify_internal(
+        //     &verifier_param.1,
+        //     &verifier_param.0,
+        //     multi_commitment,
+        //     points,
+        //     values,
+        //     batch_proof,
+        // )
     }
 
     /// Verifies that `value_i` is the evaluation at `x_i` of the polynomial
@@ -395,7 +407,7 @@ fn open_internal<E: PairingEngine>(
         r[k - 1] = cur_r;
 
         // this is a MSM over G1 and is likely to be the bottleneck
-        proofs.push(multi_scalar_mul(&gi.evals, &scalars).into_affine());
+        proofs.push(VariableBaseMSM::multi_scalar_mul(&gi.evals, &scalars).into_affine());
         end_timer!(ith_round);
     }
     let eval = polynomial.evaluate(point).ok_or_else(|| {
@@ -550,16 +562,14 @@ mod tests {
         let com = MultilinearKzgPCS::commit(&ck, &poly)?;
         let (proof, mut values) =
             MultilinearKzgPCS::multi_open_single_poly(&ck, &com, &poly, &points)?;
-        for (a,b) in values.iter().zip(points.iter()) {
-            let p = poly.evaluate(b).unwrap();
+        for (a, b) in values.iter().zip(points.iter()) {
+            // let mut b  = b.clone();
+            // b.reverse();
+            let p = poly.evaluate(&b).unwrap();
             println!("a {}", a);
             println!("b {}", p);
-            assert_eq!(
-                *a,
-                p
-            );
+            assert_eq!(*a, p);
         }
-
 
         assert!(MultilinearKzgPCS::batch_verify_single_poly(
             &vk, &com, &points, &values, &proof, rng
@@ -589,57 +599,57 @@ mod tests {
         Ok(())
     }
 
-    fn test_multi_open_helper<R: RngCore + CryptoRng>(
-        params: &(MultilinearUniversalParams<E>, UnivariateUniversalParams<E>),
-        polys: &[Rc<DenseMultilinearExtension<Fr>>],
-        num_open: usize,
-        rng: &mut R,
-    ) -> Result<(), PCSError> {
-        let nv = polys[0].num_vars();
-        assert_ne!(nv, 0);
-        let merged_nv = get_batched_nv(nv, polys.len());
-        let qx_degree = compute_qx_degree(merged_nv, polys.len());
-        let padded_qx_degree = 1usize << log2(qx_degree);
+    // fn test_multi_open_helper<R: RngCore + CryptoRng>(
+    //     params: &(MultilinearUniversalParams<E>, UnivariateUniversalParams<E>),
+    //     polys: &[Rc<DenseMultilinearExtension<Fr>>],
+    //     num_open: usize,
+    //     rng: &mut R,
+    // ) -> Result<(), PCSError> {
+    //     let nv = polys[0].num_vars();
+    //     assert_ne!(nv, 0);
+    //     let merged_nv = get_batched_nv(nv, polys.len());
+    //     let qx_degree = compute_qx_degree(merged_nv, polys.len());
+    //     let padded_qx_degree = 1usize << log2(qx_degree);
 
-        let (ck, vk) = MultilinearKzgPCS::trim(params, padded_qx_degree, Some(merged_nv))?;
-        let mut points = vec![];
-        for _ in 0..num_open {
-            let point: Vec<_> = (0..nv).map(|_| Fr::rand(rng)).collect();
-            points.push(point)
-        }
-        let com = MultilinearKzgPCS::multi_commit(&ck, &polys)?;
-        let (proof, mut values) = MultilinearKzgPCS::multi_open(&ck, &com, polys, &points)?;
+    //     let (ck, vk) = MultilinearKzgPCS::trim(params, padded_qx_degree, Some(merged_nv))?;
+    //     let mut points = vec![];
+    //     for _ in 0..num_open {
+    //         let point: Vec<_> = (0..nv).map(|_| Fr::rand(rng)).collect();
+    //         points.push(point)
+    //     }
+    //     let com = MultilinearKzgPCS::multi_commit(&ck, &polys)?;
+    //     let (proof, mut values) = MultilinearKzgPCS::multi_open(&ck, &com, polys, &points)?;
 
-        assert!(MultilinearKzgPCS::batch_verify(
-            &vk, &com, &points, &values, &proof, rng
-        )?);
+    //     assert!(MultilinearKzgPCS::batch_verify(
+    //         &vk, &com, &points, &values, &proof, rng
+    //     )?);
 
-        values[0] = Fr::rand(rng);
-        assert!(!MultilinearKzgPCS::batch_verify_single_poly(
-            &vk, &com, &points, &values, &proof, rng
-        )?);
+    //     values[0] = Fr::rand(rng);
+    //     assert!(!MultilinearKzgPCS::batch_verify_single_poly(
+    //         &vk, &com, &points, &values, &proof, rng
+    //     )?);
 
-        Ok(())
-    }
+    //     Ok(())
+    // }
 
-    #[test]
-    fn test_multi_open() -> Result<(), PCSError> {
-        let mut rng = test_rng();
+    // #[test]
+    // fn test_multi_open() -> Result<(), PCSError> {
+    //     let mut rng = test_rng();
 
-        let params = MultilinearKzgPCS::<E>::gen_srs_for_testing(&mut rng, 15)?;
+    //     let params = MultilinearKzgPCS::<E>::gen_srs_for_testing(&mut rng, 15)?;
 
-        // normal polynomials
-        for nv in 1..10 {
-            for num_open in 1..4 {
-                let mut polys = vec![];
-                for _ in 0..num_open {
-                    let poly = Rc::new(DenseMultilinearExtension::rand(nv, &mut rng));
-                    polys.push(poly)
-                }
+    //     // normal polynomials
+    //     for nv in 1..10 {
+    //         for num_open in 1..4 {
+    //             let mut polys = vec![];
+    //             for _ in 0..num_open {
+    //                 let poly = Rc::new(DenseMultilinearExtension::rand(nv, &mut rng));
+    //                 polys.push(poly)
+    //             }
 
-                test_multi_open_helper(&params, &polys, num_open, &mut rng)?;
-            }
-        }
-        Ok(())
-    }
+    //             test_multi_open_helper(&params, &polys, num_open, &mut rng)?;
+    //         }
+    //     }
+    //     Ok(())
+    // }
 }

@@ -17,6 +17,5 @@ pub use crate::{
         srs::{UnivariateProverParam, UnivariateUniversalParams, UnivariateVerifierParam},
         UnivariateKzgBatchProof, UnivariateKzgPCS, UnivariateKzgProof,
     },
-    util::multi_scalar_mul,
     PolynomialCommitmentScheme, StructuredReferenceString,
 };
