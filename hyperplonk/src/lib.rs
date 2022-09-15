@@ -7,7 +7,9 @@ use ark_ec::PairingEngine;
 use ark_poly::{DenseMultilinearExtension, MultilinearExtension};
 use ark_std::{end_timer, log2, start_timer, test_rng, One, Zero};
 use errors::HyperPlonkErrors;
-use pcs::prelude::{compute_qx_degree, merge_polynomials, PCSError, PolynomialCommitmentScheme};
+use pcs::prelude::{compute_qx_degree, merge_polynomials, 
+    // PCSError, 
+    PolynomialCommitmentScheme};
 use poly_iop::{
     prelude::{identity_permutation_mle, PermutationCheck, ZeroCheck},
     PolyIOP,
@@ -137,22 +139,26 @@ where
             .map(|s| Rc::new(DenseMultilinearExtension::from(s)))
             .collect();
 
-        let selector_com = selector_oracles
-            .iter()
-            .map(|poly| PCS::commit(&pcs_prover_param, poly))
-            .collect::<Result<Vec<PCS::Commitment>, PCSError>>()?;
+        let selector_merged = merge_polynomials(&selector_oracles)?;
+        let selector_oracle_batch_commit = PCS::commit(&pcs_prover_param, &selector_merged)?;
+
+        // let selector_com = selector_oracles
+        //     .iter()
+        //     .map(|poly| PCS::commit(&pcs_prover_param, poly))
+        //     .collect::<Result<Vec<PCS::Commitment>, PCSError>>()?;
 
         Ok((
             Self::ProvingKey {
                 params: index.params.clone(),
                 permutation_oracle,
                 selector_oracles,
+                selector_oracle_batch_commit: selector_oracle_batch_commit.clone(),
                 pcs_param: pcs_prover_param,
             },
             Self::VerifyingKey {
                 params: index.params.clone(),
                 pcs_param: pcs_verifier_param,
-                selector_com,
+                selector_com: selector_oracle_batch_commit,
                 perm_com,
             },
         ))
@@ -205,14 +211,28 @@ where
         // witness assignment of length 2^n
         let num_vars = pk.params.num_variables();
         let log_num_witness_polys = log2(pk.params.num_witness_columns()) as usize;
+        let log_num_selector_polys = log2(pk.params.num_selector_columns()) as usize;
         // number of variables in merged polynomial for Multilinear-KZG
         let merged_nv = num_vars + log_num_witness_polys;
         // online public input of length 2^\ell
         let ell = log2(pk.params.num_pub_input) as usize;
+
+        // We use accumulators to store the polynomials and their eval points.
+        // They are batch opened at a later stage.
+        // This includes
+        // - witnesses
+        // - prod(x)
+        // - selectors
+        // Note that permutation polynomial and public input polynomial have
+        // only one opening each, so we do not need to batch open it.
+        //
         // Accumulator for w_merged and its points
         let mut w_merged_pcs_acc = PcsAccumulator::<E, PCS>::new();
         // Accumulator for prod(x) and its points
         let mut prod_pcs_acc = PcsAccumulator::<E, PCS>::new();
+        // TODO: selectors are not merged yet
+        // Accumulator for prod(x) and its points
+        let mut selector_pcs_acc = PcsAccumulator::<E, PCS>::new();
 
         let witness_polys: Vec<Rc<DenseMultilinearExtension<E::Fr>>> = witnesses
             .iter()
@@ -315,69 +335,13 @@ where
         let step = start_timer!(|| "opening and evaluations");
 
         // 4.1 permutation check
-        let mut witness_zero_check_evals = vec![];
-        let mut witness_zero_check_openings = vec![];
-        // TODO: parallelization
-        // TODO: Batch opening
-        // open permutation check proof
-        let (witness_perm_check_opening, witness_perm_check_eval) =
-            PCS::open(&pk.pcs_param, &w_merged, &perm_check_point)?;
         w_merged_pcs_acc.insert_point(&perm_check_point);
-        let mut acc = PcsAccumulator::<E, PCS>::new();
-        acc.init_poly(w_merged.clone(), w_merged_com.clone())?;
-        acc.insert_point(&perm_check_point);
-        let (w_merged_batch_opening, w_merged_batch_evals) =
-        acc.batch_open(&pk.pcs_param)?;
 
-        println!("w_merged(perm_check_point) {}", witness_perm_check_eval);
-
-        println!("w_merged(perm_check_point) {}", w_merged_batch_evals[0]);
-        #[cfg(feature = "extensive_sanity_checks")]
-        {
-            // sanity checks
-            let eval = w_merged
-                .evaluate(&perm_check_proof.zero_check_proof.point)
-                .ok_or_else(|| {
-                    HyperPlonkErrors::InvalidParameters(
-                        "witness_perm_check evaluation dimension does not match".to_string(),
-                    )
-                })?;
-            if eval != witness_perm_check_eval {
-                return Err(HyperPlonkErrors::InvalidProver(
-                    "witness_perm_check evaluation is different from PCS opening".to_string(),
-                ));
-            }
-        }
         // 4.2 open zero check proof
-        // TODO: batch opening
-        for (i, wire_poly) in witness_polys.iter().enumerate() {
-        // for i  in 0..witness_polys.len() {
+        for i in 0..witness_polys.len() {
             let tmp_point = gen_eval_point(i, log_num_witness_polys, &zero_check_proof.point);
-            // Open zero check proof
-            let (zero_proof, zero_eval) = PCS::open(&pk.pcs_param, &w_merged, &tmp_point)?;
+            // Deferred opening zero check proof
             w_merged_pcs_acc.insert_point(&tmp_point);
-
-            println!(
-                "w_merged equal: {} {}",
-                w_merged.evaluate(&tmp_point).unwrap(),
-                wire_poly.evaluate(&zero_check_proof.point).unwrap()
-            );
-
-            #[cfg(feature = "extensive_sanity_checks")]
-            {
-                let eval = wire_poly.evaluate(&zero_check_proof.point).ok_or_else(|| {
-                    HyperPlonkErrors::InvalidParameters(
-                        "witness_zero_check evaluation dimension does not match".to_string(),
-                    )
-                })?;
-                if eval != zero_eval {
-                    return Err(HyperPlonkErrors::InvalidProver(
-                        "witness_zero_check evaluation is different from PCS opening".to_string(),
-                    ));
-                }
-            }
-            witness_zero_check_evals.push(zero_eval);
-            witness_zero_check_openings.push(zero_proof);
         }
 
         // Open permutation polynomial at perm_check_point
@@ -405,13 +369,29 @@ where
         let mut selector_oracle_openings = vec![];
         let mut selector_oracle_evals = vec![];
 
-        // TODO: parallelization
-        for selector_poly in pk.selector_oracles.iter() {
+        let selector_merged = merge_polynomials(&pk.selector_oracles)?;
+        selector_pcs_acc.init_poly(selector_merged, pk.selector_oracle_batch_commit.clone())?;
+
+        println!("here");
+        for i in 0..pk.selector_oracles.len() {
+            let tmp_point = gen_eval_point(i, log_num_selector_polys, &zero_check_proof.point);
+            // Deferred opening zero check proof
+            selector_pcs_acc.insert_point(&tmp_point);
+        }
+        let (selector_batch_opening, selector_batch_evals) =
+            selector_pcs_acc.batch_open(&pk.pcs_param)?;
+        println!("here");
+
+        for (i, selector_poly) in pk.selector_oracles.iter().enumerate() {
             // Open zero check proof
             // during verification, use this eval against subclaim
             let (zero_proof, zero_eval) =
                 PCS::open(&pk.pcs_param, selector_poly, &zero_check_proof.point)?;
 
+
+            assert_eq!(zero_eval, selector_batch_evals[i]);
+            // println!("s{}", zero_eval);
+            // println!("s{}", selector_zero_check_batch_eval[i]);
             #[cfg(feature = "extensive_sanity_checks")]
             {
                 let eval = selector_poly
@@ -466,15 +446,6 @@ where
         let (prod_batch_openings, prod_batch_evals) = prod_pcs_acc.batch_open(&pk.pcs_param)?;
 
         end_timer!(start);
-        println!();
-        for (i, w) in w_merged_batch_evals.iter().enumerate() {
-            println!("batch {} {}", i, w)
-        }
-        for (i, w) in witness_zero_check_evals.iter().enumerate() {
-            println!("zero check {} {}", i, w)
-        }
-        println!("witness_perm_check_eval {}", witness_perm_check_eval);
-        println!();
 
         Ok(HyperPlonkProof {
             // =======================================================================
@@ -500,7 +471,9 @@ where
             // witness_zero_check_evals,
             selector_oracle_openings,
             selector_oracle_evals,
-            // =======================================================================
+            selector_batch_opening,
+            selector_batch_evals,
+                        // =======================================================================
             // PCS components: public inputs
             // =======================================================================
             pi_eval,
@@ -713,18 +686,20 @@ where
         let mut points = vec![perm_check_point.clone()];
 
         // let tmp_point = gen_eval_point(i, log_num_witness_polys, zero_check_point);
-        for i in 0.. proof.w_merged_batch_evals.len()-2{
-            points.push(
-                gen_eval_point(i, log_num_witness_polys, zero_check_point)
-            )
+        for i in 0..proof.w_merged_batch_evals.len() - 2 {
+            points.push(gen_eval_point(i, log_num_witness_polys, zero_check_point))
         }
-        if !PCS::batch_verify_single_poly(&vk.pcs_param,  &proof.w_merged_com, 
+        if !PCS::batch_verify_single_poly(
+            &vk.pcs_param,
+            &proof.w_merged_com,
             &points,
             &proof.w_merged_batch_evals,
-             &proof.w_merged_batch_opening, &mut rng)? {
+            &proof.w_merged_batch_opening,
+            &mut rng,
+        )? {
             return Err(HyperPlonkErrors::InvalidProof(
-                        "witness for permutation check pcs verification failed".to_string(),
-                    ));
+                "witness for permutation check pcs verification failed".to_string(),
+            ));
         }
 
         // // witness for permutation check
@@ -779,43 +754,30 @@ where
         // 3.2 check zero check evaluations
         // =======================================================================
         // witness for zero check
-       
-       
-        // TODO: batch verification
-        // for (i, (opening, eval)) in proof
-        //     .witness_zero_check_openings
-        //     .iter()
-        //     .zip(proof.witness_zero_check_evals.iter())
-        //     .enumerate()
-        // {
-        //     let tmp_point = gen_eval_point(i, log_num_witness_polys, zero_check_point);
 
-        //     if !PCS::verify(
-        //         &vk.pcs_param,
-        //         &proof.w_merged_com,
-        //         &tmp_point,
-        //         eval,
-        //         opening,
-        //     )? {
-        //         return Err(HyperPlonkErrors::InvalidProof(
-        //             "witness for zero_check pcs verification failed".to_string(),
-        //         ));
-        //     }
-        // }
+        let log_num_selector_polys = log2(vk.params.num_selector_columns()) as usize;
+        let mut points = vec![];
+        for i in 0..vk.params.num_selector_columns() {
+            let tmp_point = gen_eval_point(i, log_num_selector_polys, &proof.zero_check_proof.point);
+            // Deferred opening zero check proof
+            points.push(tmp_point);
+        }
+
 
         // selector for zero check
-        for (commitment, (opening, eval)) in vk.selector_com.iter().zip(
-            proof
-                .selector_oracle_openings
-                .iter()
-                .zip(proof.selector_oracle_evals.iter()),
-        ) {
-            if !PCS::verify(&vk.pcs_param, commitment, zero_check_point, eval, opening)? {
-                return Err(HyperPlonkErrors::InvalidProof(
-                    "selector pcs verification failed".to_string(),
-                ));
-            }
+        if !PCS::batch_verify_single_poly(
+            &vk.pcs_param,
+            &vk.selector_com,
+            &points,
+            &proof.selector_batch_evals,
+            &proof.selector_batch_opening,
+            &mut rng,
+        )? {
+            return Err(HyperPlonkErrors::InvalidProof(
+                "selector pcs verification failed".to_string(),
+            ));
         }
+
 
         // =======================================================================
         // 3.3 public input consistency checks

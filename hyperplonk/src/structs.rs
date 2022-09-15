@@ -62,6 +62,15 @@ where
     pub selector_oracle_openings: Vec<PCS::Proof>,
     /// Evaluates of selectors on zero check point
     pub selector_oracle_evals: Vec<E::Fr>,
+
+        /// prod(x)'s evaluations
+    /// sequence: prod(0,x), prod(1, x), prod(x, 0), prod(x, 1), prod(1, ..., 1,
+    /// 0)
+    pub selector_batch_evals: Vec<E::Fr>,
+    /// prod(x)'s openings
+    /// sequence: prod(0,x), prod(1, x), prod(x, 0), prod(x, 1), prod(1, ..., 1,
+    /// 0)
+    pub selector_batch_opening: PCS::BatchProof,
     // =======================================================================
     // PCS components: public inputs
     // =======================================================================
@@ -153,6 +162,8 @@ pub struct HyperPlonkProvingKey<E: PairingEngine, PCS: PolynomialCommitmentSchem
     /// the preprocessed selector polynomials
     // TODO: merge the list into a single MLE
     pub selector_oracles: Vec<Rc<DenseMultilinearExtension<E::Fr>>>,
+    /// commitment to the preprocessed selector polynomials
+    pub selector_oracle_batch_commit: PCS::Commitment,
     /// the parameters for PCS commitment
     pub pcs_param: PCS::ProverParam,
 }
@@ -168,7 +179,7 @@ pub struct HyperPlonkVerifyingKey<E: PairingEngine, PCS: PolynomialCommitmentSch
     pub pcs_param: PCS::VerifierParam,
     /// Selector's commitment
     // TODO: replace me with a batch commitment
-    pub selector_com: Vec<PCS::Commitment>,
+    pub selector_com: PCS::Commitment,
     /// Permutation oracle's commitment
     pub perm_com: PCS::Commitment,
 }
