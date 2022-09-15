@@ -11,12 +11,7 @@ pub(crate) mod srs;
 pub(crate) mod util;
 
 use self::{
-    batching::{
-        // batch_verify_internal, 
-        batch_verify_same_poly_internal, 
-        // multi_open_internal,
-        multi_open_same_poly_internal,
-    },
+    batching::{batch_verify_same_poly_internal, multi_open_same_poly_internal},
     util::merge_polynomials,
 };
 use crate::{
@@ -600,9 +595,9 @@ mod tests {
     }
 
     // fn test_multi_open_helper<R: RngCore + CryptoRng>(
-    //     params: &(MultilinearUniversalParams<E>, UnivariateUniversalParams<E>),
-    //     polys: &[Rc<DenseMultilinearExtension<Fr>>],
-    //     num_open: usize,
+    //     params: &(MultilinearUniversalParams<E>,
+    // UnivariateUniversalParams<E>),     polys:
+    // &[Rc<DenseMultilinearExtension<Fr>>],     num_open: usize,
     //     rng: &mut R,
     // ) -> Result<(), PCSError> {
     //     let nv = polys[0].num_vars();
@@ -611,14 +606,15 @@ mod tests {
     //     let qx_degree = compute_qx_degree(merged_nv, polys.len());
     //     let padded_qx_degree = 1usize << log2(qx_degree);
 
-    //     let (ck, vk) = MultilinearKzgPCS::trim(params, padded_qx_degree, Some(merged_nv))?;
-    //     let mut points = vec![];
+    //     let (ck, vk) = MultilinearKzgPCS::trim(params, padded_qx_degree,
+    // Some(merged_nv))?;     let mut points = vec![];
     //     for _ in 0..num_open {
     //         let point: Vec<_> = (0..nv).map(|_| Fr::rand(rng)).collect();
     //         points.push(point)
     //     }
     //     let com = MultilinearKzgPCS::multi_commit(&ck, &polys)?;
-    //     let (proof, mut values) = MultilinearKzgPCS::multi_open(&ck, &com, polys, &points)?;
+    //     let (proof, mut values) = MultilinearKzgPCS::multi_open(&ck, &com,
+    // polys, &points)?;
 
     //     assert!(MultilinearKzgPCS::batch_verify(
     //         &vk, &com, &points, &values, &proof, rng
@@ -636,15 +632,16 @@ mod tests {
     // fn test_multi_open() -> Result<(), PCSError> {
     //     let mut rng = test_rng();
 
-    //     let params = MultilinearKzgPCS::<E>::gen_srs_for_testing(&mut rng, 15)?;
+    //     let params = MultilinearKzgPCS::<E>::gen_srs_for_testing(&mut rng,
+    // 15)?;
 
     //     // normal polynomials
     //     for nv in 1..10 {
     //         for num_open in 1..4 {
     //             let mut polys = vec![];
     //             for _ in 0..num_open {
-    //                 let poly = Rc::new(DenseMultilinearExtension::rand(nv, &mut rng));
-    //                 polys.push(poly)
+    //                 let poly = Rc::new(DenseMultilinearExtension::rand(nv,
+    // &mut rng));                 polys.push(poly)
     //             }
 
     //             test_multi_open_helper(&params, &polys, num_open, &mut rng)?;

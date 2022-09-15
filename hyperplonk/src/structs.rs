@@ -26,8 +26,8 @@ where
     // =======================================================================
     /// PCS commit for witnesses
     pub w_merged_com: PCS::Commitment,
-    // pub w_merged_batch_opening: PCS::BatchProof,
-    // pub w_merged_batch_evals: Vec<E::Fr>,
+    pub w_merged_batch_opening: PCS::BatchProof,
+    pub w_merged_batch_evals: Vec<E::Fr>,
     // =======================================================================
     // PCS components: permutation check
     // =======================================================================
@@ -40,10 +40,10 @@ where
     /// 0)
     pub prod_batch_openings: PCS::BatchProof,
     /// PCS openings for witness on permutation check point
-    // TODO: replace me with a batch opening
-    pub witness_perm_check_opening: PCS::Proof,
-    /// Evaluates of witnesses on permutation check point
-    pub witness_perm_check_eval: E::Fr,
+    // // TODO: replace me with a batch opening
+    // pub witness_perm_check_opening: PCS::Proof,
+    // /// Evaluates of witnesses on permutation check point
+    // pub witness_perm_check_eval: E::Fr,
     /// PCS openings for selectors on permutation check point
     // TODO: replace me with a batch opening
     pub perm_oracle_opening: PCS::Proof,
@@ -52,11 +52,11 @@ where
     // =======================================================================
     // PCS components: zero check
     // =======================================================================
-    /// PCS openings for witness on zero check point
-    // TODO: replace me with a batch opening
-    pub witness_zero_check_openings: Vec<PCS::Proof>,
-    /// Evaluates of witnesses on zero check point
-    pub witness_zero_check_evals: Vec<E::Fr>,
+    // /// PCS openings for witness on zero check point
+    // // TODO: replace me with a batch opening
+    // pub witness_zero_check_openings: Vec<PCS::Proof>,
+    // /// Evaluates of witnesses on zero check point
+    // pub witness_zero_check_evals: Vec<E::Fr>,
     /// PCS openings for selectors on zero check point
     // TODO: replace me with a batch opening
     pub selector_oracle_openings: Vec<PCS::Proof>,

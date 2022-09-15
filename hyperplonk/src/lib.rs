@@ -218,9 +218,9 @@ where
             .iter()
             .map(|w| Rc::new(DenseMultilinearExtension::from(w)))
             .collect();
-        // let pi_poly = Rc::new(DenseMultilinearExtension::from_evaluations_slice(
-        //     ell, pub_input,
-        // ));
+        let pi_poly = Rc::new(DenseMultilinearExtension::from_evaluations_slice(
+            ell, pub_input,
+        ));
         // =======================================================================
         // 1. Commit Witness polynomials `w_i(x)` and append commitment to
         // transcript
@@ -350,32 +350,32 @@ where
         }
         // 4.2 open zero check proof
         // TODO: batch opening
-        // for (i, wire_poly) in witness_polys.iter().enumerate() {
-        for i  in 0..witness_polys.len() {
+        for (i, wire_poly) in witness_polys.iter().enumerate() {
+        // for i  in 0..witness_polys.len() {
             let tmp_point = gen_eval_point(i, log_num_witness_polys, &zero_check_proof.point);
             // Open zero check proof
             let (zero_proof, zero_eval) = PCS::open(&pk.pcs_param, &w_merged, &tmp_point)?;
-            // w_merged_pcs_acc.insert_point(&tmp_point);
+            w_merged_pcs_acc.insert_point(&tmp_point);
 
-            // println!(
-            //     "w_merged equal: {} {}",
-            //     w_merged.evaluate(&tmp_point).unwrap(),
-            //     wire_poly.evaluate(&zero_check_proof.point).unwrap()
-            // );
+            println!(
+                "w_merged equal: {} {}",
+                w_merged.evaluate(&tmp_point).unwrap(),
+                wire_poly.evaluate(&zero_check_proof.point).unwrap()
+            );
 
-            // #[cfg(feature = "extensive_sanity_checks")]
-            // {
-            //     let eval = wire_poly.evaluate(&zero_check_proof.point).ok_or_else(|| {
-            //         HyperPlonkErrors::InvalidParameters(
-            //             "witness_zero_check evaluation dimension does not match".to_string(),
-            //         )
-            //     })?;
-            //     if eval != zero_eval {
-            //         return Err(HyperPlonkErrors::InvalidProver(
-            //             "witness_zero_check evaluation is different from PCS opening".to_string(),
-            //         ));
-            //     }
-            // }
+            #[cfg(feature = "extensive_sanity_checks")]
+            {
+                let eval = wire_poly.evaluate(&zero_check_proof.point).ok_or_else(|| {
+                    HyperPlonkErrors::InvalidParameters(
+                        "witness_zero_check evaluation dimension does not match".to_string(),
+                    )
+                })?;
+                if eval != zero_eval {
+                    return Err(HyperPlonkErrors::InvalidProver(
+                        "witness_zero_check evaluation is different from PCS opening".to_string(),
+                    ));
+                }
+            }
             witness_zero_check_evals.push(zero_eval);
             witness_zero_check_openings.push(zero_proof);
         }
@@ -384,23 +384,23 @@ where
         let (s_perm_opening, s_perm_eval) =
             PCS::open(&pk.pcs_param, &pk.permutation_oracle, &perm_check_point)?;
 
-        // #[cfg(feature = "extensive_sanity_checks")]
-        // {
-        //     // sanity check
-        //     let eval = pk
-        //         .permutation_oracle
-        //         .evaluate(&perm_check_proof.zero_check_proof.point)
-        //         .ok_or_else(|| {
-        //             HyperPlonkErrors::InvalidParameters(
-        //                 "perm_oracle evaluation dimension does not match".to_string(),
-        //             )
-        //         })?;
-        //     if eval != s_perm_eval {
-        //         return Err(HyperPlonkErrors::InvalidProver(
-        //             "perm_oracle evaluation is different from PCS opening".to_string(),
-        //         ));
-        //     }
-        // }
+        #[cfg(feature = "extensive_sanity_checks")]
+        {
+            // sanity check
+            let eval = pk
+                .permutation_oracle
+                .evaluate(&perm_check_proof.zero_check_proof.point)
+                .ok_or_else(|| {
+                    HyperPlonkErrors::InvalidParameters(
+                        "perm_oracle evaluation dimension does not match".to_string(),
+                    )
+                })?;
+            if eval != s_perm_eval {
+                return Err(HyperPlonkErrors::InvalidProver(
+                    "perm_oracle evaluation is different from PCS opening".to_string(),
+                ));
+            }
+        }
         // Open selector polynomial at zero_check_point
         let mut selector_oracle_openings = vec![];
         let mut selector_oracle_evals = vec![];
@@ -412,21 +412,21 @@ where
             let (zero_proof, zero_eval) =
                 PCS::open(&pk.pcs_param, selector_poly, &zero_check_proof.point)?;
 
-            // #[cfg(feature = "extensive_sanity_checks")]
-            // {
-            //     let eval = selector_poly
-            //         .evaluate(&zero_check_proof.point)
-            //         .ok_or_else(|| {
-            //             HyperPlonkErrors::InvalidParameters(
-            //                 "selector evaluation dimension does not match".to_string(),
-            //             )
-            //         })?;
-            //     if eval != zero_eval {
-            //         return Err(HyperPlonkErrors::InvalidProver(
-            //             "selector evaluation is different from PCS opening".to_string(),
-            //         ));
-            //     }
-            // }
+            #[cfg(feature = "extensive_sanity_checks")]
+            {
+                let eval = selector_poly
+                    .evaluate(&zero_check_proof.point)
+                    .ok_or_else(|| {
+                        HyperPlonkErrors::InvalidParameters(
+                            "selector evaluation dimension does not match".to_string(),
+                        )
+                    })?;
+                if eval != zero_eval {
+                    return Err(HyperPlonkErrors::InvalidProver(
+                        "selector evaluation is different from PCS opening".to_string(),
+                    ));
+                }
+            }
             selector_oracle_openings.push(zero_proof);
             selector_oracle_evals.push(zero_eval);
         }
@@ -440,64 +440,64 @@ where
         ]
         .concat();
         let (pi_opening, pi_eval) = PCS::open(&pk.pcs_param, &w_merged, &tmp_point)?;
-        // #[cfg(feature = "extensive_sanity_checks")]
-        // {
-        //     // sanity check
-        //     let eval = pi_poly.evaluate(&r_pi).ok_or_else(|| {
-        //         HyperPlonkErrors::InvalidParameters(
-        //             "public input evaluation dimension does not match".to_string(),
-        //         )
-        //     })?;
-        //     if eval != pi_eval {
-        //         return Err(HyperPlonkErrors::InvalidProver(
-        //             "public input evaluation is different from PCS opening".to_string(),
-        //         ));
-        //     }
-        // }
+        #[cfg(feature = "extensive_sanity_checks")]
+        {
+            // sanity check
+            let eval = pi_poly.evaluate(&r_pi).ok_or_else(|| {
+                HyperPlonkErrors::InvalidParameters(
+                    "public input evaluation dimension does not match".to_string(),
+                )
+            })?;
+            if eval != pi_eval {
+                return Err(HyperPlonkErrors::InvalidProver(
+                    "public input evaluation is different from PCS opening".to_string(),
+                ));
+            }
+        }
 
         end_timer!(step);
 
         // =======================================================================
         // 3.3 deferred batch opening
         // =======================================================================
-        // let (w_merged_batch_opening, w_merged_batch_evals) =
-        //     w_merged_pcs_acc.batch_open(&pk.pcs_param)?;
+        let (w_merged_batch_opening, w_merged_batch_evals) =
+            w_merged_pcs_acc.batch_open(&pk.pcs_param)?;
 
         let (prod_batch_openings, prod_batch_evals) = prod_pcs_acc.batch_open(&pk.pcs_param)?;
 
         end_timer!(start);
-        // println!();
-        // for (i, w) in w_merged_batch_evals.iter().enumerate() {
-        //     println!("batch {} {}", i, w)
-        // }
-        // for (i, w) in witness_zero_check_evals.iter().enumerate() {
-        //     println!("zero check {} {}", i, w)
-        // }
-        // println!("witness_perm_check_eval {}", witness_perm_check_eval);
-        // println!();
+        println!();
+        for (i, w) in w_merged_batch_evals.iter().enumerate() {
+            println!("batch {} {}", i, w)
+        }
+        for (i, w) in witness_zero_check_evals.iter().enumerate() {
+            println!("zero check {} {}", i, w)
+        }
+        println!("witness_perm_check_eval {}", witness_perm_check_eval);
+        println!();
 
         Ok(HyperPlonkProof {
             // =======================================================================
             // PCS components: common
             // =======================================================================
             w_merged_com,
-            // w_merged_batch_opening,
-            // w_merged_batch_evals,
+            w_merged_batch_opening,
+            w_merged_batch_evals,
             // =======================================================================
             // PCS components: permutation check
             // =======================================================================
             // We do not validate prod(x), this is checked by subclaim
             prod_batch_evals,
             prod_batch_openings,
-            witness_perm_check_opening,
-            witness_perm_check_eval,
+            // witness_perm_check_opening,
+            // witness_perm_check_eval,
             perm_oracle_opening: s_perm_opening,
             perm_oracle_eval: s_perm_eval,
             // =======================================================================
             // PCS components: zero check
             // =======================================================================
-            witness_zero_check_openings,
-            witness_zero_check_evals,
+            // witness_zero_check_openings,
+            // witness_zero_check_evals,
             selector_oracle_openings,
             selector_oracle_evals,
             // =======================================================================
@@ -580,13 +580,13 @@ where
                 1 << vk.params.num_selector_columns()
             )));
         }
-        if proof.witness_zero_check_evals.len() != vk.params.num_witness_columns() {
-            return Err(HyperPlonkErrors::InvalidVerifier(format!(
-                "Witness length is not correct: got {}, expect {}",
-                proof.witness_zero_check_evals.len(),
-                vk.params.num_witness_columns()
-            )));
-        }
+        // if proof.witness_zero_check_evals.len() != vk.params.num_witness_columns() {
+        //     return Err(HyperPlonkErrors::InvalidVerifier(format!(
+        //         "Witness length is not correct: got {}, expect {}",
+        //         proof.witness_zero_check_evals.len(),
+        //         vk.params.num_witness_columns()
+        //     )));
+        // }
         if proof.prod_batch_evals.len() - 1 != 5 {
             return Err(HyperPlonkErrors::InvalidVerifier(format!(
                 "the number of product polynomial evaluations is not correct: got {}, expect {}",
@@ -627,7 +627,7 @@ where
         let f_eval = eval_f(
             &vk.params.gate_func,
             &proof.selector_oracle_evals,
-            &proof.witness_zero_check_evals,
+            &proof.w_merged_batch_evals[1..],
         )?;
         if f_eval != zero_check_sub_claim.expected_evaluation {
             return Err(HyperPlonkErrors::InvalidProof(
@@ -686,9 +686,9 @@ where
         let q_x_rec = proof.prod_batch_evals[1]
             - proof.prod_batch_evals[2] * proof.prod_batch_evals[3]
             + alpha
-                * ((proof.witness_perm_check_eval + beta * proof.perm_oracle_eval + gamma)
+                * ((proof.w_merged_batch_evals[0] + beta * proof.perm_oracle_eval + gamma)
                     * proof.prod_batch_evals[0]
-                    - (proof.witness_perm_check_eval + beta * s_id_eval + gamma));
+                    - (proof.w_merged_batch_evals[0] + beta * s_id_eval + gamma));
 
         if q_x_rec
             != perm_check_sub_claim
@@ -710,18 +710,35 @@ where
         // =======================================================================
         // 3.1 check permutation check evaluations
         // =======================================================================
-        // witness for permutation check
-        if !PCS::verify(
-            &vk.pcs_param,
-            &proof.w_merged_com,
-            perm_check_point,
-            &proof.witness_perm_check_eval,
-            &proof.witness_perm_check_opening,
-        )? {
-            return Err(HyperPlonkErrors::InvalidProof(
-                "witness for permutation check pcs verification failed".to_string(),
-            ));
+        let mut points = vec![perm_check_point.clone()];
+
+        // let tmp_point = gen_eval_point(i, log_num_witness_polys, zero_check_point);
+        for i in 0.. proof.w_merged_batch_evals.len()-2{
+            points.push(
+                gen_eval_point(i, log_num_witness_polys, zero_check_point)
+            )
         }
+        if !PCS::batch_verify_single_poly(&vk.pcs_param,  &proof.w_merged_com, 
+            &points,
+            &proof.w_merged_batch_evals,
+             &proof.w_merged_batch_opening, &mut rng)? {
+            return Err(HyperPlonkErrors::InvalidProof(
+                        "witness for permutation check pcs verification failed".to_string(),
+                    ));
+        }
+
+        // // witness for permutation check
+        // if !PCS::verify(
+        //     &vk.pcs_param,
+        //     &proof.w_merged_com,
+        //     perm_check_point,
+        //     &proof.witness_perm_check_eval,
+        //     &proof.witness_perm_check_opening,
+        // )? {
+        //     return Err(HyperPlonkErrors::InvalidProof(
+        //         "witness for permutation check pcs verification failed".to_string(),
+        //     ));
+        // }
 
         if !PCS::verify(
             &vk.pcs_param,
@@ -762,27 +779,29 @@ where
         // 3.2 check zero check evaluations
         // =======================================================================
         // witness for zero check
+       
+       
         // TODO: batch verification
-        for (i, (opening, eval)) in proof
-            .witness_zero_check_openings
-            .iter()
-            .zip(proof.witness_zero_check_evals.iter())
-            .enumerate()
-        {
-            let tmp_point = gen_eval_point(i, log_num_witness_polys, zero_check_point);
+        // for (i, (opening, eval)) in proof
+        //     .witness_zero_check_openings
+        //     .iter()
+        //     .zip(proof.witness_zero_check_evals.iter())
+        //     .enumerate()
+        // {
+        //     let tmp_point = gen_eval_point(i, log_num_witness_polys, zero_check_point);
 
-            if !PCS::verify(
-                &vk.pcs_param,
-                &proof.w_merged_com,
-                &tmp_point,
-                eval,
-                opening,
-            )? {
-                return Err(HyperPlonkErrors::InvalidProof(
-                    "witness for zero_check pcs verification failed".to_string(),
-                ));
-            }
-        }
+        //     if !PCS::verify(
+        //         &vk.pcs_param,
+        //         &proof.w_merged_com,
+        //         &tmp_point,
+        //         eval,
+        //         opening,
+        //     )? {
+        //         return Err(HyperPlonkErrors::InvalidProof(
+        //             "witness for zero_check pcs verification failed".to_string(),
+        //         ));
+        //     }
+        // }
 
         // selector for zero check
         for (commitment, (opening, eval)) in vk.selector_com.iter().zip(
