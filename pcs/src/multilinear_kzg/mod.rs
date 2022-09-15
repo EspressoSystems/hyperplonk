@@ -550,6 +550,16 @@ mod tests {
         let com = MultilinearKzgPCS::commit(&ck, &poly)?;
         let (proof, mut values) =
             MultilinearKzgPCS::multi_open_single_poly(&ck, &com, &poly, &points)?;
+        for (a,b) in values.iter().zip(points.iter()) {
+            let p = poly.evaluate(b).unwrap();
+            println!("a {}", a);
+            println!("b {}", p);
+            assert_eq!(
+                *a,
+                p
+            );
+        }
+
 
         assert!(MultilinearKzgPCS::batch_verify_single_poly(
             &vk, &com, &points, &values, &proof, rng
@@ -559,7 +569,7 @@ mod tests {
         assert!(!MultilinearKzgPCS::batch_verify_single_poly(
             &vk, &com, &points, &values, &proof, rng
         )?);
-
+        println!("===========================\n");
         Ok(())
     }
 
@@ -567,10 +577,10 @@ mod tests {
     fn test_multi_open_single_poly() -> Result<(), PCSError> {
         let mut rng = test_rng();
 
-        let params = MultilinearKzgPCS::<E>::gen_srs_for_testing(&mut rng, 10)?;
+        let params = MultilinearKzgPCS::<E>::gen_srs_for_testing(&mut rng, 15)?;
 
-        for nv in 1..5 {
-            for num_open in 1..4 {
+        for nv in 1..10 {
+            for num_open in 2..10 {
                 let poly1 = Rc::new(DenseMultilinearExtension::rand(nv, &mut rng));
                 test_multi_open_single_poly_helper(&params, poly1, num_open, &mut rng)?;
             }
@@ -616,19 +626,20 @@ mod tests {
     fn test_multi_open() -> Result<(), PCSError> {
         let mut rng = test_rng();
 
-        let params = MultilinearKzgPCS::<E>::gen_srs_for_testing(&mut rng, 10)?;
+        let params = MultilinearKzgPCS::<E>::gen_srs_for_testing(&mut rng, 15)?;
 
         // normal polynomials
-        for num_open in 1..4 {
-            let mut polys = vec![];
-            for _ in 0..num_open {
-                let poly = Rc::new(DenseMultilinearExtension::rand(4, &mut rng));
-                polys.push(poly)
+        for nv in 1..10 {
+            for num_open in 1..4 {
+                let mut polys = vec![];
+                for _ in 0..num_open {
+                    let poly = Rc::new(DenseMultilinearExtension::rand(nv, &mut rng));
+                    polys.push(poly)
+                }
+
+                test_multi_open_helper(&params, &polys, num_open, &mut rng)?;
             }
-
-            test_multi_open_helper(&params, &polys, num_open, &mut rng)?;
         }
-
         Ok(())
     }
 }

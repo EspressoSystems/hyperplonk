@@ -209,8 +209,8 @@ where
         let merged_nv = num_vars + log_num_witness_polys;
         // online public input of length 2^\ell
         let ell = log2(pk.params.num_pub_input) as usize;
-        // // Accumulator for w_merged and its points
-        // let mut w_merged_pcs_acc = PcsAccumulator::<E, PCS>::new();
+        // Accumulator for w_merged and its points
+        let mut w_merged_pcs_acc = PcsAccumulator::<E, PCS>::new();
         // Accumulator for prod(x) and its points
         let mut prod_pcs_acc = PcsAccumulator::<E, PCS>::new();
 
@@ -234,7 +234,7 @@ where
             )));
         }
         let w_merged_com = PCS::commit(&pk.pcs_param, &w_merged)?;
-        // w_merged_pcs_acc.init_poly(w_merged.clone(), w_merged_com.clone())?;
+        w_merged_pcs_acc.init_poly(w_merged.clone(), w_merged_com.clone())?;
         transcript.append_serializable_element(b"w", &w_merged_com)?;
         end_timer!(step);
         // =======================================================================
@@ -322,16 +322,16 @@ where
         // open permutation check proof
         let (witness_perm_check_opening, witness_perm_check_eval) =
             PCS::open(&pk.pcs_param, &w_merged, &perm_check_point)?;
-        // w_merged_pcs_acc.insert_point(&perm_check_point);
-        // let mut acc = PcsAccumulator::<E, PCS>::new();
-        // acc.init_poly(w_merged.clone(), w_merged_com.clone())?;
-        // acc.insert_point(&perm_check_point);
-        // let (w_merged_batch_opening, w_merged_batch_evals) =
-        // acc.batch_open(&pk.pcs_param)?;
+        w_merged_pcs_acc.insert_point(&perm_check_point);
+        let mut acc = PcsAccumulator::<E, PCS>::new();
+        acc.init_poly(w_merged.clone(), w_merged_com.clone())?;
+        acc.insert_point(&perm_check_point);
+        let (w_merged_batch_opening, w_merged_batch_evals) =
+        acc.batch_open(&pk.pcs_param)?;
 
-        // println!("w_merged(perm_check_point) {}", witness_perm_check_eval);
+        println!("w_merged(perm_check_point) {}", witness_perm_check_eval);
 
-        // println!("w_merged(perm_check_point) {}", w_merged_batch_evals[0]);
+        println!("w_merged(perm_check_point) {}", w_merged_batch_evals[0]);
         #[cfg(feature = "extensive_sanity_checks")]
         {
             // sanity checks

@@ -132,6 +132,7 @@ pub(crate) fn compute_w_circ_l<F: PrimeField>(
             ))
         },
     };
+    println!("num_points {}", num_points);
     println!("uni degree {}", uni_degree);
     println!("domain size {}", domain.size());
     for point in domain.elements() {
@@ -215,6 +216,7 @@ pub(crate) fn build_l<F: PrimeField>(
     points: &[Vec<F>],
     domain: &Radix2EvaluationDomain<F>,
 ) -> Result<Vec<DensePolynomial<F>>, PCSError> {
+    println!("points size : {}", points.len());
     println!("without prefix domain size {}", domain.size());
 
     let mut uni_polys = Vec::new();
@@ -225,7 +227,7 @@ pub(crate) fn build_l<F: PrimeField>(
         eval.extend_from_slice(vec![F::zero(); domain.size as usize - eval.len()].as_slice());
         uni_polys.push(Evaluations::from_vec_and_domain(eval, *domain).interpolate())
     }
-
+    println!("uni poly degree: {}", uni_polys[0].degree());
     Ok(uni_polys)
 }
 

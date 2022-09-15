@@ -740,10 +740,6 @@ mod tests {
             &batch_proof,
         )?);
 
-        for (a, b) in evals.iter().zip(evaluations.iter()) {
-            assert_eq!(a, b)
-        }
-
         // // bad commitment
         // assert!(!batch_verify_internal(
         //     &uni_vk,
@@ -807,8 +803,8 @@ mod tests {
         let uni_params =
             UnivariateUniversalParams::<E>::gen_srs_for_testing(&mut rng, 1usize << 15)?;
         let ml_params = MultilinearUniversalParams::<E>::gen_srs_for_testing(&mut rng, 15)?;
-        for nv in 1..5 {
-            for point_len in 3..10 {
+        for nv in 1..10 {
+            for point_len in 1..10 {
                 // normal polynomials
                 let polys1 = Rc::new(DenseMultilinearExtension::rand(nv, &mut rng));
                 test_same_poly_multi_open_internal_helper(
