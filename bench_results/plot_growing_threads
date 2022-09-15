@@ -1,0 +1,20 @@
+set terminal postscript eps enhanced color 
+filename = 'degree_2_grow_threads.txt'
+set term png 
+set output "degree_2_grow_threads.png" 
+
+# set font "32"
+
+set key left
+set grid
+# set logscale y
+
+set title font ",10" 
+set key title "MultiThreading with degree 2 custom gates" 
+set xlabel "log_2(constraints)"
+set ylabel 'time (us)'
+# set xtics (4,8,16,32,64)
+plot filename using 1:4 w lp t "2 cores vs 1 core",\
+     filename using 1:6 w lp t "4 cores vs 1 core",\
+     filename using 1:8 w lp t "8 cores vs 1 core",
+reset

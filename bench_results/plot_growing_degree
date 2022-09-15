@@ -1,0 +1,37 @@
+set terminal postscript eps enhanced color 
+filename = '8threads_growing_degree.txt'
+set term png 
+set output "8_threads_grow_degree.png" 
+
+# set font "32"
+
+set key left
+set grid
+set logscale y
+
+set title font ",10" 
+set key title "High degree custom gates" 
+set xlabel "log_2(constraints)"
+set ylabel 'time (us)'
+# set xtics (4,8,16,32,64)
+plot filename using 1:2 w lp t "degree 1",\
+     filename using 1:4 w lp t "degree 2",\
+     filename using 1:6 w lp t "degree 4",\
+     filename using 1:8 w lp t "degree 8",\
+     filename using 1:10 w lp t "degree 16",\
+     filename using 1:12 w lp t "degree 32",
+
+filename = '4threads_growing_degree.txt'
+set term png 
+set output "4_threads_grow_degree.png" 
+
+plot filename using 1:2 w lp t "degree 1",\
+     filename using 1:4 w lp t "degree 2",\
+     filename using 1:6 w lp t "degree 4",\
+     filename using 1:8 w lp t "degree 8",\
+     filename using 1:10 w lp t "degree 16",\
+     filename using 1:12 w lp t "degree 32",
+
+reset
+
+
