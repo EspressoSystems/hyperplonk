@@ -6,7 +6,7 @@
 
 mod single_poly;
 
-pub use single_poly::*;
+pub(crate) use single_poly::*;
 
 // use super::{
 //     open_internal,

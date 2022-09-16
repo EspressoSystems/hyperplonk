@@ -1,18 +1,16 @@
 #![allow(dead_code)]
 
+use crate::{
+    custom_gate::CustomizedGates, errors::HyperPlonkErrors, structs::HyperPlonkParams,
+    witness::WitnessColumn,
+};
 use arithmetic::VirtualPolynomial;
 use ark_ec::PairingEngine;
 use ark_ff::PrimeField;
 use ark_poly::DenseMultilinearExtension;
 use pcs::PolynomialCommitmentScheme;
-use std::{borrow::Borrow, rc::Rc};
-
-use crate::{
-    custom_gate::CustomizedGates, errors::HyperPlonkErrors, structs::HyperPlonkParams,
-    witness::WitnessColumn,
-};
-
 use poly_iop::prelude::bit_decompose;
+use std::{borrow::Borrow, rc::Rc};
 
 /// An accumulator structure that holds a polynomial and
 /// its opening points

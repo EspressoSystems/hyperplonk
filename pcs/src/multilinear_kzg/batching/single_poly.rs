@@ -8,15 +8,12 @@ use crate::{
     multilinear_kzg::{
         open_internal,
         srs::{MultilinearProverParam, MultilinearVerifierParam},
-        util::{build_l, compute_w_circ_l, get_uni_domain, merge_polynomials},
+        util::{build_l, compute_w_circ_l, get_uni_domain},
         verify_internal, MultilinearKzgBatchProof,
     },
-    prelude::{
-        Commitment, MultilinearKzgPCS, MultilinearUniversalParams, UnivariateProverParam,
-        UnivariateVerifierParam,
-    },
+    prelude::{Commitment, UnivariateProverParam, UnivariateVerifierParam},
     univariate_kzg::UnivariateKzgPCS,
-    CryptoRng, PCSError, PolynomialCommitmentScheme,
+    PCSError, PolynomialCommitmentScheme,
 };
 use ark_ec::PairingEngine;
 use ark_poly::{DenseMultilinearExtension, EvaluationDomain, MultilinearExtension, Polynomial};
@@ -44,7 +41,6 @@ use transcript::IOPTranscript;
 /// Steps:
 /// 1. build `l(points)` which is a list of univariate polynomials that goes
 /// through the points
-/// 2. build MLE `w` which is the merge of all MLEs.
 /// 3. build `q(x)` which is a univariate polynomial `W circ l`
 /// 4. commit to q(x) and sample r from transcript
 /// transcript contains: w commitment, points, q(x)'s commitment
@@ -71,8 +67,6 @@ pub(crate) fn multi_open_same_poly_internal<E: PairingEngine>(
     }
 
     let num_var = polynomial.num_vars();
-    println!("num_vars = {}, num_points = {}", num_var, points.len());
-
     for point in points.iter() {
         if point.len() != num_var {
             return Err(PCSError::InvalidParameters(
@@ -82,20 +76,14 @@ pub(crate) fn multi_open_same_poly_internal<E: PairingEngine>(
     }
 
     let domain = get_uni_domain::<E::Fr>(points_len)?;
-    println!("domain: {}", domain.size());
 
     // 1. build `l(points)` which is a list of univariate polynomials that goes
     // through the points
     let uni_polys = build_l(points, &domain)?;
-    println!(
-        "uni poly len: {}, degree: {}, {:?}",
-        uni_polys.len(),
-        uni_polys[0].degree(),
-        uni_polys[0]
-    );
+
     // 3. build `q(x)` which is a univariate polynomial `W circ l`
     let q_x = compute_w_circ_l(&polynomial, &uni_polys, points.len())?;
-    println!("q(x) degree {}", q_x.degree());
+
     // 4. commit to q(x) and sample r from transcript
     // transcript contains: w commitment, points, q(x)'s commitment
     let mut transcript = IOPTranscript::new(b"ml kzg");
@@ -116,7 +104,6 @@ pub(crate) fn multi_open_same_poly_internal<E: PairingEngine>(
             UnivariateKzgPCS::<E>::open(uni_prover_param, &q_x, &domain.element(i))?;
         q_x_opens.push(q_x_open);
         q_x_evals.push(q_x_eval);
-        println!("q_x_eval {}", q_x_eval);
 
         #[cfg(feature = "extensive_sanity_checks")]
         {
@@ -138,14 +125,12 @@ pub(crate) fn multi_open_same_poly_internal<E: PairingEngine>(
     let (q_x_open, q_r_value) = UnivariateKzgPCS::<E>::open(uni_prover_param, &q_x, &r)?;
     q_x_opens.push(q_x_open);
     q_x_evals.push(q_r_value);
-    println!("q(r) {}", q_r_value);
 
     // 7. get a point `p := l(r)`
     let point: Vec<E::Fr> = uni_polys.iter().map(|poly| poly.evaluate(&r)).collect();
     // 8. output an opening of `w` over point `p`
     let (mle_opening, mle_eval) = open_internal(ml_prover_param, &polynomial, &point)?;
 
-    println!("mle(r) {}", mle_eval);
     // 9. output value that is `w` evaluated at `p` (which should match `q(r)`)
     if mle_eval != q_r_value {
         return Err(PCSError::InvalidProver(
@@ -290,14 +275,24 @@ pub(crate) fn batch_verify_same_poly_internal<E: PairingEngine>(
 mod tests {
     use super::*;
     use crate::{
-        multilinear_kzg::util::{compute_qx_degree, generate_evaluations_single_poly},
+        multilinear_kzg::{
+            srs::MultilinearUniversalParams,
+            util::{compute_qx_degree, generate_evaluations_single_poly},
+            MultilinearKzgPCS,
+        },
         prelude::UnivariateUniversalParams,
         StructuredReferenceString,
     };
     use ark_bls12_381::Bls12_381 as E;
     use ark_ec::PairingEngine;
     use ark_poly::{DenseMultilinearExtension, MultilinearExtension};
-    use ark_std::{log2, rand::RngCore, test_rng, vec::Vec, UniformRand};
+    use ark_std::{
+        log2,
+        rand::{CryptoRng, RngCore},
+        test_rng,
+        vec::Vec,
+        UniformRand,
+    };
     type Fr = <E as PairingEngine>::Fr;
 
     fn test_same_poly_multi_open_internal_helper<R: RngCore + CryptoRng>(

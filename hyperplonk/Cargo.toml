@@ -33,11 +33,14 @@ path = "benches/bench.rs"
 harness = false
 
 [features]
-# default = [ "parallel", "print-trace", "extensive_sanity_checks" ]
-default = [ "parallel", "extensive_sanity_checks" ]
+# default = [ "parallel", "print-trace" ]
+default = [ "parallel" ]
 bench = [ "parallel" ]
 # extensive sanity checks that are useful for debugging
-extensive_sanity_checks = [ ]
+extensive_sanity_checks = [
+    "poly-iop/extensive_sanity_checks",
+    "pcs/extensive_sanity_checks",
+ ]
 parallel = [ 
     "rayon",
     "ark-std/parallel", 

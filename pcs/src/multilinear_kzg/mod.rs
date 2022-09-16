@@ -235,10 +235,10 @@ impl<E: PairingEngine> PolynomialCommitmentScheme<E> for MultilinearKzgPCS<E> {
     /// 8. output an opening of `w` over point `p`
     /// 9. output `w(p)`
     fn multi_open(
-        prover_param: impl Borrow<Self::ProverParam>,
-        multi_commitment: &Self::BatchCommitment,
-        polynomials: &[Self::Polynomial],
-        points: &[Self::Point],
+        _prover_param: impl Borrow<Self::ProverParam>,
+        _multi_commitment: &Self::BatchCommitment,
+        _polynomials: &[Self::Polynomial],
+        _points: &[Self::Point],
     ) -> Result<(Self::BatchProof, Vec<Self::Evaluation>), PCSError> {
         unimplemented!()
         // multi_open_internal::<E>(
@@ -295,11 +295,11 @@ impl<E: PairingEngine> PolynomialCommitmentScheme<E> for MultilinearKzgPCS<E> {
     /// 5. get a point `p := l(r)`
     /// 6. verifies `p` is verifies against proof
     fn batch_verify<R: RngCore + CryptoRng>(
-        verifier_param: &Self::VerifierParam,
-        multi_commitment: &Self::BatchCommitment,
-        points: &[Self::Point],
-        values: &[E::Fr],
-        batch_proof: &Self::BatchProof,
+        _verifier_param: &Self::VerifierParam,
+        _multi_commitment: &Self::BatchCommitment,
+        _points: &[Self::Point],
+        _values: &[E::Fr],
+        _batch_proof: &Self::BatchProof,
         _rng: &mut R,
     ) -> Result<bool, PCSError> {
         unimplemented!()
@@ -481,11 +481,10 @@ fn verify_internal<E: PairingEngine>(
 #[cfg(test)]
 mod tests {
     use super::*;
-    use crate::multilinear_kzg::util::{compute_qx_degree, get_batched_nv};
     use ark_bls12_381::Bls12_381;
     use ark_ec::PairingEngine;
     use ark_poly::{DenseMultilinearExtension, MultilinearExtension};
-    use ark_std::{log2, rand::RngCore, test_rng, vec::Vec, UniformRand};
+    use ark_std::{rand::RngCore, test_rng, vec::Vec, UniformRand};
     type E = Bls12_381;
     type Fr = <E as PairingEngine>::Fr;
 
@@ -558,11 +557,7 @@ mod tests {
         let (proof, mut values) =
             MultilinearKzgPCS::multi_open_single_poly(&ck, &com, &poly, &points)?;
         for (a, b) in values.iter().zip(points.iter()) {
-            // let mut b  = b.clone();
-            // b.reverse();
             let p = poly.evaluate(&b).unwrap();
-            println!("a {}", a);
-            println!("b {}", p);
             assert_eq!(*a, p);
         }
 
@@ -574,7 +569,6 @@ mod tests {
         assert!(!MultilinearKzgPCS::batch_verify_single_poly(
             &vk, &com, &points, &values, &proof, rng
         )?);
-        println!("===========================\n");
         Ok(())
     }
 

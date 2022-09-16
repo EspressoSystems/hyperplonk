@@ -12,6 +12,7 @@ use ark_poly::{
     MultilinearExtension, Polynomial, Radix2EvaluationDomain,
 };
 use ark_std::{end_timer, format, log2, rc::Rc, start_timer, string::ToString, vec, vec::Vec};
+use rayon::prelude::{IntoParallelIterator, ParallelIterator};
 
 /// Decompose an integer into a binary vector in little endian.
 #[allow(dead_code)]
@@ -120,8 +121,6 @@ pub(crate) fn compute_w_circ_l<F: PrimeField>(
         )));
     }
 
-    let mut res_eval: Vec<F> = vec![];
-
     let uni_degree = compute_qx_degree(w.num_vars(), num_points);
 
     let domain = match Radix2EvaluationDomain::<F>::new(uni_degree) {
@@ -132,18 +131,22 @@ pub(crate) fn compute_w_circ_l<F: PrimeField>(
             ))
         },
     };
-    println!("num_points {}", num_points);
-    println!("uni degree {}", uni_degree);
-    println!("domain size {}", domain.size());
-    for point in domain.elements() {
-        // we reverse the order here because the coefficient vec are stored in
-        // bit-reversed order
-        let l_eval: Vec<F> = l.iter().map(|x| x.evaluate(&point)).collect();
-        res_eval.push(w.evaluate(l_eval.as_ref()).unwrap())
-    }
+    let step = start_timer!(|| "compute eval");
+
+    let res_eval = (0..domain.size())
+        .into_par_iter()
+        .map(|i| {
+            let l_eval: Vec<F> = l.iter().map(|x| x.evaluate(&domain.element(i))).collect();
+            w.evaluate(l_eval.as_ref()).unwrap()
+        })
+        .collect();
+
+    end_timer!(step);
+    let step = start_timer!(|| "interpolation");
+
     let evaluation = Evaluations::from_vec_and_domain(res_eval, domain);
     let res = evaluation.interpolate();
-
+    end_timer!(step);
     end_timer!(timer);
     Ok(res)
 }
@@ -216,9 +219,6 @@ pub(crate) fn build_l<F: PrimeField>(
     points: &[Vec<F>],
     domain: &Radix2EvaluationDomain<F>,
 ) -> Result<Vec<DensePolynomial<F>>, PCSError> {
-    println!("points size : {}", points.len());
-    println!("without prefix domain size {}", domain.size());
-
     let mut uni_polys = Vec::new();
     let num_var = points[0].len();
     // build the actual univariate polys that go through the points
@@ -227,7 +227,6 @@ pub(crate) fn build_l<F: PrimeField>(
         eval.extend_from_slice(vec![F::zero(); domain.size as usize - eval.len()].as_slice());
         uni_polys.push(Evaluations::from_vec_and_domain(eval, *domain).interpolate())
     }
-    println!("uni poly degree: {}", uni_polys[0].degree());
     Ok(uni_polys)
 }
 

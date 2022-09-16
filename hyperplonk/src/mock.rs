@@ -205,21 +205,30 @@ mod test {
         for nv in 1..10 {
             let vanilla_gate = CustomizedGates::vanilla_plonk_gate();
             test_mock_circuit_zkp_helper(nv, &vanilla_gate, &pcs_srs)?;
-            println!();
         }
         for nv in 1..10 {
             let tubro_gate = CustomizedGates::jellyfish_turbo_plonk_gate();
             test_mock_circuit_zkp_helper(nv, &tubro_gate, &pcs_srs)?;
-            println!();
         }
         let nv = 5;
         for num_witness in 2..10 {
             for degree in [1, 2, 4, 8, 16] {
                 let mock_gate = CustomizedGates::mock_gate(num_witness, degree);
                 test_mock_circuit_zkp_helper(nv, &mock_gate, &pcs_srs)?;
-                println!();
             }
         }
+
+        Ok(())
+    }
+
+    #[test]
+    fn test_mock_circuit_e2e() -> Result<(), HyperPlonkErrors> {
+        let mut rng = test_rng();
+        let pcs_srs = MultilinearKzgPCS::<Bls12_381>::gen_srs_for_testing(&mut rng, 21)?;
+        let nv = 15;
+
+        let vanilla_gate = CustomizedGates::vanilla_plonk_gate();
+        test_mock_circuit_zkp_helper(nv, &vanilla_gate, &pcs_srs)?;
 
         Ok(())
     }

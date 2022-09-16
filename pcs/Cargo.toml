@@ -32,7 +32,7 @@ harness = false
 
 [features]
 # default = [ "parallel", "print-trace" ]
-default = [ "parallel", "extensive_sanity_checks" ]
+default = [ "parallel",]
 extensive_sanity_checks = [ ]
 parallel = [ 
     "rayon",

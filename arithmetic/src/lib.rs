@@ -1,5 +1,6 @@
 mod errors;
 mod multilinear_polynomial;
+mod univariate_polynomial;
 mod virtual_polynomial;
 
 pub use errors::ArithErrors;

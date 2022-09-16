@@ -1,19 +1,19 @@
-use ark_ff::{ PrimeField};
-use ark_poly::{
-    univariate::DensePolynomial, EvaluationDomain, Evaluations, Polynomial, Radix2EvaluationDomain,
-};
+// TODO: remove
+#![allow(dead_code)]
 
 use crate::ArithErrors;
+use ark_ff::PrimeField;
+use ark_poly::{
+    univariate::DensePolynomial, EvaluationDomain, Evaluations, Radix2EvaluationDomain,
+};
 
 /// Given a list of points, build `l(points)` which is a list of univariate
 /// polynomials that goes through the points.
+
 pub fn build_l<F: PrimeField>(
     points: &[Vec<F>],
     domain: &Radix2EvaluationDomain<F>,
 ) -> Result<Vec<DensePolynomial<F>>, ArithErrors> {
-    println!("points size : {}", points.len());
-    println!("without prefix domain size {}", domain.size());
-
     let mut uni_polys = Vec::new();
     let num_var = points[0].len();
     // build the actual univariate polys that go through the points
@@ -22,7 +22,6 @@ pub fn build_l<F: PrimeField>(
         eval.extend_from_slice(vec![F::zero(); domain.size as usize - eval.len()].as_slice());
         uni_polys.push(Evaluations::from_vec_and_domain(eval, *domain).interpolate())
     }
-    println!("uni poly degree: {}", uni_polys[0].degree());
     Ok(uni_polys)
 }
 
@@ -46,7 +45,7 @@ pub fn get_uni_domain<F: PrimeField>(
 mod test {
     use super::*;
     use ark_bls12_381::Fr;
-    use ark_ff::{One, field_new};
+    use ark_ff::{field_new, One};
     use ark_poly::UVPolynomial;
 
     #[test]

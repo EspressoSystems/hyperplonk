@@ -22,64 +22,58 @@ where
     PCS: PolynomialCommitmentScheme<E>,
 {
     // =======================================================================
-    // PCS components: common
+    // witness related
     // =======================================================================
     /// PCS commit for witnesses
     pub w_merged_com: PCS::Commitment,
+    /// Batch opening for witness commitment
+    /// - PermCheck eval: 1 point
+    /// - ZeroCheck evals: #witness points
     pub w_merged_batch_opening: PCS::BatchProof,
+    /// Evaluations of Witness
+    /// - PermCheck eval: 1 point
+    /// - ZeroCheck evals: #witness points
     pub w_merged_batch_evals: Vec<E::Fr>,
     // =======================================================================
-    // PCS components: permutation check
+    // prod(x) related
     // =======================================================================
-    /// prod(x)'s evaluations
-    /// sequence: prod(0,x), prod(1, x), prod(x, 0), prod(x, 1), prod(1, ..., 1,
-    /// 0)
-    pub prod_batch_evals: Vec<E::Fr>,
     /// prod(x)'s openings
-    /// sequence: prod(0,x), prod(1, x), prod(x, 0), prod(x, 1), prod(1, ..., 1,
-    /// 0)
+    /// - prod(0,x),
+    /// - prod(1, x),
+    /// - prod(x, 0),
+    /// - prod(x, 1),
+    /// - prod(1, ..., 1,0)
     pub prod_batch_openings: PCS::BatchProof,
-    /// PCS openings for witness on permutation check point
-    // // TODO: replace me with a batch opening
-    // pub witness_perm_check_opening: PCS::Proof,
-    // /// Evaluates of witnesses on permutation check point
-    // pub witness_perm_check_eval: E::Fr,
+    /// prod(x)'s evaluations
+    /// - prod(0,x),
+    /// - prod(1, x),
+    /// - prod(x, 0),
+    /// - prod(x, 1),
+    /// - prod(1, ..., 1,0)
+    pub prod_batch_evals: Vec<E::Fr>,
+    // =======================================================================
+    // selectors related
+    // =======================================================================
+    /// PCS openings for selectors on zero check point
+    pub selector_batch_opening: PCS::BatchProof,
+    /// Evaluates of selectors on zero check point
+    pub selector_batch_evals: Vec<E::Fr>,
+    // =======================================================================
+    // perm oracle related
+    // =======================================================================
     /// PCS openings for selectors on permutation check point
-    // TODO: replace me with a batch opening
     pub perm_oracle_opening: PCS::Proof,
     /// Evaluates of selectors on permutation check point
     pub perm_oracle_eval: E::Fr,
     // =======================================================================
-    // PCS components: zero check
-    // =======================================================================
-    // /// PCS openings for witness on zero check point
-    // // TODO: replace me with a batch opening
-    // pub witness_zero_check_openings: Vec<PCS::Proof>,
-    // /// Evaluates of witnesses on zero check point
-    // pub witness_zero_check_evals: Vec<E::Fr>,
-    /// PCS openings for selectors on zero check point
-    // TODO: replace me with a batch opening
-    pub selector_oracle_openings: Vec<PCS::Proof>,
-    /// Evaluates of selectors on zero check point
-    pub selector_oracle_evals: Vec<E::Fr>,
-
-        /// prod(x)'s evaluations
-    /// sequence: prod(0,x), prod(1, x), prod(x, 0), prod(x, 1), prod(1, ..., 1,
-    /// 0)
-    pub selector_batch_evals: Vec<E::Fr>,
-    /// prod(x)'s openings
-    /// sequence: prod(0,x), prod(1, x), prod(x, 0), prod(x, 1), prod(1, ..., 1,
-    /// 0)
-    pub selector_batch_opening: PCS::BatchProof,
-    // =======================================================================
-    // PCS components: public inputs
+    // public inputs related
     // =======================================================================
     /// Evaluates of public inputs on r_pi from transcript
     pub pi_eval: E::Fr,
     /// Opening of public inputs on r_pi from transcript
     pub pi_opening: PCS::Proof,
     // =======================================================================
-    // IOP components
+    // IOP proofs
     // =======================================================================
     /// the custom gate zerocheck proof
     pub zero_check_proof: <PC as ZeroCheck<E::Fr>>::ZeroCheckProof,
@@ -90,8 +84,6 @@ where
 /// The HyperPlonk instance parameters, consists of the following:
 ///   - the number of constraints
 ///   - number of public input columns
-///   - number of selector columns
-///   - number of witness columns
 ///   - the customized gate function
 #[derive(Clone, Debug, Default, PartialEq, Eq)]
 pub struct HyperPlonkParams {
@@ -153,32 +145,33 @@ impl<F: PrimeField> HyperPlonkIndex<F> {
 /// The HyperPlonk proving key, consists of the following:
 ///   - the hyperplonk instance parameters
 ///   - the preprocessed polynomials output by the indexer
+///   - the commitment to the selectors
+///   - the parameters for polynomial commitment
 #[derive(Clone, Debug, Default, PartialEq)]
 pub struct HyperPlonkProvingKey<E: PairingEngine, PCS: PolynomialCommitmentScheme<E>> {
-    /// hyperplonk instance parameters
+    /// Hyperplonk instance parameters
     pub params: HyperPlonkParams,
-    /// the preprocessed permutation polynomials
+    /// The preprocessed permutation polynomials
     pub permutation_oracle: Rc<DenseMultilinearExtension<E::Fr>>,
-    /// the preprocessed selector polynomials
-    // TODO: merge the list into a single MLE
+    /// The preprocessed selector polynomials
     pub selector_oracles: Vec<Rc<DenseMultilinearExtension<E::Fr>>>,
-    /// commitment to the preprocessed selector polynomials
-    pub selector_oracle_batch_commit: PCS::Commitment,
-    /// the parameters for PCS commitment
+    /// A commitment to the preprocessed selector polynomials
+    pub selector_com: PCS::Commitment,
+    /// The parameters for PCS commitment
     pub pcs_param: PCS::ProverParam,
 }
 
 /// The HyperPlonk verifying key, consists of the following:
 ///   - the hyperplonk instance parameters
-///   - the preprocessed polynomials output by the indexer
+///   - the commitments to the preprocessed polynomials output by the indexer
+///   - the parameters for polynomial commitment
 #[derive(Clone, Debug, Default, PartialEq)]
 pub struct HyperPlonkVerifyingKey<E: PairingEngine, PCS: PolynomialCommitmentScheme<E>> {
-    /// hyperplonk instance parameters
+    /// Hyperplonk instance parameters
     pub params: HyperPlonkParams,
-    /// the parameters for PCS commitment
+    /// The parameters for PCS commitment
     pub pcs_param: PCS::VerifierParam,
-    /// Selector's commitment
-    // TODO: replace me with a batch commitment
+    /// A commitment to the preprocessed selector polynomials
     pub selector_com: PCS::Commitment,
     /// Permutation oracle's commitment
     pub perm_com: PCS::Commitment,
