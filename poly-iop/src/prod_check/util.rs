@@ -7,6 +7,7 @@ use arithmetic::VirtualPolynomial;
 use ark_ff::PrimeField;
 use ark_poly::DenseMultilinearExtension;
 use ark_std::{end_timer, start_timer};
+use rayon::prelude::{IntoParallelRefIterator, ParallelIterator};
 use std::rc::Rc;
 use transcript::IOPTranscript;
 
@@ -191,10 +192,12 @@ fn compute_prod_0<F: PrimeField>(
 ) -> Result<Vec<F>, PolyIOPErrors> {
     let start = start_timer!(|| "compute prod(0,x)");
 
-    let mut prod_0x_evals = vec![];
-    for (&fi, &gi) in fx.iter().zip(gx.iter()) {
-        prod_0x_evals.push(fi / gi);
-    }
+    let input = fx
+        .iter()
+        .zip(gx.iter())
+        .map(|(&fi, &gi)| (fi, gi))
+        .collect::<Vec<_>>();
+    let prod_0x_evals = input.par_iter().map(|(x, y)| *x / *y).collect::<Vec<_>>();
 
     end_timer!(start);
     Ok(prod_0x_evals)
