@@ -111,13 +111,11 @@ pub trait PolynomialCommitmentScheme<E: PairingEngine> {
     /// Input a multilinear extension, and a number of points, and
     /// a transcript, compute a multi-opening for all the polynomials.
     fn multi_open_single_poly(
-        _prover_param: impl Borrow<Self::ProverParam>,
-        _commitment: &Self::Commitment,
-        _polynomials: &Self::Polynomial,
-        _points: &[Self::Point],
-    ) -> Result<(Self::BatchProof, Vec<Self::Evaluation>), PCSError> {
-        unimplemented!()
-    }
+        prover_param: impl Borrow<Self::ProverParam>,
+        commitment: &Self::Commitment,
+        polynomials: &Self::Polynomial,
+        points: &[Self::Point],
+    ) -> Result<(Self::BatchProof, Vec<Self::Evaluation>), PCSError>;
 
     /// Verifies that `value` is the evaluation at `x` of the polynomial
     /// committed inside `comm`.
@@ -142,16 +140,13 @@ pub trait PolynomialCommitmentScheme<E: PairingEngine> {
 
     /// Verifies that `value_i` is the evaluation at `x_i` of the polynomial
     /// `poly` committed inside `comm`.
-    fn batch_verify_single_poly<R: RngCore + CryptoRng>(
-        _verifier_param: &Self::VerifierParam,
-        _commitment: &Self::Commitment,
-        _points: &[Self::Point],
-        _values: &[E::Fr],
-        _batch_proof: &Self::BatchProof,
-        _rng: &mut R,
-    ) -> Result<bool, PCSError> {
-        unimplemented!()
-    }
+    fn batch_verify_single_poly(
+        verifier_param: &Self::VerifierParam,
+        commitment: &Self::Commitment,
+        points: &[Self::Point],
+        values: &[E::Fr],
+        batch_proof: &Self::BatchProof,
+    ) -> Result<bool, PCSError>;
 }
 
 /// API definitions for structured reference string

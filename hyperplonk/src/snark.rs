@@ -8,7 +8,7 @@ use crate::{
 use arithmetic::VPAuxInfo;
 use ark_ec::PairingEngine;
 use ark_poly::{DenseMultilinearExtension, MultilinearExtension};
-use ark_std::{end_timer, log2, start_timer, test_rng, One, Zero};
+use ark_std::{end_timer, log2, start_timer, One, Zero};
 use pcs::prelude::{compute_qx_degree, merge_polynomials, PolynomialCommitmentScheme};
 use poly_iop::{
     prelude::{identity_permutation_mle, PermutationCheck, ZeroCheck},
@@ -465,8 +465,6 @@ where
         pub_input: &[E::Fr],
         proof: &Self::Proof,
     ) -> Result<bool, HyperPlonkErrors> {
-        let mut rng = test_rng();
-
         let start = start_timer!(|| "hyperplonk verification");
 
         let mut transcript = IOPTranscript::<E::Fr>::new(b"hyperplonk");
@@ -640,7 +638,6 @@ where
             &points,
             &proof.w_merged_batch_evals,
             &proof.w_merged_batch_opening,
-            &mut rng,
         )? {
             return Err(HyperPlonkErrors::InvalidProof(
                 "witness for permutation check pcs verification failed".to_string(),
@@ -675,7 +672,6 @@ where
             &points,
             &proof.prod_batch_evals,
             &proof.prod_batch_openings,
-            &mut rng,
         )? {
             return Err(HyperPlonkErrors::InvalidProof(
                 "prod(0, x) pcs verification failed".to_string(),
@@ -701,7 +697,6 @@ where
             &points,
             &proof.selector_batch_evals,
             &proof.selector_batch_opening,
-            &mut rng,
         )? {
             return Err(HyperPlonkErrors::InvalidProof(
                 "selector pcs verification failed".to_string(),

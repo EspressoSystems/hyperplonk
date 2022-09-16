@@ -195,6 +195,18 @@ impl<E: PairingEngine> PolynomialCommitmentScheme<E> for UnivariateKzgPCS<E> {
         end_timer!(open_time);
         Ok((batch_proof, evals))
     }
+
+    /// Input a multilinear extension, and a number of points, and
+    /// a transcript, compute a multi-opening for all the polynomials.
+    fn multi_open_single_poly(
+        _prover_param: impl Borrow<Self::ProverParam>,
+        _commitment: &Self::Commitment,
+        _polynomials: &Self::Polynomial,
+        _points: &[Self::Point],
+    ) -> Result<(Self::BatchProof, Vec<Self::Evaluation>), PCSError> {
+        unimplemented!()
+    }
+
     /// Verifies that `value` is the evaluation at `x` of the polynomial
     /// committed inside `comm`.
     fn verify(
@@ -281,6 +293,18 @@ impl<E: PairingEngine> PolynomialCommitmentScheme<E> for UnivariateKzgPCS<E> {
         end_timer!(pairing_time);
         end_timer!(check_time, || format!("Result: {}", result));
         Ok(result)
+    }
+
+    /// Verifies that `value_i` is the evaluation at `x_i` of the polynomial
+    /// `poly` committed inside `comm`.
+    fn batch_verify_single_poly(
+        _verifier_param: &Self::VerifierParam,
+        _commitment: &Self::Commitment,
+        _points: &[Self::Point],
+        _values: &[E::Fr],
+        _batch_proof: &Self::BatchProof,
+    ) -> Result<bool, PCSError> {
+        unimplemented!()
     }
 }
 

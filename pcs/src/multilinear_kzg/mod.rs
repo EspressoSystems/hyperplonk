@@ -11,7 +11,10 @@ pub(crate) mod srs;
 pub(crate) mod util;
 
 use self::{
-    batching::{batch_verify_same_poly_internal, multi_open_same_poly_internal},
+    batching::{
+        batch_verify_internal, batch_verify_same_poly_internal, multi_open_internal,
+        multi_open_same_poly_internal,
+    },
     util::merge_polynomials,
 };
 use crate::{
@@ -235,19 +238,18 @@ impl<E: PairingEngine> PolynomialCommitmentScheme<E> for MultilinearKzgPCS<E> {
     /// 8. output an opening of `w` over point `p`
     /// 9. output `w(p)`
     fn multi_open(
-        _prover_param: impl Borrow<Self::ProverParam>,
-        _multi_commitment: &Self::BatchCommitment,
-        _polynomials: &[Self::Polynomial],
-        _points: &[Self::Point],
+        prover_param: impl Borrow<Self::ProverParam>,
+        multi_commitment: &Self::BatchCommitment,
+        polynomials: &[Self::Polynomial],
+        points: &[Self::Point],
     ) -> Result<(Self::BatchProof, Vec<Self::Evaluation>), PCSError> {
-        unimplemented!()
-        // multi_open_internal::<E>(
-        //     &prover_param.borrow().1,
-        //     &prover_param.borrow().0,
-        //     polynomials,
-        //     multi_commitment,
-        //     points,
-        // )
+        multi_open_internal::<E>(
+            &prover_param.borrow().1,
+            &prover_param.borrow().0,
+            polynomials,
+            multi_commitment,
+            points,
+        )
     }
 
     /// Input a multilinear extension, and a number of points, and
@@ -295,33 +297,31 @@ impl<E: PairingEngine> PolynomialCommitmentScheme<E> for MultilinearKzgPCS<E> {
     /// 5. get a point `p := l(r)`
     /// 6. verifies `p` is verifies against proof
     fn batch_verify<R: RngCore + CryptoRng>(
-        _verifier_param: &Self::VerifierParam,
-        _multi_commitment: &Self::BatchCommitment,
-        _points: &[Self::Point],
-        _values: &[E::Fr],
-        _batch_proof: &Self::BatchProof,
+        verifier_param: &Self::VerifierParam,
+        multi_commitment: &Self::BatchCommitment,
+        points: &[Self::Point],
+        values: &[E::Fr],
+        batch_proof: &Self::BatchProof,
         _rng: &mut R,
     ) -> Result<bool, PCSError> {
-        unimplemented!()
-        // batch_verify_internal(
-        //     &verifier_param.1,
-        //     &verifier_param.0,
-        //     multi_commitment,
-        //     points,
-        //     values,
-        //     batch_proof,
-        // )
+        batch_verify_internal(
+            &verifier_param.1,
+            &verifier_param.0,
+            multi_commitment,
+            points,
+            values,
+            batch_proof,
+        )
     }
 
     /// Verifies that `value_i` is the evaluation at `x_i` of the polynomial
     /// `poly` committed inside `comm`.
-    fn batch_verify_single_poly<R: RngCore + CryptoRng>(
+    fn batch_verify_single_poly(
         verifier_param: &Self::VerifierParam,
         commitment: &Self::Commitment,
         points: &[Self::Point],
         values: &[E::Fr],
         batch_proof: &Self::BatchProof,
-        _rng: &mut R,
     ) -> Result<bool, PCSError> {
         batch_verify_same_poly_internal(
             &verifier_param.1,
@@ -480,11 +480,13 @@ fn verify_internal<E: PairingEngine>(
 
 #[cfg(test)]
 mod tests {
+    use crate::multilinear_kzg::util::{compute_qx_degree, get_batched_nv};
+
     use super::*;
     use ark_bls12_381::Bls12_381;
     use ark_ec::PairingEngine;
     use ark_poly::{DenseMultilinearExtension, MultilinearExtension};
-    use ark_std::{rand::RngCore, test_rng, vec::Vec, UniformRand};
+    use ark_std::{log2, rand::RngCore, test_rng, vec::Vec, UniformRand};
     type E = Bls12_381;
     type Fr = <E as PairingEngine>::Fr;
 
@@ -562,12 +564,12 @@ mod tests {
         }
 
         assert!(MultilinearKzgPCS::batch_verify_single_poly(
-            &vk, &com, &points, &values, &proof, rng
+            &vk, &com, &points, &values, &proof
         )?);
 
         values[0] = Fr::rand(rng);
         assert!(!MultilinearKzgPCS::batch_verify_single_poly(
-            &vk, &com, &points, &values, &proof, rng
+            &vk, &com, &points, &values, &proof
         )?);
         Ok(())
     }
@@ -588,59 +590,57 @@ mod tests {
         Ok(())
     }
 
-    // fn test_multi_open_helper<R: RngCore + CryptoRng>(
-    //     params: &(MultilinearUniversalParams<E>,
-    // UnivariateUniversalParams<E>),     polys:
-    // &[Rc<DenseMultilinearExtension<Fr>>],     num_open: usize,
-    //     rng: &mut R,
-    // ) -> Result<(), PCSError> {
-    //     let nv = polys[0].num_vars();
-    //     assert_ne!(nv, 0);
-    //     let merged_nv = get_batched_nv(nv, polys.len());
-    //     let qx_degree = compute_qx_degree(merged_nv, polys.len());
-    //     let padded_qx_degree = 1usize << log2(qx_degree);
+    fn test_multi_open_helper<R: RngCore + CryptoRng>(
+        params: &(MultilinearUniversalParams<E>, UnivariateUniversalParams<E>),
+        polys: &[Rc<DenseMultilinearExtension<Fr>>],
+        num_open: usize,
+        rng: &mut R,
+    ) -> Result<(), PCSError> {
+        let nv = polys[0].num_vars();
+        assert_ne!(nv, 0);
+        let merged_nv = get_batched_nv(nv, polys.len());
+        let qx_degree = compute_qx_degree(merged_nv, polys.len());
+        let padded_qx_degree = 1usize << log2(qx_degree);
 
-    //     let (ck, vk) = MultilinearKzgPCS::trim(params, padded_qx_degree,
-    // Some(merged_nv))?;     let mut points = vec![];
-    //     for _ in 0..num_open {
-    //         let point: Vec<_> = (0..nv).map(|_| Fr::rand(rng)).collect();
-    //         points.push(point)
-    //     }
-    //     let com = MultilinearKzgPCS::multi_commit(&ck, &polys)?;
-    //     let (proof, mut values) = MultilinearKzgPCS::multi_open(&ck, &com,
-    // polys, &points)?;
+        let (ck, vk) = MultilinearKzgPCS::trim(params, padded_qx_degree, Some(merged_nv))?;
+        let mut points = vec![];
+        for _ in 0..num_open {
+            let point: Vec<_> = (0..nv).map(|_| Fr::rand(rng)).collect();
+            points.push(point)
+        }
+        let com = MultilinearKzgPCS::multi_commit(&ck, &polys)?;
+        let (proof, mut values) = MultilinearKzgPCS::multi_open(&ck, &com, polys, &points)?;
 
-    //     assert!(MultilinearKzgPCS::batch_verify(
-    //         &vk, &com, &points, &values, &proof, rng
-    //     )?);
+        assert!(MultilinearKzgPCS::batch_verify(
+            &vk, &com, &points, &values, &proof, rng
+        )?);
 
-    //     values[0] = Fr::rand(rng);
-    //     assert!(!MultilinearKzgPCS::batch_verify_single_poly(
-    //         &vk, &com, &points, &values, &proof, rng
-    //     )?);
+        values[0] = Fr::rand(rng);
+        assert!(!MultilinearKzgPCS::batch_verify_single_poly(
+            &vk, &com, &points, &values, &proof
+        )?);
 
-    //     Ok(())
-    // }
+        Ok(())
+    }
 
-    // #[test]
-    // fn test_multi_open() -> Result<(), PCSError> {
-    //     let mut rng = test_rng();
+    #[test]
+    fn test_multi_open() -> Result<(), PCSError> {
+        let mut rng = test_rng();
 
-    //     let params = MultilinearKzgPCS::<E>::gen_srs_for_testing(&mut rng,
-    // 15)?;
+        let params = MultilinearKzgPCS::<E>::gen_srs_for_testing(&mut rng, 15)?;
 
-    //     // normal polynomials
-    //     for nv in 1..10 {
-    //         for num_open in 1..4 {
-    //             let mut polys = vec![];
-    //             for _ in 0..num_open {
-    //                 let poly = Rc::new(DenseMultilinearExtension::rand(nv,
-    // &mut rng));                 polys.push(poly)
-    //             }
+        // normal polynomials
+        for nv in 1..10 {
+            for num_open in 1..4 {
+                let mut polys = vec![];
+                for _ in 0..num_open {
+                    let poly = Rc::new(DenseMultilinearExtension::rand(nv, &mut rng));
+                    polys.push(poly)
+                }
 
-    //             test_multi_open_helper(&params, &polys, num_open, &mut rng)?;
-    //         }
-    //     }
-    //     Ok(())
-    // }
+                test_multi_open_helper(&params, &polys, num_open, &mut rng)?;
+            }
+        }
+        Ok(())
+    }
 }
