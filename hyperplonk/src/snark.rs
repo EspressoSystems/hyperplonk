@@ -5,9 +5,9 @@ use crate::{
     witness::WitnessColumn,
     HyperPlonkSNARK,
 };
-use arithmetic::VPAuxInfo;
+use arithmetic::{evaluate_opt, VPAuxInfo};
 use ark_ec::PairingEngine;
-use ark_poly::{DenseMultilinearExtension, MultilinearExtension};
+use ark_poly::DenseMultilinearExtension;
 use ark_std::{end_timer, log2, start_timer, One, Zero};
 use pcs::prelude::{compute_qx_degree, merge_polynomials, PolynomialCommitmentScheme};
 use poly_iop::{
@@ -596,9 +596,7 @@ where
 
         // TODO: s_id PCS verify instead of evaluation
         let s_id = identity_permutation_mle::<E::Fr>(perm_check_point.len());
-        let s_id_eval = s_id.evaluate(perm_check_point).ok_or_else(|| {
-            HyperPlonkErrors::InvalidVerifier("unable to evaluate s_id(x)".to_string())
-        })?;
+        let s_id_eval = evaluate_opt(&s_id, perm_check_point);
 
         let q_x_rec = proof.prod_batch_evals[1]
             - proof.prod_batch_evals[2] * proof.prod_batch_evals[3]
@@ -707,9 +705,7 @@ where
         // 3.3 public input consistency checks
         // =======================================================================
         let mut r_pi = transcript.get_and_append_challenge_vectors(b"r_pi", ell)?;
-        let pi_eval = pi_poly.evaluate(&r_pi).ok_or_else(|| {
-            HyperPlonkErrors::InvalidParameters("evaluation dimension does not match".to_string())
-        })?;
+        let pi_eval = evaluate_opt(&pi_poly, &r_pi);
         r_pi = [
             vec![E::Fr::zero(); num_vars - ell],
             r_pi,

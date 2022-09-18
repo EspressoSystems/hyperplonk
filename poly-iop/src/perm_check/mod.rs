@@ -158,7 +158,7 @@ mod test {
         prelude::{identity_permutation_mle, random_permutation_mle},
         PolyIOP,
     };
-    use arithmetic::VPAuxInfo;
+    use arithmetic::{evaluate_opt, VPAuxInfo};
     use ark_bls12_381::Bls12_381;
     use ark_ec::PairingEngine;
     use ark_poly::{DenseMultilinearExtension, MultilinearExtension};
@@ -206,10 +206,10 @@ mod test {
         )?;
 
         // check product subclaim
-        if prod_x
-            .evaluate(&perm_check_sub_claim.product_check_sub_claim.final_query.0)
-            .unwrap()
-            != perm_check_sub_claim.product_check_sub_claim.final_query.1
+        if evaluate_opt(
+            &prod_x,
+            &perm_check_sub_claim.product_check_sub_claim.final_query.0,
+        ) != perm_check_sub_claim.product_check_sub_claim.final_query.1
         {
             return Err(PolyIOPErrors::InvalidVerifier("wrong subclaim".to_string()));
         };

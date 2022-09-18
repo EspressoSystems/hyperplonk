@@ -18,6 +18,7 @@ ark-bls12-381 = { version = "0.3.0", default-features = false, features = [ "cur
 displaydoc = { version = "0.2.3", default-features = false }
 derivative = { version = "2", features = ["use_core"] }
 
+arithmetic = { path = "../arithmetic" }
 transcript = { path = "../transcript" }
 util = { path = "../util" }
 
@@ -41,8 +42,10 @@ parallel = [
     "ark-ff/parallel",  
     "ark-poly/parallel", 
     "ark-ec/parallel",
-    "util/parallel"
+    "util/parallel",
+    "arithmetic/parallel", 
     ]
 print-trace = [ 
     "ark-std/print-trace",
+    "arithmetic/print-trace",
     ] 

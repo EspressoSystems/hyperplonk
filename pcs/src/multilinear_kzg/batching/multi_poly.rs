@@ -118,7 +118,7 @@ pub(crate) fn multi_open_internal<E: PairingEngine>(
             UnivariateKzgPCS::<E>::open(uni_prover_param, &q_x, &domain.element(i))?;
         q_x_opens.push(q_x_open);
         q_x_evals.push(q_x_eval);
-        // #[cfg(feature = "extensive_sanity_checks")]
+        #[cfg(feature = "extensive_sanity_checks")]
         {
             // sanity check
             let point: Vec<E::Fr> = uni_polys

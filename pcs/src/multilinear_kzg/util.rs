@@ -6,6 +6,7 @@
 
 //! Useful utilities for KZG PCS
 use crate::prelude::PCSError;
+use arithmetic::evaluate_opt;
 use ark_ff::PrimeField;
 use ark_poly::{
     univariate::DensePolynomial, DenseMultilinearExtension, EvaluationDomain, Evaluations,
@@ -28,6 +29,7 @@ pub(crate) fn bit_decompose(input: u64, num_var: usize) -> Vec<bool> {
 
 /// given the evaluation input `point` of the `index`-th polynomial,
 /// obtain the evaluation point in the merged polynomial
+#[allow(dead_code)]
 pub(crate) fn gen_eval_point<F: PrimeField>(index: usize, index_len: usize, point: &[F]) -> Vec<F> {
     let mut index_vec: Vec<F> = bit_decompose(index as u64, index_len)
         .into_iter()

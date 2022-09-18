@@ -24,6 +24,7 @@ use crate::{
     univariate_kzg::UnivariateKzgProof,
     PCSError, PolynomialCommitmentScheme, StructuredReferenceString,
 };
+use arithmetic::evaluate_opt;
 use ark_ec::{
     msm::{FixedBaseMSM, VariableBaseMSM},
     AffineCurve, PairingEngine, ProjectiveCurve,
@@ -405,9 +406,7 @@ fn open_internal<E: PairingEngine>(
         proofs.push(VariableBaseMSM::multi_scalar_mul(&gi.evals, &scalars).into_affine());
         end_timer!(ith_round);
     }
-    let eval = polynomial.evaluate(point).ok_or_else(|| {
-        PCSError::InvalidParameters("fail to evaluate the polynomial".to_string())
-    })?;
+    let eval = evaluate_opt(polynomial, point);
     end_timer!(open_timer);
     Ok((MultilinearKzgProof { proofs }, eval))
 }

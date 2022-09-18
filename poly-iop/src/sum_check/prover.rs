@@ -5,9 +5,9 @@ use crate::{
     errors::PolyIOPErrors,
     structs::{IOPProverMessage, IOPProverState},
 };
-use arithmetic::VirtualPolynomial;
+use arithmetic::{fix_variables, VirtualPolynomial};
 use ark_ff::PrimeField;
-use ark_poly::{DenseMultilinearExtension, MultilinearExtension};
+use ark_poly::DenseMultilinearExtension;
 use ark_std::{end_timer, start_timer, vec::Vec};
 use std::rc::Rc;
 
@@ -85,12 +85,12 @@ impl<F: PrimeField> SumCheckProver<F> for IOPProverState<F> {
             #[cfg(feature = "parallel")]
             flattened_ml_extensions
                 .par_iter_mut()
-                .for_each(|mle| *mle = mle.fix_variables(&[r]));
+                .for_each(|mle| *mle = fix_variables(mle, &[r]));
 
             #[cfg(not(feature = "parallel"))]
             flattened_ml_extensions
                 .iter_mut()
-                .for_each(|mle| *mle = mle.fix_variables(&[r]));
+                .for_each(|mle| *mle = fix_variables(mle, &[r]));
         } else if self.round > 0 {
             return Err(PolyIOPErrors::InvalidProver(
                 "verifier message is empty".to_string(),

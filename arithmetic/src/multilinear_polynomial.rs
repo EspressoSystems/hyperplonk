@@ -34,6 +34,11 @@ pub fn random_zero_mle_list<F: PrimeField, R: RngCore>(
     list
 }
 
+pub fn evaluate_opt<F: Field>(poly: &DenseMultilinearExtension<F>, point: &[F]) -> F {
+    assert_eq!(poly.num_vars, point.len());
+    fix_variables(poly, point).evaluations[0]
+}
+
 pub fn fix_variables<F: Field>(
     poly: &DenseMultilinearExtension<F>,
     partial_point: &[F],
