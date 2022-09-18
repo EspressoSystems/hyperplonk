@@ -26,6 +26,17 @@ pub(crate) fn bit_decompose(input: u64, num_var: usize) -> Vec<bool> {
     res
 }
 
+/// given the evaluation input `point` of the `index`-th polynomial,
+/// obtain the evaluation point in the merged polynomial
+pub(crate) fn gen_eval_point<F: PrimeField>(index: usize, index_len: usize, point: &[F]) -> Vec<F> {
+    let mut index_vec: Vec<F> = bit_decompose(index as u64, index_len)
+        .into_iter()
+        .map(|x| F::from(x))
+        .collect();
+    index_vec.reverse();
+    [point, &index_vec].concat()
+}
+
 /// For an MLE w with `mle_num_vars` variables, and `point_len` number of
 /// points, compute the degree of the univariate polynomial `q(x):= w(l(x))`
 /// where l(x) is a list of polynomials that go through all points.

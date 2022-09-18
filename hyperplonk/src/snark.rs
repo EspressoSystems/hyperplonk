@@ -388,14 +388,14 @@ where
             // prod(x) related
             // =======================================================================
             /// prod(x)'s openings
-            /// - prod(0,x),
+            /// - prod(0, x),
             /// - prod(1, x),
             /// - prod(x, 0),
             /// - prod(x, 1),
             /// - prod(1, ..., 1,0)
             prod_batch_openings,
             /// prod(x)'s evaluations
-            /// - prod(0,x),
+            /// - prod(0, x),
             /// - prod(1, x),
             /// - prod(x, 0),
             /// - prod(x, 1),
