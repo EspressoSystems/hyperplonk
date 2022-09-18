@@ -9,7 +9,6 @@ use ark_poly::{
 
 /// Given a list of points, build `l(points)` which is a list of univariate
 /// polynomials that goes through the points.
-
 pub fn build_l<F: PrimeField>(
     points: &[Vec<F>],
     domain: &Radix2EvaluationDomain<F>,

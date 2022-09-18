@@ -93,7 +93,8 @@ mod test {
 
     use crate::{
         multilinear_kzg::{srs::MultilinearUniversalParams, MultilinearKzgPCS},
-        univariate_kzg::srs::UnivariateUniversalParams, StructuredReferenceString,
+        univariate_kzg::srs::UnivariateUniversalParams,
+        StructuredReferenceString,
     };
 
     use super::*;
@@ -110,7 +111,6 @@ mod test {
         let (uni_ck, uni_vk) = uni_params.trim(200)?;
         let (ml_ck, ml_vk) = ml_params.trim(5)?;
 
-
         // First poly and points
         let a_nv = 3;
         let a = Rc::new(DenseMultilinearExtension::rand(a_nv, &mut rng));
@@ -121,14 +121,11 @@ mod test {
                 .collect::<Vec<Fr>>();
             a_points.push(point);
         }
-        let a_com = MultilinearKzgPCS::<E>::commit(
-            &(ml_ck.clone(), uni_ck.clone()),
-          &  a
-        )?;
+        let a_com = MultilinearKzgPCS::<E>::commit(&(ml_ck.clone(), uni_ck.clone()), &a)?;
         let a_poly_and_point = PolyAndPoints {
             polynomial: a,
             commitment: a_com,
-            points: a_points
+            points: a_points,
         };
 
         let b_nv = 2;
@@ -141,23 +138,16 @@ mod test {
             b_points.push(point);
         }
 
-        let b_com = MultilinearKzgPCS::<E>::commit(
-            &(ml_ck.clone(), uni_ck.clone()),
-          &b
-        )?;
+        let b_com = MultilinearKzgPCS::<E>::commit(&(ml_ck.clone(), uni_ck.clone()), &b)?;
 
         let b_poly_and_point = PolyAndPoints {
             polynomial: b,
             commitment: b_com,
-            points: b_points
+            points: b_points,
         };
 
-        let (proof, open) = 
-        multi_open_better(
-            &uni_ck,
-            &ml_ck,
-            &[a_poly_and_point, b_poly_and_point]
-        )?;
+        let (proof, open) =
+            multi_open_better(&uni_ck, &ml_ck, &[a_poly_and_point, b_poly_and_point])?;
 
         Ok(())
     }
