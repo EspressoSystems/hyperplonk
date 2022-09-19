@@ -204,13 +204,9 @@ impl<E: PairingEngine> ProverPolysAndPoints<E> {
 
     pub fn batch_open(
         &self,
-        // transcript: &mut IOPTranscript<E::Fr>,
-        uni_prover_param: &UnivariateProverParam<E::G1Affine>, /* UnivariateProverParam<E::
-                                                                * G1Affine>), */
+        uni_prover_param: &UnivariateProverParam<E::G1Affine>,
         ml_prover_param: &MultilinearProverParam<E>,
     ) -> Result<(MultilinearKzgBatchProof<E>, Vec<E::Fr>), PCSError> {
-        let padded_len = self.get_lay_1_padded_len();
-
         let domain = get_uni_domain::<E::Fr>(self.get_num_points())?;
 
         // let points = self.
@@ -226,6 +222,7 @@ impl<E: PairingEngine> ProverPolysAndPoints<E> {
         let mut transcript = IOPTranscript::new(b"ml kzg");
         let q_x = compute_w_circ_l(&merged_poly, &uni_polys, self.get_num_points())?;
         let q_x_commit = UnivariateKzgPCS::<E>::commit(uni_prover_param, &q_x)?;
+        transcript.append_serializable_element(b"w", &q_x_commit)?;
 
         for point in self.witness_merge_pap.points.iter() {
             transcript.append_serializable_element(b"points", point)?;
@@ -253,7 +250,7 @@ impl<E: PairingEngine> ProverPolysAndPoints<E> {
                     .iter()
                     .map(|poly| poly.evaluate(&domain.element(i)))
                     .collect();
-                let mle_eval = merge_poly.evaluate(&point).unwrap();
+                let mle_eval = merged_poly.evaluate(&point).unwrap();
                 if mle_eval != q_x_eval {
                     return Err(PCSError::InvalidProver(
                         "Q(omega) does not match W(l(omega))".to_string(),
@@ -271,6 +268,7 @@ impl<E: PairingEngine> ProverPolysAndPoints<E> {
         let point: Vec<E::Fr> = uni_polys.iter().map(|poly| poly.evaluate(&r)).collect();
 
         // 9. output value that is `w` evaluated at `p` (which should match `q(r)`)
+        #[cfg(feature = "extensive_sanity_checks")]
         if merged_poly.evaluate(&point).unwrap() != q_r_value {
             return Err(PCSError::InvalidProver(
                 "Q(r) does not match W(l(r))".to_string(),
@@ -289,7 +287,32 @@ impl<E: PairingEngine> ProverPolysAndPoints<E> {
             &point[..self.prod_pap.points.len()],
         )?;
 
-        println!("here");
+        #[cfg(feature = "extensive_sanity_checks")]
+        {
+            let a = self
+                .witness_merge_pap
+                .polynomial
+                .evaluate(&self.witness_merge_pap.points[0])
+                .unwrap();
+            println!("a {}", a);
+            let b = merged_poly
+                .evaluate(
+                    [
+                        self.witness_merge_pap.points[0].as_slice(),
+                        vec![
+                            E::Fr::zero();
+                            self.get_total_len() - self.witness_merge_pap.points[0].len()
+                        ]
+                        .as_ref(),
+                    ]
+                    .concat()
+                    .as_ref(),
+                )
+                .unwrap();
+            println!("b {}", b);
+        }
+
+        println!("here asdfasd");
         todo!()
     }
 }

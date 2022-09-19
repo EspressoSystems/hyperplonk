@@ -211,8 +211,8 @@ impl<E: PairingEngine> PolynomialCommitmentScheme<E> for UnivariateKzgPCS<E> {
     }
 
     fn multi_open_better(
-        prover_param: impl Borrow<Self::ProverParam>,
-        paps: &ProverPolysAndPoints<E>,
+        _prover_param: impl Borrow<Self::ProverParam>,
+        _paps: &ProverPolysAndPoints<E>,
     ) -> Result<(Self::BatchProof, Vec<Self::Evaluation>), PCSError> {
         unimplemented!()
     }
