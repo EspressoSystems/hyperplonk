@@ -47,6 +47,8 @@ use ark_std::{
 // use batching::{batch_verify_internal, multi_open_internal};
 use srs::{MultilinearProverParam, MultilinearUniversalParams, MultilinearVerifierParam};
 
+pub use batching::better::{PolyAndPoints, ProverPolysAndPoints};
+
 /// KZG Polynomial Commitment Scheme on multilinear polynomials.
 pub struct MultilinearKzgPCS<E: PairingEngine> {
     #[doc(hidden)]
@@ -270,6 +272,15 @@ impl<E: PairingEngine> PolynomialCommitmentScheme<E> for MultilinearKzgPCS<E> {
         )
     }
 
+    /// Input a multilinear extension, and a number of points, and
+    /// a transcript, compute a multi-opening for all the polynomials.
+    fn multi_open_better(
+        prover_param: impl Borrow<Self::ProverParam>,
+        paps: &ProverPolysAndPoints<E>,
+    ) -> Result<(Self::BatchProof, Vec<Self::Evaluation>), PCSError> {
+        paps.batch_open(&prover_param.borrow().1, &prover_param.borrow().0)
+    }
+
     /// Verifies that `value` is the evaluation at `x` of the polynomial
     /// committed inside `comm`.
     ///
@@ -344,7 +355,7 @@ impl<E: PairingEngine> PolynomialCommitmentScheme<E> for MultilinearKzgPCS<E> {
 /// - it proceeds with `num_var` number of rounds,
 /// - at round i, we compute an MSM for `2^{num_var - i + 1}` number of G2
 ///   elements.
-fn open_internal<E: PairingEngine>(
+pub fn open_internal<E: PairingEngine>(
     prover_param: &MultilinearProverParam<E>,
     polynomial: &DenseMultilinearExtension<E::Fr>,
     point: &[E::Fr],

@@ -6,7 +6,10 @@
 
 //! Main module for univariate KZG commitment scheme
 
-use crate::{prelude::Commitment, PCSError, PolynomialCommitmentScheme, StructuredReferenceString};
+use crate::{
+    multilinear_kzg::ProverPolysAndPoints, prelude::Commitment, PCSError,
+    PolynomialCommitmentScheme, StructuredReferenceString,
+};
 use ark_ec::{msm::VariableBaseMSM, AffineCurve, PairingEngine, ProjectiveCurve};
 use ark_ff::PrimeField;
 use ark_poly::{univariate::DensePolynomial, Polynomial, UVPolynomial};
@@ -203,6 +206,13 @@ impl<E: PairingEngine> PolynomialCommitmentScheme<E> for UnivariateKzgPCS<E> {
         _commitment: &Self::Commitment,
         _polynomials: &Self::Polynomial,
         _points: &[Self::Point],
+    ) -> Result<(Self::BatchProof, Vec<Self::Evaluation>), PCSError> {
+        unimplemented!()
+    }
+
+    fn multi_open_better(
+        prover_param: impl Borrow<Self::ProverParam>,
+        paps: &ProverPolysAndPoints<E>,
     ) -> Result<(Self::BatchProof, Vec<Self::Evaluation>), PCSError> {
         unimplemented!()
     }

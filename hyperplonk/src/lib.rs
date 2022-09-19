@@ -9,6 +9,7 @@ use witness::WitnessColumn;
 mod custom_gate;
 mod errors;
 mod mock;
+// mod pcs_aggregator;
 pub mod prelude;
 mod selectors;
 mod snark;

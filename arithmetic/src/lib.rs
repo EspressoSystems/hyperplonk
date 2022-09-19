@@ -8,4 +8,5 @@ pub use multilinear_polynomial::{
     evaluate_opt, fix_first_variable, fix_variables, random_zero_mle_list,
     DenseMultilinearExtension,
 };
+pub use univariate_polynomial::{build_l, get_uni_domain};
 pub use virtual_polynomial::{build_eq_x_r, VPAuxInfo, VirtualPolynomial};

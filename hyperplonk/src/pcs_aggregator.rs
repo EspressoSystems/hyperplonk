@@ -1,19 +1,15 @@
 //! Aggregate and batch opening PCS, tailored to Hyperplonk.
-//!
-//! TODO: refactor this file and move some into hyperplonk repo
 
-use crate::{
-    multilinear_kzg::{open_internal, util::gen_eval_point},
-    prelude::{
-        compute_w_circ_l, fix_variables_reverse_ord, merge_polynomials, MultilinearKzgBatchProof,
-        MultilinearProverParam, PCSError, UnivariateKzgPCS, UnivariateProverParam,
-    },
-    PolynomialCommitmentScheme,
-};
+use crate::{prelude::HyperPlonkErrors, utils::gen_eval_point, PolynomialCommitmentScheme};
 use arithmetic::{build_l, get_uni_domain, DenseMultilinearExtension};
 use ark_ec::PairingEngine;
 use ark_poly::{univariate::DensePolynomial, EvaluationDomain, MultilinearExtension, Polynomial};
 use ark_std::{end_timer, log2, start_timer, Zero};
+use pcs::prelude::{
+    compute_w_circ_l, fix_variables_reverse_ord, merge_polynomials, open_internal,
+    MultilinearKzgBatchProof, MultilinearProverParam, PCSError, UnivariateKzgPCS,
+    UnivariateProverParam,
+};
 use std::rc::Rc;
 use transcript::IOPTranscript;
 
@@ -24,13 +20,13 @@ pub struct PolyAndPoints<E: PairingEngine> {
 }
 
 impl<E: PairingEngine> PolyAndPoints<E> {
-    pub fn init_poly(polynomial: Rc<DenseMultilinearExtension<E::Fr>>) -> Self {
+    pub(crate) fn init_poly(polynomial: Rc<DenseMultilinearExtension<E::Fr>>) -> Self {
         Self {
             polynomial,
             points: vec![],
         }
     }
-    pub fn init_poly_and_point(
+    pub(crate) fn init_poly_and_point(
         polynomial: Rc<DenseMultilinearExtension<E::Fr>>,
         point: &[E::Fr],
     ) -> Self {
@@ -40,7 +36,7 @@ impl<E: PairingEngine> PolyAndPoints<E> {
         }
     }
 
-    pub fn insert_point(&mut self, point: &[E::Fr]) {
+    pub(crate) fn insert_point(&mut self, point: &[E::Fr]) {
         self.points.push(point.to_vec())
     }
 }
@@ -48,11 +44,11 @@ impl<E: PairingEngine> PolyAndPoints<E> {
 #[derive(Debug)]
 pub struct ProverPolysAndPoints<E: PairingEngine> {
     /// the points are already padded for w_merge_nv size
-    pub witness_merge_pap: PolyAndPoints<E>,
+    pub(crate) witness_merge_pap: PolyAndPoints<E>,
     /// the points do not require padding
-    pub prod_pap: PolyAndPoints<E>,
+    pub(crate) prod_pap: PolyAndPoints<E>,
     /// the points are not padded
-    pub selectors_pap: Vec<PolyAndPoints<E>>,
+    pub(crate) selectors_pap: Vec<PolyAndPoints<E>>,
 }
 
 impl<E: PairingEngine> ProverPolysAndPoints<E> {
@@ -105,7 +101,7 @@ impl<E: PairingEngine> ProverPolysAndPoints<E> {
     }
 
     /// merge the polynomials; following the same sequence as points
-    fn merge_poly(&self) -> Result<DenseMultilinearExtension<E::Fr>, PCSError> {
+    fn merge_poly(&self) -> Result<DenseMultilinearExtension<E::Fr>, HyperPlonkErrors> {
         let timer = start_timer!(|| "merge polynomials");
         let nv = self.prod_pap.polynomial.num_vars;
         let mut to_be_merged = vec![];
@@ -146,7 +142,7 @@ impl<E: PairingEngine> ProverPolysAndPoints<E> {
 
     // }
 
-    fn build_l(&self) -> Result<Vec<DensePolynomial<E::Fr>>, PCSError> {
+    fn build_l(&self) -> Result<Vec<DensePolynomial<E::Fr>>, HyperPlonkErrors> {
         let timer = start_timer!(|| "build l for poly and points");
 
         let lay1_to_pad = self.get_lay_1_padded_len();
@@ -202,13 +198,12 @@ impl<E: PairingEngine> ProverPolysAndPoints<E> {
         Ok(res)
     }
 
-    pub fn batch_open(
+    pub(crate) fn batch_open(
         &self,
-        // transcript: &mut IOPTranscript<E::Fr>,
-        uni_prover_param: &UnivariateProverParam<E::G1Affine>, /* UnivariateProverParam<E::
-                                                                * G1Affine>), */
+        transcript: &mut IOPTranscript<E::Fr>,
+        uni_prover_param: &UnivariateProverParam<E::G1Affine>,
         ml_prover_param: &MultilinearProverParam<E>,
-    ) -> Result<(MultilinearKzgBatchProof<E>, Vec<E::Fr>), PCSError> {
+    ) -> Result<(MultilinearKzgBatchProof<E>, Vec<E::Fr>), HyperPlonkErrors> {
         let padded_len = self.get_lay_1_padded_len();
 
         let domain = get_uni_domain::<E::Fr>(self.get_num_points())?;
@@ -223,9 +218,8 @@ impl<E: PairingEngine> ProverPolysAndPoints<E> {
         println!("here");
 
         // build `q(x)` which is a univariate polynomial `W circ l`
-        let mut transcript = IOPTranscript::new(b"ml kzg");
         let q_x = compute_w_circ_l(&merged_poly, &uni_polys, self.get_num_points())?;
-        let q_x_commit = UnivariateKzgPCS::<E>::commit(uni_prover_param, &q_x)?;
+        // let q_x_commit = UnivariateKzgPCS::<E>::commit(uni_prover_param, &q_x)?;
 
         for point in self.witness_merge_pap.points.iter() {
             transcript.append_serializable_element(b"points", point)?;
@@ -272,7 +266,7 @@ impl<E: PairingEngine> ProverPolysAndPoints<E> {
 
         // 9. output value that is `w` evaluated at `p` (which should match `q(r)`)
         if merged_poly.evaluate(&point).unwrap() != q_r_value {
-            return Err(PCSError::InvalidProver(
+            return Err(HyperPlonkErrors::InvalidProver(
                 "Q(r) does not match W(l(r))".to_string(),
             ));
         }
@@ -284,7 +278,7 @@ impl<E: PairingEngine> ProverPolysAndPoints<E> {
         );
 
         let (mle_opening, mle_eval) = open_internal(
-            &ml_prover_param,
+            ml_prover_param,
             &merged_poly_partial_eval,
             &point[..self.prod_pap.points.len()],
         )?;

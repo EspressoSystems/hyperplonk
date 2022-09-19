@@ -8,9 +8,14 @@
 pub use crate::{
     errors::PCSError,
     multilinear_kzg::{
+        open_internal,
         srs::{MultilinearProverParam, MultilinearUniversalParams, MultilinearVerifierParam},
-        util::{compute_qx_degree, get_batched_nv, merge_polynomials},
-        MultilinearKzgBatchProof, MultilinearKzgPCS, MultilinearKzgProof,
+        util::{
+            compute_qx_degree, compute_w_circ_l, fix_variables_reverse_ord, get_batched_nv,
+            merge_polynomials,
+        },
+        MultilinearKzgBatchProof, MultilinearKzgPCS, MultilinearKzgProof, PolyAndPoints,
+        ProverPolysAndPoints,
     },
     structs::Commitment,
     univariate_kzg::{

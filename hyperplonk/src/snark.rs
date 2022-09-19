@@ -9,7 +9,10 @@ use arithmetic::{evaluate_opt, VPAuxInfo};
 use ark_ec::PairingEngine;
 use ark_poly::DenseMultilinearExtension;
 use ark_std::{end_timer, log2, start_timer, One, Zero};
-use pcs::prelude::{compute_qx_degree, merge_polynomials, PolynomialCommitmentScheme};
+use pcs::prelude::{
+    compute_qx_degree, merge_polynomials, PolyAndPoints, PolynomialCommitmentScheme,
+    ProverPolysAndPoints,
+};
 use poly_iop::{
     prelude::{identity_permutation_mle, PermutationCheck, ZeroCheck},
     PolyIOP,
@@ -71,7 +74,7 @@ where
             .map(|s| Rc::new(DenseMultilinearExtension::from(s)))
             .collect();
 
-        let selector_merged = merge_polynomials(&selector_oracles)?;
+        let selector_merged = Rc::new(merge_polynomials(&selector_oracles)?);
         let selector_com = PCS::commit(&pcs_prover_param, &selector_merged)?;
 
         Ok((
@@ -175,6 +178,8 @@ where
         // Accumulator for prod(x) and its points
         let mut selector_pcs_acc = PcsAccumulator::<E, PCS>::new();
 
+        let mut selectors_pap: Vec<PolyAndPoints<E>> = vec![];
+
         let witness_polys: Vec<Rc<DenseMultilinearExtension<E::Fr>>> = witnesses
             .iter()
             .map(|w| Rc::new(DenseMultilinearExtension::from(w)))
@@ -185,7 +190,7 @@ where
         // transcript
         // =======================================================================
         let step = start_timer!(|| "commit witnesses");
-        let w_merged = merge_polynomials(&witness_polys)?;
+        let w_merged = Rc::new(merge_polynomials(&witness_polys)?);
         if w_merged.num_vars != merged_nv {
             return Err(HyperPlonkErrors::InvalidParameters(format!(
                 "merged witness poly has a different num_vars ({}) from expected ({})",
@@ -194,6 +199,8 @@ where
         }
         let w_merged_com = PCS::commit(&pk.pcs_param, &w_merged)?;
         w_merged_pcs_acc.init_poly(w_merged.clone(), w_merged_com.clone())?;
+        let mut witness_merge_pap = PolyAndPoints::<E>::init_poly(w_merged.clone());
+
         transcript.append_serializable_element(b"w", &w_merged_com)?;
         end_timer!(step);
         // =======================================================================
@@ -277,9 +284,17 @@ where
         prod_pcs_acc.insert_point(&tmp_point4);
         prod_pcs_acc.insert_point(&tmp_point5);
 
+        let mut prod_pap = PolyAndPoints::<E>::init_poly(prod_x.clone());
+        prod_pap.insert_point(&tmp_point1);
+        prod_pap.insert_point(&tmp_point2);
+        prod_pap.insert_point(&tmp_point3);
+        prod_pap.insert_point(&tmp_point4);
+        prod_pap.insert_point(&tmp_point5);
+
         // 4.2  permutation check
         //   - 4.2.1. (deferred) wi_poly(perm_check_point)
         w_merged_pcs_acc.insert_point(&perm_check_point);
+        witness_merge_pap.insert_point(&perm_check_point);
 
         //   - 4.2.2. perm_poly(perm_check_point)
         let (perm_oracle_opening, perm_oracle_eval) =
@@ -309,15 +324,23 @@ where
             let tmp_point = gen_eval_point(i, log_num_witness_polys, &zero_check_proof.point);
             // Deferred opening zero check proof
             w_merged_pcs_acc.insert_point(&tmp_point);
+            witness_merge_pap.insert_point(&tmp_point);
         }
 
         //   - 4.3.2. (deferred) selector_poly(zero_check_point)
-        let selector_merged = merge_polynomials(&pk.selector_oracles)?;
+        let selector_merged = Rc::new(merge_polynomials(&pk.selector_oracles)?);
         selector_pcs_acc.init_poly(selector_merged, pk.selector_com.clone())?;
         for i in 0..pk.selector_oracles.len() {
             let tmp_point = gen_eval_point(i, log_num_selector_polys, &zero_check_proof.point);
             // Deferred opening zero check proof
             selector_pcs_acc.insert_point(&tmp_point);
+        }
+
+        for selector_poly in pk.selector_oracles.iter() {
+            selectors_pap.push(PolyAndPoints::init_poly_and_point(
+                selector_poly.clone(),
+                &zero_check_proof.point,
+            ))
         }
 
         // - 4.4. public input consistency checks
@@ -354,6 +377,17 @@ where
         // 5. deferred batch opening
         // =======================================================================
         let step = start_timer!(|| "deferred batch openings");
+
+        let prover_poly_and_points = ProverPolysAndPoints {
+            witness_merge_pap,
+            prod_pap,
+            selectors_pap,
+        };
+
+        let (proof, open) = PCS::multi_open_better(&pk.pcs_param, &prover_poly_and_points)?;
+
+        // prover_poly_and_points.batch_open(&mut transcript, &pk.pcs_param)?;
+
         let sub_step = start_timer!(|| "open witness");
         let (w_merged_batch_opening, w_merged_batch_evals) =
             w_merged_pcs_acc.batch_open(&pk.pcs_param)?;

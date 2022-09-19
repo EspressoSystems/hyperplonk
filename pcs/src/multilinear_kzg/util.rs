@@ -6,7 +6,6 @@
 
 //! Useful utilities for KZG PCS
 use crate::prelude::PCSError;
-use arithmetic::evaluate_opt;
 use ark_ff::PrimeField;
 use ark_poly::{
     univariate::DensePolynomial, DenseMultilinearExtension, EvaluationDomain, Evaluations,
@@ -14,6 +13,27 @@ use ark_poly::{
 };
 use ark_std::{end_timer, format, log2, rc::Rc, start_timer, string::ToString, vec, vec::Vec};
 use rayon::prelude::{IntoParallelIterator, ParallelIterator};
+
+// TODO: improve this algorithm
+pub fn fix_variables_reverse_ord<F: PrimeField>(
+    poly: Rc<DenseMultilinearExtension<F>>,
+    partial_point: &[F],
+) -> Rc<DenseMultilinearExtension<F>> {
+    let mut res = poly.evaluations.clone();
+    let nv = poly.num_vars;
+    let res_nv = nv - partial_point.len();
+    for (i, &p) in partial_point.iter().enumerate() {
+        let one_minus_p = F::one() - p;
+        let cur_size = 1 << (nv - i - 1);
+        for j in 0..cur_size {
+            res[j] = one_minus_p * res[j] + p * res[j + cur_size];
+        }
+    }
+    Rc::new(DenseMultilinearExtension::from_evaluations_slice(
+        res_nv,
+        res[0..1 << res_nv].as_ref(),
+    ))
+}
 
 /// Decompose an integer into a binary vector in little endian.
 #[allow(dead_code)]
@@ -118,7 +138,7 @@ pub(crate) fn compute_w_circ_l_with_prefix<F: PrimeField>(
 /// univariate polynomial that composes W with l.
 ///
 /// Returns an error if l's length does not matches number of variables in W.
-pub(crate) fn compute_w_circ_l<F: PrimeField>(
+pub fn compute_w_circ_l<F: PrimeField>(
     w: &DenseMultilinearExtension<F>,
     l: &[DensePolynomial<F>],
     num_points: usize,
@@ -174,7 +194,7 @@ pub fn get_batched_nv(num_var: usize, polynomials_len: usize) -> usize {
 /// polynomials do not share a same number of nvs.
 pub fn merge_polynomials<F: PrimeField>(
     polynomials: &[Rc<DenseMultilinearExtension<F>>],
-) -> Result<Rc<DenseMultilinearExtension<F>>, PCSError> {
+) -> Result<DenseMultilinearExtension<F>, PCSError> {
     let nv = polynomials[0].num_vars();
     for poly in polynomials.iter() {
         if nv != poly.num_vars() {
@@ -190,9 +210,9 @@ pub fn merge_polynomials<F: PrimeField>(
         scalars.extend_from_slice(poly.to_evaluations().as_slice());
     }
     scalars.extend_from_slice(vec![F::zero(); (1 << merged_nv) - scalars.len()].as_ref());
-    Ok(Rc::new(DenseMultilinearExtension::from_evaluations_vec(
+    Ok(DenseMultilinearExtension::from_evaluations_vec(
         merged_nv, scalars,
-    )))
+    ))
 }
 
 /// Given a list of points, build `l(points)` which is a list of univariate
@@ -844,6 +864,37 @@ mod test {
                 "q(r) != w(l(r))"
             );
         }
+        Ok(())
+    }
+
+    #[test]
+    fn test_merge_poly() -> Result<(), PCSError> {
+        test_merge_poly_helper::<Fr>()
+    }
+
+    fn test_merge_poly_helper<F: PrimeField>() -> Result<(), PCSError> {
+        // W1 = 3x1x2 + 2x2 whose evaluations are
+        // 0, 0 |-> 0
+        // 1, 0 |-> 0
+        // 0, 1 |-> 2
+        // 1, 1 |-> 5
+        let w_eval = vec![F::zero(), F::zero(), F::from(2u64), F::from(5u64)];
+        let w1 = Rc::new(DenseMultilinearExtension::from_evaluations_vec(2, w_eval));
+
+        // w2 = x1x2 + x1 + x2 whose evaluations are
+        // 0, 0 |-> 0
+        // 1, 0 |-> 1
+        // 0, 1 |-> 1
+        // 1, 1 |-> 2
+        let w_eval = vec![F::zero(), F::one(), F::one(), F::from(2u64)];
+        let w2 = Rc::new(DenseMultilinearExtension::from_evaluations_vec(2, w_eval));
+
+        let w_merged = Rc::new(merge_polynomials(&[w1.clone(), w2.clone()])?);
+        assert_eq!(
+            fix_variables_reverse_ord(w_merged.clone(), &[F::zero()]),
+            w1
+        );
+        assert_eq!(fix_variables_reverse_ord(w_merged, &[F::one()]), w2);
         Ok(())
     }
 }

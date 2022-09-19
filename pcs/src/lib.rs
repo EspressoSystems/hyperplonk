@@ -10,6 +10,7 @@ use ark_ff::Field;
 use ark_serialize::{CanonicalDeserialize, CanonicalSerialize};
 use ark_std::rand::{CryptoRng, RngCore};
 use errors::PCSError;
+use prelude::ProverPolysAndPoints;
 use std::{borrow::Borrow, fmt::Debug, hash::Hash};
 
 /// This trait defines APIs for polynomial commitment schemes.
@@ -115,6 +116,11 @@ pub trait PolynomialCommitmentScheme<E: PairingEngine> {
         commitment: &Self::Commitment,
         polynomials: &Self::Polynomial,
         points: &[Self::Point],
+    ) -> Result<(Self::BatchProof, Vec<Self::Evaluation>), PCSError>;
+
+    fn multi_open_better(
+        prover_param: impl Borrow<Self::ProverParam>,
+        paps: &ProverPolysAndPoints<E>,
     ) -> Result<(Self::BatchProof, Vec<Self::Evaluation>), PCSError>;
 
     /// Verifies that `value` is the evaluation at `x` of the polynomial

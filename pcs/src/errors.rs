@@ -6,6 +6,7 @@
 
 //! Error module.
 
+use arithmetic::ArithErrors;
 use ark_serialize::SerializationError;
 use ark_std::string::String;
 use displaydoc::Display;
@@ -26,6 +27,8 @@ pub enum PCSError {
     SerializationError(SerializationError),
     /// Transcript error {0}
     TranscriptError(TranscriptError),
+    /// Arithmetic error {0}
+    ArithErrors(ArithErrors),
 }
 
 impl From<SerializationError> for PCSError {
@@ -37,5 +40,11 @@ impl From<SerializationError> for PCSError {
 impl From<TranscriptError> for PCSError {
     fn from(e: TranscriptError) -> Self {
         Self::TranscriptError(e)
+    }
+}
+
+impl From<ArithErrors> for PCSError {
+    fn from(e: ArithErrors) -> Self {
+        Self::ArithErrors(e)
     }
 }
