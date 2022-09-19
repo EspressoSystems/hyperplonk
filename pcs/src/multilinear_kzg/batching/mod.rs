@@ -6,6 +6,7 @@
 
 pub mod better;
 mod multi_poly;
+mod new;
 mod single_poly;
 
 pub use better::*;
