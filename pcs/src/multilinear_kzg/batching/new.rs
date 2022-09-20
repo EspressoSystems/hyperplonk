@@ -47,33 +47,31 @@ fn open_new<E: PairingEngine>(
 
 /// compute the degree of q(y) which is (k-1)(d*n+1)
 /// - k: number of points
-/// - d: degree of MLE
 /// - n: number of variables
 #[inline]
-fn compute_q_y_degree(k: usize, d: usize, n: usize) -> usize {
-    (k - 1) * (d * n + 1)
+fn compute_q_y_degree(k: usize, n: usize) -> usize {
+    (k - 1) * (n + 1)
 }
 
 /// Evaluate `q(y) := g(y, h1, ...hn)` and obtain a univariate polynomial
 /// this is done via interpolation
 /// Inputs:
 /// - points
-/// - degree: (k - 1)(d*n + 1)
+/// - degree: (k - 1)(n + 1)
 fn compute_q_y<F: PrimeField>(
     polynomials: &[Rc<DenseMultilinearExtension<F>>],
     points: &[Vec<F>],
-    mle_degree: usize,
 ) -> Result<DensePolynomial<F>, PCSError> {
     let k = points.len();
     let n = points[0].len();
     let timer = start_timer!(|| format!("compute q(y) for {} MLEs each of {} nv", k, m));
 
-    let q_y_degree = compute_q_y_degree(k, mle_degree, n);
+    let q_y_degree = compute_q_y_degree(k, n);
     // large domain for evaluating q(y) in alpha roots
     let domain: Radix2EvaluationDomain<F> = get_uni_domain(q_y_degree)?;
     let domain_k: Radix2EvaluationDomain<F> = get_uni_domain(k)?;
 
-    let eval_points = eval_h_y_at_roots(points, mle_degree)?;
+    let eval_points = eval_h_y_at_roots(points)?;
     let mut q_y_eval = vec![];
     for root in domain.elements() {
         let mut cur_value = F::zero();
@@ -99,14 +97,11 @@ fn compute_q_y<F: PrimeField>(
 /// we evaluate y at omega^1 .... omega^q_y_degree and obtain q_y_degree
 /// number of points, each of dimension n
 ///  
-fn eval_h_y_at_roots<F: PrimeField>(
-    points: &[Vec<F>],
-    mle_degree: usize,
-) -> Result<Vec<Vec<F>>, PCSError> {
+fn eval_h_y_at_roots<F: PrimeField>(points: &[Vec<F>]) -> Result<Vec<Vec<F>>, PCSError> {
     let k = points.len();
     let n = points[0].len();
 
-    let q_y_degree = compute_q_y_degree(k, mle_degree, n);
+    let q_y_degree = compute_q_y_degree(k, n);
 
     // large domain for evaluating q(y) in alpha roots
     let domain: Radix2EvaluationDomain<F> = get_uni_domain(q_y_degree)?;
@@ -175,8 +170,8 @@ mod test {
         let w_eval = vec![F::zero(), F::one(), F::one(), F::from(2u64)];
         let w2 = Rc::new(DenseMultilinearExtension::from_evaluations_vec(2, w_eval));
 
-        let point = eval_h_y_at_roots(&[point1.clone(), point2.clone()], 1)?;
-        let q_y = compute_q_y(&[w1, w2], &[point1, point2], 1);
+        let point = eval_h_y_at_roots(&[point1.clone(), point2.clone()])?;
+        let q_y = compute_q_y(&[w1, w2], &[point1, point2]);
 
         Ok(())
     }
