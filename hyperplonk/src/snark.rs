@@ -378,13 +378,14 @@ where
         // =======================================================================
         let step = start_timer!(|| "deferred batch openings");
 
-        let prover_poly_and_points = ProverPolysAndPoints {
-            witness_merge_pap,
-            prod_pap,
-            selectors_pap,
-        };
+        // let prover_poly_and_points = ProverPolysAndPoints {
+        //     witness_merge_pap,
+        //     prod_pap,
+        //     selectors_pap,
+        // };
 
-        let (proof, open) = PCS::multi_open_better(&pk.pcs_param, &prover_poly_and_points)?;
+        // let (proof, open) = PCS::multi_open_better(&pk.pcs_param,
+        // &prover_poly_and_points)?;
 
         // prover_poly_and_points.batch_open(&mut transcript, &pk.pcs_param)?;
 
