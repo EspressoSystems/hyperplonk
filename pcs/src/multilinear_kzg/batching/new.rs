@@ -1,5 +1,9 @@
 use crate::{
-    multilinear_kzg::{open_internal, srs::MultilinearProverParam, util::get_uni_domain},
+    multilinear_kzg::{
+        open_internal,
+        srs::MultilinearProverParam,
+        util::{get_quotient_domain, get_uni_domain},
+    },
     prelude::PCSError,
     univariate_kzg::{srs::UnivariateProverParam, UnivariateKzgPCS},
     PolynomialCommitmentScheme,
@@ -8,10 +12,10 @@ use arithmetic::DenseMultilinearExtension;
 use ark_ec::PairingEngine;
 use ark_ff::PrimeField;
 use ark_poly::{
-    univariate::DensePolynomial, EvaluationDomain, Evaluations, MultilinearExtension,
-    Radix2EvaluationDomain,
+    univariate::DensePolynomial, EvaluationDomain, Evaluations, GeneralEvaluationDomain,
+    MultilinearExtension, Radix2EvaluationDomain,
 };
-use ark_std::{end_timer, start_timer};
+use ark_std::{end_timer, log2, start_timer};
 use std::rc::Rc;
 use transcript::IOPTranscript;
 
@@ -23,19 +27,20 @@ use transcript::IOPTranscript;
 /// (n+1) mle (L_i(y) is implicit)
 /// 2. define `h(y) := \sum_{i=0}^{k-1} L_i(y) p_i` which are n (h(y) is
 /// implicit) univariate polynomials
-/// 3. evaluate `q(y) := g(y, h1, ...hn)` and obtain a univariate polynomial
-/// this is done via interpolation
+/// 3. define `q(y) := g(y, h1, ...hn)`
+/// 4. define `q'(y) := (q(y) - \sum_{i=0}^{k-1} L_i(y) y_i)/Z_k(x)` and obtain
+/// a univariate polynomial this is done via interpolation
 ///   4.1 y in [w..w^k] -> n evaluation: y_1...y_k
-///   4.2 evaluate y at alpha...alpha (d* mu +1 )(k-1) - k
-///   4.3 interpolate to get `q(y)` explicit form
-/// 4. commit to `q(y)` and append commitment to transcript
+///   4.2 evaluate y at alpha...alpha^(d*mu +1 )(k-1) over the quotient domain
+///   4.3 interpolate to get `q'(y)` explicit form
+/// 4. commit to `q'(y)` and append commitment to transcript
 ///
 /// 5. sample a random field element `r` from transcript
 /// 6. generate `g(r, x0,...x_{n-1}) := \sum_{i=0}^{k-1} L_i(r) f_i` which is an
 /// `n` dim MLE
 /// 7. compute `h(r) := \sum_{i=0}^{k-1} L_i(r) p_i` which is an `n` dim point
 ///
-/// 8. open `q(y)` at `r` and outputs its evaluation and proof
+/// 8. open `q'(y)` at `r` and outputs its evaluation and proof
 /// 9. open `g(y, x0,...x_{n-1})` at `r, h1(r),...hn(r)` and outputs its
 /// evaluations and proof  
 fn open_new<E: PairingEngine>(
@@ -44,10 +49,12 @@ fn open_new<E: PairingEngine>(
     polynomials: &[Rc<DenseMultilinearExtension<E::Fr>>],
     points: &[Vec<E::Fr>],
 ) -> Result<(), PCSError> {
-    // 3. evaluate `q(y) := g(y, h1, ...hn)` and obtain a univariate polynomial
-    // this is done via interpolation
-    let q_y = compute_q_y(polynomials, points)?;
-    // 4. commit to `q(y)` and append commitment to transcript
+    // 4. define `q'(y) := (q(y) - \sum_{i=0}^{k-1} L_i(y) y_i)/Z_k(x)` and obtain a
+    // univariate polynomial this is done via interpolation
+    //   4.1 y in [w..w^k] -> n evaluation: y_1...y_k
+    //   4.2 evaluate y at alpha...alpha^(d*mu +1 )(k-1) over the quotient domain
+    //   4.3 interpolate to get `q'(y)` explicit form
+    let q_prime_y = compute_q_prime_y(polynomials, points)?;
 
     let mut transcript = IOPTranscript::<E::Fr>::new(b"ml kzg");
     for point in points {
@@ -55,8 +62,8 @@ fn open_new<E: PairingEngine>(
         transcript.append_serializable_element(b"w", point)?;
     }
 
-    let q_y_commit = UnivariateKzgPCS::<E>::commit(uni_prover_param, &q_y)?;
-    transcript.append_serializable_element(b"q(y)", &q_y_commit)?;
+    let q_prime_y_commit = UnivariateKzgPCS::<E>::commit(uni_prover_param, &q_prime_y)?;
+    transcript.append_serializable_element(b"q(y)", &q_prime_y_commit)?;
 
     // 5. sample a random field element `r` from transcript
     let r = transcript.get_and_append_challenge(b"r")?;
@@ -69,14 +76,14 @@ fn open_new<E: PairingEngine>(
     let h_r = build_h_r(points, &r)?;
 
     // 8. open `q(y)` at `r` and outputs its evaluation and proof
-    let (q_r_proof, q_r_eval) = UnivariateKzgPCS::<E>::open(uni_prover_param, &q_y, &r)?;
-    println!("q(r): {}", q_r_eval);
+    let (q_r_proof, q_r_eval) = UnivariateKzgPCS::<E>::open(uni_prover_param, &q_prime_y, &r)?;
+    println!("q'(r): {}", q_r_eval);
 
     // 9. open `g(y, x0,...x_{n-1})` at `r, h1(r),...hn(r)` and outputs its
     // evaluations and proof
     let (g_r_proof, g_r_eval) = open_internal(ml_prover_param, &g_y, &h_r)?;
 
-    println!("q(r): {}", g_r_eval);
+    println!("g(r): {}", g_r_eval);
 
     Ok(())
 }
@@ -87,12 +94,12 @@ fn build_h_r<F: PrimeField>(points: &[Vec<F>], r: &F) -> Result<Vec<F>, PCSError
     let k = points.len();
     let nv = points[0].len();
     let domain_k: Radix2EvaluationDomain<F> = get_uni_domain(k)?;
-    let l_i_r_eval = domain_k.evaluate_all_lagrange_coefficients(*r);
+    let l_i_r_evals = domain_k.evaluate_all_lagrange_coefficients(*r);
     let mut h_r = vec![F::zero(); nv];
 
     for i in 0..nv {
         for j in 0..k {
-            h_r[i] += points[j][i] * l_i_r_eval[j];
+            h_r[i] += points[j][i] * l_i_r_evals[j];
         }
     }
 
@@ -108,13 +115,13 @@ fn build_g_mle<F: PrimeField>(
     let k = polynomials.len();
     let nv = polynomials[0].num_vars;
     let domain_k: Radix2EvaluationDomain<F> = get_uni_domain(k)?;
-    let l_i_r_eval = domain_k.evaluate_all_lagrange_coefficients(*r);
+    let l_i_r_evals = domain_k.evaluate_all_lagrange_coefficients(*r);
     let mut evaluations = vec![F::zero(); 1 << nv];
 
     // TODO: optimization
     for i in 0..1 << nv {
         for j in 0..k {
-            evaluations[i] += polynomials[j].evaluations[i] * l_i_r_eval[j];
+            evaluations[i] += polynomials[j].evaluations[i] * l_i_r_evals[j];
         }
     }
 
@@ -139,7 +146,7 @@ fn compute_q_y_degree(k: usize, n: usize) -> usize {
 /// Inputs:
 /// - points
 /// - degree: (k - 1)(n + 1)
-fn compute_q_y<F: PrimeField>(
+fn compute_q_prime_y<F: PrimeField>(
     polynomials: &[Rc<DenseMultilinearExtension<F>>],
     points: &[Vec<F>],
 ) -> Result<DensePolynomial<F>, PCSError> {
@@ -149,24 +156,33 @@ fn compute_q_y<F: PrimeField>(
 
     let q_y_degree = compute_q_y_degree(k, n);
     // large domain for evaluating q(y) in alpha roots
-    let domain: Radix2EvaluationDomain<F> = get_uni_domain(q_y_degree)?;
+    let domain: GeneralEvaluationDomain<F> = get_quotient_domain(1 << log2(q_y_degree))?;
     let domain_k: Radix2EvaluationDomain<F> = get_uni_domain(k)?;
 
     let eval_points = eval_h_y_at_roots(points)?;
-    let mut q_y_eval = vec![];
+    let mut q_prime_y_evals = vec![];
     for root in domain.elements() {
         let mut cur_value = F::zero();
         // L_i(y) evaluated at the large domain's root
-        let l_i_y_eval = domain_k.evaluate_all_lagrange_coefficients(root);
+        let l_i_y_evals = domain_k.evaluate_all_lagrange_coefficients(root);
         for i in 0..k {
             // f_i(h1...hn)
+            // println!("{}", i);
             let mle_eval = polynomials[i].evaluate(&eval_points[i]).unwrap();
-            cur_value += l_i_y_eval[i] * mle_eval
+            cur_value += l_i_y_evals[i] * mle_eval;
+            cur_value -= l_i_y_evals[i] * root;
         }
-        q_y_eval.push(cur_value)
+        let z_k_eval = domain.evaluate_vanishing_polynomial(F::multiplicative_generator() * root);
+        // println!("z_k {}", z_k_eval);
+        q_prime_y_evals.push(cur_value / z_k_eval)
     }
 
-    let res = Evaluations::from_vec_and_domain(q_y_eval, domain).interpolate();
+    domain.coset_fft_in_place(&mut q_prime_y_evals);
+    let res = DensePolynomial {
+        coeffs: q_prime_y_evals,
+    };
+
+    // Evaluations::from_vec_and_domain(q_prime_y_eval, domain).interpolate();
 
     end_timer!(timer);
     Ok(res)
@@ -222,7 +238,7 @@ mod test {
     use ark_std::{test_rng, One, Zero};
     use std::rc::Rc;
 
-    use super::{build_g_mle, build_h_r, compute_q_y, eval_h_y_at_roots, open_new};
+    use super::{build_g_mle, build_h_r, compute_q_prime_y, eval_h_y_at_roots, open_new};
 
     #[test]
     fn test_compute_q_y() -> Result<(), PCSError> {
@@ -259,7 +275,7 @@ mod test {
         let polynomials = &[w1.clone(), w2.clone()];
 
         let point = eval_h_y_at_roots(points)?;
-        let q_y = compute_q_y(polynomials, points);
+        let q_y = compute_q_prime_y(polynomials, points);
 
         let r = F::from(10u64);
         let g_mle = build_g_mle(polynomials, &r)?;

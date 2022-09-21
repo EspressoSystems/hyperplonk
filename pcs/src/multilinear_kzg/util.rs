@@ -9,7 +9,7 @@ use crate::prelude::PCSError;
 use ark_ff::PrimeField;
 use ark_poly::{
     univariate::DensePolynomial, DenseMultilinearExtension, EvaluationDomain, Evaluations,
-    MultilinearExtension, Polynomial, Radix2EvaluationDomain,
+    GeneralEvaluationDomain, MultilinearExtension, Polynomial, Radix2EvaluationDomain,
 };
 use ark_std::{end_timer, format, log2, rc::Rc, start_timer, string::ToString, vec, vec::Vec};
 use rayon::prelude::{IntoParallelIterator, ParallelIterator};
@@ -77,6 +77,22 @@ pub(crate) fn get_uni_domain<F: PrimeField>(
     uni_poly_degree: usize,
 ) -> Result<Radix2EvaluationDomain<F>, PCSError> {
     let domain = match Radix2EvaluationDomain::<F>::new(uni_poly_degree) {
+        Some(p) => p,
+        None => {
+            return Err(PCSError::InvalidParameters(
+                "failed to build radix 2 domain".to_string(),
+            ))
+        },
+    };
+    Ok(domain)
+}
+
+/// get the domain for the univariate polynomial
+#[inline]
+pub(crate) fn get_quotient_domain<F: PrimeField>(
+    uni_poly_degree: usize,
+) -> Result<GeneralEvaluationDomain<F>, PCSError> {
+    let domain = match GeneralEvaluationDomain::<F>::new(uni_poly_degree) {
         Some(p) => p,
         None => {
             return Err(PCSError::InvalidParameters(
