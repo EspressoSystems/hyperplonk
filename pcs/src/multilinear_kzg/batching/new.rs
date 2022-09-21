@@ -1,7 +1,5 @@
 use crate::{
-    multilinear_kzg::{
-        open_internal, srs::MultilinearProverParam, util::get_uni_domain, MultilinearKzgPCS,
-    },
+    multilinear_kzg::{open_internal, srs::MultilinearProverParam, util::get_uni_domain},
     prelude::PCSError,
     univariate_kzg::{srs::UnivariateProverParam, UnivariateKzgPCS},
     PolynomialCommitmentScheme,
@@ -19,7 +17,6 @@ use transcript::IOPTranscript;
 
 /// input: k points `p`, each of dim n
 /// input: k MLEs `f`, each of dim n
-///
 ///
 /// steps:
 /// 1. define `g(y, x0,...x_{n-1}) := \sum_{i=0}^{k-1} L_i(y) f_i` which is an
@@ -66,7 +63,6 @@ fn open_new<E: PairingEngine>(
 
     // 6. generate `g(r, x0,...x_{n-1}) := \sum_{i=0}^{k-1} L_i(r) f_i` which is an
     // `n` dim MLE
-
     let g_y = build_g_mle(polynomials, &r)?;
 
     // 7. compute `h(r) := \sum_{i=0}^{k-1} L_i(r) p_i` which is an `n` dim point
@@ -74,10 +70,14 @@ fn open_new<E: PairingEngine>(
 
     // 8. open `q(y)` at `r` and outputs its evaluation and proof
     let (q_r_proof, q_r_eval) = UnivariateKzgPCS::<E>::open(uni_prover_param, &q_y, &r)?;
+    println!("q(r): {}", q_r_eval);
 
     // 9. open `g(y, x0,...x_{n-1})` at `r, h1(r),...hn(r)` and outputs its
     // evaluations and proof
     let (g_r_proof, g_r_eval) = open_internal(ml_prover_param, &g_y, &h_r)?;
+
+    println!("q(r): {}", g_r_eval);
+
     Ok(())
 }
 
@@ -211,14 +211,18 @@ fn eval_h_y_at_roots<F: PrimeField>(points: &[Vec<F>]) -> Result<Vec<Vec<F>>, PC
 
 #[cfg(test)]
 mod test {
+    use crate::{
+        multilinear_kzg::srs::MultilinearUniversalParams, prelude::PCSError,
+        univariate_kzg::srs::UnivariateUniversalParams, StructuredReferenceString,
+    };
+    use arithmetic::DenseMultilinearExtension;
+    use ark_bls12_381::{Bls12_381, Fr};
+    use ark_ec::PairingEngine;
+    use ark_ff::PrimeField;
+    use ark_std::{test_rng, One, Zero};
     use std::rc::Rc;
 
-    use crate::prelude::PCSError;
-    use arithmetic::DenseMultilinearExtension;
-    use ark_bls12_381::Fr;
-    use ark_ff::PrimeField;
-
-    use super::{build_g_mle, build_h_r, compute_q_y, eval_h_y_at_roots};
+    use super::{build_g_mle, build_h_r, compute_q_y, eval_h_y_at_roots, open_new};
 
     #[test]
     fn test_compute_q_y() -> Result<(), PCSError> {
@@ -262,5 +266,55 @@ mod test {
         let hr = build_h_r(points, &r)?;
 
         Ok(())
+    }
+
+    #[test]
+    fn test_commitment() -> Result<(), PCSError> {
+        test_commitment_helper::<Bls12_381>()
+    }
+
+    fn test_commitment_helper<E: PairingEngine>() -> Result<(), PCSError> {
+        // point 1 is [1, 2]
+        let point1 = vec![E::Fr::from(1u64), E::Fr::from(2u64)];
+
+        // point 2 is [3, 4]
+        let point2 = vec![E::Fr::from(3u64), E::Fr::from(4u64)];
+
+        // point 3 is [5, 6]
+        let point3 = vec![E::Fr::from(5u64), E::Fr::from(6u64)];
+
+        // W1 = 3x1x2 + 2x2 whose evaluations are
+        // 0, 0 |-> 0
+        // 1, 0 |-> 0
+        // 0, 1 |-> 2
+        // 1, 1 |-> 5
+        let w_eval = vec![
+            E::Fr::zero(),
+            E::Fr::zero(),
+            E::Fr::from(2u64),
+            E::Fr::from(5u64),
+        ];
+        let w1 = Rc::new(DenseMultilinearExtension::from_evaluations_vec(2, w_eval));
+
+        // w2 = x1x2 + x1 + x2 whose evaluations are
+        // 0, 0 |-> 0
+        // 1, 0 |-> 1
+        // 0, 1 |-> 1
+        // 1, 1 |-> 2
+        let w_eval = vec![E::Fr::zero(), E::Fr::one(), E::Fr::one(), E::Fr::from(2u64)];
+        let w2 = Rc::new(DenseMultilinearExtension::from_evaluations_vec(2, w_eval));
+
+        let points = &[point1.clone(), point2.clone()];
+        let polynomials = &[w1.clone(), w2.clone()];
+
+        let mut rng = test_rng();
+        let uni_params =
+            UnivariateUniversalParams::<E>::gen_srs_for_testing(&mut rng, 1usize << 15)?;
+        let ml_params = MultilinearUniversalParams::<E>::gen_srs_for_testing(&mut rng, 15)?;
+
+        let (uni_ck, uni_vk) = uni_params.trim(32)?;
+        let (ml_ck, ml_vk) = ml_params.trim(3)?;
+
+        open_new(&uni_ck, &ml_ck, polynomials, points)
     }
 }
