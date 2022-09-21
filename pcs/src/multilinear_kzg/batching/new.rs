@@ -155,24 +155,26 @@ fn compute_q_prime_y<F: PrimeField>(
     let timer = start_timer!(|| format!("compute q(y) for {} MLEs each of {} nv", k, m));
 
     let q_y_degree = compute_q_y_degree(k, n);
-    // large domain for evaluating q(y) in alpha roots
+    // coset domain for evaluating q(y) in alpha roots
     let domain: GeneralEvaluationDomain<F> = get_quotient_domain(1 << log2(q_y_degree))?;
     let domain_k: Radix2EvaluationDomain<F> = get_uni_domain(k)?;
 
     let eval_points = eval_h_y_at_roots(points)?;
     let mut q_prime_y_evals = vec![];
     for root in domain.elements() {
+        let coset_root = F::multiplicative_generator() * root;
+
         let mut cur_value = F::zero();
-        // L_i(y) evaluated at the large domain's root
-        let l_i_y_evals = domain_k.evaluate_all_lagrange_coefficients(root);
+        // L_i(y) evaluated at the coset domain's root
+        let l_i_y_evals = domain_k.evaluate_all_lagrange_coefficients(coset_root);
         for i in 0..k {
             // f_i(h1...hn)
             // println!("{}", i);
             let mle_eval = polynomials[i].evaluate(&eval_points[i]).unwrap();
             cur_value += l_i_y_evals[i] * mle_eval;
-            cur_value -= l_i_y_evals[i] * root;
+            cur_value -= l_i_y_evals[i] * coset_root;
         }
-        let z_k_eval = domain.evaluate_vanishing_polynomial(F::multiplicative_generator() * root);
+        let z_k_eval = domain.evaluate_vanishing_polynomial(coset_root);
         // println!("z_k {}", z_k_eval);
         q_prime_y_evals.push(cur_value / z_k_eval)
     }
