@@ -59,38 +59,13 @@
 <span id="59">59</span>
 <span id="60">60</span>
 <span id="61">61</span>
-<span id="62">62</span>
-<span id="63">63</span>
-<span id="64">64</span>
-<span id="65">65</span>
-<span id="66">66</span>
-<span id="67">67</span>
-<span id="68">68</span>
-<span id="69">69</span>
-<span id="70">70</span>
-<span id="71">71</span>
-<span id="72">72</span>
-<span id="73">73</span>
-<span id="74">74</span>
-<span id="75">75</span>
-<span id="76">76</span>
-<span id="77">77</span>
-<span id="78">78</span>
-<span id="79">79</span>
-<span id="80">80</span>
-<span id="81">81</span>
-<span id="82">82</span>
-<span id="83">83</span>
-<span id="84">84</span>
-<span id="85">85</span>
-<span id="86">86</span>
-<span id="87">87</span>
 </pre><pre class="rust"><code><span class="doccomment">//! This module implements useful functions for the permutation check protocol.</span>
 
 <span class="kw">use</span> <span class="ident"><span class="kw">crate</span>::errors::PolyIOPErrors</span>;
+<span class="kw">use</span> <span class="ident">arithmetic::identity_permutation_mle</span>;
 <span class="kw">use</span> <span class="ident">ark_ff::PrimeField</span>;
 <span class="kw">use</span> <span class="ident">ark_poly::DenseMultilinearExtension</span>;
-<span class="kw">use</span> <span class="ident">ark_std</span>::{<span class="ident">end_timer</span>, <span class="ident">rand::RngCore</span>, <span class="ident">start_timer</span>};
+<span class="kw">use</span> <span class="ident">ark_std</span>::{<span class="ident">end_timer</span>, <span class="ident">start_timer</span>};
 <span class="kw">use</span> <span class="ident">std::rc::Rc</span>;
 
 <span class="doccomment">/// Returns the evaluations of two MLEs:</span>
@@ -144,33 +119,6 @@
 
     <span class="macro">end_timer!</span>(<span class="ident">start</span>);
     <span class="prelude-val">Ok</span>((<span class="ident">numerator</span>, <span class="ident">denominator</span>))
-}
-
-<span class="doccomment">/// An MLE that represent an identity permutation: `f(index) \mapto index`</span>
-<span class="kw">pub</span> <span class="kw">fn</span> <span class="ident">identity_permutation_mle</span><span class="op">&lt;</span><span class="ident">F</span>: <span class="ident">PrimeField</span><span class="op">&gt;</span>(
-    <span class="ident">num_vars</span>: <span class="ident">usize</span>,
-) -&gt; <span class="ident">Rc</span><span class="op">&lt;</span><span class="ident">DenseMultilinearExtension</span><span class="op">&lt;</span><span class="ident">F</span><span class="op">&gt;</span><span class="op">&gt;</span> {
-    <span class="kw">let</span> <span class="ident">s_id_vec</span> <span class="op">=</span> (<span class="number">0</span>..<span class="number">1u64</span> <span class="op">&lt;</span><span class="op">&lt;</span> <span class="ident">num_vars</span>).<span class="ident">map</span>(<span class="ident">F::from</span>).<span class="ident">collect</span>();
-    <span class="ident">Rc::new</span>(<span class="ident">DenseMultilinearExtension::from_evaluations_vec</span>(
-        <span class="ident">num_vars</span>, <span class="ident">s_id_vec</span>,
-    ))
-}
-
-<span class="doccomment">/// An MLE that represent a random permutation</span>
-<span class="kw">pub</span> <span class="kw">fn</span> <span class="ident">random_permutation_mle</span><span class="op">&lt;</span><span class="ident">F</span>: <span class="ident">PrimeField</span>, <span class="ident">R</span>: <span class="ident">RngCore</span><span class="op">&gt;</span>(
-    <span class="ident">num_vars</span>: <span class="ident">usize</span>,
-    <span class="ident">rng</span>: <span class="kw-2">&amp;mut</span> <span class="ident">R</span>,
-) -&gt; <span class="ident">Rc</span><span class="op">&lt;</span><span class="ident">DenseMultilinearExtension</span><span class="op">&lt;</span><span class="ident">F</span><span class="op">&gt;</span><span class="op">&gt;</span> {
-    <span class="kw">let</span> <span class="ident">len</span> <span class="op">=</span> <span class="number">1u64</span> <span class="op">&lt;</span><span class="op">&lt;</span> <span class="ident">num_vars</span>;
-    <span class="kw">let</span> <span class="kw-2">mut</span> <span class="ident">s_id_vec</span>: <span class="ident">Vec</span><span class="op">&lt;</span><span class="ident">F</span><span class="op">&gt;</span> <span class="op">=</span> (<span class="number">0</span>..<span class="ident">len</span>).<span class="ident">map</span>(<span class="ident">F::from</span>).<span class="ident">collect</span>();
-    <span class="kw">let</span> <span class="kw-2">mut</span> <span class="ident">s_perm_vec</span> <span class="op">=</span> <span class="macro">vec!</span>[];
-    <span class="kw">for</span> <span class="kw">_</span> <span class="kw">in</span> <span class="number">0</span>..<span class="ident">len</span> {
-        <span class="kw">let</span> <span class="ident">index</span> <span class="op">=</span> <span class="ident">rng</span>.<span class="ident">next_u64</span>() <span class="kw">as</span> <span class="ident">usize</span> <span class="op">%</span> <span class="ident">s_id_vec</span>.<span class="ident">len</span>();
-        <span class="ident">s_perm_vec</span>.<span class="ident">push</span>(<span class="ident">s_id_vec</span>.<span class="ident">remove</span>(<span class="ident">index</span>));
-    }
-    <span class="ident">Rc::new</span>(<span class="ident">DenseMultilinearExtension::from_evaluations_vec</span>(
-        <span class="ident">num_vars</span>, <span class="ident">s_perm_vec</span>,
-    ))
 }
 </code></pre></div>
 </section></div></main><div id="rustdoc-vars" data-root-path="../../../" data-current-crate="poly_iop" data-themes="ayu,dark,light" data-resource-suffix="" data-rustdoc-version="1.64.0 (a55dd71d5 2022-09-19)" ></div></body></html>

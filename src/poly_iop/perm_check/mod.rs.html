@@ -274,10 +274,6 @@
 <span id="274">274</span>
 <span id="275">275</span>
 <span id="276">276</span>
-<span id="277">277</span>
-<span id="278">278</span>
-<span id="279">279</span>
-<span id="280">280</span>
 </pre><pre class="rust"><code><span class="doccomment">//! Main module for the Permutation Check protocol</span>
 
 <span class="kw">use</span> <span class="ident"><span class="self">self</span>::util::computer_num_and_denom</span>;
@@ -285,7 +281,7 @@
 <span class="kw">use</span> <span class="ident">ark_ec::PairingEngine</span>;
 <span class="kw">use</span> <span class="ident">ark_poly::DenseMultilinearExtension</span>;
 <span class="kw">use</span> <span class="ident">ark_std</span>::{<span class="ident">end_timer</span>, <span class="ident">start_timer</span>};
-<span class="kw">use</span> <span class="ident">jf_primitives::pcs::PolynomialCommitmentScheme</span>;
+<span class="kw">use</span> <span class="ident">pcs::PolynomialCommitmentScheme</span>;
 <span class="kw">use</span> <span class="ident">std::rc::Rc</span>;
 <span class="kw">use</span> <span class="ident">transcript::IOPTranscript</span>;
 
@@ -433,20 +429,16 @@
 <span class="attribute">#[<span class="ident">cfg</span>(<span class="ident">test</span>)]</span>
 <span class="kw">mod</span> <span class="ident">test</span> {
     <span class="kw">use</span> <span class="ident"><span class="kw">super</span>::PermutationCheck</span>;
-    <span class="kw">use</span> <span class="kw">crate</span>::{
-        <span class="ident">errors::PolyIOPErrors</span>,
-        <span class="ident">prelude</span>::{<span class="ident">identity_permutation_mle</span>, <span class="ident">random_permutation_mle</span>},
-        <span class="ident">PolyIOP</span>,
-    };
-    <span class="kw">use</span> <span class="ident">arithmetic::VPAuxInfo</span>;
+    <span class="kw">use</span> <span class="kw">crate</span>::{<span class="ident">errors::PolyIOPErrors</span>, <span class="ident">PolyIOP</span>};
+    <span class="kw">use</span> <span class="ident">arithmetic</span>::{<span class="ident">evaluate_opt</span>, <span class="ident">identity_permutation_mle</span>, <span class="ident">random_permutation_mle</span>, <span class="ident">VPAuxInfo</span>};
     <span class="kw">use</span> <span class="ident">ark_bls12_381::Bls12_381</span>;
     <span class="kw">use</span> <span class="ident">ark_ec::PairingEngine</span>;
     <span class="kw">use</span> <span class="ident">ark_poly</span>::{<span class="ident">DenseMultilinearExtension</span>, <span class="ident">MultilinearExtension</span>};
     <span class="kw">use</span> <span class="ident">ark_std::test_rng</span>;
-    <span class="kw">use</span> <span class="ident">jf_primitives::pcs</span>::{<span class="ident">prelude::MultilinearKzgPCS</span>, <span class="ident">PolynomialCommitmentScheme</span>};
+    <span class="kw">use</span> <span class="ident">pcs</span>::{<span class="ident">prelude::MultilinearKzgPCS</span>, <span class="ident">PolynomialCommitmentScheme</span>};
     <span class="kw">use</span> <span class="ident">std</span>::{<span class="ident">marker::PhantomData</span>, <span class="ident">rc::Rc</span>};
 
-    <span class="kw">type</span> <span class="ident">Kzg</span> <span class="op">=</span> <span class="ident">MultilinearKzgPCS</span><span class="op">&lt;</span><span class="ident">Bls12_381</span><span class="op">&gt;</span>;
+    <span class="kw">type</span> <span class="ident">KZG</span> <span class="op">=</span> <span class="ident">MultilinearKzgPCS</span><span class="op">&lt;</span><span class="ident">Bls12_381</span><span class="op">&gt;</span>;
 
     <span class="kw">fn</span> <span class="ident">test_permutation_check_helper</span><span class="op">&lt;</span><span class="ident">E</span>, <span class="ident">PCS</span><span class="op">&gt;</span>(
         <span class="ident">pcs_param</span>: <span class="kw-2">&amp;</span><span class="ident">PCS::ProverParam</span>,
@@ -486,10 +478,10 @@
         )<span class="question-mark">?</span>;
 
         <span class="comment">// check product subclaim</span>
-        <span class="kw">if</span> <span class="ident">prod_x</span>
-            .<span class="ident">evaluate</span>(<span class="kw-2">&amp;</span><span class="ident">perm_check_sub_claim</span>.<span class="ident">product_check_sub_claim</span>.<span class="ident">final_query</span>.<span class="number">0</span>)
-            .<span class="ident">unwrap</span>()
-            <span class="op">!</span><span class="op">=</span> <span class="ident">perm_check_sub_claim</span>.<span class="ident">product_check_sub_claim</span>.<span class="ident">final_query</span>.<span class="number">1</span>
+        <span class="kw">if</span> <span class="ident">evaluate_opt</span>(
+            <span class="kw-2">&amp;</span><span class="ident">prod_x</span>,
+            <span class="kw-2">&amp;</span><span class="ident">perm_check_sub_claim</span>.<span class="ident">product_check_sub_claim</span>.<span class="ident">final_query</span>.<span class="number">0</span>,
+        ) <span class="op">!</span><span class="op">=</span> <span class="ident">perm_check_sub_claim</span>.<span class="ident">product_check_sub_claim</span>.<span class="ident">final_query</span>.<span class="number">1</span>
         {
             <span class="kw">return</span> <span class="prelude-val">Err</span>(<span class="ident">PolyIOPErrors::InvalidVerifier</span>(<span class="string">&quot;wrong subclaim&quot;</span>.<span class="ident">to_string</span>()));
         };
@@ -508,7 +500,7 @@
             <span class="kw">let</span> <span class="ident">w</span> <span class="op">=</span> <span class="ident">Rc::new</span>(<span class="ident">DenseMultilinearExtension::rand</span>(<span class="ident">nv</span>, <span class="kw-2">&amp;mut</span> <span class="ident">rng</span>));
             <span class="comment">// s_perm is the identity map</span>
             <span class="kw">let</span> <span class="ident">s_perm</span> <span class="op">=</span> <span class="ident">identity_permutation_mle</span>(<span class="ident">nv</span>);
-            <span class="ident">test_permutation_check_helper</span>::<span class="op">&lt;</span><span class="ident">Bls12_381</span>, <span class="ident">Kzg</span><span class="op">&gt;</span>(<span class="kw-2">&amp;</span><span class="ident">pcs_param</span>, <span class="kw-2">&amp;</span><span class="ident">w</span>, <span class="kw-2">&amp;</span><span class="ident">w</span>, <span class="kw-2">&amp;</span><span class="ident">s_perm</span>)<span class="question-mark">?</span>;
+            <span class="ident">test_permutation_check_helper</span>::<span class="op">&lt;</span><span class="ident">Bls12_381</span>, <span class="ident">KZG</span><span class="op">&gt;</span>(<span class="kw-2">&amp;</span><span class="ident">pcs_param</span>, <span class="kw-2">&amp;</span><span class="ident">w</span>, <span class="kw-2">&amp;</span><span class="ident">w</span>, <span class="kw-2">&amp;</span><span class="ident">s_perm</span>)<span class="question-mark">?</span>;
         }
 
         {
@@ -518,9 +510,9 @@
             <span class="kw">let</span> <span class="ident">s_perm</span> <span class="op">=</span> <span class="ident">random_permutation_mle</span>(<span class="ident">nv</span>, <span class="kw-2">&amp;mut</span> <span class="ident">rng</span>);
 
             <span class="kw">if</span> <span class="ident">nv</span> <span class="op">==</span> <span class="number">1</span> {
-                <span class="ident">test_permutation_check_helper</span>::<span class="op">&lt;</span><span class="ident">Bls12_381</span>, <span class="ident">Kzg</span><span class="op">&gt;</span>(<span class="kw-2">&amp;</span><span class="ident">pcs_param</span>, <span class="kw-2">&amp;</span><span class="ident">w</span>, <span class="kw-2">&amp;</span><span class="ident">w</span>, <span class="kw-2">&amp;</span><span class="ident">s_perm</span>)<span class="question-mark">?</span>;
+                <span class="ident">test_permutation_check_helper</span>::<span class="op">&lt;</span><span class="ident">Bls12_381</span>, <span class="ident">KZG</span><span class="op">&gt;</span>(<span class="kw-2">&amp;</span><span class="ident">pcs_param</span>, <span class="kw-2">&amp;</span><span class="ident">w</span>, <span class="kw-2">&amp;</span><span class="ident">w</span>, <span class="kw-2">&amp;</span><span class="ident">s_perm</span>)<span class="question-mark">?</span>;
             } <span class="kw">else</span> {
-                <span class="macro">assert!</span>(<span class="ident">test_permutation_check_helper</span>::<span class="op">&lt;</span><span class="ident">Bls12_381</span>, <span class="ident">Kzg</span><span class="op">&gt;</span>(
+                <span class="macro">assert!</span>(<span class="ident">test_permutation_check_helper</span>::<span class="op">&lt;</span><span class="ident">Bls12_381</span>, <span class="ident">KZG</span><span class="op">&gt;</span>(
                     <span class="kw-2">&amp;</span><span class="ident">pcs_param</span>, <span class="kw-2">&amp;</span><span class="ident">w</span>, <span class="kw-2">&amp;</span><span class="ident">w</span>, <span class="kw-2">&amp;</span><span class="ident">s_perm</span>
                 )
                 .<span class="ident">is_err</span>());
@@ -535,7 +527,7 @@
             <span class="kw">let</span> <span class="ident">s_perm</span> <span class="op">=</span> <span class="ident">identity_permutation_mle</span>(<span class="ident">nv</span>);
 
             <span class="macro">assert!</span>(
-                <span class="ident">test_permutation_check_helper</span>::<span class="op">&lt;</span><span class="ident">Bls12_381</span>, <span class="ident">Kzg</span><span class="op">&gt;</span>(<span class="kw-2">&amp;</span><span class="ident">pcs_param</span>, <span class="kw-2">&amp;</span><span class="ident">f</span>, <span class="kw-2">&amp;</span><span class="ident">g</span>, <span class="kw-2">&amp;</span><span class="ident">s_perm</span>)
+                <span class="ident">test_permutation_check_helper</span>::<span class="op">&lt;</span><span class="ident">Bls12_381</span>, <span class="ident">KZG</span><span class="op">&gt;</span>(<span class="kw-2">&amp;</span><span class="ident">pcs_param</span>, <span class="kw-2">&amp;</span><span class="ident">f</span>, <span class="kw-2">&amp;</span><span class="ident">g</span>, <span class="kw-2">&amp;</span><span class="ident">s_perm</span>)
                     .<span class="ident">is_err</span>()
             );
         }

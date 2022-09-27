@@ -311,7 +311,7 @@
 <span class="kw">use</span> <span class="ident">ark_ff</span>::{<span class="ident">One</span>, <span class="ident">PrimeField</span>, <span class="ident">Zero</span>};
 <span class="kw">use</span> <span class="ident">ark_poly::DenseMultilinearExtension</span>;
 <span class="kw">use</span> <span class="ident">ark_std</span>::{<span class="ident">end_timer</span>, <span class="ident">start_timer</span>};
-<span class="kw">use</span> <span class="ident">jf_primitives::pcs::prelude::PolynomialCommitmentScheme</span>;
+<span class="kw">use</span> <span class="ident">pcs::PolynomialCommitmentScheme</span>;
 <span class="kw">use</span> <span class="ident">std::rc::Rc</span>;
 <span class="kw">use</span> <span class="ident">transcript::IOPTranscript</span>;
 
@@ -507,7 +507,7 @@
     <span class="kw">use</span> <span class="ident">ark_ec::PairingEngine</span>;
     <span class="kw">use</span> <span class="ident">ark_poly</span>::{<span class="ident">DenseMultilinearExtension</span>, <span class="ident">MultilinearExtension</span>};
     <span class="kw">use</span> <span class="ident">ark_std::test_rng</span>;
-    <span class="kw">use</span> <span class="ident">jf_primitives::pcs</span>::{<span class="ident">prelude::MultilinearKzgPCS</span>, <span class="ident">PolynomialCommitmentScheme</span>};
+    <span class="kw">use</span> <span class="ident">pcs</span>::{<span class="ident">prelude::MultilinearKzgPCS</span>, <span class="ident">PolynomialCommitmentScheme</span>};
     <span class="kw">use</span> <span class="ident">std</span>::{<span class="ident">marker::PhantomData</span>, <span class="ident">rc::Rc</span>};
 
     <span class="comment">// f and g are guaranteed to have the same product</span>

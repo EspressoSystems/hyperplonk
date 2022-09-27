@@ -268,19 +268,157 @@
 <span id="268">268</span>
 <span id="269">269</span>
 <span id="270">270</span>
-</pre><pre class="rust"><code><span class="kw">use</span> <span class="ident">std::rc::Rc</span>;
-
-<span class="kw">use</span> <span class="ident">arithmetic::VirtualPolynomial</span>;
-<span class="kw">use</span> <span class="ident">ark_ff::PrimeField</span>;
-<span class="kw">use</span> <span class="ident">ark_poly::DenseMultilinearExtension</span>;
-
-<span class="kw">use</span> <span class="kw">crate</span>::{
-    <span class="ident">errors::HyperPlonkErrors</span>,
-    <span class="ident">structs</span>::{<span class="ident">CustomizedGates</span>, <span class="ident">HyperPlonkParams</span>},
+<span id="271">271</span>
+<span id="272">272</span>
+<span id="273">273</span>
+<span id="274">274</span>
+<span id="275">275</span>
+<span id="276">276</span>
+<span id="277">277</span>
+<span id="278">278</span>
+<span id="279">279</span>
+<span id="280">280</span>
+<span id="281">281</span>
+<span id="282">282</span>
+<span id="283">283</span>
+<span id="284">284</span>
+<span id="285">285</span>
+<span id="286">286</span>
+<span id="287">287</span>
+<span id="288">288</span>
+<span id="289">289</span>
+<span id="290">290</span>
+<span id="291">291</span>
+<span id="292">292</span>
+<span id="293">293</span>
+<span id="294">294</span>
+<span id="295">295</span>
+<span id="296">296</span>
+<span id="297">297</span>
+<span id="298">298</span>
+<span id="299">299</span>
+<span id="300">300</span>
+<span id="301">301</span>
+<span id="302">302</span>
+<span id="303">303</span>
+<span id="304">304</span>
+<span id="305">305</span>
+<span id="306">306</span>
+<span id="307">307</span>
+<span id="308">308</span>
+<span id="309">309</span>
+<span id="310">310</span>
+<span id="311">311</span>
+<span id="312">312</span>
+<span id="313">313</span>
+<span id="314">314</span>
+<span id="315">315</span>
+<span id="316">316</span>
+<span id="317">317</span>
+<span id="318">318</span>
+<span id="319">319</span>
+<span id="320">320</span>
+<span id="321">321</span>
+<span id="322">322</span>
+<span id="323">323</span>
+<span id="324">324</span>
+<span id="325">325</span>
+<span id="326">326</span>
+<span id="327">327</span>
+<span id="328">328</span>
+<span id="329">329</span>
+<span id="330">330</span>
+<span id="331">331</span>
+<span id="332">332</span>
+<span id="333">333</span>
+<span id="334">334</span>
+<span id="335">335</span>
+<span id="336">336</span>
+<span id="337">337</span>
+</pre><pre class="rust"><code><span class="kw">use</span> <span class="kw">crate</span>::{
+    <span class="ident">custom_gate::CustomizedGates</span>, <span class="ident">errors::HyperPlonkErrors</span>, <span class="ident">structs::HyperPlonkParams</span>,
     <span class="ident">witness::WitnessColumn</span>,
 };
+<span class="kw">use</span> <span class="ident">arithmetic::VirtualPolynomial</span>;
+<span class="kw">use</span> <span class="ident">ark_ec::PairingEngine</span>;
+<span class="kw">use</span> <span class="ident">ark_ff::PrimeField</span>;
+<span class="kw">use</span> <span class="ident">ark_poly::DenseMultilinearExtension</span>;
+<span class="kw">use</span> <span class="ident">pcs::PolynomialCommitmentScheme</span>;
+<span class="kw">use</span> <span class="ident">std</span>::{<span class="ident">borrow::Borrow</span>, <span class="ident">rc::Rc</span>};
 
-<span class="kw">use</span> <span class="ident">poly_iop::prelude::bit_decompose</span>;
+<span class="doccomment">/// An accumulator structure that holds a polynomial and</span>
+<span class="doccomment">/// its opening points</span>
+<span class="attribute">#[<span class="ident">derive</span>(<span class="ident">Debug</span>)]</span>
+<span class="kw">pub</span>(<span class="kw">super</span>) <span class="kw">struct</span> <span class="ident">PcsAccumulator</span><span class="op">&lt;</span><span class="ident">E</span>: <span class="ident">PairingEngine</span>, <span class="ident">PCS</span>: <span class="ident">PolynomialCommitmentScheme</span><span class="op">&lt;</span><span class="ident">E</span><span class="op">&gt;</span><span class="op">&gt;</span> {
+    <span class="kw">pub</span>(<span class="kw">crate</span>) <span class="ident">polynomial</span>: <span class="prelude-ty">Option</span><span class="op">&lt;</span><span class="ident">PCS::Polynomial</span><span class="op">&gt;</span>,
+    <span class="kw">pub</span>(<span class="kw">crate</span>) <span class="ident">poly_commit</span>: <span class="prelude-ty">Option</span><span class="op">&lt;</span><span class="ident">PCS::Commitment</span><span class="op">&gt;</span>,
+    <span class="kw">pub</span>(<span class="kw">crate</span>) <span class="ident">points</span>: <span class="ident">Vec</span><span class="op">&lt;</span><span class="ident">PCS::Point</span><span class="op">&gt;</span>,
+}
+
+<span class="kw">impl</span><span class="op">&lt;</span><span class="ident">E</span>: <span class="ident">PairingEngine</span>, <span class="ident">PCS</span>: <span class="ident">PolynomialCommitmentScheme</span><span class="op">&lt;</span><span class="ident">E</span><span class="op">&gt;</span><span class="op">&gt;</span> <span class="ident">PcsAccumulator</span><span class="op">&lt;</span><span class="ident">E</span>, <span class="ident">PCS</span><span class="op">&gt;</span> {
+    <span class="doccomment">/// Create an empty accumulator.</span>
+    <span class="kw">pub</span>(<span class="kw">super</span>) <span class="kw">fn</span> <span class="ident">new</span>() -&gt; <span class="self">Self</span> {
+        <span class="self">Self</span> {
+            <span class="ident">polynomial</span>: <span class="prelude-val">None</span>,
+            <span class="ident">poly_commit</span>: <span class="prelude-val">None</span>,
+            <span class="ident">points</span>: <span class="macro">vec!</span>[],
+        }
+    }
+
+    <span class="doccomment">/// Initialize the polynomial; requires both the polynomial</span>
+    <span class="doccomment">/// and its commitment.</span>
+    <span class="kw">pub</span>(<span class="kw">super</span>) <span class="kw">fn</span> <span class="ident">init_poly</span>(
+        <span class="kw-2">&amp;mut</span> <span class="self">self</span>,
+        <span class="ident">polynomial</span>: <span class="ident">PCS::Polynomial</span>,
+        <span class="ident">commitment</span>: <span class="ident">PCS::Commitment</span>,
+    ) -&gt; <span class="prelude-ty">Result</span><span class="op">&lt;</span>(), <span class="ident">HyperPlonkErrors</span><span class="op">&gt;</span> {
+        <span class="kw">if</span> <span class="self">self</span>.<span class="ident">polynomial</span>.<span class="ident">is_some</span>() <span class="op">|</span><span class="op">|</span> <span class="self">self</span>.<span class="ident">poly_commit</span>.<span class="ident">is_some</span>() {
+            <span class="kw">return</span> <span class="prelude-val">Err</span>(<span class="ident">HyperPlonkErrors::InvalidProver</span>(
+                <span class="string">&quot;poly already set for accumulator&quot;</span>.<span class="ident">to_string</span>(),
+            ));
+        }
+
+        <span class="self">self</span>.<span class="ident">polynomial</span> <span class="op">=</span> <span class="prelude-val">Some</span>(<span class="ident">polynomial</span>);
+        <span class="self">self</span>.<span class="ident">poly_commit</span> <span class="op">=</span> <span class="prelude-val">Some</span>(<span class="ident">commitment</span>);
+        <span class="prelude-val">Ok</span>(())
+    }
+
+    <span class="doccomment">/// Push a new evaluation point into the accumulator</span>
+    <span class="kw">pub</span>(<span class="kw">super</span>) <span class="kw">fn</span> <span class="ident">insert_point</span>(<span class="kw-2">&amp;mut</span> <span class="self">self</span>, <span class="ident">point</span>: <span class="kw-2">&amp;</span><span class="ident">PCS::Point</span>) {
+        <span class="self">self</span>.<span class="ident">points</span>.<span class="ident">push</span>(<span class="ident">point</span>.<span class="ident">clone</span>())
+    }
+
+    <span class="doccomment">/// Batch open all the points over a merged polynomial.</span>
+    <span class="doccomment">/// A simple wrapper of PCS::multi_open</span>
+    <span class="kw">pub</span>(<span class="kw">super</span>) <span class="kw">fn</span> <span class="ident">batch_open</span>(
+        <span class="kw-2">&amp;</span><span class="self">self</span>,
+        <span class="ident">prover_param</span>: <span class="kw">impl</span> <span class="ident">Borrow</span><span class="op">&lt;</span><span class="ident">PCS::ProverParam</span><span class="op">&gt;</span>,
+    ) -&gt; <span class="prelude-ty">Result</span><span class="op">&lt;</span>(<span class="ident">PCS::BatchProof</span>, <span class="ident">Vec</span><span class="op">&lt;</span><span class="ident">PCS::Evaluation</span><span class="op">&gt;</span>), <span class="ident">HyperPlonkErrors</span><span class="op">&gt;</span> {
+        <span class="kw">let</span> <span class="ident">poly</span> <span class="op">=</span> <span class="kw">match</span> <span class="kw-2">&amp;</span><span class="self">self</span>.<span class="ident">polynomial</span> {
+            <span class="prelude-val">Some</span>(<span class="ident">p</span>) =&gt; <span class="ident">p</span>,
+            <span class="prelude-val">None</span> =&gt; {
+                <span class="kw">return</span> <span class="prelude-val">Err</span>(<span class="ident">HyperPlonkErrors::InvalidProver</span>(
+                    <span class="string">&quot;poly is set for accumulator&quot;</span>.<span class="ident">to_string</span>(),
+                ))
+            },
+        };
+
+        <span class="kw">let</span> <span class="ident">commitment</span> <span class="op">=</span> <span class="kw">match</span> <span class="kw-2">&amp;</span><span class="self">self</span>.<span class="ident">poly_commit</span> {
+            <span class="prelude-val">Some</span>(<span class="ident">p</span>) =&gt; <span class="ident">p</span>,
+            <span class="prelude-val">None</span> =&gt; {
+                <span class="kw">return</span> <span class="prelude-val">Err</span>(<span class="ident">HyperPlonkErrors::InvalidProver</span>(
+                    <span class="string">&quot;poly is set for accumulator&quot;</span>.<span class="ident">to_string</span>(),
+                ))
+            },
+        };
+        <span class="prelude-val">Ok</span>(<span class="ident">PCS::multi_open_single_poly</span>(
+            <span class="ident">prover_param</span>.<span class="ident">borrow</span>(),
+            <span class="ident">commitment</span>,
+            <span class="ident">poly</span>,
+            <span class="kw-2">&amp;</span><span class="self">self</span>.<span class="ident">points</span>,
+        )<span class="question-mark">?</span>)
+    }
+}
 
 <span class="doccomment">/// Build MLE from matrix of witnesses.</span>
 <span class="doccomment">///</span>
@@ -312,30 +450,37 @@
 }
 
 <span class="doccomment">/// Sanity-check for HyperPlonk SNARK proving</span>
-<span class="kw">pub</span>(<span class="kw">crate</span>) <span class="kw">fn</span> <span class="ident">prove_sanity_check</span><span class="op">&lt;</span><span class="ident">F</span>: <span class="ident">PrimeField</span><span class="op">&gt;</span>(
+<span class="kw">pub</span>(<span class="kw">crate</span>) <span class="kw">fn</span> <span class="ident">prover_sanity_check</span><span class="op">&lt;</span><span class="ident">F</span>: <span class="ident">PrimeField</span><span class="op">&gt;</span>(
     <span class="ident">params</span>: <span class="kw-2">&amp;</span><span class="ident">HyperPlonkParams</span>,
     <span class="ident">pub_input</span>: <span class="kw-2">&amp;</span>[<span class="ident">F</span>],
     <span class="ident">witnesses</span>: <span class="kw-2">&amp;</span>[<span class="ident">WitnessColumn</span><span class="op">&lt;</span><span class="ident">F</span><span class="op">&gt;</span>],
 ) -&gt; <span class="prelude-ty">Result</span><span class="op">&lt;</span>(), <span class="ident">HyperPlonkErrors</span><span class="op">&gt;</span> {
-    <span class="kw">let</span> <span class="ident">num_vars</span> <span class="op">=</span> <span class="ident">params</span>.<span class="ident">nv</span>;
-    <span class="kw">let</span> <span class="ident">ell</span> <span class="op">=</span> <span class="ident">params</span>.<span class="ident">log_pub_input_len</span>;
+    <span class="comment">// public input length must be no greater than num_constraints</span>
+
+    <span class="kw">if</span> <span class="ident">pub_input</span>.<span class="ident">len</span>() <span class="op">&gt;</span> <span class="ident">params</span>.<span class="ident">num_constraints</span> {
+        <span class="kw">return</span> <span class="prelude-val">Err</span>(<span class="ident">HyperPlonkErrors::InvalidProver</span>(<span class="macro">format!</span>(
+            <span class="string">&quot;Public input length {} is greater than num constraits {}&quot;</span>,
+            <span class="ident">pub_input</span>.<span class="ident">len</span>(),
+            <span class="ident">params</span>.<span class="ident">num_pub_input</span>
+        )));
+    }
 
     <span class="comment">// public input length</span>
-    <span class="kw">if</span> <span class="ident">pub_input</span>.<span class="ident">len</span>() <span class="op">!</span><span class="op">=</span> <span class="number">1</span> <span class="op">&lt;</span><span class="op">&lt;</span> <span class="ident">ell</span> {
+    <span class="kw">if</span> <span class="ident">pub_input</span>.<span class="ident">len</span>() <span class="op">!</span><span class="op">=</span> <span class="ident">params</span>.<span class="ident">num_pub_input</span> {
         <span class="kw">return</span> <span class="prelude-val">Err</span>(<span class="ident">HyperPlonkErrors::InvalidProver</span>(<span class="macro">format!</span>(
             <span class="string">&quot;Public input length is not correct: got {}, expect {}&quot;</span>,
             <span class="ident">pub_input</span>.<span class="ident">len</span>(),
-            <span class="number">1</span> <span class="op">&lt;</span><span class="op">&lt;</span> <span class="ident">ell</span>
+            <span class="ident">params</span>.<span class="ident">num_pub_input</span>
         )));
     }
     <span class="comment">// witnesses length</span>
     <span class="kw">for</span> (<span class="ident">i</span>, <span class="ident">w</span>) <span class="kw">in</span> <span class="ident">witnesses</span>.<span class="ident">iter</span>().<span class="ident">enumerate</span>() {
-        <span class="kw">if</span> <span class="ident">w</span>.<span class="number">0</span>.<span class="ident">len</span>() <span class="op">!</span><span class="op">=</span> <span class="number">1</span> <span class="op">&lt;</span><span class="op">&lt;</span> <span class="ident">num_vars</span> {
+        <span class="kw">if</span> <span class="ident">w</span>.<span class="number">0</span>.<span class="ident">len</span>() <span class="op">!</span><span class="op">=</span> <span class="ident">params</span>.<span class="ident">num_constraints</span> {
             <span class="kw">return</span> <span class="prelude-val">Err</span>(<span class="ident">HyperPlonkErrors::InvalidProver</span>(<span class="macro">format!</span>(
                 <span class="string">&quot;{}-th witness length is not correct: got {}, expect {}&quot;</span>,
                 <span class="ident">i</span>,
-                <span class="ident">pub_input</span>.<span class="ident">len</span>(),
-                <span class="number">1</span> <span class="op">&lt;</span><span class="op">&lt;</span> <span class="ident">ell</span>
+                <span class="ident">w</span>.<span class="number">0</span>.<span class="ident">len</span>(),
+                <span class="ident">params</span>.<span class="ident">num_constraints</span>
             )));
         }
     }
@@ -429,17 +574,6 @@
         <span class="ident">res</span> <span class="op">+</span><span class="op">=</span> <span class="ident">cur_value</span>;
     }
     <span class="prelude-val">Ok</span>(<span class="ident">res</span>)
-}
-
-<span class="doccomment">/// given the evaluation input `point` of the `index`-th polynomial,</span>
-<span class="doccomment">/// obtain the evaluation point in the merged polynomial</span>
-<span class="kw">pub</span>(<span class="kw">crate</span>) <span class="kw">fn</span> <span class="ident">gen_eval_point</span><span class="op">&lt;</span><span class="ident">F</span>: <span class="ident">PrimeField</span><span class="op">&gt;</span>(<span class="ident">index</span>: <span class="ident">usize</span>, <span class="ident">index_len</span>: <span class="ident">usize</span>, <span class="ident">point</span>: <span class="kw-2">&amp;</span>[<span class="ident">F</span>]) -&gt; <span class="ident">Vec</span><span class="op">&lt;</span><span class="ident">F</span><span class="op">&gt;</span> {
-    <span class="kw">let</span> <span class="kw-2">mut</span> <span class="ident">index_vec</span>: <span class="ident">Vec</span><span class="op">&lt;</span><span class="ident">F</span><span class="op">&gt;</span> <span class="op">=</span> <span class="ident">bit_decompose</span>(<span class="ident">index</span> <span class="kw">as</span> <span class="ident">u64</span>, <span class="ident">index_len</span>)
-        .<span class="ident">into_iter</span>()
-        .<span class="ident">map</span>(<span class="op">|</span><span class="ident">x</span><span class="op">|</span> <span class="ident">F::from</span>(<span class="ident">x</span>))
-        .<span class="ident">collect</span>();
-    <span class="ident">index_vec</span>.<span class="ident">reverse</span>();
-    [<span class="ident">point</span>, <span class="kw-2">&amp;</span><span class="ident">index_vec</span>].<span class="ident">concat</span>()
 }
 
 <span class="attribute">#[<span class="ident">cfg</span>(<span class="ident">test</span>)]</span>

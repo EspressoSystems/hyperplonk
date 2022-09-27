@@ -66,6 +66,15 @@
 <span id="66">66</span>
 <span id="67">67</span>
 <span id="68">68</span>
+<span id="69">69</span>
+<span id="70">70</span>
+<span id="71">71</span>
+<span id="72">72</span>
+<span id="73">73</span>
+<span id="74">74</span>
+<span id="75">75</span>
+<span id="76">76</span>
+<span id="77">77</span>
 </pre><pre class="rust"><code><span class="kw">use</span> <span class="kw">crate</span>::{<span class="ident">build_mle</span>, <span class="ident">errors::HyperPlonkErrors</span>};
 <span class="kw">use</span> <span class="ident">ark_ff::PrimeField</span>;
 <span class="kw">use</span> <span class="ident">ark_poly::DenseMultilinearExtension</span>;
@@ -77,7 +86,7 @@
 <span class="kw">pub</span> <span class="kw">struct</span> <span class="ident">WitnessRow</span><span class="op">&lt;</span><span class="ident">F</span>: <span class="ident">PrimeField</span><span class="op">&gt;</span>(<span class="kw">pub</span>(<span class="kw">crate</span>) <span class="ident">Vec</span><span class="op">&lt;</span><span class="ident">F</span><span class="op">&gt;</span>);
 
 <span class="doccomment">/// A column of witnesses of length `#constraints`</span>
-<span class="attribute">#[<span class="ident">derive</span>(<span class="ident">Debug</span>, <span class="ident">Clone</span>)]</span>
+<span class="attribute">#[<span class="ident">derive</span>(<span class="ident">Debug</span>, <span class="ident">Clone</span>, <span class="ident">Default</span>)]</span>
 <span class="kw">pub</span> <span class="kw">struct</span> <span class="ident">WitnessColumn</span><span class="op">&lt;</span><span class="ident">F</span>: <span class="ident">PrimeField</span><span class="op">&gt;</span>(<span class="kw">pub</span>(<span class="kw">crate</span>) <span class="ident">Vec</span><span class="op">&lt;</span><span class="ident">F</span><span class="op">&gt;</span>);
 
 <span class="kw">impl</span><span class="op">&lt;</span><span class="ident">F</span>: <span class="ident">PrimeField</span><span class="op">&gt;</span> <span class="ident">WitnessColumn</span><span class="op">&lt;</span><span class="ident">F</span><span class="op">&gt;</span> {
@@ -85,6 +94,11 @@
     <span class="doccomment">/// column.</span>
     <span class="kw">pub</span> <span class="kw">fn</span> <span class="ident">get_nv</span>(<span class="kw-2">&amp;</span><span class="self">self</span>) -&gt; <span class="ident">usize</span> {
         <span class="ident">log2</span>(<span class="self">self</span>.<span class="number">0</span>.<span class="ident">len</span>()) <span class="kw">as</span> <span class="ident">usize</span>
+    }
+
+    <span class="doccomment">/// Append a new element to the witness column</span>
+    <span class="kw">pub</span> <span class="kw">fn</span> <span class="ident">append</span>(<span class="kw-2">&amp;mut</span> <span class="self">self</span>, <span class="ident">new_element</span>: <span class="ident">F</span>) {
+        <span class="self">self</span>.<span class="number">0</span>.<span class="ident">push</span>(<span class="ident">new_element</span>)
     }
 
     <span class="doccomment">/// Build witness columns from rows</span>
@@ -109,6 +123,10 @@
         }
 
         <span class="prelude-val">Ok</span>(<span class="ident">res</span>)
+    }
+
+    <span class="kw">pub</span> <span class="kw">fn</span> <span class="ident">coeff_ref</span>(<span class="kw-2">&amp;</span><span class="self">self</span>) -&gt; <span class="kw-2">&amp;</span>[<span class="ident">F</span>] {
+        <span class="self">self</span>.<span class="number">0</span>.<span class="ident">as_ref</span>()
     }
 }
 

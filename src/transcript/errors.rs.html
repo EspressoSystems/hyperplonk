@@ -24,14 +24,14 @@
 
 <span class="doccomment">/// A `enum` specifying the possible failure modes of the Transcript.</span>
 <span class="attribute">#[<span class="ident">derive</span>(<span class="ident">Display</span>, <span class="ident">Debug</span>)]</span>
-<span class="kw">pub</span> <span class="kw">enum</span> <span class="ident">TranscriptErrors</span> {
+<span class="kw">pub</span> <span class="kw">enum</span> <span class="ident">TranscriptError</span> {
     <span class="doccomment">/// Invalid Transcript: {0}</span>
     <span class="ident">InvalidTranscript</span>(<span class="ident">String</span>),
     <span class="doccomment">/// An error during (de)serialization: {0}</span>
     <span class="ident">SerializationError</span>(<span class="ident">ark_serialize::SerializationError</span>),
 }
 
-<span class="kw">impl</span> <span class="ident">From</span><span class="op">&lt;</span><span class="ident">ark_serialize::SerializationError</span><span class="op">&gt;</span> <span class="kw">for</span> <span class="ident">TranscriptErrors</span> {
+<span class="kw">impl</span> <span class="ident">From</span><span class="op">&lt;</span><span class="ident">ark_serialize::SerializationError</span><span class="op">&gt;</span> <span class="kw">for</span> <span class="ident">TranscriptError</span> {
     <span class="kw">fn</span> <span class="ident">from</span>(<span class="ident">e</span>: <span class="ident">ark_serialize::SerializationError</span>) -&gt; <span class="self">Self</span> {
         <span class="ident"><span class="self">Self</span>::SerializationError</span>(<span class="ident">e</span>)
     }
