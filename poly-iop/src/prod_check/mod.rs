@@ -11,7 +11,7 @@ use ark_ec::PairingEngine;
 use ark_ff::{One, PrimeField, Zero};
 use ark_poly::DenseMultilinearExtension;
 use ark_std::{end_timer, start_timer};
-use pcs::prelude::PolynomialCommitmentScheme;
+use pcs::PolynomialCommitmentScheme;
 use std::rc::Rc;
 use transcript::IOPTranscript;
 
@@ -254,7 +254,7 @@ mod test {
         let (bad_proof, prod_x_bad) = <PolyIOP<E::Fr> as ProductCheck<E, PCS>>::prove(
             pcs_param,
             &Rc::new(f.clone()),
-            &Rc::new(h.clone()),
+            &Rc::new(h),
             &mut transcript,
         )?;
 

@@ -65,13 +65,8 @@ where
         let supported_ml_degree = max_nv;
 
         // extract PCS prover and verifier keys from SRS
-        let (pcs_prover_param, pcs_verifier_param) = PCS::trim(
-            pcs_srs,
-            supported_uni_degree,
-            // We are merging prod(x) at 5 points which requires
-            // log(num_constraints) + log_num_witness_polys + 1 + log(#points)
-            Some(supported_ml_degree),
-        )?;
+        let (pcs_prover_param, pcs_verifier_param) =
+            PCS::trim(pcs_srs, supported_uni_degree, Some(supported_ml_degree))?;
 
         // build permutation oracles
         let permutation_oracle = Rc::new(DenseMultilinearExtension::from_evaluations_slice(

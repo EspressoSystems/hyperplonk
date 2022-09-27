@@ -51,5 +51,4 @@ parallel = [
 print-trace = [ 
     "arithmetic/print-trace",
     "ark-std/print-trace",
-    "pcs/print-trace",
     ] 
