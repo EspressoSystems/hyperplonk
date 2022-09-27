@@ -139,8 +139,8 @@ fn bench_permutation_check() -> Result<(), PolyIOPErrors> {
     let mut rng = test_rng();
 
     for nv in 4..20 {
-        let srs = Kzg::gen_srs_for_testing(&mut rng, nv + 1)?;
-        let (pcs_param, _) = Kzg::trim(&srs, nv + 1, Some(nv + 1))?;
+        let srs = KZG::gen_srs_for_testing(&mut rng, nv + 1)?;
+        let (pcs_param, _) = KZG::trim(&srs, nv + 1, Some(nv + 1))?;
 
         let repetition = if nv < 10 {
             100
@@ -158,10 +158,10 @@ fn bench_permutation_check() -> Result<(), PolyIOPErrors> {
         let proof = {
             let start = Instant::now();
             let mut transcript =
-                <PolyIOP<Fr> as PermutationCheck<Bls12_381, Kzg>>::init_transcript();
+                <PolyIOP<Fr> as PermutationCheck<Bls12_381, KZG>>::init_transcript();
             transcript.append_message(b"testing", b"initializing transcript for testing")?;
 
-            let (proof, _q_x) = <PolyIOP<Fr> as PermutationCheck<Bls12_381, Kzg>>::prove(
+            let (proof, _q_x) = <PolyIOP<Fr> as PermutationCheck<Bls12_381, KZG>>::prove(
                 &pcs_param,
                 &w,
                 &w,
@@ -186,9 +186,9 @@ fn bench_permutation_check() -> Result<(), PolyIOPErrors> {
 
             let start = Instant::now();
             let mut transcript =
-                <PolyIOP<Fr> as PermutationCheck<Bls12_381, Kzg>>::init_transcript();
+                <PolyIOP<Fr> as PermutationCheck<Bls12_381, KZG>>::init_transcript();
             transcript.append_message(b"testing", b"initializing transcript for testing")?;
-            let _perm_check_sum_claim = <PolyIOP<Fr> as PermutationCheck<Bls12_381, Kzg>>::verify(
+            let _perm_check_sum_claim = <PolyIOP<Fr> as PermutationCheck<Bls12_381, KZG>>::verify(
                 &proof,
                 &poly_info,
                 &mut transcript,
@@ -210,8 +210,8 @@ fn bench_prod_check() -> Result<(), PolyIOPErrors> {
     let mut rng = test_rng();
 
     for nv in 4..20 {
-        let srs = Kzg::gen_srs_for_testing(&mut rng, nv + 1)?;
-        let (pcs_param, _) = Kzg::trim(&srs, nv + 1, Some(nv + 1))?;
+        let srs = KZG::gen_srs_for_testing(&mut rng, nv + 1)?;
+        let (pcs_param, _) = KZG::trim(&srs, nv + 1, Some(nv + 1))?;
 
         let repetition = if nv < 10 {
             100
@@ -229,10 +229,10 @@ fn bench_prod_check() -> Result<(), PolyIOPErrors> {
 
         let proof = {
             let start = Instant::now();
-            let mut transcript = <PolyIOP<Fr> as ProductCheck<Bls12_381, Kzg>>::init_transcript();
+            let mut transcript = <PolyIOP<Fr> as ProductCheck<Bls12_381, KZG>>::init_transcript();
             transcript.append_message(b"testing", b"initializing transcript for testing")?;
 
-            let (proof, _prod_x) = <PolyIOP<Fr> as ProductCheck<Bls12_381, Kzg>>::prove(
+            let (proof, _prod_x) = <PolyIOP<Fr> as ProductCheck<Bls12_381, KZG>>::prove(
                 &pcs_param,
                 &f,
                 &g,
@@ -255,9 +255,9 @@ fn bench_prod_check() -> Result<(), PolyIOPErrors> {
             };
 
             let start = Instant::now();
-            let mut transcript = <PolyIOP<Fr> as ProductCheck<Bls12_381, Kzg>>::init_transcript();
+            let mut transcript = <PolyIOP<Fr> as ProductCheck<Bls12_381, KZG>>::init_transcript();
             transcript.append_message(b"testing", b"initializing transcript for testing")?;
-            let _perm_check_sum_claim = <PolyIOP<Fr> as ProductCheck<Bls12_381, Kzg>>::verify(
+            let _perm_check_sum_claim = <PolyIOP<Fr> as ProductCheck<Bls12_381, KZG>>::verify(
                 &proof,
                 &poly_info,
                 &mut transcript,
