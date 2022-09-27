@@ -5,7 +5,7 @@ use crate::{errors::PolyIOPErrors, prelude::ProductCheck, PolyIOP};
 use ark_ec::PairingEngine;
 use ark_poly::DenseMultilinearExtension;
 use ark_std::{end_timer, start_timer};
-use jf_primitives::pcs::PolynomialCommitmentScheme;
+use pcs::PolynomialCommitmentScheme;
 use std::rc::Rc;
 use transcript::IOPTranscript;
 
@@ -153,20 +153,16 @@ where
 #[cfg(test)]
 mod test {
     use super::PermutationCheck;
-    use crate::{
-        errors::PolyIOPErrors,
-        prelude::{identity_permutation_mle, random_permutation_mle},
-        PolyIOP,
-    };
-    use arithmetic::VPAuxInfo;
+    use crate::{errors::PolyIOPErrors, PolyIOP};
+    use arithmetic::{evaluate_opt, identity_permutation_mle, random_permutation_mle, VPAuxInfo};
     use ark_bls12_381::Bls12_381;
     use ark_ec::PairingEngine;
     use ark_poly::{DenseMultilinearExtension, MultilinearExtension};
     use ark_std::test_rng;
-    use jf_primitives::pcs::{prelude::MultilinearKzgPCS, PolynomialCommitmentScheme};
+    use pcs::{prelude::MultilinearKzgPCS, PolynomialCommitmentScheme};
     use std::{marker::PhantomData, rc::Rc};
 
-    type Kzg = MultilinearKzgPCS<Bls12_381>;
+    type KZG = MultilinearKzgPCS<Bls12_381>;
 
     fn test_permutation_check_helper<E, PCS>(
         pcs_param: &PCS::ProverParam,
@@ -206,10 +202,10 @@ mod test {
         )?;
 
         // check product subclaim
-        if prod_x
-            .evaluate(&perm_check_sub_claim.product_check_sub_claim.final_query.0)
-            .unwrap()
-            != perm_check_sub_claim.product_check_sub_claim.final_query.1
+        if evaluate_opt(
+            &prod_x,
+            &perm_check_sub_claim.product_check_sub_claim.final_query.0,
+        ) != perm_check_sub_claim.product_check_sub_claim.final_query.1
         {
             return Err(PolyIOPErrors::InvalidVerifier("wrong subclaim".to_string()));
         };
@@ -228,7 +224,7 @@ mod test {
             let w = Rc::new(DenseMultilinearExtension::rand(nv, &mut rng));
             // s_perm is the identity map
             let s_perm = identity_permutation_mle(nv);
-            test_permutation_check_helper::<Bls12_381, Kzg>(&pcs_param, &w, &w, &s_perm)?;
+            test_permutation_check_helper::<Bls12_381, KZG>(&pcs_param, &w, &w, &s_perm)?;
         }
 
         {
@@ -238,9 +234,9 @@ mod test {
             let s_perm = random_permutation_mle(nv, &mut rng);
 
             if nv == 1 {
-                test_permutation_check_helper::<Bls12_381, Kzg>(&pcs_param, &w, &w, &s_perm)?;
+                test_permutation_check_helper::<Bls12_381, KZG>(&pcs_param, &w, &w, &s_perm)?;
             } else {
-                assert!(test_permutation_check_helper::<Bls12_381, Kzg>(
+                assert!(test_permutation_check_helper::<Bls12_381, KZG>(
                     &pcs_param, &w, &w, &s_perm
                 )
                 .is_err());
@@ -255,7 +251,7 @@ mod test {
             let s_perm = identity_permutation_mle(nv);
 
             assert!(
-                test_permutation_check_helper::<Bls12_381, Kzg>(&pcs_param, &f, &g, &s_perm)
+                test_permutation_check_helper::<Bls12_381, KZG>(&pcs_param, &f, &g, &s_perm)
                     .is_err()
             );
         }

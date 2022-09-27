@@ -1,16 +1,20 @@
+// Copyright (c) 2022 Espresso Systems (espressosys.com)
+// This file is part of the Jellyfish library.
+
+// You should have received a copy of the MIT License
+// along with the Jellyfish library. If not, see <https://mit-license.org/>.
+
 //! Error module.
 
 use arithmetic::ArithErrors;
 use ark_serialize::SerializationError;
 use ark_std::string::String;
 use displaydoc::Display;
-use pcs::prelude::PCSError;
-use poly_iop::prelude::PolyIOPErrors;
 use transcript::TranscriptError;
 
-/// A `enum` specifying the possible failure modes of hyperplonk.
+/// A `enum` specifying the possible failure modes of the PCS.
 #[derive(Display, Debug)]
-pub enum HyperPlonkErrors {
+pub enum PCSError {
     /// Invalid Prover: {0}
     InvalidProver(String),
     /// Invalid Verifier: {0}
@@ -21,42 +25,26 @@ pub enum HyperPlonkErrors {
     InvalidParameters(String),
     /// An error during (de)serialization: {0}
     SerializationError(SerializationError),
-    /// PolyIOP error {0}
-    PolyIOPErrors(PolyIOPErrors),
-    /// PCS error {0}
-    PCSErrors(PCSError),
     /// Transcript error {0}
     TranscriptError(TranscriptError),
-    /// Arithmetic Error: {0}
-    ArithmeticErrors(ArithErrors),
+    /// ArithErrors error {0}
+    ArithErrors(ArithErrors),
 }
 
-impl From<SerializationError> for HyperPlonkErrors {
+impl From<SerializationError> for PCSError {
     fn from(e: ark_serialize::SerializationError) -> Self {
         Self::SerializationError(e)
     }
 }
 
-impl From<PolyIOPErrors> for HyperPlonkErrors {
-    fn from(e: PolyIOPErrors) -> Self {
-        Self::PolyIOPErrors(e)
-    }
-}
-
-impl From<PCSError> for HyperPlonkErrors {
-    fn from(e: PCSError) -> Self {
-        Self::PCSErrors(e)
-    }
-}
-
-impl From<TranscriptError> for HyperPlonkErrors {
+impl From<TranscriptError> for PCSError {
     fn from(e: TranscriptError) -> Self {
         Self::TranscriptError(e)
     }
 }
 
-impl From<ArithErrors> for HyperPlonkErrors {
+impl From<ArithErrors> for PCSError {
     fn from(e: ArithErrors) -> Self {
-        Self::ArithmeticErrors(e)
+        Self::ArithErrors(e)
     }
 }

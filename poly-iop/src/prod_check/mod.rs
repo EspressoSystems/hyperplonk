@@ -11,7 +11,7 @@ use ark_ec::PairingEngine;
 use ark_ff::{One, PrimeField, Zero};
 use ark_poly::DenseMultilinearExtension;
 use ark_std::{end_timer, start_timer};
-use jf_primitives::pcs::prelude::PolynomialCommitmentScheme;
+use pcs::PolynomialCommitmentScheme;
 use std::rc::Rc;
 use transcript::IOPTranscript;
 
@@ -207,7 +207,7 @@ mod test {
     use ark_ec::PairingEngine;
     use ark_poly::{DenseMultilinearExtension, MultilinearExtension};
     use ark_std::test_rng;
-    use jf_primitives::pcs::{prelude::MultilinearKzgPCS, PolynomialCommitmentScheme};
+    use pcs::{prelude::MultilinearKzgPCS, PolynomialCommitmentScheme};
     use std::{marker::PhantomData, rc::Rc};
 
     // f and g are guaranteed to have the same product

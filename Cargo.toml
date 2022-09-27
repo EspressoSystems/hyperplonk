@@ -4,4 +4,5 @@ members = [
   "hyperplonk",
   "poly-iop",
   "transcript",
+  "util"
 ]

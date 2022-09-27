@@ -5,14 +5,15 @@ use crate::{
     errors::PolyIOPErrors,
     structs::{IOPProverMessage, IOPProverState},
 };
-use arithmetic::VirtualPolynomial;
+use arithmetic::{fix_variables, VirtualPolynomial};
 use ark_ff::PrimeField;
-use ark_poly::{DenseMultilinearExtension, MultilinearExtension};
+use ark_poly::DenseMultilinearExtension;
 use ark_std::{end_timer, start_timer, vec::Vec};
+use rayon::prelude::IntoParallelIterator;
 use std::rc::Rc;
 
 #[cfg(feature = "parallel")]
-use rayon::iter::{IndexedParallelIterator, IntoParallelRefMutIterator, ParallelIterator};
+use rayon::iter::{IntoParallelRefMutIterator, ParallelIterator};
 
 impl<F: PrimeField> SumCheckProver<F> for IOPProverState<F> {
     type VirtualPolynomial = VirtualPolynomial<F>;
@@ -44,8 +45,9 @@ impl<F: PrimeField> SumCheckProver<F> for IOPProverState<F> {
         &mut self,
         challenge: &Option<F>,
     ) -> Result<Self::ProverMessage, PolyIOPErrors> {
-        let start =
-            start_timer!(|| format!("sum check prove {}-th round and update state", self.round));
+        // let start =
+        //     start_timer!(|| format!("sum check prove {}-th round and update state",
+        // self.round));
 
         if self.round >= self.poly.aux_info.num_variables {
             return Err(PolyIOPErrors::InvalidProver(
@@ -53,7 +55,7 @@ impl<F: PrimeField> SumCheckProver<F> for IOPProverState<F> {
             ));
         }
 
-        let fix_argument = start_timer!(|| "fix argument");
+        // let fix_argument = start_timer!(|| "fix argument");
 
         // Step 1:
         // fix argument and evaluate f(x) over x_m = r; where r is the challenge
@@ -85,18 +87,18 @@ impl<F: PrimeField> SumCheckProver<F> for IOPProverState<F> {
             #[cfg(feature = "parallel")]
             flattened_ml_extensions
                 .par_iter_mut()
-                .for_each(|mle| *mle = mle.fix_variables(&[r]));
+                .for_each(|mle| *mle = fix_variables(mle, &[r]));
 
             #[cfg(not(feature = "parallel"))]
             flattened_ml_extensions
                 .iter_mut()
-                .for_each(|mle| *mle = mle.fix_variables(&[r]));
+                .for_each(|mle| *mle = fix_variables(mle, &[r]));
         } else if self.round > 0 {
             return Err(PolyIOPErrors::InvalidProver(
                 "verifier message is empty".to_string(),
             ));
         }
-        end_timer!(fix_argument);
+        // end_timer!(fix_argument);
 
         self.round += 1;
 
@@ -104,29 +106,44 @@ impl<F: PrimeField> SumCheckProver<F> for IOPProverState<F> {
         let mut products_sum = Vec::with_capacity(self.poly.aux_info.max_degree + 1);
         products_sum.resize(self.poly.aux_info.max_degree + 1, F::zero());
 
-        let compute_sum = start_timer!(|| "compute sum");
+        // let compute_sum = start_timer!(|| "compute sum");
+
         // Step 2: generate sum for the partial evaluated polynomial:
         // f(r_1, ... r_m,, x_{m+1}... x_n)
 
         #[cfg(feature = "parallel")]
-        products_sum.par_iter_mut().enumerate().for_each(|(t, e)| {
-            for b in 0..1 << (self.poly.aux_info.num_variables - self.round) {
-                // evaluate P_round(t)
-                for (coefficient, products) in products_list.iter() {
-                    let num_mles = products.len();
-                    let mut product = *coefficient;
-                    for &f in products.iter().take(num_mles) {
-                        let table = &flattened_ml_extensions[f]; // f's range is checked in init
-                        product *= table[b << 1] * (F::one() - F::from(t as u64))
-                            + table[(b << 1) + 1] * F::from(t as u64);
-                    }
-                    *e += product;
-                }
+        for (t, e) in products_sum.iter_mut().enumerate() {
+            let t = F::from(t as u64);
+            let one_minus_t = F::one() - t;
+            let products = (0..1 << (self.poly.aux_info.num_variables - self.round))
+                .into_par_iter()
+                .map(|b| {
+                    // evaluate P_round(t)
+                    let mut tmp = F::zero();
+                    products_list.iter().for_each(|(coefficient, products)| {
+                        let num_mles = products.len();
+                        let mut product = *coefficient;
+                        for &f in products.iter().take(num_mles) {
+                            let table = &flattened_ml_extensions[f]; // f's range is checked in init
+                            product *= table[b << 1] * one_minus_t + table[(b << 1) + 1] * t;
+                        }
+                        tmp += product;
+                    });
+
+                    tmp
+                })
+                .collect::<Vec<F>>();
+
+            for i in products.iter() {
+                *e += i
             }
-        });
+        }
 
         #[cfg(not(feature = "parallel"))]
         products_sum.iter_mut().enumerate().for_each(|(t, e)| {
+            let t = F::from(t as u64);
+            let one_minus_t = F::one() - t;
+
             for b in 0..1 << (self.poly.aux_info.num_variables - self.round) {
                 // evaluate P_round(t)
                 for (coefficient, products) in products_list.iter() {
@@ -134,8 +151,7 @@ impl<F: PrimeField> SumCheckProver<F> for IOPProverState<F> {
                     let mut product = *coefficient;
                     for &f in products.iter().take(num_mles) {
                         let table = &flattened_ml_extensions[f]; // f's range is checked in init
-                        product *= table[b << 1] * (F::one() - F::from(t as u64))
-                            + table[(b << 1) + 1] * F::from(t as u64);
+                        product *= table[b << 1] * one_minus_t + table[(b << 1) + 1] * t;
                     }
                     *e += product;
                 }
@@ -148,8 +164,8 @@ impl<F: PrimeField> SumCheckProver<F> for IOPProverState<F> {
             .map(|x| Rc::new(x.clone()))
             .collect();
 
-        end_timer!(compute_sum);
-        end_timer!(start);
+        // end_timer!(compute_sum);
+        // end_timer!(start);
         Ok(IOPProverMessage {
             evaluations: products_sum,
         })

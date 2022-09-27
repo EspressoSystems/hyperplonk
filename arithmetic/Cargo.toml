@@ -19,6 +19,7 @@ rayon = { version = "1.5.2", default-features = false, optional = true }
 
 [dev-dependencies]
 ark-ec = { version = "^0.3.0", default-features = false }
+criterion = "0.3.0"
 
 [features]
 # default = [ "parallel", "print-trace" ]
@@ -32,3 +33,9 @@ parallel = [
 print-trace = [ 
     "ark-std/print-trace" 
     ] 
+
+
+[[bench]]
+name = "mle_eval"
+path = "benches/bench.rs"
+harness = false

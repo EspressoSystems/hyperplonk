@@ -1,11 +1,11 @@
 //! Main module for the HyperPlonk PolyIOP.
 
-use crate::selectors::SelectorColumn;
+use crate::{custom_gate::CustomizedGates, selectors::SelectorColumn};
 use ark_ec::PairingEngine;
 use ark_ff::PrimeField;
 use ark_poly::DenseMultilinearExtension;
-use ark_std::cmp::max;
-use jf_primitives::pcs::PolynomialCommitmentScheme;
+use ark_std::log2;
+use pcs::PolynomialCommitmentScheme;
 use poly_iop::prelude::{PermutationCheck, ZeroCheck};
 use std::rc::Rc;
 
@@ -22,78 +22,84 @@ where
     PCS: PolynomialCommitmentScheme<E>,
 {
     // =======================================================================
-    // PCS components: common
+    // witness related
     // =======================================================================
-    /// PCS commit for witnesses
+    // PCS commit for witnesses
     pub w_merged_com: PCS::Commitment,
+    // Batch opening for witness commitment
+    // - PermCheck eval: 1 point
+    // - ZeroCheck evals: #witness points
+    // - public input eval: 1 point
+    pub w_merged_batch_opening: PCS::BatchProof,
+    // Evaluations of Witness
+    // - PermCheck eval: 1 point
+    // - ZeroCheck evals: #witness points
+    // - public input eval: 1 point
+    pub w_merged_batch_evals: Vec<E::Fr>,
     // =======================================================================
-    // PCS components: permutation check
+    // prod(x) related
     // =======================================================================
-    /// prod(x)'s evaluations
-    /// sequence: prod(0,x), prod(1, x), prod(x, 0), prod(x, 1), prod(1, ..., 1,
-    /// 0)
-    pub prod_evals: Vec<E::Fr>,
-    /// prod(x)'s openings
-    /// sequence: prod(0,x), prod(1, x), prod(x, 0), prod(x, 1), prod(1, ..., 1,
-    /// 0)
-    pub prod_openings: Vec<PCS::Proof>,
-    /// PCS openings for witness on permutation check point
-    // TODO: replace me with a batch opening
-    pub witness_perm_check_opening: PCS::Proof,
-    /// Evaluates of witnesses on permutation check point
-    pub witness_perm_check_eval: E::Fr,
-    /// PCS openings for selectors on permutation check point
-    // TODO: replace me with a batch opening
-    pub perm_oracle_opening: PCS::Proof,
-    /// Evaluates of selectors on permutation check point
-    pub perm_oracle_eval: E::Fr,
+    // prod(x)'s openings
+    // - prod(0, x),
+    // - prod(1, x),
+    // - prod(x, 0),
+    // - prod(x, 1),
+    // - prod(1, ..., 1,0)
+    pub prod_batch_openings: PCS::BatchProof,
+    // prod(x)'s evaluations
+    // - prod(0, x),
+    // - prod(1, x),
+    // - prod(x, 0),
+    // - prod(x, 1),
+    // - prod(1, ..., 1,0)
+    pub prod_batch_evals: Vec<E::Fr>,
     // =======================================================================
-    // PCS components: zero check
+    // selectors related
     // =======================================================================
-    /// PCS openings for witness on zero check point
-    // TODO: replace me with a batch opening
-    pub witness_zero_check_openings: Vec<PCS::Proof>,
-    /// Evaluates of witnesses on zero check point
-    pub witness_zero_check_evals: Vec<E::Fr>,
-    /// PCS openings for selectors on zero check point
-    // TODO: replace me with a batch opening
-    pub selector_oracle_openings: Vec<PCS::Proof>,
-    /// Evaluates of selectors on zero check point
-    pub selector_oracle_evals: Vec<E::Fr>,
+    // PCS openings for selectors on zero check point
+    pub selector_batch_opening: PCS::BatchProof,
+    // Evaluates of selectors on zero check point
+    pub selector_batch_evals: Vec<E::Fr>,
     // =======================================================================
-    // PCS components: public inputs
+    // IOP proofs
     // =======================================================================
-    /// Evaluates of public inputs on r_pi from transcript
-    pub pi_eval: E::Fr,
-    /// Opening of public inputs on r_pi from transcript
-    pub pi_opening: PCS::Proof,
-    // =======================================================================
-    // IOP components
-    // =======================================================================
-    /// the custom gate zerocheck proof
+    // the custom gate zerocheck proof
     pub zero_check_proof: <PC as ZeroCheck<E::Fr>>::ZeroCheckProof,
-    /// the permutation check proof for copy constraints
+    // the permutation check proof for copy constraints
     pub perm_check_proof: PC::PermutationProof,
 }
 
 /// The HyperPlonk instance parameters, consists of the following:
-///   - the number of variables in the poly-IOP
-///   - binary log of the number of public input variables
-///   - binary log of the number of selectors
-///   - binary log of the number of witness wires
+///   - the number of constraints
+///   - number of public input columns
 ///   - the customized gate function
 #[derive(Clone, Debug, Default, PartialEq, Eq)]
 pub struct HyperPlonkParams {
-    /// the number of variables in polys
-    pub nv: usize,
-    /// binary log of the public input length
-    pub log_pub_input_len: usize,
-    // binary log of the number of selectors
-    pub log_n_selectors: usize,
-    /// binary log of the number of witness wires
-    pub log_n_wires: usize,
+    /// the number of constraints
+    pub num_constraints: usize,
+    /// number of public input
+    // public input is only 1 column and is implicitly the first witness column.
+    // this size must not exceed number of constraints.
+    pub num_pub_input: usize,
     /// customized gate function
     pub gate_func: CustomizedGates,
+}
+
+impl HyperPlonkParams {
+    /// Number of variables in a multilinear system
+    pub fn num_variables(&self) -> usize {
+        log2(self.num_constraints) as usize
+    }
+
+    /// number of selector columns
+    pub fn num_selector_columns(&self) -> usize {
+        self.gate_func.num_selector_columns()
+    }
+
+    /// number of witness columns
+    pub fn num_witness_columns(&self) -> usize {
+        self.gate_func.num_witness_columns()
+    }
 }
 
 /// The HyperPlonk index, consists of the following:
@@ -107,72 +113,56 @@ pub struct HyperPlonkIndex<F: PrimeField> {
     pub selectors: Vec<SelectorColumn<F>>,
 }
 
+impl<F: PrimeField> HyperPlonkIndex<F> {
+    /// Number of variables in a multilinear system
+    pub fn num_variables(&self) -> usize {
+        self.params.num_variables()
+    }
+
+    /// number of selector columns
+    pub fn num_selector_columns(&self) -> usize {
+        self.params.num_selector_columns()
+    }
+
+    /// number of witness columns
+    pub fn num_witness_columns(&self) -> usize {
+        self.params.num_witness_columns()
+    }
+}
+
 /// The HyperPlonk proving key, consists of the following:
 ///   - the hyperplonk instance parameters
 ///   - the preprocessed polynomials output by the indexer
+///   - the commitment to the selectors
+///   - the parameters for polynomial commitment
 #[derive(Clone, Debug, Default, PartialEq)]
 pub struct HyperPlonkProvingKey<E: PairingEngine, PCS: PolynomialCommitmentScheme<E>> {
-    /// hyperplonk instance parameters
+    /// Hyperplonk instance parameters
     pub params: HyperPlonkParams,
-    /// the preprocessed permutation polynomials
+    /// The preprocessed permutation polynomials
     pub permutation_oracle: Rc<DenseMultilinearExtension<E::Fr>>,
-    /// the preprocessed selector polynomials
-    // TODO: merge the list into a single MLE
+    /// The preprocessed selector polynomials
     pub selector_oracles: Vec<Rc<DenseMultilinearExtension<E::Fr>>>,
-    /// the parameters for PCS commitment
+    /// A commitment to the preprocessed selector polynomials
+    pub selector_com: PCS::Commitment,
+    /// The parameters for PCS commitment
     pub pcs_param: PCS::ProverParam,
 }
 
 /// The HyperPlonk verifying key, consists of the following:
 ///   - the hyperplonk instance parameters
-///   - the preprocessed polynomials output by the indexer
+///   - the commitments to the preprocessed polynomials output by the indexer
+///   - the parameters for polynomial commitment
 #[derive(Clone, Debug, Default, PartialEq)]
 pub struct HyperPlonkVerifyingKey<E: PairingEngine, PCS: PolynomialCommitmentScheme<E>> {
-    /// hyperplonk instance parameters
+    /// Hyperplonk instance parameters
     pub params: HyperPlonkParams,
-    /// the parameters for PCS commitment
+    /// The preprocessed permutation polynomials
+    pub permutation_oracle: Rc<DenseMultilinearExtension<E::Fr>>,
+    /// The parameters for PCS commitment
     pub pcs_param: PCS::VerifierParam,
-    /// Selector's commitment
-    // TODO: replace me with a batch commitment
-    pub selector_com: Vec<PCS::Commitment>,
+    /// A commitment to the preprocessed selector polynomials
+    pub selector_com: PCS::Commitment,
     /// Permutation oracle's commitment
     pub perm_com: PCS::Commitment,
-}
-
-/// Customized gate is a list of tuples of
-///     (coefficient, selector_index, wire_indices)
-///
-/// Example:
-///     q_L(X) * W_1(X)^5 - W_2(X)
-/// is represented as
-/// vec![
-///     ( 1,    Some(id_qL),    vec![id_W1, id_W1, id_W1, id_W1, id_W1]),
-///     (-1,    None,           vec![id_W2])
-/// ]
-///
-/// CustomizedGates {
-///     gates: vec![
-///         (1, Some(0), vec![0, 0, 0, 0, 0]),
-///         (-1, None, vec![1])
-///     ],
-/// };
-/// where id_qL = 0 // first selector
-/// id_W1 = 0 // first witness
-/// id_w2 = 1 // second witness
-///
-/// NOTE: here coeff is a signed integer, instead of a field element
-#[derive(Clone, Debug, Default, PartialEq, Eq)]
-pub struct CustomizedGates {
-    pub(crate) gates: Vec<(i64, Option<usize>, Vec<usize>)>,
-}
-
-impl CustomizedGates {
-    /// The degree of the algebraic customized gate
-    pub fn degree(&self) -> usize {
-        let mut res = 0;
-        for x in self.gates.iter() {
-            res = max(res, x.2.len() + (x.1.is_some() as usize))
-        }
-        res
-    }
 }

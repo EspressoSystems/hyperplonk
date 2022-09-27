@@ -1,5 +1,5 @@
 [package]
-name = "hyperplonk"
+name = "pcs"
 version = "0.1.0"
 edition = "2021"
 
@@ -8,55 +8,44 @@ edition = "2021"
 [dependencies]
 
 ark-std = { version = "^0.3.0", default-features = false }
-ark-ec = { version = "^0.3.0", default-features = false }
-ark-ff = { version = "^0.3.0", default-features = false }
-ark-poly = { version = "^0.3.0", default-features = false }
 ark-serialize = { version = "^0.3.0", default-features = false, features = [ "derive" ] }
+ark-ff = { version = "^0.3.0", default-features = false }
+ark-ec = { version = "^0.3.0", default-features = false }
+ark-poly = {version = "^0.3.0", default-features = false }
+ark-sponge = {version = "^0.3.0", default-features = false}
+ark-bls12-381 = { version = "0.3.0", default-features = false, features = [ "curve" ] }
 
 displaydoc = { version = "0.2.3", default-features = false }
+derivative = { version = "2", features = ["use_core"] }
 
-poly-iop = { path = "../poly-iop" }
-pcs = { path = "../pcs" }
-transcript = { path = "../transcript" }
 arithmetic = { path = "../arithmetic" }
+transcript = { path = "../transcript" }
 util = { path = "../util" }
 
 rayon = { version = "1.5.2", default-features = false, optional = true }
-
-[dev-dependencies]
-ark-bls12-381 = { version = "0.3.0", default-features = false, features = [ "curve" ] }
+itertools = { version = "0.10.4", optional = true }
 
 # Benchmarks
 [[bench]]
-name = "hyperplonk-benches"
+name = "pcs-benches"
 path = "benches/bench.rs"
 harness = false
 
 [features]
-# default = [ ] 
-default = [ "parallel" ]
 # default = [ "parallel", "print-trace" ]
-# default = [ "parallel",  "extensive_sanity_checks" ]
-bench = [ "parallel" ]
-# extensive sanity checks that are useful for debugging
-extensive_sanity_checks = [
-    "poly-iop/extensive_sanity_checks",
-    "pcs/extensive_sanity_checks",
- ]
+default = [ "parallel",]
+extensive_sanity_checks = [ ]
 parallel = [ 
     "rayon",
+    "itertools",
     "ark-std/parallel", 
     "ark-ff/parallel",  
     "ark-poly/parallel", 
     "ark-ec/parallel",
-    
-    "poly-iop/parallel",
-    "arithmetic/parallel",
-    "pcs/parallel",
-    "util/parallel"
+    "util/parallel",
+    "arithmetic/parallel", 
     ]
 print-trace = [ 
     "ark-std/print-trace",
-    "poly-iop/print-trace",
     "arithmetic/print-trace",
     ] 

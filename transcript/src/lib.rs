@@ -4,7 +4,7 @@
 //! TODO(ZZ): decide which APIs need to be public.
 
 mod errors;
-pub use errors::TranscriptErrors;
+pub use errors::TranscriptError;
 
 use ark_ff::PrimeField;
 use ark_serialize::CanonicalSerialize;
@@ -44,7 +44,7 @@ impl<F: PrimeField> IOPTranscript<F> {
         &mut self,
         label: &'static [u8],
         msg: &[u8],
-    ) -> Result<(), TranscriptErrors> {
+    ) -> Result<(), TranscriptError> {
         self.transcript.append_message(label, msg);
         self.is_empty = false;
         Ok(())
@@ -55,7 +55,7 @@ impl<F: PrimeField> IOPTranscript<F> {
         &mut self,
         label: &'static [u8],
         field_elem: &F,
-    ) -> Result<(), TranscriptErrors> {
+    ) -> Result<(), TranscriptError> {
         self.append_message(label, &to_bytes!(field_elem)?)
     }
 
@@ -64,7 +64,7 @@ impl<F: PrimeField> IOPTranscript<F> {
         &mut self,
         label: &'static [u8],
         group_elem: &S,
-    ) -> Result<(), TranscriptErrors> {
+    ) -> Result<(), TranscriptError> {
         self.append_message(label, &to_bytes!(group_elem)?)
     }
 
@@ -73,13 +73,10 @@ impl<F: PrimeField> IOPTranscript<F> {
     //
     // The output field element is statistical uniform as long
     // as the field has a size less than 2^384.
-    pub fn get_and_append_challenge(
-        &mut self,
-        label: &'static [u8],
-    ) -> Result<F, TranscriptErrors> {
+    pub fn get_and_append_challenge(&mut self, label: &'static [u8]) -> Result<F, TranscriptError> {
         //  we need to reject when transcript is empty
         if self.is_empty {
-            return Err(TranscriptErrors::InvalidTranscript(
+            return Err(TranscriptError::InvalidTranscript(
                 "transcript is empty".to_string(),
             ));
         }
@@ -100,10 +97,10 @@ impl<F: PrimeField> IOPTranscript<F> {
         &mut self,
         label: &'static [u8],
         len: usize,
-    ) -> Result<Vec<F>, TranscriptErrors> {
+    ) -> Result<Vec<F>, TranscriptError> {
         //  we need to reject when transcript is empty
         if self.is_empty {
-            return Err(TranscriptErrors::InvalidTranscript(
+            return Err(TranscriptError::InvalidTranscript(
                 "transcript is empty".to_string(),
             ));
         }
