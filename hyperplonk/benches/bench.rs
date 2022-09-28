@@ -32,11 +32,11 @@ fn main() -> Result<(), HyperPlonkErrors> {
 
 fn bench_vanilla_plonk(thread: usize) -> Result<(), HyperPlonkErrors> {
     let mut rng = test_rng();
-    let pcs_srs = MultilinearKzgPCS::<Bls12_381>::gen_srs_for_testing(&mut rng, 22)?;
+    let pcs_srs = MultilinearKzgPCS::<Bls12_381>::gen_srs_for_testing(&mut rng, 24)?;
 
     let filename = format!("vanilla nv {}.txt", thread);
     let mut file = File::create(filename).unwrap();
-    for nv in 1..16 {
+    for nv in 1..21 {
         let vanilla_gate = CustomizedGates::vanilla_plonk_gate();
         bench_mock_circuit_zkp_helper(&mut file, nv, &vanilla_gate, &pcs_srs)?;
     }
@@ -46,11 +46,11 @@ fn bench_vanilla_plonk(thread: usize) -> Result<(), HyperPlonkErrors> {
 
 fn bench_high_degree_plonk(degree: usize, thread: usize) -> Result<(), HyperPlonkErrors> {
     let mut rng = test_rng();
-    let pcs_srs = MultilinearKzgPCS::<Bls12_381>::gen_srs_for_testing(&mut rng, 22)?;
+    let pcs_srs = MultilinearKzgPCS::<Bls12_381>::gen_srs_for_testing(&mut rng, 24)?;
 
     let filename = format!("high degree {} thread {}.txt", degree, thread);
     let mut file = File::create(filename).unwrap();
-    for nv in 1..16 {
+    for nv in 1..21 {
         let vanilla_gate = CustomizedGates::vanilla_plonk_gate();
         bench_mock_circuit_zkp_helper(&mut file, nv, &vanilla_gate, &pcs_srs)?;
     }
