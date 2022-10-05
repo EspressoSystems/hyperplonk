@@ -1,0 +1,48 @@
+set terminal postscript eps enhanced color 
+spartan = 'comparison/spartan.txt'
+hyperplonk = 'comparison/hyperplonk.txt'
+jellyfish = 'comparison/jellyfish.txt'
+
+set output "spartan_prover.eps" 
+
+# set font "32"
+
+set key left
+set grid
+set logscale y
+
+set title font ",10" 
+set key title "Proving time" 
+set xlabel "log \# constraits"
+set ylabel 'log time (s)'
+# set xtics (4,8,16,32,64)
+plot spartan using 1:2 w lp t "spartan",\
+     jellyfish using 1:2 w lp t "jellyfish",\
+     hyperplonk using 1:2 w lp t "hyperplonk",
+reset
+
+
+set terminal postscript eps enhanced color 
+spartan = 'comparison/spartan.txt'
+hyperplonk = 'comparison/hyperplonk.txt'
+
+
+set output "spartan_verifier.eps" 
+
+# set font "32"
+
+set key left
+set grid
+set logscale y
+
+set title font ",10" 
+set key title "Verifier time" 
+set xlabel "log \# constraits"
+set ylabel 'log time (s)'
+# set xtics (4,8,16,32,64)
+plot spartan using 1:3 w lp t "spartan",\
+     jellyfish using 1:3 w lp t "jellyfish",\
+     hyperplonk using 1:3 w lp t "hyperplonk",
+reset
+
+

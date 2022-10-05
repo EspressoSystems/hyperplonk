@@ -22,8 +22,8 @@ fn main() -> Result<(), PolyIOPErrors> {
 
 fn bench_sum_check() -> Result<(), PolyIOPErrors> {
     let mut rng = test_rng();
-    for degree in 2..4 {
-        for nv in 4..25 {
+    for degree in 2..3 {
+        for nv in 4..20 {
             let repetition = if nv < 10 {
                 100
             } else if nv < 20 {
@@ -42,11 +42,10 @@ fn bench_sum_check() -> Result<(), PolyIOPErrors> {
                     let _proof = <PolyIOP<Fr> as SumCheck<Fr>>::prove(&poly, &mut transcript)?;
                 }
 
-                println!(
-                    "sum check proving time for {} variables and {} degree: {} ns",
+                print!(
+                    "{}, {}, ",
                     nv,
-                    degree,
-                    start.elapsed().as_nanos() / repetition as u128
+                    start.elapsed().as_nanos() / repetition /1000 as u128
                 );
                 let mut transcript = <PolyIOP<Fr> as SumCheck<Fr>>::init_transcript();
                 <PolyIOP<Fr> as SumCheck<Fr>>::prove(&poly, &mut transcript)?
@@ -68,15 +67,10 @@ fn bench_sum_check() -> Result<(), PolyIOPErrors> {
                         "wrong subclaim"
                     );
                 }
-                println!(
-                    "sum check verification time for {} variables and {} degree: {} ns",
-                    nv,
-                    degree,
-                    start.elapsed().as_nanos() / repetition as u128
-                );
+                println!("{}", start.elapsed().as_nanos() /1000 / repetition as u128);
             }
 
-            println!("====================================");
+            // println!("====================================");
         }
     }
     Ok(())
@@ -84,7 +78,7 @@ fn bench_sum_check() -> Result<(), PolyIOPErrors> {
 
 fn bench_zero_check() -> Result<(), PolyIOPErrors> {
     let mut rng = test_rng();
-    for degree in 2..4 {
+    for degree in 2..3 {
         for nv in 4..20 {
             let repetition = if nv < 10 {
                 100
@@ -98,38 +92,45 @@ fn bench_zero_check() -> Result<(), PolyIOPErrors> {
             let poly_info = poly.aux_info.clone();
             let proof = {
                 let start = Instant::now();
+
+                for _ in 0..repetition {
+                    let mut transcript = <PolyIOP<Fr> as ZeroCheck<Fr>>::init_transcript();
+                    transcript
+                        .append_message(b"testing", b"initializing transcript for testing")?;
+                    let proof = <PolyIOP<Fr> as ZeroCheck<Fr>>::prove(&poly, &mut transcript)?;
+                }
+                print!(
+                    "{}, {}, ",
+                    nv,
+                    start.elapsed().as_nanos() / repetition /1000 as u128
+                );
+
                 let mut transcript = <PolyIOP<Fr> as ZeroCheck<Fr>>::init_transcript();
                 transcript.append_message(b"testing", b"initializing transcript for testing")?;
                 let proof = <PolyIOP<Fr> as ZeroCheck<Fr>>::prove(&poly, &mut transcript)?;
-
-                println!(
-                    "zero check proving time for {} variables and {} degree: {} ns",
-                    nv,
-                    degree,
-                    start.elapsed().as_nanos() / repetition as u128
-                );
                 proof
             };
 
             {
                 let start = Instant::now();
-                let mut transcript = <PolyIOP<Fr> as ZeroCheck<Fr>>::init_transcript();
-                transcript.append_message(b"testing", b"initializing transcript for testing")?;
-                let zero_subclaim =
-                    <PolyIOP<Fr> as ZeroCheck<Fr>>::verify(&proof, &poly_info, &mut transcript)?;
-                assert!(
-                    poly.evaluate(&zero_subclaim.point)? == zero_subclaim.expected_evaluation,
-                    "wrong subclaim"
-                );
-                println!(
-                    "zero check verification time for {} variables and {} degree: {} ns",
-                    nv,
-                    degree,
-                    start.elapsed().as_nanos() / repetition as u128
-                );
+                for _ in 0..repetition {
+                    let mut transcript = <PolyIOP<Fr> as ZeroCheck<Fr>>::init_transcript();
+                    transcript
+                        .append_message(b"testing", b"initializing transcript for testing")?;
+                    let zero_subclaim = <PolyIOP<Fr> as ZeroCheck<Fr>>::verify(
+                        &proof,
+                        &poly_info,
+                        &mut transcript,
+                    )?;
+                    assert!(
+                        poly.evaluate(&zero_subclaim.point)? == zero_subclaim.expected_evaluation,
+                        "wrong subclaim"
+                    );
+                }
+                println!("{}", start.elapsed().as_nanos() /1000 / repetition as u128);
             }
 
-            println!("====================================");
+            // println!("====================================");
         }
     }
     Ok(())
@@ -157,6 +158,25 @@ fn bench_permutation_check() -> Result<(), PolyIOPErrors> {
 
         let proof = {
             let start = Instant::now();
+
+            for _ in 0..repetition {
+                let mut transcript =
+                    <PolyIOP<Fr> as PermutationCheck<Bls12_381, KZG>>::init_transcript();
+                transcript.append_message(b"testing", b"initializing transcript for testing")?;
+
+                let (proof, _q_x) = <PolyIOP<Fr> as PermutationCheck<Bls12_381, KZG>>::prove(
+                    &pcs_param,
+                    &w,
+                    &w,
+                    &s_perm,
+                    &mut transcript,
+                )?;
+            }
+            print!(
+                "{}, {}, ",
+                nv,
+                start.elapsed().as_nanos()  /1000/ repetition as u128
+            );
             let mut transcript =
                 <PolyIOP<Fr> as PermutationCheck<Bls12_381, KZG>>::init_transcript();
             transcript.append_message(b"testing", b"initializing transcript for testing")?;
@@ -168,12 +188,6 @@ fn bench_permutation_check() -> Result<(), PolyIOPErrors> {
                 &s_perm,
                 &mut transcript,
             )?;
-
-            println!(
-                "permutation check proving time for {} variables: {} ns",
-                nv,
-                start.elapsed().as_nanos() / repetition as u128
-            );
             proof
         };
 
@@ -185,22 +199,21 @@ fn bench_permutation_check() -> Result<(), PolyIOPErrors> {
             };
 
             let start = Instant::now();
-            let mut transcript =
-                <PolyIOP<Fr> as PermutationCheck<Bls12_381, KZG>>::init_transcript();
-            transcript.append_message(b"testing", b"initializing transcript for testing")?;
-            let _perm_check_sum_claim = <PolyIOP<Fr> as PermutationCheck<Bls12_381, KZG>>::verify(
-                &proof,
-                &poly_info,
-                &mut transcript,
-            )?;
-            println!(
-                "permutation check verification time for {} variables: {} ns",
-                nv,
-                start.elapsed().as_nanos() / repetition as u128
-            );
+            for _ in 0..repetition {
+                let mut transcript =
+                    <PolyIOP<Fr> as PermutationCheck<Bls12_381, KZG>>::init_transcript();
+                transcript.append_message(b"testing", b"initializing transcript for testing")?;
+                let _perm_check_sum_claim =
+                    <PolyIOP<Fr> as PermutationCheck<Bls12_381, KZG>>::verify(
+                        &proof,
+                        &poly_info,
+                        &mut transcript,
+                    )?;
+            }
+            println!("{}", start.elapsed().as_nanos()  /1000/ repetition as u128);
         }
 
-        println!("====================================");
+        // println!("====================================");
     }
 
     Ok(())
@@ -229,6 +242,23 @@ fn bench_prod_check() -> Result<(), PolyIOPErrors> {
 
         let proof = {
             let start = Instant::now();
+            for _ in 0..repetition {
+                let mut transcript =
+                    <PolyIOP<Fr> as ProductCheck<Bls12_381, KZG>>::init_transcript();
+                transcript.append_message(b"testing", b"initializing transcript for testing")?;
+
+                let (proof, _prod_x) = <PolyIOP<Fr> as ProductCheck<Bls12_381, KZG>>::prove(
+                    &pcs_param,
+                    &f,
+                    &g,
+                    &mut transcript,
+                )?;
+            }
+            print!(
+                "{}, {}, ",
+                nv,
+                start.elapsed().as_nanos()  /1000/ repetition as u128
+            );
             let mut transcript = <PolyIOP<Fr> as ProductCheck<Bls12_381, KZG>>::init_transcript();
             transcript.append_message(b"testing", b"initializing transcript for testing")?;
 
@@ -238,12 +268,6 @@ fn bench_prod_check() -> Result<(), PolyIOPErrors> {
                 &g,
                 &mut transcript,
             )?;
-
-            println!(
-                "product check proving time for {} variables: {} ns",
-                nv,
-                start.elapsed().as_nanos() / repetition as u128
-            );
             proof
         };
 
@@ -255,21 +279,20 @@ fn bench_prod_check() -> Result<(), PolyIOPErrors> {
             };
 
             let start = Instant::now();
-            let mut transcript = <PolyIOP<Fr> as ProductCheck<Bls12_381, KZG>>::init_transcript();
-            transcript.append_message(b"testing", b"initializing transcript for testing")?;
-            let _perm_check_sum_claim = <PolyIOP<Fr> as ProductCheck<Bls12_381, KZG>>::verify(
-                &proof,
-                &poly_info,
-                &mut transcript,
-            )?;
-            println!(
-                "product check verification time for {} variables: {} ns",
-                nv,
-                start.elapsed().as_nanos() / repetition as u128
-            );
+            for _ in 0..repetition {
+                let mut transcript =
+                    <PolyIOP<Fr> as ProductCheck<Bls12_381, KZG>>::init_transcript();
+                transcript.append_message(b"testing", b"initializing transcript for testing")?;
+                let _perm_check_sum_claim = <PolyIOP<Fr> as ProductCheck<Bls12_381, KZG>>::verify(
+                    &proof,
+                    &poly_info,
+                    &mut transcript,
+                )?;
+            }
+            println!("{}", start.elapsed().as_nanos()  /1000/ repetition as u128);
         }
 
-        println!("====================================");
+        // println!("====================================");
     }
 
     Ok(())

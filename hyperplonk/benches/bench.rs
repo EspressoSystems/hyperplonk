@@ -69,10 +69,10 @@ fn bench_mock_circuit_zkp_helper(
 ) -> Result<(), HyperPlonkErrors> {
     let repetition = if nv < 10 {
         10
-    } else if nv < 20 {
+    } else if nv < 15 {
         5
     } else {
-        2
+        1
     };
 
     //==========================================================
@@ -145,5 +145,6 @@ fn bench_mock_circuit_zkp_helper(
         nv,
         start.elapsed().as_micros() / repetition as u128
     );
+    println!();
     Ok(())
 }
