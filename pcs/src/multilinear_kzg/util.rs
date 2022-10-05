@@ -39,7 +39,6 @@ pub(crate) fn compute_w_circ_l_with_overlapping<F: PrimeField>(
     overlapped_sub_point: &[F],
     l: &[DensePolynomial<F>],
     num_points: usize,
-    with_suffix: bool,
 ) -> Result<DensePolynomial<F>, PCSError> {
     let timer = start_timer!(|| "compute W \\circ l with overlappiung");
 
@@ -49,11 +48,7 @@ pub(crate) fn compute_w_circ_l_with_overlapping<F: PrimeField>(
         ));
     }
 
-    let uni_degree = if with_suffix {
-        compute_qx_degree(l.len() + log2(l.len()) as usize, num_points)
-    } else {
-        compute_qx_degree(l.len(), num_points)
-    } + overlapped_sub_point.len();
+    let uni_degree = compute_qx_degree(l.len(), num_points);
 
     let domain = match Radix2EvaluationDomain::<F>::new(uni_degree) {
         Some(p) => p,

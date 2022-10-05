@@ -113,7 +113,6 @@ pub(crate) fn multi_open_same_poly_overlapping_points_internal<E: PairingEngine>
         overlapped_subpoint.as_ref(),
         &uni_polys,
         non_overlap_sub_points.len(),
-        false,
     )?;
 
     // 4. commit to q(x) and sample r from transcript
