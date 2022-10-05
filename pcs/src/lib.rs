@@ -117,6 +117,17 @@ pub trait PolynomialCommitmentScheme<E: PairingEngine> {
         points: &[Self::Point],
     ) -> Result<(Self::BatchProof, Vec<Self::Evaluation>), PCSError>;
 
+    /// Input a multilinear extension, and a number of points, and
+    /// a transcript, compute a multi-opening for all the polynomials.
+    /// The first `overlap_len` variables of each point must be the same.
+    fn multi_open_single_poly_overlap_points(
+        prover_param: impl Borrow<Self::ProverParam>,
+        commitment: &Self::Commitment,
+        polynomial: &Self::Polynomial,
+        points: &[Self::Point],
+        overlap_len: usize,
+    ) -> Result<(Self::BatchProof, Vec<Self::Evaluation>), PCSError>;
+
     /// Verifies that `value` is the evaluation at `x` of the polynomial
     /// committed inside `comm`.
     fn verify(
@@ -146,6 +157,18 @@ pub trait PolynomialCommitmentScheme<E: PairingEngine> {
         points: &[Self::Point],
         values: &[E::Fr],
         batch_proof: &Self::BatchProof,
+    ) -> Result<bool, PCSError>;
+
+    /// Verifies that `value_i` is the evaluation at `x_i` of the polynomial
+    /// `poly` committed inside `comm`.
+    /// The first `overlap_len` variables of each point must be the same.
+    fn batch_verify_single_poly_overlap_points(
+        verifier_param: &Self::VerifierParam,
+        commitment: &Self::Commitment,
+        points: &[Self::Point],
+        values: &[E::Fr],
+        batch_proof: &Self::BatchProof,
+        overlap_len: usize,
     ) -> Result<bool, PCSError>;
 }
 

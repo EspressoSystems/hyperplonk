@@ -6,6 +6,8 @@
 
 mod multi_poly;
 mod single_poly;
+mod single_poly_overlapping_points;
 
 pub(crate) use multi_poly::*;
 pub(crate) use single_poly::*;
+pub(crate) use single_poly_overlapping_points::*;

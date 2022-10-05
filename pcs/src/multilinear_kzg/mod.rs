@@ -11,8 +11,9 @@ pub(crate) mod srs;
 pub(crate) mod util;
 
 use self::batching::{
-    batch_verify_internal, batch_verify_same_poly_internal, multi_open_internal,
-    multi_open_same_poly_internal,
+    batch_verify_internal, batch_verify_same_poly_internal,
+    batch_verify_same_poly_overlapping_points_internal, multi_open_internal,
+    multi_open_same_poly_internal, multi_open_same_poly_overlapping_points_internal,
 };
 use crate::{
     prelude::{
@@ -267,6 +268,26 @@ impl<E: PairingEngine> PolynomialCommitmentScheme<E> for MultilinearKzgPCS<E> {
         )
     }
 
+    /// Input a multilinear extension, and a number of points, and
+    /// a transcript, compute a multi-opening for all the polynomials.
+    /// The first `overlap_len` variables of each point must be the same.
+    fn multi_open_single_poly_overlap_points(
+        prover_param: impl Borrow<Self::ProverParam>,
+        commitment: &Self::Commitment,
+        polynomial: &Self::Polynomial,
+        points: &[Self::Point],
+        overlap_len: usize,
+    ) -> Result<(Self::BatchProof, Vec<Self::Evaluation>), PCSError> {
+        multi_open_same_poly_overlapping_points_internal::<E>(
+            &prover_param.borrow().1,
+            &prover_param.borrow().0,
+            polynomial,
+            commitment,
+            points,
+            overlap_len,
+        )
+    }
+
     /// Verifies that `value` is the evaluation at `x` of the polynomial
     /// committed inside `comm`.
     ///
@@ -328,6 +349,28 @@ impl<E: PairingEngine> PolynomialCommitmentScheme<E> for MultilinearKzgPCS<E> {
             points,
             values,
             batch_proof,
+        )
+    }
+
+    /// Verifies that `value_i` is the evaluation at `x_i` of the polynomial
+    /// `poly` committed inside `comm`.
+    /// The first `overlap_len` variables of each point must be the same.
+    fn batch_verify_single_poly_overlap_points(
+        verifier_param: &Self::VerifierParam,
+        commitment: &Self::Commitment,
+        points: &[Self::Point],
+        values: &[E::Fr],
+        batch_proof: &Self::BatchProof,
+        overlap_len: usize,
+    ) -> Result<bool, PCSError> {
+        batch_verify_same_poly_overlapping_points_internal(
+            &verifier_param.1,
+            &verifier_param.0,
+            commitment,
+            points,
+            values,
+            batch_proof,
+            overlap_len,
         )
     }
 }

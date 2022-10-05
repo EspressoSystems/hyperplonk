@@ -13,6 +13,7 @@ use ark_poly::{
     MultilinearExtension, Polynomial, Radix2EvaluationDomain,
 };
 use ark_std::{end_timer, format, log2, start_timer, string::ToString, vec::Vec};
+use itertools::Itertools;
 use rayon::prelude::{IntoParallelIterator, ParallelIterator};
 
 /// For an MLE w with `mle_num_vars` variables, and `point_len` number of
@@ -25,6 +26,67 @@ use rayon::prelude::{IntoParallelIterator, ParallelIterator};
 #[inline]
 pub fn compute_qx_degree(mle_num_vars: usize, point_len: usize) -> usize {
     mle_num_vars * ((1 << log2(point_len)) - 1) + 1
+}
+
+/// Compute W \circ l with overlapped points.
+///
+/// Given an MLE W, and a list of univariate polynomials l, generate the
+/// univariate polynomial that composes W with l.
+///
+/// Returns an error if l's length does not matches number of variables in W.
+pub(crate) fn compute_w_circ_l_with_overlapping<F: PrimeField>(
+    w: &DenseMultilinearExtension<F>,
+    overlapped_sub_point: &[F],
+    l: &[DensePolynomial<F>],
+    num_points: usize,
+    with_suffix: bool,
+) -> Result<DensePolynomial<F>, PCSError> {
+    let timer = start_timer!(|| "compute W \\circ l with overlappiung");
+
+    if w.num_vars != overlapped_sub_point.len() + l.len() {
+        return Err(PCSError::InvalidParameters(
+            "overlapped length is not correct".to_string(),
+        ));
+    }
+
+    let uni_degree = if with_suffix {
+        compute_qx_degree(l.len() + log2(l.len()) as usize, num_points)
+    } else {
+        compute_qx_degree(l.len(), num_points)
+    } + overlapped_sub_point.len();
+
+    let domain = match Radix2EvaluationDomain::<F>::new(uni_degree) {
+        Some(p) => p,
+        None => {
+            return Err(PCSError::InvalidParameters(
+                "failed to build radix 2 domain".to_string(),
+            ))
+        },
+    };
+
+    let step = start_timer!(|| format!("compute eval {}-dim domain", domain.size()));
+    let res_eval = (0..domain.size())
+        .into_par_iter()
+        .map(|i| {
+            let l_eval: Vec<F> = [
+                overlapped_sub_point,
+                l.iter()
+                    .map(|x| x.evaluate(&domain.element(i)))
+                    .collect_vec()
+                    .as_ref(),
+            ]
+            .concat();
+
+            evaluate_no_par(w, &l_eval)
+        })
+        .collect();
+    end_timer!(step);
+
+    let evaluation = Evaluations::from_vec_and_domain(res_eval, domain);
+    let res = evaluation.interpolate();
+
+    end_timer!(timer);
+    Ok(res)
 }
 
 /// Compute W \circ l.

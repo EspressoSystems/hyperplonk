@@ -8,7 +8,7 @@ use crate::{
     multilinear_kzg::{
         open_internal,
         srs::{MultilinearProverParam, MultilinearVerifierParam},
-        util::compute_w_circ_l,
+        util::compute_w_circ_l_with_overlapping,
         verify_internal, MultilinearKzgBatchProof,
     },
     prelude::{Commitment, UnivariateProverParam, UnivariateVerifierParam},
@@ -51,14 +51,15 @@ use transcript::IOPTranscript;
 /// 7. get a point `p := l(r)`
 /// 8. output an opening of `w` over point `p`
 /// 9. output `w(p)`
-pub(crate) fn multi_open_same_poly_internal<E: PairingEngine>(
+pub(crate) fn multi_open_same_poly_overlapping_points_internal<E: PairingEngine>(
     uni_prover_param: &UnivariateProverParam<E::G1Affine>,
     ml_prover_param: &MultilinearProverParam<E>,
     polynomial: &Rc<DenseMultilinearExtension<E::Fr>>,
     commitment: &Commitment<E>,
     points: &[Vec<E::Fr>],
+    over_lapped_dim: usize,
 ) -> Result<(MultilinearKzgBatchProof<E>, Vec<E::Fr>), PCSError> {
-    let open_timer = start_timer!(|| "multi open");
+    let open_timer = start_timer!(|| "multi open overlapped points");
 
     // ===================================
     // Sanity checks on inputs
@@ -76,15 +77,44 @@ pub(crate) fn multi_open_same_poly_internal<E: PairingEngine>(
             ));
         }
     }
+    if over_lapped_dim >= num_var {
+        return Err(PCSError::InvalidParameters(format!(
+            "Overlapped length {} is not smaller than point's dim {}",
+            over_lapped_dim, num_var
+        )));
+    }
 
     let domain = get_uni_domain::<E::Fr>(points_len)?;
 
-    // 1. build `l(points)` which is a list of univariate polynomials that goes
-    // through the points
-    let uni_polys = build_l(points, &domain, false)?;
+    // 1. build `l(sub_points)` which is a list of univariate polynomials that goes
+    // through the sub_points
+    let overlapped_subpoint = points[0]
+        .iter()
+        .take(over_lapped_dim)
+        .copied()
+        .collect::<Vec<_>>();
+
+    let non_overlap_sub_points = points
+        .iter()
+        .map(|point| {
+            point
+                .iter()
+                .skip(over_lapped_dim)
+                .copied()
+                .collect::<Vec<_>>()
+        })
+        .collect::<Vec<_>>();
+
+    let uni_polys = build_l(non_overlap_sub_points.as_ref(), &domain, false)?;
 
     // 3. build `q(x)` which is a univariate polynomial `W circ l`
-    let q_x = compute_w_circ_l(polynomial, &uni_polys, points.len(), false)?;
+    let q_x = compute_w_circ_l_with_overlapping(
+        polynomial,
+        overlapped_subpoint.as_ref(),
+        &uni_polys,
+        non_overlap_sub_points.len(),
+        false,
+    )?;
 
     // 4. commit to q(x) and sample r from transcript
     // transcript contains: w commitment, points, q(x)'s commitment
@@ -113,6 +143,7 @@ pub(crate) fn multi_open_same_poly_internal<E: PairingEngine>(
                 .iter()
                 .map(|poly| poly.evaluate(&domain.element(i)))
                 .collect();
+            let point = [overlapped_subpoint.as_ref(), point.as_slice()].concat();
             let mle_eval = polynomial.evaluate(&point).unwrap();
             if mle_eval != q_x_eval {
                 return Err(PCSError::InvalidProver(
@@ -128,10 +159,13 @@ pub(crate) fn multi_open_same_poly_internal<E: PairingEngine>(
     q_x_evals.push(q_r_value);
 
     // 7. get a point `p := l(r)`
-    let point: Vec<E::Fr> = uni_polys
+    let non_over_lap_point: Vec<E::Fr> = uni_polys
         .into_par_iter()
         .map(|poly| poly.evaluate(&r))
         .collect();
+
+    let point = [overlapped_subpoint.as_ref(), non_over_lap_point.as_slice()].concat();
+
     // 8. output an opening of `w` over point `p`
     let (mle_opening, mle_eval) = open_internal(ml_prover_param, polynomial, &point)?;
 
@@ -166,13 +200,14 @@ pub(crate) fn multi_open_same_poly_internal<E: PairingEngine>(
 /// polynomials that goes through the points
 /// 5. get a point `p := l(r)`
 /// 6. verifies `p` is valid against multilinear KZG proof
-pub(crate) fn batch_verify_same_poly_internal<E: PairingEngine>(
+pub(crate) fn batch_verify_same_poly_overlapping_points_internal<E: PairingEngine>(
     uni_verifier_param: &UnivariateVerifierParam<E>,
     ml_verifier_param: &MultilinearVerifierParam<E>,
     multi_commitment: &Commitment<E>,
     points: &[Vec<E::Fr>],
     values: &[E::Fr],
     batch_proof: &MultilinearKzgBatchProof<E>,
+    over_lapped_dim: usize,
 ) -> Result<bool, PCSError> {
     let verify_timer = start_timer!(|| "batch verify");
 
@@ -210,6 +245,13 @@ pub(crate) fn batch_verify_same_poly_internal<E: PairingEngine>(
                 num_var,
             )));
         }
+    }
+
+    if over_lapped_dim >= num_var {
+        return Err(PCSError::InvalidParameters(format!(
+            "Overlapped length {} is not smaller than point's dim {}",
+            over_lapped_dim, num_var
+        )));
     }
 
     let domain = get_uni_domain::<E::Fr>(points_len)?;
@@ -253,10 +295,31 @@ pub(crate) fn batch_verify_same_poly_internal<E: PairingEngine>(
     }
     // 4. build `l(points)` which is a list of univariate polynomials that goes
     // through the points
-    let uni_polys = build_l(points, &domain, false)?;
+
+    let overlapped_subpoint = points[0]
+        .iter()
+        .take(over_lapped_dim)
+        .copied()
+        .collect::<Vec<_>>();
+
+    let non_overlap_sub_points = points
+        .iter()
+        .map(|point| {
+            point
+                .iter()
+                .skip(over_lapped_dim)
+                .copied()
+                .collect::<Vec<_>>()
+        })
+        .collect::<Vec<_>>();
+
+    let uni_polys = build_l(non_overlap_sub_points.as_ref(), &domain, false)?;
 
     // 5. get a point `p := l(r)`
-    let point: Vec<E::Fr> = uni_polys.iter().map(|x| x.evaluate(&r)).collect();
+    let non_over_lap_point: Vec<E::Fr> = uni_polys.iter().map(|x| x.evaluate(&r)).collect();
+
+    let point = [overlapped_subpoint.as_ref(), non_over_lap_point.as_slice()].concat();
+
     // 6. verifies `p` is valid against multilinear KZG proof
     let res = verify_internal(
         ml_verifier_param,
@@ -274,6 +337,7 @@ pub(crate) fn batch_verify_same_poly_internal<E: PairingEngine>(
 
     Ok(res)
 }
+
 #[cfg(test)]
 mod tests {
     use super::*;
@@ -286,6 +350,7 @@ mod tests {
         prelude::UnivariateUniversalParams,
         StructuredReferenceString,
     };
+    use arithmetic::gen_eval_point;
     use ark_bls12_381::Bls12_381 as E;
     use ark_ec::PairingEngine;
     use ark_poly::{DenseMultilinearExtension, MultilinearExtension};
@@ -301,43 +366,56 @@ mod tests {
     fn test_same_poly_multi_open_internal_helper<R: RngCore + CryptoRng>(
         uni_params: &UnivariateUniversalParams<E>,
         ml_params: &MultilinearUniversalParams<E>,
-        poly: &Rc<DenseMultilinearExtension<Fr>>,
+        shared_dim: usize,
         point_len: usize,
         rng: &mut R,
     ) -> Result<(), PCSError> {
-        let nv = poly.num_vars;
-        let qx_degree = compute_qx_degree(nv, point_len);
-        let padded_qx_degree = 1usize << log2(qx_degree);
-
-        let (uni_ck, uni_vk) = uni_params.trim(padded_qx_degree)?;
-        let (ml_ck, ml_vk) = ml_params.trim(nv)?;
+        let sub_point = (0..shared_dim).map(|_| Fr::rand(rng)).collect::<Vec<Fr>>();
+        let log_point_len = log2(point_len) as usize;
+        let poly_nv = shared_dim + log_point_len;
 
         let mut points = Vec::new();
-        let mut eval = Vec::new();
-        for _ in 0..point_len {
-            let point = (0..nv).map(|_| Fr::rand(rng)).collect::<Vec<Fr>>();
-            eval.push(poly.evaluate(&point).unwrap());
+        for i in 0..point_len {
+            let point = gen_eval_point(i, log_point_len, sub_point.as_ref());
             points.push(point);
         }
 
-        let evals = generate_evaluations_single_poly(poly, &points)?;
-        let com = MultilinearKzgPCS::commit(&(ml_ck.clone(), uni_ck.clone()), poly)?;
-        let (batch_proof, evaluations) =
-            multi_open_same_poly_internal(&uni_ck, &ml_ck, poly, &com, &points)?;
+        let qx_degree = compute_qx_degree(poly_nv, point_len);
+        let padded_qx_degree = 1usize << log2(qx_degree);
+
+        // normal polynomials
+        let poly = Rc::new(DenseMultilinearExtension::rand(poly_nv, rng));
+
+        let (uni_ck, uni_vk) = uni_params.trim(padded_qx_degree)?;
+        let (ml_ck, ml_vk) = ml_params.trim(poly_nv)?;
+
+        let mut eval = Vec::new();
+        for point in points.iter() {
+            eval.push(poly.evaluate(point).unwrap());
+        }
+
+        let evals = generate_evaluations_single_poly(&poly, &points)?;
+        let com = MultilinearKzgPCS::commit(&(ml_ck.clone(), uni_ck.clone()), &poly)?;
+        let (batch_proof, evaluations) = multi_open_same_poly_overlapping_points_internal(
+            &uni_ck, &ml_ck, &poly, &com, &points, shared_dim,
+        )?;
 
         for (a, b) in evals.iter().zip(evaluations.iter()) {
             assert_eq!(a, b)
         }
 
         // good path
-        assert!(batch_verify_same_poly_internal(
+        let res = batch_verify_same_poly_overlapping_points_internal(
             &uni_vk,
             &ml_vk,
             &com,
             &points,
             &evaluations,
             &batch_proof,
-        )?);
+            shared_dim,
+        )?;
+        println!("good path {:?}", res);
+        assert!(res);
 
         Ok(())
     }
@@ -349,14 +427,12 @@ mod tests {
         let uni_params =
             UnivariateUniversalParams::<E>::gen_srs_for_testing(&mut rng, 1usize << 15)?;
         let ml_params = MultilinearUniversalParams::<E>::gen_srs_for_testing(&mut rng, 15)?;
-        for nv in 1..10 {
-            for point_len in 1..10 {
-                // normal polynomials
-                let polys1 = Rc::new(DenseMultilinearExtension::rand(nv, &mut rng));
+        for shared_dim in 1..10 {
+            for point_len in 2..10 {
                 test_same_poly_multi_open_internal_helper(
                     &uni_params,
                     &ml_params,
-                    &polys1,
+                    shared_dim,
                     point_len,
                     &mut rng,
                 )?;
