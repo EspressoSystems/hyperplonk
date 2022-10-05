@@ -6,6 +6,7 @@ use pcs::prelude::PolynomialCommitmentScheme;
 use poly_iop::prelude::PermutationCheck;
 use witness::WitnessColumn;
 
+mod batching;
 mod custom_gate;
 mod errors;
 mod mock;
