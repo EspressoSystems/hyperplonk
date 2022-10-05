@@ -368,8 +368,9 @@ where
         end_timer!(sub_step);
 
         let sub_step = start_timer!(|| "open selector");
-        let (selector_batch_opening, selector_batch_evals) =
-            selector_pcs_acc.batch_open(&pk.pcs_param)?;
+
+        let (selector_batch_opening, selector_batch_evals) = selector_pcs_acc
+            .batch_open_overlapped_points(&pk.pcs_param, zero_check_proof.point.len())?;
         end_timer!(sub_step);
         end_timer!(step);
         end_timer!(start);
@@ -651,12 +652,25 @@ where
             points.push(tmp_point);
         }
 
-        if !PCS::batch_verify_single_poly(
+        if proof.selector_batch_evals.len() == 2 {
+            if !PCS::batch_verify_single_poly(
+                &vk.pcs_param,
+                &vk.selector_com,
+                &points,
+                &proof.selector_batch_evals,
+                &proof.selector_batch_opening,
+            )? {
+                return Err(HyperPlonkErrors::InvalidProof(
+                    "selector pcs verification failed".to_string(),
+                ));
+            }
+        } else if !PCS::batch_verify_single_poly_overlap_points(
             &vk.pcs_param,
             &vk.selector_com,
             &points,
             &proof.selector_batch_evals,
             &proof.selector_batch_opening,
+            proof.zero_check_proof.point.len(),
         )? {
             return Err(HyperPlonkErrors::InvalidProof(
                 "selector pcs verification failed".to_string(),

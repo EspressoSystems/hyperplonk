@@ -81,6 +81,43 @@ impl<E: PairingEngine, PCS: PolynomialCommitmentScheme<E>> PcsAccumulator<E, PCS
             &self.points,
         )?)
     }
+
+    /// Batch open all the points over a merged polynomial.
+    /// A simple wrapper of PCS::multi_open
+    pub(super) fn batch_open_overlapped_points(
+        &self,
+        prover_param: impl Borrow<PCS::ProverParam>,
+        overlap_len: usize,
+    ) -> Result<(PCS::BatchProof, Vec<PCS::Evaluation>), HyperPlonkErrors> {
+        if self.points.len() == 1 {
+            return self.batch_open(prover_param);
+        }
+
+        let poly = match &self.polynomial {
+            Some(p) => p,
+            None => {
+                return Err(HyperPlonkErrors::InvalidProver(
+                    "poly is set for accumulator".to_string(),
+                ))
+            },
+        };
+
+        let commitment = match &self.poly_commit {
+            Some(p) => p,
+            None => {
+                return Err(HyperPlonkErrors::InvalidProver(
+                    "poly is set for accumulator".to_string(),
+                ))
+            },
+        };
+        Ok(PCS::multi_open_single_poly_overlap_points(
+            prover_param.borrow(),
+            commitment,
+            poly,
+            &self.points,
+            overlap_len,
+        )?)
+    }
 }
 
 /// Build MLE from matrix of witnesses.
