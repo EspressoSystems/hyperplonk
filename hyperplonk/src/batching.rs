@@ -30,8 +30,6 @@ where
     pub(crate) sum_check_proof: IOPProof<E::Fr>,
     /// \tilde g(a1, a2)
     pub(crate) tilde_g_eval: E::Fr,
-    /// f_i(a2)
-    pub(crate) f_i_eval_at_a2: Vec<E::Fr>,
     /// f_i(point_i)
     pub(crate) f_i_eval_at_point_i: Vec<E::Fr>,
     /// proof for g'(a_2)
@@ -74,13 +72,13 @@ where
 
     // \tilde g(i, b) = eq(t, i) * f_i(b)
     let timer = start_timer!(|| format!("compute tilde g for {} points", points.len()));
-    let mut tilde_g_eval = vec![];
+    let mut tilde_g_eval = vec![E::Fr::zero(); 1 << (ell + num_var)];
+    let block_size = 1 << num_var;
     for (index, f_i) in polynomials.iter().enumerate() {
-        for &f_i_eval in f_i.iter() {
-            tilde_g_eval.push(f_i_eval * eq_t_i_list[index])
+        for (j, &f_i_eval) in f_i.iter().enumerate() {
+            tilde_g_eval[index * block_size + j] = f_i_eval * eq_t_i_list[index];
         }
     }
-    tilde_g_eval.resize(1 << (ell + num_var), E::Fr::zero());
     let tilde_g = Rc::new(DenseMultilinearExtension::from_evaluations_vec(
         merged_num_var,
         tilde_g_eval,
@@ -90,12 +88,12 @@ where
     // merge all evals into a nv + ell mle
 
     let timer = start_timer!(|| format!("compute tilde eq for {} points", points.len()));
-    let mut tilde_eq_eval = vec![];
-    for point in points.iter() {
-        let eq_b_zi = build_eq_x_r_vec(&point)?;
-        tilde_eq_eval.extend_from_slice(eq_b_zi.as_slice());
+    let mut tilde_eq_eval = vec![E::Fr::zero(); 1 << (ell + num_var)];
+    for (index, point) in points.iter().enumerate() {
+        let eq_b_zi = build_eq_x_r_vec(point)?;
+        let start = index * block_size;
+        tilde_eq_eval[start..start + block_size].copy_from_slice(eq_b_zi.as_slice());
     }
-    tilde_eq_eval.resize(1 << (ell + num_var), E::Fr::zero());
     let tilde_eq = Rc::new(DenseMultilinearExtension::from_evaluations_vec(
         merged_num_var,
         tilde_eq_eval,
@@ -118,10 +116,6 @@ where
     let step = start_timer!(|| "open at a2");
     let a1 = &proof.point[num_var..];
     let a2 = &proof.point[..num_var];
-    let f_i_eval_at_a2 = polynomials
-        .iter()
-        .map(|p| p.evaluate(a2).unwrap())
-        .collect::<Vec<E::Fr>>();
     end_timer!(step);
 
     // build g'(a2)
@@ -145,7 +139,6 @@ where
     Ok(NewBatchProof {
         sum_check_proof: proof,
         tilde_g_eval,
-        f_i_eval_at_a2,
         f_i_eval_at_point_i,
         g_prime_proof,
     })
@@ -189,18 +182,10 @@ where
     let eq_a1_list = build_eq_x_r_vec(a1)?;
     let eq_t_list = build_eq_x_r_vec(t.as_ref())?;
 
-    let mut g_prime_eval = E::Fr::zero();
     let mut g_prime_commit = E::G1Affine::zero().into_projective();
     for i in 0..k {
         let tmp = eq_a1_list[i] * eq_t_list[i];
-        g_prime_eval += tmp * proof.f_i_eval_at_a2[i];
         g_prime_commit += &f_i_commitments[i].0.mul(tmp);
-    }
-
-    // ensure g'(a_2) == \tilde g(a1, a2)
-    if proof.tilde_g_eval != g_prime_eval {
-        // println!("eval not match");
-        return Ok(false);
     }
 
     // ensure \sum_i eq(t, <i>) * f_i_evals matches the sum via SumCheck
@@ -226,7 +211,7 @@ where
         verifier_param,
         &Commitment(g_prime_commit.into_affine()),
         a2.to_vec().as_ref(),
-        &g_prime_eval,
+        &proof.tilde_g_eval,
         &proof.g_prime_proof,
     )?;
 

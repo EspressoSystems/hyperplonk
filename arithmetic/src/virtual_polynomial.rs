@@ -10,6 +10,7 @@ use ark_std::{
     rand::{Rng, RngCore},
     start_timer,
 };
+use rayon::prelude::*;
 use std::{cmp::max, collections::HashMap, marker::PhantomData, ops::Add, rc::Rc};
 
 #[rustfmt::skip]
@@ -382,13 +383,24 @@ fn build_eq_x_r_helper<F: PrimeField>(r: &[F], buf: &mut Vec<F>) -> Result<(), A
         // for the current step we will need
         // if x_0 = 0:   (1-r0) * [b_1, ..., b_k]
         // if x_0 = 1:   r0 * [b_1, ..., b_k]
+        // let mut res = vec![];
+        // for &b_i in buf.iter() {
+        //     let tmp = r[0] * b_i;
+        //     res.push(b_i - tmp);
+        //     res.push(tmp);
+        // }
+        // *buf = res;
 
-        let mut res = vec![];
-        for &b_i in buf.iter() {
-            let tmp = r[0] * b_i;
-            res.push(b_i - tmp);
-            res.push(tmp);
-        }
+        let mut res = vec![F::zero(); buf.len() << 1];
+        res.par_iter_mut().enumerate().for_each(|(i, val)| {
+            let bi = buf[i >> 1];
+            let tmp = r[0] * bi;
+            if i & 1 == 0 {
+                *val = bi - tmp;
+            } else {
+                *val = tmp;
+            }
+        });
         *buf = res;
     }
 
