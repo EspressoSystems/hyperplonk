@@ -6,10 +6,7 @@ use crate::{
     witness::WitnessColumn,
     HyperPlonkSNARK,
 };
-use arithmetic::{
-    evaluate_opt, gen_eval_point, identity_permutation_mle, merge_polynomials,
-    pad_and_merge_polynomials, VPAuxInfo,
-};
+use arithmetic::{evaluate_opt, identity_permutation_mle, merge_polynomials, VPAuxInfo};
 use ark_ec::PairingEngine;
 use ark_poly::DenseMultilinearExtension;
 use ark_std::{end_timer, log2, start_timer, One, Zero};
@@ -72,13 +69,7 @@ where
             .map(|s| Rc::new(DenseMultilinearExtension::from(s)))
             .collect();
 
-        let chunk_size = 1 << (log_num_witness_polys + 1) as usize;
-
-        let selector_trunks = selector_oracles
-            .chunks(chunk_size)
-            .map(|chunk| pad_and_merge_polynomials(&chunk, prod_x_nv))
-            .collect::<Result<Vec<_>, _>>()?;
-        let selector_commitments = selector_trunks
+        let selector_commitments = selector_oracles
             .iter()
             .map(|poly| PCS::commit(&pcs_prover_param, poly))
             .collect::<Result<Vec<_>, _>>()?;
@@ -170,7 +161,6 @@ where
         // so each chunk we we store maximum 1 << (prod_x_nv - num_var) selectors
         let log_chunk_size = log_num_witness_polys + 1;
         let prod_x_nv = num_vars + log_chunk_size;
-        let chunk_size = 1 << log_chunk_size;
 
         // online public input of length 2^\ell
         let ell = log2(pk.params.num_pub_input) as usize;
@@ -185,7 +175,9 @@ where
         // Accumulator's nv is bounded by prod(x) that means
         // we need to split the selectors into multiple chunks if
         // #selectors > chunk_size
-        let mut pcs_acc = PcsAccumulator::<E, PCS>::new(prod_x_nv);
+        // let mut pcs_acc = PcsAccumulator::<E, PCS>::new(prod_x_nv);
+        let mut prod_x_pcs_acc = PcsAccumulator::<E, PCS>::new(prod_x_nv);
+        let mut witness_and_selector_x_pcs_acc = PcsAccumulator::<E, PCS>::new(num_vars);
 
         // =======================================================================
         // 1. Commit Witness polynomials `w_i(x)` and append commitment to
@@ -198,6 +190,11 @@ where
             .map(|w| Rc::new(DenseMultilinearExtension::from(w)))
             .collect();
 
+        let witness_commits = witness_polys
+            .iter()
+            .map(|x| PCS::commit(&pk.pcs_param, x).unwrap())
+            .collect::<Vec<_>>();
+
         // merge all witness into a single MLE - we will run perm check on it
         // to obtain prod(x)
         let w_merged = merge_polynomials(&witness_polys)?;
@@ -207,18 +204,9 @@ where
                 w_merged.num_vars, merged_nv
             )));
         }
-
-        // get the witnesses whose length matches prod(x)
-        let w_merged_ext = {
-            let mut tmp = w_merged.evaluations.to_owned();
-            tmp.resize(1 << prod_x_nv, E::Fr::zero());
-            Rc::new(DenseMultilinearExtension::from_evaluations_vec(
-                prod_x_nv, tmp,
-            ))
-        };
-
-        let w_merged_ext_com = PCS::commit(&pk.pcs_param, &w_merged_ext)?;
-        transcript.append_serializable_element(b"w", &w_merged_ext_com)?;
+        for com in witness_commits.iter() {
+            transcript.append_serializable_element(b"w", com)?;
+        }
 
         end_timer!(step);
         // =======================================================================
@@ -291,78 +279,76 @@ where
         let tmp_point3 = [&[E::Fr::zero()], perm_check_point.as_slice()].concat();
         // prod(x, 1)
         let tmp_point4 = [&[E::Fr::one()], perm_check_point.as_slice()].concat();
-        // prod(1, ..., 1, 0)
-        let tmp_point5 = [vec![E::Fr::zero()], vec![E::Fr::one(); merged_nv]].concat();
+        // // prod(1, ..., 1, 0)
+        // let tmp_point5 = [vec![E::Fr::zero()], vec![E::Fr::one();
+        // merged_nv]].concat();
 
-        pcs_acc.insert_poly_and_points(&prod_x, &perm_check_proof.prod_x_comm, &tmp_point1);
-        pcs_acc.insert_poly_and_points(&prod_x, &perm_check_proof.prod_x_comm, &tmp_point2);
-        pcs_acc.insert_poly_and_points(&prod_x, &perm_check_proof.prod_x_comm, &tmp_point3);
-        pcs_acc.insert_poly_and_points(&prod_x, &perm_check_proof.prod_x_comm, &tmp_point4);
-        pcs_acc.insert_poly_and_points(&prod_x, &perm_check_proof.prod_x_comm, &tmp_point5);
+        prod_x_pcs_acc.insert_poly_and_points(&prod_x, &perm_check_proof.prod_x_comm, &tmp_point1);
+        prod_x_pcs_acc.insert_poly_and_points(&prod_x, &perm_check_proof.prod_x_comm, &tmp_point2);
+        prod_x_pcs_acc.insert_poly_and_points(&prod_x, &perm_check_proof.prod_x_comm, &tmp_point3);
+        prod_x_pcs_acc.insert_poly_and_points(&prod_x, &perm_check_proof.prod_x_comm, &tmp_point4);
 
         // 4.2  permutation check
-        //   - 4.2.1. (deferred) wi_poly(perm_check_point)
-        // w_merged_pcs_acc.insert_poly_and_points(&w_merged, &w_merged_ext_com,
-        // perm_check_point, false);
-        pcs_acc.insert_poly_and_points(
-            &w_merged_ext,
-            &w_merged_ext_com,
-            &[perm_check_point.as_slice(), &[E::Fr::zero()]].concat(),
-        );
+        //   - 4.2.1. wi_poly(perm_check_point)
+        let (perm_check_opening, perm_check_eval) =
+            PCS::open(&pk.pcs_param, &w_merged, perm_check_point)?;
 
         // - 4.3. zero check evaluations and proofs
         //   - 4.3.1 (deferred) wi_poly(zero_check_point)
         for i in 0..witness_polys.len() {
-            let tmp_point = gen_eval_point(i, log_chunk_size, &zero_check_proof.point);
-            // Deferred opening zero check proof
-            pcs_acc.insert_poly_and_points(&w_merged_ext, &w_merged_ext_com, &tmp_point);
+            witness_and_selector_x_pcs_acc.insert_poly_and_points(
+                &witness_polys[i],
+                &witness_commits[i],
+                &zero_check_proof.point,
+            );
         }
 
         //   - 4.3.2. (deferred) selector_poly(zero_check_point)
-        let selector_trunks = pk
-            .selector_oracles
-            .chunks(chunk_size)
-            .map(|chunk| pad_and_merge_polynomials(&chunk, prod_x_nv))
-            .collect::<Result<Vec<_>, _>>()?;
-
-        for (i, chunk) in pk.selector_oracles.chunks(chunk_size).enumerate() {
-            for j in 0..chunk.len() {
-                let tmp_point = gen_eval_point(j, log_chunk_size, &zero_check_proof.point);
-
-                pcs_acc.insert_poly_and_points(
-                    &selector_trunks[i],
-                    &pk.selector_commitments[i],
-                    &tmp_point,
-                );
-            }
-        }
+        pk.selector_oracles
+            .iter()
+            .zip(pk.selector_commitments.iter())
+            .for_each(|(poly, com)| {
+                witness_and_selector_x_pcs_acc.insert_poly_and_points(
+                    poly,
+                    com,
+                    &zero_check_proof.point,
+                )
+            });
 
         // - 4.4. public input consistency checks
         //   - pi_poly(r_pi) where r_pi is sampled from transcript
         let r_pi = transcript.get_and_append_challenge_vectors(b"r_pi", ell)?;
-
-        let tmp_point = [
-            vec![E::Fr::zero(); num_vars - ell],
-            r_pi,
-            vec![E::Fr::zero(); log_chunk_size],
-        ]
-        .concat();
-
-        pcs_acc.insert_poly_and_points(&w_merged_ext, &w_merged_ext_com, &tmp_point);
+        let tmp_point = [vec![E::Fr::zero(); num_vars - ell], r_pi].concat();
+        witness_and_selector_x_pcs_acc.insert_poly_and_points(
+            &witness_polys[0],
+            &witness_commits[0],
+            &tmp_point,
+        );
         end_timer!(step);
 
         // =======================================================================
         // 5. deferred batch opening
         // =======================================================================
-        let step = start_timer!(|| "deferred batch openings");
-        let batch_openings = pcs_acc.multi_open(&pk.pcs_param, &mut transcript)?;
+        let step = start_timer!(|| "deferred batch openings prod(x)");
+        let batch_prod_x_openings = prod_x_pcs_acc.multi_open(&pk.pcs_param, &mut transcript)?;
         end_timer!(step);
+
+        let step = start_timer!(|| "deferred batch openings witness and selectors");
+        let batch_witness_and_selector_openings =
+            witness_and_selector_x_pcs_acc.multi_open(&pk.pcs_param, &mut transcript)?;
+        end_timer!(step);
+
         end_timer!(start);
 
         Ok(HyperPlonkProof {
-            /// PCS commit for witnesses
-            w_merged_ext_com,
-            batch_openings,
+            // PCS commit for witnesses
+            witness_commits,
+            // batch_openings,
+            batch_prod_x_openings,
+            batch_witness_and_selector_openings,
+            // perm check openings
+            perm_check_opening,
+            perm_check_eval,
             // =======================================================================
             // IOP proofs
             // =======================================================================
@@ -412,10 +398,6 @@ where
 
         let num_selectors = vk.params.num_selector_columns();
         let num_witnesses = vk.params.num_witness_columns();
-        assert_eq!(
-            proof.batch_openings.f_i_eval_at_point_i.len(),
-            num_selectors + num_witnesses + 7
-        );
 
         // witness assignment of length 2^n
         let log_num_witness_polys = log2(num_witnesses) as usize;
@@ -425,10 +407,6 @@ where
 
         //  online public input of length 2^\ell
         let ell = log2(vk.params.num_pub_input) as usize;
-        // number of nv in prod(x) which is supposed to be the cap
-        // so each chunk we we store maximum 1 << (prod_x_nv - num_var) selectors
-        let log_chunk_size = log_num_witness_polys + 1;
-        let chunk_size = 1 << log_chunk_size;
 
         // sequence:
         // - prod(x) at 5 points
@@ -436,11 +414,18 @@ where
         // - w_merged at zero check points (#witness points)
         // - selector_merged at zero check points (#selector points)
         // - w[0] at r_pi
-        let selector_evals = &proof.batch_openings.f_i_eval_at_point_i
-            [6 + num_witnesses..6 + num_witnesses + num_selectors];
-        let witness_evals = &proof.batch_openings.f_i_eval_at_point_i[5..6 + num_witnesses];
-        let prod_evals = &proof.batch_openings.f_i_eval_at_point_i[0..5];
-        let pi_eval = proof.batch_openings.f_i_eval_at_point_i.last().unwrap();
+        let selector_evals = &proof
+            .batch_witness_and_selector_openings
+            .f_i_eval_at_point_i[num_witnesses..num_witnesses + num_selectors];
+        let witness_evals = &proof
+            .batch_witness_and_selector_openings
+            .f_i_eval_at_point_i[..num_witnesses];
+        let prod_evals = &proof.batch_prod_x_openings.f_i_eval_at_point_i[0..4];
+        let pi_eval = proof
+            .batch_witness_and_selector_openings
+            .f_i_eval_at_point_i
+            .last()
+            .unwrap();
 
         let pi_poly = DenseMultilinearExtension::from_evaluations_slice(ell as usize, pub_input);
 
@@ -474,7 +459,9 @@ where
             phantom: PhantomData::default(),
         };
         // push witness to transcript
-        transcript.append_serializable_element(b"w", &proof.w_merged_ext_com)?;
+        for com in proof.witness_commits.iter() {
+            transcript.append_serializable_element(b"w", com)?;
+        }
 
         let zero_check_sub_claim = <Self as ZeroCheck<E::Fr>>::verify(
             &proof.zero_check_proof,
@@ -485,7 +472,7 @@ where
         let zero_check_point = &zero_check_sub_claim.point;
 
         // check zero check subclaim
-        let f_eval = eval_f(&vk.params.gate_func, selector_evals, &witness_evals[1..])?;
+        let f_eval = eval_f(&vk.params.gate_func, selector_evals, &witness_evals)?;
         if f_eval != zero_check_sub_claim.expected_evaluation {
             return Err(HyperPlonkErrors::InvalidProof(
                 "zero check evaluation failed".to_string(),
@@ -565,82 +552,45 @@ where
         // =======================================================================
         // 3.1 open prod(x)' evaluations
         // =======================================================================
-        let prod_final_query = perm_check_sub_claim.product_check_sub_claim.final_query;
+        // TODO: Check prod(x) at (1,...,1,0)
+        let _prod_final_query = perm_check_sub_claim.product_check_sub_claim.final_query;
         let prod_points = [
             [perm_check_point.as_slice(), &[E::Fr::zero()]].concat(),
             [perm_check_point.as_slice(), &[E::Fr::one()]].concat(),
             [&[E::Fr::zero()], perm_check_point.as_slice()].concat(),
             [&[E::Fr::one()], perm_check_point.as_slice()].concat(),
-            prod_final_query.0,
+            // prod_final_query.0,
         ];
 
-        // =======================================================================
-        // 3.2 open selectors' evaluations
-        // =======================================================================
-        let mut selector_points = vec![];
-        for i in 0..vk.params.num_selector_columns() {
-            let tmp_point = gen_eval_point(
-                i % chunk_size,
-                log_chunk_size,
-                &proof.zero_check_proof.point,
-            );
-            selector_points.push(tmp_point);
-        }
-
-        // let log_num_selector_polys = log2(vk.params.num_selector_columns()) as usize;
-        // let mut selector_points = vec![];
-        // for i in  {
-        //     let tmp_point =
-        //         gen_eval_point(i, log_chunk_size, &proof.zero_check_proof.point);
-        //     selector_points.push(tmp_point);
-        // }
-
-        // =======================================================================
-        // 3.2 open witnesses' evaluations
-        // =======================================================================
         let mut r_pi = transcript.get_and_append_challenge_vectors(b"r_pi", ell)?;
+        // =======================================================================
+        // 3.2 open prod(x) evaluations
+        // =======================================================================
+        let res = batch_verify_internal(
+            &vk.pcs_param,
+            [proof.perm_check_proof.prod_x_comm; 4].as_ref(),
+            prod_points.as_ref(),
+            &proof.batch_prod_x_openings,
+            &mut transcript,
+        )?;
+        assert!(res);
+
+        // =======================================================================
+        // 3.3 open witnesses' and selectors evaluations
+        // =======================================================================
         let pi_eval_rec = evaluate_opt(&pi_poly, &r_pi);
         assert_eq!(&pi_eval_rec, pi_eval);
 
-        r_pi = [
-            vec![E::Fr::zero(); num_vars - ell],
-            r_pi,
-            vec![E::Fr::zero(); log_chunk_size],
-        ]
-        .concat();
-
-        let mut w_merged_points = vec![[perm_check_point.as_slice(), &[E::Fr::zero()]].concat()];
-
-        for i in 0..num_witnesses {
-            w_merged_points.push(gen_eval_point(i, log_chunk_size, zero_check_point))
-        }
-
-        // sequence:
-        // - prod(x) at 5 points
-        // - w_merged at perm check point
-        // - w_merged at zero check points (#witness points)
-        // - selector_merged at zero check points (#selector points)
-        // - w[0] at r_pi
-        let selector_commits: Vec<Commitment<E>> = vk
-            .selector_commitments
-            .iter()
-            .map(|x| vec![x; chunk_size])
-            .flatten()
-            .copied()
-            .collect();
-
+        r_pi = [vec![E::Fr::zero(); num_vars - ell], r_pi].concat();
         let commitments = [
-            vec![proof.perm_check_proof.prod_x_comm; 5].as_slice(),
-            vec![proof.w_merged_ext_com; num_witnesses + 1].as_slice(),
-            selector_commits[0..num_selectors].as_ref(),
-            &[proof.w_merged_ext_com],
+            proof.witness_commits.as_slice(),
+            vk.selector_commitments.as_slice(),
+            &[proof.witness_commits[0]],
         ]
         .concat();
 
         let points = [
-            prod_points.as_ref(),
-            w_merged_points.as_ref(),
-            selector_points.as_ref(),
+            vec![zero_check_point.clone(); num_witnesses + num_selectors].as_slice(),
             &[r_pi],
         ]
         .concat();
@@ -648,12 +598,13 @@ where
         let res = batch_verify_internal(
             &vk.pcs_param,
             commitments.as_ref(),
-            &points,
-            &proof.batch_openings,
+            points.as_ref(),
+            &proof.batch_witness_and_selector_openings,
             &mut transcript,
         )?;
 
         assert!(res);
+
         end_timer!(step);
         end_timer!(start);
         Ok(true)
