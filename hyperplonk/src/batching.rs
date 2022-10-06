@@ -4,9 +4,10 @@
 // The sumcheck based batch opening therefore cannot stay in the PCS repo --
 // which creates a cyclic dependency.
 
-use arithmetic::{build_eq_x_r_vec, DenseMultilinearExtension, VirtualPolynomial};
+use arithmetic::{
+    build_eq_x_r_vec, fix_last_variables, DenseMultilinearExtension, VirtualPolynomial,
+};
 use ark_ec::{AffineCurve, PairingEngine, ProjectiveCurve};
-use ark_ff::PrimeField;
 use ark_poly::MultilinearExtension;
 use ark_std::{end_timer, log2, start_timer, One, Zero};
 use pcs::{
@@ -95,15 +96,16 @@ pub(crate) fn multi_open_internal<E: PairingEngine>(
     let proof = <PolyIOP<E::Fr> as SumCheck<E::Fr>>::prove(&sum_check_vp, transcript)?;
     let tilde_g_eval = tilde_g.evaluate(&proof.point).unwrap();
 
-    let a1 = &proof.point[..ell];
-    let a2 = &proof.point[ell..];
+    // (a1, a2) := sumcheck's point
+    let a1 = &proof.point[num_var..];
+    let a2 = &proof.point[..num_var];
     let f_i_eval = polynomials
         .iter()
         .map(|p| p.evaluate(a2).unwrap())
         .collect::<Vec<E::Fr>>();
 
     // build g'(a2)
-    let g_prime = Rc::new(tilde_g.fix_variables(a1));
+    let g_prime = Rc::new(fix_last_variables(&tilde_g, a1));
     let (g_prime_proof, g_prime_eval) = MultilinearKzgPCS::open(
         &(ml_prover_param, uni_prover_param),
         &g_prime,
@@ -142,8 +144,8 @@ pub(crate) fn batch_verify_internal<E: PairingEngine>(
     let t = transcript.get_and_append_challenge_vectors("t".as_ref(), ell)?;
 
     // sum check point (a1, a2)
-    let a1 = &proof.sum_check_proof.point[ell..];
-    let a2 = &proof.sum_check_proof.point[..ell];
+    let a1 = &proof.sum_check_proof.point[num_var..];
+    let a2 = &proof.sum_check_proof.point[..num_var];
 
     // build g' commitment
     let eq_a1_list = build_eq_x_r_vec(a1)?;
@@ -172,6 +174,7 @@ pub(crate) fn batch_verify_internal<E: PairingEngine>(
         &proof.g_prime_proof,
     )?;
 
+    println!("res {}", res);
     end_timer!(open_timer);
     Ok(res)
 }
@@ -217,12 +220,6 @@ mod tests {
                 .collect::<Vec<Fr>>();
             points.push(point);
         }
-
-        let evals = polys
-            .iter()
-            .zip(points.iter())
-            .map(|(f, p)| f.evaluate(p).unwrap())
-            .collect::<Vec<_>>();
 
         let commitments = polys
             .iter()

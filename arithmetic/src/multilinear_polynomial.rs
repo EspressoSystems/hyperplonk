@@ -210,3 +210,29 @@ pub fn merge_polynomials<F: PrimeField>(
         merged_nv, scalars,
     )))
 }
+
+pub fn fix_last_variables<F: PrimeField>(
+    poly: &DenseMultilinearExtension<F>,
+    partial_point: &[F],
+) -> DenseMultilinearExtension<F> {
+    let mut res = fix_last_variable(poly, &partial_point.last().unwrap());
+    for p in partial_point.iter().rev().skip(1) {
+        res = fix_last_variable(&res, p);
+    }
+    res
+}
+
+pub fn fix_last_variable<F: PrimeField>(
+    poly: &DenseMultilinearExtension<F>,
+    partial_point: &F,
+) -> DenseMultilinearExtension<F> {
+    let nv = poly.num_vars();
+    let half_len = 1 << (nv - 1);
+    let mut res = vec![F::zero(); half_len];
+    let one_minus_p = F::one() - partial_point;
+    for i in 0..half_len {
+        res[i] =
+            one_minus_p * poly.evaluations[i] + *partial_point * poly.evaluations[i + half_len];
+    }
+    DenseMultilinearExtension::from_evaluations_vec(nv - 1, res)
+}
