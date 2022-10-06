@@ -188,8 +188,6 @@ where
         let prod_x_nv = num_vars + log_chunk_size;
         let chunk_size = 1 << log_chunk_size;
 
-        println!("prod len {}", prod_x_nv);
-
         // online public input of length 2^\ell
         let ell = log2(pk.params.num_pub_input) as usize;
 
@@ -436,20 +434,17 @@ where
         );
 
         // witness assignment of length 2^n
-        let num_vars = vk.params.num_variables();
         let log_num_witness_polys = log2(num_witnesses) as usize;
+        let num_vars = vk.params.num_variables();
+        // number of variables in merged polynomial for Multilinear-KZG
+        let merged_nv = num_vars + log_num_witness_polys;
 
+        //  online public input of length 2^\ell
+        let ell = log2(vk.params.num_pub_input) as usize;
         // number of nv in prod(x) which is supposed to be the cap
         // so each chunk we we store maximum 1 << (prod_x_nv - num_var) selectors
         let log_chunk_size = log_num_witness_polys + 1;
-        let prod_x_nv = num_vars + log_chunk_size;
         let chunk_size = 1 << log_chunk_size;
-        println!(
-            "
-            {} {} {} {}
-        ",
-            num_vars, log_num_witness_polys, prod_x_nv, chunk_size
-        );
 
         // sequence:
         // - prod(x) at 5 points
@@ -462,15 +457,6 @@ where
         let witness_evals = &proof.batch_openings.f_i_eval_at_point_i[5..6 + num_witnesses];
         let prod_evals = &proof.batch_openings.f_i_eval_at_point_i[0..5];
         let pi_eval = proof.batch_openings.f_i_eval_at_point_i.last().unwrap();
-
-        // witness assignment of length 2^n
-        let num_vars = vk.params.num_variables();
-        let log_num_witness_polys = log2(vk.params.num_witness_columns()) as usize;
-        // number of variables in merged polynomial for Multilinear-KZG
-        let merged_nv = num_vars + log_num_witness_polys;
-
-        //  online public input of length 2^\ell
-        let ell = log2(vk.params.num_pub_input) as usize;
 
         let pi_poly = DenseMultilinearExtension::from_evaluations_slice(ell as usize, pub_input);
 
@@ -614,8 +600,6 @@ where
                 log_chunk_size,
                 &proof.zero_check_proof.point,
             );
-            println!("{}", tmp_point.len());
-            println!("{} {:?}\n", i, tmp_point);
             selector_points.push(tmp_point);
         }
 
@@ -677,9 +661,6 @@ where
         ]
         .concat();
 
-        for p in points.iter() {
-            println!("{}", p.len());
-        }
         let res = batch_verify_internal(
             &vk.pcs_param,
             commitments.as_ref(),
@@ -782,11 +763,9 @@ mod tests {
             &[w1.clone(), w2.clone()],
         )?;
 
-        println!("here");
         let _verify = <PolyIOP<E::Fr> as HyperPlonkSNARK<E, MultilinearKzgPCS<E>>>::verify(
             &vk, &pi.0, &proof,
         )?;
-        println!("here");
 
         // bad path 1: wrong permutation
         let rand_perm: Vec<E::Fr> = random_permutation_mle(merged_nv, &mut rng)

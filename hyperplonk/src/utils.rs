@@ -1,8 +1,8 @@
 use crate::{
-    batching::{multi_open_internal, NewBatchProof},
+    batching::multi_open_internal,
     custom_gate::CustomizedGates,
     errors::HyperPlonkErrors,
-    structs::HyperPlonkParams,
+    structs::{BatchProof, HyperPlonkParams},
     witness::WitnessColumn,
 };
 use arithmetic::VirtualPolynomial;
@@ -62,8 +62,9 @@ where
         assert!(poly.num_vars == point.len());
         assert!(poly.num_vars == self.num_var);
 
-        let evals = poly.evaluate(point).unwrap();
-        self.evals.push(evals);
+        let eval = poly.evaluate(point).unwrap();
+        println!("eval {}", eval);
+        self.evals.push(eval);
         self.polynomials.push(poly.clone());
         self.points.push(point.clone());
         self.commitments.push(commit.clone());
@@ -75,7 +76,7 @@ where
         &self,
         prover_param: impl Borrow<PCS::ProverParam>,
         transcript: &mut IOPTranscript<E::Fr>,
-    ) -> Result<NewBatchProof<E, PCS>, HyperPlonkErrors> {
+    ) -> Result<BatchProof<E, PCS>, HyperPlonkErrors> {
         multi_open_internal(
             prover_param.borrow(),
             self.polynomials.as_ref(),

@@ -1,12 +1,12 @@
 //! Main module for the HyperPlonk PolyIOP.
 
-use crate::{batching::NewBatchProof, custom_gate::CustomizedGates, selectors::SelectorColumn};
+use crate::{custom_gate::CustomizedGates, selectors::SelectorColumn};
 use ark_ec::PairingEngine;
 use ark_ff::PrimeField;
 use ark_poly::DenseMultilinearExtension;
 use ark_std::log2;
 use pcs::PolynomialCommitmentScheme;
-use poly_iop::prelude::{PermutationCheck, ZeroCheck};
+use poly_iop::prelude::{IOPProof, PermutationCheck, ZeroCheck};
 use std::rc::Rc;
 
 /// The proof for the HyperPlonk PolyIOP, consists of the following:
@@ -23,7 +23,7 @@ where
 {
     // PCS commit for witnesses
     pub w_merged_ext_com: PCS::Commitment,
-    pub(crate) batch_openings: NewBatchProof<E, PCS>,
+    pub(crate) batch_openings: BatchProof<E, PCS>,
     // =======================================================================
     // IOP proofs
     // =======================================================================
@@ -129,4 +129,18 @@ pub struct HyperPlonkVerifyingKey<E: PairingEngine, PCS: PolynomialCommitmentSch
     pub selector_commitments: Vec<PCS::Commitment>,
     /// Permutation oracle's commitment
     pub perm_com: PCS::Commitment,
+}
+
+#[derive(Clone, Debug, Default, PartialEq)]
+pub(crate) struct BatchProof<E, PCS>
+where
+    E: PairingEngine,
+    PCS: PolynomialCommitmentScheme<E>,
+{
+    /// A sum check proof proving tilde g's sum
+    pub(crate) sum_check_proof: IOPProof<E::Fr>,
+    /// f_i(point_i)
+    pub(crate) f_i_eval_at_point_i: Vec<E::Fr>,
+    /// proof for g'(a_2)
+    pub(crate) g_prime_proof: PCS::Proof,
 }

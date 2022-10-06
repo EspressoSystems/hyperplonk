@@ -9,32 +9,14 @@ use arithmetic::{
 };
 use ark_ec::{AffineCurve, PairingEngine, ProjectiveCurve};
 use ark_ff::PrimeField;
-use ark_poly::MultilinearExtension;
 use ark_std::{end_timer, log2, start_timer, One, Zero};
 use pcs::{prelude::Commitment, PolynomialCommitmentScheme};
-use poly_iop::{
-    prelude::{IOPProof, SumCheck},
-    PolyIOP,
-};
+use poly_iop::{prelude::SumCheck, PolyIOP};
 use rayon::prelude::{IntoParallelIterator, ParallelIterator};
 use std::{marker::PhantomData, rc::Rc};
 use transcript::IOPTranscript;
 
-use crate::prelude::HyperPlonkErrors;
-
-#[derive(Clone, Debug, Default, PartialEq)]
-pub(crate) struct NewBatchProof<E, PCS>
-where
-    E: PairingEngine,
-    PCS: PolynomialCommitmentScheme<E>,
-{
-    /// A sum check proof proving tilde g's sum
-    pub(crate) sum_check_proof: IOPProof<E::Fr>,
-    /// f_i(point_i)
-    pub(crate) f_i_eval_at_point_i: Vec<E::Fr>,
-    /// proof for g'(a_2)
-    pub(crate) g_prime_proof: PCS::Proof,
-}
+use crate::{prelude::HyperPlonkErrors, structs::BatchProof};
 
 /// Steps:
 /// 1. todo...
@@ -44,7 +26,7 @@ pub(crate) fn multi_open_internal<E, PCS>(
     points: &[PCS::Point],
     evals: &[PCS::Evaluation],
     transcript: &mut IOPTranscript<E::Fr>,
-) -> Result<NewBatchProof<E, PCS>, HyperPlonkErrors>
+) -> Result<BatchProof<E, PCS>, HyperPlonkErrors>
 where
     E: PairingEngine,
     PCS: PolynomialCommitmentScheme<
@@ -63,11 +45,9 @@ where
     let ell = log2(k) as usize;
     let merged_num_var = num_var + ell;
 
-    // println!("ell {}, num_var {}", ell, num_var);
-
     // challenge point t
     let t = transcript.get_and_append_challenge_vectors("t".as_ref(), ell)?;
-    println!("t0: {}", t[0]);
+
     // eq(t, i) for i in [0..k]
     let eq_t_i_list = build_eq_x_r_vec(t.as_ref())?;
 
@@ -131,7 +111,7 @@ where
     end_timer!(step);
 
     let step = start_timer!(|| "pcs open");
-    let (g_prime_proof, g_prime_eval) = PCS::open(prover_param, &g_prime, a2.to_vec().as_ref())?;
+    let (g_prime_proof, _g_prime_eval) = PCS::open(prover_param, &g_prime, a2.to_vec().as_ref())?;
     // assert_eq!(g_prime_eval, tilde_g_eval);
     end_timer!(step);
 
@@ -139,7 +119,7 @@ where
     end_timer!(step);
     end_timer!(open_timer);
 
-    Ok(NewBatchProof {
+    Ok(BatchProof {
         sum_check_proof: proof,
         f_i_eval_at_point_i: evals.to_vec(),
         g_prime_proof,
@@ -152,7 +132,7 @@ pub(crate) fn batch_verify_internal<E, PCS>(
     verifier_param: &PCS::VerifierParam,
     f_i_commitments: &[Commitment<E>],
     points: &[PCS::Point],
-    proof: &NewBatchProof<E, PCS>,
+    proof: &BatchProof<E, PCS>,
     transcript: &mut IOPTranscript<E::Fr>,
 ) -> Result<bool, HyperPlonkErrors>
 where
@@ -172,11 +152,10 @@ where
     let k = f_i_commitments.len();
     let ell = log2(k) as usize;
     let num_var = proof.sum_check_proof.point.len() - ell;
-    // println!("ell {}, num_var {}", ell, num_var);
 
     // challenge point t
     let t = transcript.get_and_append_challenge_vectors("t".as_ref(), ell)?;
-    println!("t0: {}", t[0]);
+
     // sum check point (a1, a2)
     let a1 = &proof.sum_check_proof.point[num_var..];
     let a2 = &proof.sum_check_proof.point[..num_var];
@@ -223,7 +202,6 @@ where
         &proof.g_prime_proof,
     )?;
 
-    println!("res {}", res);
     end_timer!(open_timer);
     Ok(res)
 }
@@ -304,7 +282,6 @@ mod tests {
         let mut transcript = IOPTranscript::new("test transcript".as_ref());
         transcript.append_field_element("init".as_ref(), &Fr::zero())?;
 
-        println!("prove");
         let batch_proof = multi_open_internal::<E, MultilinearKzgPCS<E>>(
             &(ml_ck.clone(), uni_ck.clone()),
             polys,
@@ -314,7 +291,6 @@ mod tests {
         )?;
 
         // good path
-        println!("verify");
         let mut transcript = IOPTranscript::new("test transcript".as_ref());
         transcript.append_field_element("init".as_ref(), &Fr::zero())?;
         assert!(batch_verify_internal::<E, MultilinearKzgPCS<E>>(
