@@ -188,6 +188,8 @@ where
         let prod_x_nv = num_vars + log_chunk_size;
         let chunk_size = 1 << log_chunk_size;
 
+        println!("prod len {}", prod_x_nv);
+
         // online public input of length 2^\ell
         let ell = log2(pk.params.num_pub_input) as usize;
 
@@ -435,13 +437,19 @@ where
 
         // witness assignment of length 2^n
         let num_vars = vk.params.num_variables();
-        let log_num_witness_polys = log2(num_selectors) as usize;
+        let log_num_witness_polys = log2(num_witnesses) as usize;
 
         // number of nv in prod(x) which is supposed to be the cap
         // so each chunk we we store maximum 1 << (prod_x_nv - num_var) selectors
         let log_chunk_size = log_num_witness_polys + 1;
         let prod_x_nv = num_vars + log_chunk_size;
-        let chunk_size = 1 << prod_x_nv;
+        let chunk_size = 1 << log_chunk_size;
+        println!(
+            "
+            {} {} {} {}
+        ",
+            num_vars, log_num_witness_polys, prod_x_nv, chunk_size
+        );
 
         // sequence:
         // - prod(x) at 5 points
@@ -606,6 +614,8 @@ where
                 log_chunk_size,
                 &proof.zero_check_proof.point,
             );
+            println!("{}", tmp_point.len());
+            println!("{} {:?}\n", i, tmp_point);
             selector_points.push(tmp_point);
         }
 
@@ -631,9 +641,9 @@ where
         ]
         .concat();
 
-        let mut w_merged_points = vec![perm_check_point.clone()];
+        let mut w_merged_points = vec![[perm_check_point.as_slice(), &[E::Fr::zero()]].concat()];
 
-        for i in 0..num_witnesses - 2 {
+        for i in 0..num_witnesses {
             w_merged_points.push(gen_eval_point(i, log_chunk_size, zero_check_point))
         }
 
@@ -667,6 +677,9 @@ where
         ]
         .concat();
 
+        for p in points.iter() {
+            println!("{}", p.len());
+        }
         let res = batch_verify_internal(
             &vk.pcs_param,
             commitments.as_ref(),
