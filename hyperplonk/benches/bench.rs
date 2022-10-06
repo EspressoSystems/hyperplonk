@@ -51,7 +51,7 @@ fn bench_high_degree_plonk(degree: usize, thread: usize) -> Result<(), HyperPlon
     let filename = format!("high degree {} thread {}.txt", degree, thread);
     let mut file = File::create(filename).unwrap();
     for nv in [10, 15, 18, 20] {
-        let vanilla_gate = CustomizedGates::vanilla_plonk_gate();
+        let vanilla_gate = CustomizedGates::mock_gate(2, degree);
         bench_mock_circuit_zkp_helper(&mut file, nv, &vanilla_gate, &pcs_srs)?;
     }
 
