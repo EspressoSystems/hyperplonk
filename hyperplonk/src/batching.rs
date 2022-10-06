@@ -73,6 +73,7 @@ where
     let eq_t_i_list = build_eq_x_r_vec(t.as_ref())?;
 
     // \tilde g(i, b) = eq(t, i) * f_i(b)
+    let timer = start_timer!(|| format!("compute tilde g for {} points", points.len()));
     let mut tilde_g_eval = vec![];
     for (index, f_i) in polynomials.iter().enumerate() {
         for &f_i_eval in f_i.iter() {
@@ -84,9 +85,11 @@ where
         merged_num_var,
         tilde_g_eval,
     ));
-
+    end_timer!(timer);
     // evaluate eq(b, z_i) at boolean hypercube
     // merge all evals into a nv + ell mle
+
+    let timer = start_timer!(|| format!("compute tilde eq for {} points", points.len()));
     let mut tilde_eq_eval = vec![];
     for point in points.iter() {
         let eq_b_zi = build_eq_x_r_vec(&point)?;
@@ -97,13 +100,19 @@ where
         merged_num_var,
         tilde_eq_eval,
     ));
+    end_timer!(timer);
 
     // built the virtual polynomial for SumCheck
+    let timer = start_timer!(|| format!("sum check prove"));
+
+    let step = start_timer!(|| "add mle");
     let mut sum_check_vp = VirtualPolynomial::new(num_var + ell);
     sum_check_vp.add_mle_list([tilde_g.clone(), tilde_eq], E::Fr::one())?;
+    end_timer!(step);
 
     let proof = <PolyIOP<E::Fr> as SumCheck<E::Fr>>::prove(&sum_check_vp, transcript)?;
     let tilde_g_eval = tilde_g.evaluate(&proof.point).unwrap();
+    end_timer!(timer);
 
     // (a1, a2) := sumcheck's point
     let step = start_timer!(|| "open at a2");
@@ -120,8 +129,10 @@ where
     let g_prime = Rc::new(fix_last_variables(&tilde_g, a1));
     end_timer!(step);
 
+    let step = start_timer!(|| "pcs open");
     let (g_prime_proof, g_prime_eval) = PCS::open(prover_param, &g_prime, a2.to_vec().as_ref())?;
     assert_eq!(g_prime_eval, tilde_g_eval);
+    end_timer!(step);
 
     let step = start_timer!(|| "evaluate fi(pi)");
     let f_i_eval_at_point_i = polynomials
@@ -310,10 +321,10 @@ mod tests {
         let mut rng = test_rng();
 
         let uni_params =
-            UnivariateUniversalParams::<E>::gen_srs_for_testing(&mut rng, 1usize << 15)?;
-        let ml_params = MultilinearUniversalParams::<E>::gen_srs_for_testing(&mut rng, 15)?;
-        for num_poly in 2..10 {
-            for nv in 1..5 {
+            UnivariateUniversalParams::<E>::gen_srs_for_testing(&mut rng, 1usize << 10)?;
+        let ml_params = MultilinearUniversalParams::<E>::gen_srs_for_testing(&mut rng, 20)?;
+        for num_poly in 5..6 {
+            for nv in 15..16 {
                 let polys1: Vec<_> = (0..num_poly)
                     .map(|_| Rc::new(DenseMultilinearExtension::rand(nv, &mut rng)))
                     .collect();
