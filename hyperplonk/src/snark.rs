@@ -204,9 +204,10 @@ where
                 w_merged.num_vars, merged_nv
             )));
         }
-        for com in witness_commits.iter() {
-            transcript.append_serializable_element(b"w", com)?;
-        }
+
+        // TODO: use PCS to compute this
+        let witness_merged_commit = PCS::commit(&pk.pcs_param, &w_merged)?;
+        transcript.append_serializable_element(b"w", &witness_merged_commit)?;
 
         end_timer!(step);
         // =======================================================================
@@ -342,6 +343,7 @@ where
 
         Ok(HyperPlonkProof {
             // PCS commit for witnesses
+            witness_merged_commit,
             witness_commits,
             // batch_openings,
             batch_prod_x_openings,
@@ -459,9 +461,7 @@ where
             phantom: PhantomData::default(),
         };
         // push witness to transcript
-        for com in proof.witness_commits.iter() {
-            transcript.append_serializable_element(b"w", com)?;
-        }
+        transcript.append_serializable_element(b"w", &proof.witness_merged_commit)?;
 
         let zero_check_sub_claim = <Self as ZeroCheck<E::Fr>>::verify(
             &proof.zero_check_proof,
@@ -563,9 +563,7 @@ where
         ];
 
         let mut r_pi = transcript.get_and_append_challenge_vectors(b"r_pi", ell)?;
-        // =======================================================================
-        // 3.2 open prod(x) evaluations
-        // =======================================================================
+
         let res = batch_verify_internal(
             &vk.pcs_param,
             [proof.perm_check_proof.prod_x_comm; 4].as_ref(),
@@ -578,6 +576,16 @@ where
         // =======================================================================
         // 3.3 open witnesses' and selectors evaluations
         // =======================================================================
+
+        let res = PCS::verify(
+            &vk.pcs_param,
+            &proof.witness_merged_commit,
+            &perm_check_point,
+            &proof.perm_check_eval,
+            &proof.perm_check_opening,
+        )?;
+        assert!(res);
+
         let pi_eval_rec = evaluate_opt(&pi_poly, &r_pi);
         assert_eq!(&pi_eval_rec, pi_eval);
 

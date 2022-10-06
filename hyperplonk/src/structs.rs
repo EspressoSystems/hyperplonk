@@ -22,6 +22,7 @@ where
     PCS: PolynomialCommitmentScheme<E>,
 {
     // PCS commit for witnesses
+    pub witness_merged_commit: PCS::Commitment,
     pub witness_commits: Vec<PCS::Commitment>,
     pub batch_prod_x_openings: BatchProof<E, PCS>,
     pub batch_witness_and_selector_openings: BatchProof<E, PCS>,
