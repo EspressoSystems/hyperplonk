@@ -45,7 +45,7 @@ fn bench_sum_check() -> Result<(), PolyIOPErrors> {
                 print!(
                     "{}, {}, ",
                     nv,
-                    start.elapsed().as_nanos() / repetition /1000 as u128
+                    start.elapsed().as_nanos() / repetition / 1000 as u128
                 );
                 let mut transcript = <PolyIOP<Fr> as SumCheck<Fr>>::init_transcript();
                 <PolyIOP<Fr> as SumCheck<Fr>>::prove(&poly, &mut transcript)?
@@ -67,7 +67,7 @@ fn bench_sum_check() -> Result<(), PolyIOPErrors> {
                         "wrong subclaim"
                     );
                 }
-                println!("{}", start.elapsed().as_nanos() /1000 / repetition as u128);
+                println!("{}", start.elapsed().as_nanos() / 1000 / repetition as u128);
             }
 
             // println!("====================================");
@@ -102,7 +102,7 @@ fn bench_zero_check() -> Result<(), PolyIOPErrors> {
                 print!(
                     "{}, {}, ",
                     nv,
-                    start.elapsed().as_nanos() / repetition /1000 as u128
+                    start.elapsed().as_nanos() / repetition / 1000 as u128
                 );
 
                 let mut transcript = <PolyIOP<Fr> as ZeroCheck<Fr>>::init_transcript();
@@ -127,7 +127,7 @@ fn bench_zero_check() -> Result<(), PolyIOPErrors> {
                         "wrong subclaim"
                     );
                 }
-                println!("{}", start.elapsed().as_nanos() /1000 / repetition as u128);
+                println!("{}", start.elapsed().as_nanos() / 1000 / repetition as u128);
             }
 
             // println!("====================================");
@@ -175,7 +175,7 @@ fn bench_permutation_check() -> Result<(), PolyIOPErrors> {
             print!(
                 "{}, {}, ",
                 nv,
-                start.elapsed().as_nanos()  /1000/ repetition as u128
+                start.elapsed().as_nanos() / 1000 / repetition as u128
             );
             let mut transcript =
                 <PolyIOP<Fr> as PermutationCheck<Bls12_381, KZG>>::init_transcript();
@@ -210,7 +210,7 @@ fn bench_permutation_check() -> Result<(), PolyIOPErrors> {
                         &mut transcript,
                     )?;
             }
-            println!("{}", start.elapsed().as_nanos()  /1000/ repetition as u128);
+            println!("{}", start.elapsed().as_nanos() / 1000 / repetition as u128);
         }
 
         // println!("====================================");
@@ -257,7 +257,7 @@ fn bench_prod_check() -> Result<(), PolyIOPErrors> {
             print!(
                 "{}, {}, ",
                 nv,
-                start.elapsed().as_nanos()  /1000/ repetition as u128
+                start.elapsed().as_nanos() / 1000 / repetition as u128
             );
             let mut transcript = <PolyIOP<Fr> as ProductCheck<Bls12_381, KZG>>::init_transcript();
             transcript.append_message(b"testing", b"initializing transcript for testing")?;
@@ -289,7 +289,7 @@ fn bench_prod_check() -> Result<(), PolyIOPErrors> {
                     &mut transcript,
                 )?;
             }
-            println!("{}", start.elapsed().as_nanos()  /1000/ repetition as u128);
+            println!("{}", start.elapsed().as_nanos() / 1000 / repetition as u128);
         }
 
         // println!("====================================");
