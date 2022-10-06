@@ -5,7 +5,7 @@ use crate::{
     errors::PolyIOPErrors,
     structs::{IOPProverMessage, IOPProverState},
 };
-use arithmetic::{fix_variables, VirtualPolynomial};
+use arithmetic::{fix_first_variable, VirtualPolynomial};
 use ark_ff::PrimeField;
 use ark_poly::DenseMultilinearExtension;
 use ark_std::{end_timer, start_timer, vec::Vec};
@@ -87,8 +87,7 @@ impl<F: PrimeField> SumCheckProver<F> for IOPProverState<F> {
             #[cfg(feature = "parallel")]
             flattened_ml_extensions
                 .par_iter_mut()
-                .for_each(|mle| *mle = fix_variables(mle, &[r]));
-
+                .for_each(|mle| *mle = fix_first_variable(mle, &r));
             #[cfg(not(feature = "parallel"))]
             flattened_ml_extensions
                 .iter_mut()
@@ -103,8 +102,7 @@ impl<F: PrimeField> SumCheckProver<F> for IOPProverState<F> {
         self.round += 1;
 
         let products_list = self.poly.products.clone();
-        let mut products_sum = Vec::with_capacity(self.poly.aux_info.max_degree + 1);
-        products_sum.resize(self.poly.aux_info.max_degree + 1, F::zero());
+        let mut products_sum = vec![F::zero(); self.poly.aux_info.max_degree + 1];
 
         // let compute_sum = start_timer!(|| "compute sum");
 
@@ -112,30 +110,58 @@ impl<F: PrimeField> SumCheckProver<F> for IOPProverState<F> {
         // f(r_1, ... r_m,, x_{m+1}... x_n)
 
         #[cfg(feature = "parallel")]
-        for (t, e) in products_sum.iter_mut().enumerate() {
-            let t = F::from(t as u64);
-            let one_minus_t = F::one() - t;
-            let products = (0..1 << (self.poly.aux_info.num_variables - self.round))
-                .into_par_iter()
-                .map(|b| {
-                    // evaluate P_round(t)
-                    let mut tmp = F::zero();
-                    products_list.iter().for_each(|(coefficient, products)| {
-                        let num_mles = products.len();
-                        let mut product = *coefficient;
-                        for &f in products.iter().take(num_mles) {
-                            let table = &flattened_ml_extensions[f]; // f's range is checked in init
-                            product *= table[b << 1] * one_minus_t + table[(b << 1) + 1] * t;
-                        }
-                        tmp += product;
-                    });
+        let flag = (self.poly.aux_info.max_degree == 2)
+            && (products_list.len() == 1)
+            && (products_list[0].0 == F::one());
+        if flag {
+            for (t, e) in products_sum.iter_mut().enumerate() {
+                let evals = (0..1 << (self.poly.aux_info.num_variables - self.round))
+                    .into_par_iter()
+                    .map(|b| {
+                        // evaluate P_round(t)
+                        let table0 = &flattened_ml_extensions[products_list[0].1[0]];
+                        let table1 = &flattened_ml_extensions[products_list[0].1[1]];
+                        let val = if t == 0 {
+                            table0[b << 1] * table1[b << 1]
+                        } else if t == 1 {
+                            table0[(b << 1) + 1] * table1[(b << 1) + 1]
+                        } else {
+                            (table0[(b << 1) + 1] + table0[(b << 1) + 1] - table0[b << 1])
+                                * (table1[(b << 1) + 1] + table1[(b << 1) + 1] - table1[b << 1])
+                        };
+                        val
+                    })
+                    .collect::<Vec<F>>();
+                for val in evals.iter() {
+                    *e += val
+                }
+            }
+        } else {
+            for (t, e) in products_sum.iter_mut().enumerate() {
+                let t = F::from(t as u64);
+                let one_minus_t = F::one() - t;
+                let products = (0..1 << (self.poly.aux_info.num_variables - self.round))
+                    .into_par_iter()
+                    .map(|b| {
+                        // evaluate P_round(t)
+                        let mut tmp = F::zero();
+                        products_list.iter().for_each(|(coefficient, products)| {
+                            let num_mles = products.len();
+                            let mut product = *coefficient;
+                            for &f in products.iter().take(num_mles) {
+                                let table = &flattened_ml_extensions[f]; // f's range is checked in init
+                                product *= table[b << 1] * one_minus_t + table[(b << 1) + 1] * t;
+                            }
+                            tmp += product;
+                        });
 
-                    tmp
-                })
-                .collect::<Vec<F>>();
+                        tmp
+                    })
+                    .collect::<Vec<F>>();
 
-            for i in products.iter() {
-                *e += i
+                for i in products.iter() {
+                    *e += i
+                }
             }
         }
 
