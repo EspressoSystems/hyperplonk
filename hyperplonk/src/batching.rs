@@ -8,6 +8,7 @@ use arithmetic::{
     build_eq_x_r_vec, fix_last_variables, DenseMultilinearExtension, VPAuxInfo, VirtualPolynomial,
 };
 use ark_ec::{AffineCurve, PairingEngine, ProjectiveCurve};
+use ark_ff::PrimeField;
 use ark_poly::MultilinearExtension;
 use ark_std::{end_timer, log2, start_timer, One, Zero};
 use pcs::{prelude::Commitment, PolynomialCommitmentScheme};
@@ -28,8 +29,6 @@ where
 {
     /// A sum check proof proving tilde g's sum
     pub(crate) sum_check_proof: IOPProof<E::Fr>,
-    /// \tilde g(a1, a2)
-    pub(crate) tilde_g_eval: E::Fr,
     /// f_i(point_i)
     pub(crate) f_i_eval_at_point_i: Vec<E::Fr>,
     /// proof for g'(a_2)
@@ -109,7 +108,6 @@ where
     end_timer!(step);
 
     let proof = <PolyIOP<E::Fr> as SumCheck<E::Fr>>::prove(&sum_check_vp, transcript)?;
-    let tilde_g_eval = tilde_g.evaluate(&proof.point).unwrap();
     end_timer!(timer);
 
     // (a1, a2) := sumcheck's point
@@ -125,7 +123,7 @@ where
 
     let step = start_timer!(|| "pcs open");
     let (g_prime_proof, g_prime_eval) = PCS::open(prover_param, &g_prime, a2.to_vec().as_ref())?;
-    assert_eq!(g_prime_eval, tilde_g_eval);
+    // assert_eq!(g_prime_eval, tilde_g_eval);
     end_timer!(step);
 
     let step = start_timer!(|| "evaluate fi(pi)");
@@ -138,7 +136,7 @@ where
     end_timer!(open_timer);
     Ok(NewBatchProof {
         sum_check_proof: proof,
-        tilde_g_eval,
+        // tilde_g_eval,
         f_i_eval_at_point_i,
         g_prime_proof,
     })
@@ -149,6 +147,7 @@ where
 pub(crate) fn batch_verify_internal<E, PCS>(
     verifier_param: &PCS::VerifierParam,
     f_i_commitments: &[Commitment<E>],
+    points: &[PCS::Point],
     proof: &NewBatchProof<E, PCS>,
     transcript: &mut IOPTranscript<E::Fr>,
 ) -> Result<bool, HyperPlonkErrors>
@@ -199,25 +198,47 @@ where
         num_variables: num_var + ell,
         phantom: PhantomData,
     };
-    let _subclaim = <PolyIOP<E::Fr> as SumCheck<E::Fr>>::verify(
+    let subclaim = <PolyIOP<E::Fr> as SumCheck<E::Fr>>::verify(
         sum,
         &proof.sum_check_proof,
         &aux_info,
         transcript,
     )?;
+    let mut eq_tilde_eval = E::Fr::zero();
+    for (point, &coef) in points.iter().zip(eq_a1_list.iter()) {
+        eq_tilde_eval += coef * eq_eval_internal(a2, point);
+    }
+    let tilde_g_eval = subclaim.expected_evaluation / eq_tilde_eval;
 
     // verify commitment
     let res = PCS::verify(
         verifier_param,
         &Commitment(g_prime_commit.into_affine()),
         a2.to_vec().as_ref(),
-        &proof.tilde_g_eval,
+        &tilde_g_eval,
         &proof.g_prime_proof,
     )?;
 
     // println!("res {}", res);
     end_timer!(open_timer);
     Ok(res)
+}
+
+/// Evaluate eq polynomial. use the public one later
+fn eq_eval_internal<F: PrimeField>(x: &[F], y: &[F]) -> F {
+    // if x.len() != y.len() {
+    //     return Err(ArithErrors::InvalidParameters(
+    //         "x and y have different length".to_string(),
+    //     ));
+    // }
+    let start = start_timer!(|| "eq_eval");
+    let mut res = F::one();
+    for (&xi, &yi) in x.iter().zip(y.iter()) {
+        let xi_yi = xi * yi;
+        res *= xi_yi + xi_yi - xi - yi + F::one();
+    }
+    end_timer!(start);
+    res
 }
 
 #[cfg(test)]
@@ -294,6 +315,7 @@ mod tests {
         assert!(batch_verify_internal::<E, MultilinearKzgPCS<E>>(
             &(ml_vk, uni_vk),
             &commitments,
+            &points,
             &batch_proof,
             &mut transcript
         )?);

@@ -601,7 +601,7 @@ where
         // 3.1 open prod(x)' evaluations
         // =======================================================================
         let prod_final_query = perm_check_sub_claim.product_check_sub_claim.final_query;
-        let points = [
+        let prod_points = [
             [perm_check_point.as_slice(), &[E::Fr::zero()]].concat(),
             [perm_check_point.as_slice(), &[E::Fr::one()]].concat(),
             [&[E::Fr::zero()], perm_check_point.as_slice()].concat(),
@@ -625,11 +625,11 @@ where
         // 3.2 open selectors' evaluations
         // =======================================================================
         let log_num_selector_polys = log2(vk.params.num_selector_columns()) as usize;
-        let mut points = vec![];
+        let mut selector_points = vec![];
         for i in 0..vk.params.num_selector_columns() {
             let tmp_point =
                 gen_eval_point(i, log_num_selector_polys, &proof.zero_check_proof.point);
-            points.push(tmp_point);
+            selector_points.push(tmp_point);
         }
 
         // if proof.se.len() == 2 {
@@ -675,12 +675,12 @@ where
         ]
         .concat();
 
-        // let mut points = vec![perm_check_point.clone()];
+        let mut w_merged_points = vec![perm_check_point.clone()];
 
-        // for i in 0..proof.w_merged_batch_evals.len() - 3 {
-        //     points.push(gen_eval_point(i, log_num_witness_polys, zero_check_point))
-        // }
-        // points.push(r_pi);
+        for i in 0..proof.w_merged_batch_opening.f_i_eval_at_point_i.len() - 2 {
+            w_merged_points.push(gen_eval_point(i, log_num_witness_polys, zero_check_point))
+        }
+        w_merged_points.push(r_pi);
         // if !PCS::batch_verify_single_poly(
         //     &vk.pcs_param,
         //     &proof.w_merged_com,
@@ -696,6 +696,7 @@ where
         let res = batch_verify_internal(
             &vk.pcs_param,
             vec![proof.w_merged_com; vk.params.num_witness_columns() + 2].as_ref(),
+            &w_merged_points,
             &proof.w_merged_batch_opening,
             &mut transcript,
         )?;
@@ -703,6 +704,7 @@ where
         let res = batch_verify_internal(
             &vk.pcs_param,
             vec![proof.perm_check_proof.prod_x_comm; 5].as_ref(),
+            &prod_points,
             &proof.prod_batch_openings,
             &mut transcript,
         )?;
@@ -710,6 +712,7 @@ where
         let res = batch_verify_internal(
             &vk.pcs_param,
             vec![vk.selector_com; vk.params.num_selector_columns()].as_ref(),
+            &selector_points,
             &proof.selector_batch_openings,
             &mut transcript,
         )?;
