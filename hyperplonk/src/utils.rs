@@ -8,7 +8,7 @@ use crate::{
 use arithmetic::VirtualPolynomial;
 use ark_ec::PairingEngine;
 use ark_ff::PrimeField;
-use ark_poly::DenseMultilinearExtension;
+use ark_poly::{DenseMultilinearExtension, MultilinearExtension};
 use pcs::{prelude::Commitment, PolynomialCommitmentScheme};
 use std::{borrow::Borrow, rc::Rc};
 use transcript::IOPTranscript;
@@ -17,9 +17,17 @@ use transcript::IOPTranscript;
 /// its opening points
 #[derive(Debug)]
 pub(super) struct PcsAccumulator<E: PairingEngine, PCS: PolynomialCommitmentScheme<E>> {
+    // sequence:
+    // - prod(x) at 5 points
+    // - w_merged at perm check point
+    // - w_merged at zero check points (#witness points)
+    // - selector_merged at zero check points (#selector points)
+    // - w[0] at r_pi
+    pub(crate) num_var: usize,
     pub(crate) polynomials: Vec<PCS::Polynomial>,
     pub(crate) commitments: Vec<PCS::Commitment>,
     pub(crate) points: Vec<PCS::Point>,
+    pub(crate) evals: Vec<PCS::Evaluation>,
 }
 
 impl<E, PCS> PcsAccumulator<E, PCS>
@@ -34,11 +42,13 @@ where
     >,
 {
     /// Create an empty accumulator.
-    pub(super) fn new() -> Self {
+    pub(super) fn new(num_var: usize) -> Self {
         Self {
+            num_var,
             polynomials: vec![],
             commitments: vec![],
             points: vec![],
+            evals: vec![],
         }
     }
 
@@ -49,9 +59,14 @@ where
         commit: &PCS::Commitment,
         point: &PCS::Point,
     ) {
+        assert!(poly.num_vars == point.len());
+        assert!(poly.num_vars == self.num_var);
+
+        let evals = poly.evaluate(point).unwrap();
+        self.evals.push(evals);
         self.polynomials.push(poly.clone());
+        self.points.push(point.clone());
         self.commitments.push(commit.clone());
-        self.points.push(point.clone())
     }
 
     /// Batch open all the points over a merged polynomial.
@@ -65,6 +80,7 @@ where
             prover_param.borrow(),
             self.polynomials.as_ref(),
             self.points.as_ref(),
+            self.evals.as_ref(),
             transcript,
         )
     }

@@ -16,6 +16,7 @@ use poly_iop::{
     prelude::{IOPProof, SumCheck},
     PolyIOP,
 };
+use rayon::prelude::{IntoParallelIterator, ParallelIterator};
 use std::{marker::PhantomData, rc::Rc};
 use transcript::IOPTranscript;
 
@@ -41,6 +42,7 @@ pub(crate) fn multi_open_internal<E, PCS>(
     prover_param: &PCS::ProverParam,
     polynomials: &[PCS::Polynomial],
     points: &[PCS::Point],
+    evals: &[PCS::Evaluation],
     transcript: &mut IOPTranscript<E::Fr>,
 ) -> Result<NewBatchProof<E, PCS>, HyperPlonkErrors>
 where
@@ -65,34 +67,41 @@ where
 
     // challenge point t
     let t = transcript.get_and_append_challenge_vectors("t".as_ref(), ell)?;
-
+    println!("t0: {}", t[0]);
     // eq(t, i) for i in [0..k]
     let eq_t_i_list = build_eq_x_r_vec(t.as_ref())?;
 
     // \tilde g(i, b) = eq(t, i) * f_i(b)
     let timer = start_timer!(|| format!("compute tilde g for {} points", points.len()));
-    let mut tilde_g_eval = vec![E::Fr::zero(); 1 << (ell + num_var)];
-    let block_size = 1 << num_var;
-    for (index, f_i) in polynomials.iter().enumerate() {
-        for (j, &f_i_eval) in f_i.iter().enumerate() {
-            tilde_g_eval[index * block_size + j] = f_i_eval * eq_t_i_list[index];
-        }
-    }
+
+    let mut tilde_g_eval = polynomials
+        .iter()
+        .enumerate()
+        .map(|(index, f_i)| {
+            f_i.evaluations
+                .clone()
+                .into_par_iter()
+                .map(|x| x * eq_t_i_list[index])
+                .collect::<Vec<_>>()
+        })
+        .flatten()
+        .collect::<Vec<_>>();
+
+    tilde_g_eval.resize(1 << (ell + num_var), E::Fr::zero());
     let tilde_g = Rc::new(DenseMultilinearExtension::from_evaluations_vec(
         merged_num_var,
         tilde_g_eval,
     ));
     end_timer!(timer);
-    // evaluate eq(b, z_i) at boolean hypercube
-    // merge all evals into a nv + ell mle
 
     let timer = start_timer!(|| format!("compute tilde eq for {} points", points.len()));
-    let mut tilde_eq_eval = vec![E::Fr::zero(); 1 << (ell + num_var)];
-    for (index, point) in points.iter().enumerate() {
-        let eq_b_zi = build_eq_x_r_vec(point)?;
-        let start = index * block_size;
-        tilde_eq_eval[start..start + block_size].copy_from_slice(eq_b_zi.as_slice());
-    }
+    let mut tilde_eq_eval = points
+        .into_par_iter()
+        .map(|point| build_eq_x_r_vec(point).unwrap())
+        .flatten()
+        .collect::<Vec<_>>();
+
+    tilde_eq_eval.resize(1 << (ell + num_var), E::Fr::zero());
     let tilde_eq = Rc::new(DenseMultilinearExtension::from_evaluations_vec(
         merged_num_var,
         tilde_eq_eval,
@@ -100,7 +109,7 @@ where
     end_timer!(timer);
 
     // built the virtual polynomial for SumCheck
-    let timer = start_timer!(|| format!("sum check prove"));
+    let timer = start_timer!(|| format!("sum check prove of {} variables", num_var + ell));
 
     let step = start_timer!(|| "add mle");
     let mut sum_check_vp = VirtualPolynomial::new(num_var + ell);
@@ -127,17 +136,13 @@ where
     end_timer!(step);
 
     let step = start_timer!(|| "evaluate fi(pi)");
-    let f_i_eval_at_point_i = polynomials
-        .iter()
-        .zip(points.iter())
-        .map(|(f, p)| f.evaluate(p).unwrap())
-        .collect();
     end_timer!(step);
     end_timer!(open_timer);
     Ok(NewBatchProof {
         sum_check_proof: proof,
-        // tilde_g_eval,
-        f_i_eval_at_point_i,
+        tilde_g_eval,
+        f_i_eval_at_a2,
+        f_i_eval_at_point_i: evals.to_vec(),
         g_prime_proof,
     })
 }
@@ -172,7 +177,7 @@ where
 
     // challenge point t
     let t = transcript.get_and_append_challenge_vectors("t".as_ref(), ell)?;
-
+    println!("t0: {}", t[0]);
     // sum check point (a1, a2)
     let a1 = &proof.sum_check_proof.point[num_var..];
     let a2 = &proof.sum_check_proof.point[..num_var];
@@ -286,11 +291,11 @@ mod tests {
             points.push(point);
         }
 
-        // let evals = polys
-        //     .iter()
-        //     .zip(points.iter())
-        //     .map(|(f, p)| f.evaluate(p).unwrap())
-        //     .collect::<Vec<_>>();
+        let evals = polys
+            .iter()
+            .zip(points.iter())
+            .map(|(f, p)| f.evaluate(p).unwrap())
+            .collect::<Vec<_>>();
 
         let commitments = polys
             .iter()
@@ -305,6 +310,7 @@ mod tests {
             &(ml_ck.clone(), uni_ck.clone()),
             polys,
             &points,
+            &evals,
             &mut transcript,
         )?;
 

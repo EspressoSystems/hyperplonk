@@ -21,47 +21,9 @@ where
     PC: PermutationCheck<E, PCS>,
     PCS: PolynomialCommitmentScheme<E>,
 {
-    // =======================================================================
-    // witness related
-    // =======================================================================
     // PCS commit for witnesses
-    pub(crate) w_merged_batch_opening: NewBatchProof<E, PCS>,
-
-    pub w_merged_com: PCS::Commitment,
-    // Batch opening for witness commitment
-    // - PermCheck eval: 1 point
-    // - ZeroCheck evals: #witness points
-    // - public input eval: 1 point
-    // pub w_merged_batch_opening: PCS::BatchProof,
-    // Evaluations of Witness
-    // - PermCheck eval: 1 point
-    // - ZeroCheck evals: #witness points
-    // - public input eval: 1 point
-    // pub w_merged_batch_evals: Vec<E::Fr>,
-    // =======================================================================
-    // prod(x) related
-    // =======================================================================
-    // prod(x)'s openings
-    // - prod(0, x),
-    // - prod(1, x),
-    // - prod(x, 0),
-    // - prod(x, 1),
-    // - prod(1, ..., 1,0)
-    pub(crate) prod_batch_openings: NewBatchProof<E, PCS>,
-    // prod(x)'s evaluations
-    // - prod(0, x),
-    // - prod(1, x),
-    // - prod(x, 0),
-    // - prod(x, 1),
-    // - prod(1, ..., 1,0)
-    // pub prod_batch_evals: Vec<E::Fr>,
-    // =======================================================================
-    // selectors related
-    // =======================================================================
-    // PCS openings for selectors on zero check point
-    pub(crate) selector_batch_openings: NewBatchProof<E, PCS>,
-    // Evaluates of selectors on zero check point
-    // pub selector_batch_evals: Vec<E::Fr>,
+    pub w_merged_ext_com: PCS::Commitment,
+    pub(crate) batch_openings: NewBatchProof<E, PCS>,
     // =======================================================================
     // IOP proofs
     // =======================================================================
@@ -146,7 +108,7 @@ pub struct HyperPlonkProvingKey<E: PairingEngine, PCS: PolynomialCommitmentSchem
     /// The preprocessed selector polynomials
     pub selector_oracles: Vec<Rc<DenseMultilinearExtension<E::Fr>>>,
     /// A commitment to the preprocessed selector polynomials
-    pub selector_com: PCS::Commitment,
+    pub selector_commitments: Vec<PCS::Commitment>,
     /// The parameters for PCS commitment
     pub pcs_param: PCS::ProverParam,
 }
@@ -164,7 +126,7 @@ pub struct HyperPlonkVerifyingKey<E: PairingEngine, PCS: PolynomialCommitmentSch
     /// The parameters for PCS commitment
     pub pcs_param: PCS::VerifierParam,
     /// A commitment to the preprocessed selector polynomials
-    pub selector_com: PCS::Commitment,
+    pub selector_commitments: Vec<PCS::Commitment>,
     /// Permutation oracle's commitment
     pub perm_com: PCS::Commitment,
 }

@@ -186,6 +186,37 @@ fn fix_variables_no_par<F: Field>(
     DenseMultilinearExtension::from_evaluations_slice(nv - dim, &poly[..(1 << (nv - dim))])
 }
 
+/// TODO
+pub fn pad_and_merge_polynomials<F: PrimeField>(
+    polynomials: &[Rc<DenseMultilinearExtension<F>>],
+    target_nv: usize,
+) -> Result<Rc<DenseMultilinearExtension<F>>, ArithErrors> {
+    let nv = polynomials[0].num_vars();
+    for poly in polynomials.iter() {
+        if nv != poly.num_vars() {
+            return Err(ArithErrors::InvalidParameters(
+                "num_vars do not match for polynomials".to_string(),
+            ));
+        }
+    }
+
+    let merged_nv = get_batched_nv(nv, polynomials.len());
+    if merged_nv > target_nv {
+        return Err(ArithErrors::InvalidParameters(
+            "target is smaller than merged nv".to_string(),
+        ));
+    }
+
+    let mut scalars = vec![];
+    for poly in polynomials.iter() {
+        scalars.extend_from_slice(poly.to_evaluations().as_slice());
+    }
+    scalars.extend_from_slice(vec![F::zero(); (1 << target_nv) - scalars.len()].as_ref());
+    Ok(Rc::new(DenseMultilinearExtension::from_evaluations_vec(
+        target_nv, scalars,
+    )))
+}
+
 /// merge a set of polynomials. Returns an error if the
 /// polynomials do not share a same number of nvs.
 pub fn merge_polynomials<F: PrimeField>(
