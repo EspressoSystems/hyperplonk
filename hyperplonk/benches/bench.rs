@@ -8,7 +8,7 @@ use hyperplonk::{
     HyperPlonkSNARK,
 };
 use pcs::{
-    prelude::{MultilinearKzgPCS, MultilinearUniversalParams, UnivariateUniversalParams},
+    prelude::{MultilinearKzgPCS, MultilinearUniversalParams},
     PolynomialCommitmentScheme,
 };
 use poly_iop::PolyIOP;
@@ -62,10 +62,7 @@ fn bench_mock_circuit_zkp_helper(
     file: &mut File,
     nv: usize,
     gate: &CustomizedGates,
-    pcs_srs: &(
-        MultilinearUniversalParams<Bls12_381>,
-        UnivariateUniversalParams<Bls12_381>,
-    ),
+    pcs_srs: &MultilinearUniversalParams<Bls12_381>,
 ) -> Result<(), HyperPlonkErrors> {
     let repetition = if nv < 10 {
         10

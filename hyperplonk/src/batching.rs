@@ -39,7 +39,6 @@ where
     let open_timer = start_timer!(|| format!("multi open {} points", points.len()));
 
     // TODO: sanity checks
-
     let num_var = polynomials[0].num_vars;
     let k = polynomials.len();
     let ell = log2(k) as usize;

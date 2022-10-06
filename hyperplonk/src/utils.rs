@@ -63,7 +63,7 @@ where
         assert!(poly.num_vars == self.num_var);
 
         let eval = poly.evaluate(point).unwrap();
-        println!("eval {}", eval);
+
         self.evals.push(eval);
         self.polynomials.push(poly.clone());
         self.points.push(point.clone());
