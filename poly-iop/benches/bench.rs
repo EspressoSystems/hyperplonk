@@ -63,10 +63,11 @@ fn bench_sum_check() -> Result<(), PolyIOPErrors> {
                         &poly_info,
                         &mut transcript,
                     )?;
-                    assert!(
-                        poly.evaluate(&subclaim.point).unwrap() == subclaim.expected_evaluation,
-                        "wrong subclaim"
-                    );
+                    // assert!(
+                    //     poly.evaluate(&subclaim.point).unwrap() ==
+                    // subclaim.expected_evaluation,
+                    //     "wrong subclaim"
+                    // );
                 }
                 println!(
                     "sum check verification time for {} variables and {} degree: {} ns",
@@ -117,10 +118,10 @@ fn bench_zero_check() -> Result<(), PolyIOPErrors> {
                 transcript.append_message(b"testing", b"initializing transcript for testing")?;
                 let zero_subclaim =
                     <PolyIOP<Fr> as ZeroCheck<Fr>>::verify(&proof, &poly_info, &mut transcript)?;
-                assert!(
-                    poly.evaluate(&zero_subclaim.point)? == zero_subclaim.expected_evaluation,
-                    "wrong subclaim"
-                );
+                // assert!(
+                //     poly.evaluate(&zero_subclaim.point)? ==
+                // zero_subclaim.expected_evaluation,     "wrong subclaim"
+                // );
                 println!(
                     "zero check verification time for {} variables and {} degree: {} ns",
                     nv,

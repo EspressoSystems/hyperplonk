@@ -4,15 +4,15 @@
 // The sumcheck based batch opening therefore cannot stay in the PCS repo --
 // which creates a cyclic dependency.
 
-use arithmetic::{DenseMultilinearExtension, VirtualPolynomial};
+use arithmetic::{build_eq_x_r, DenseMultilinearExtension, VirtualPolynomial, build_eq_x_r_vec};
 use ark_ec::{AffineCurve, PairingEngine, ProjectiveCurve};
 use ark_ff::PrimeField;
 use ark_poly::MultilinearExtension;
 use ark_std::{end_timer, log2, start_timer, One, Zero};
 use pcs::{
     prelude::{
-        Commitment, MultilinearKzgPCS, MultilinearProverParam, MultilinearVerifierParam,
-        UnivariateProverParam, UnivariateVerifierParam,
+        Commitment, MultilinearKzgPCS, MultilinearKzgProof, MultilinearProverParam,
+        MultilinearVerifierParam, UnivariateProverParam, UnivariateVerifierParam,
     },
     PolynomialCommitmentScheme,
 };
@@ -32,6 +32,8 @@ pub(crate) struct NewBatchProof<E: PairingEngine> {
     pub(crate) tilde_g_eval: E::Fr,
     /// f_i(a2)
     pub(crate) f_i_eval: Vec<E::Fr>,
+    /// proof for g'(a_2)
+    pub(crate) g_prime_proof: MultilinearKzgProof<E>,
 }
 
 /// Steps:
@@ -56,7 +58,7 @@ pub(crate) fn multi_open_internal<E: PairingEngine>(
     let t = transcript.get_and_append_challenge_vectors("t".as_ref(), ell)?;
 
     // eq(t, i) for i in [0..k]
-    let eq_t_i_list = get_eq_x(t.as_ref(), ell);
+    let eq_t_i_list = get_eq_x(t.as_ref())?;
 
     // \tilde g(i, b) = eq(t, i) * f_i(b)
     let mut tilde_g_eval = vec![];
@@ -75,7 +77,7 @@ pub(crate) fn multi_open_internal<E: PairingEngine>(
     // merge all evals into a nv + ell mle
     let mut tilde_eq_eval = vec![];
     for point in points.iter() {
-        let eq_b_zi = get_eq_x(&point, num_var);
+        let eq_b_zi = get_eq_x(&point)?;
         tilde_eq_eval.extend_from_slice(eq_b_zi.as_slice());
     }
     tilde_eq_eval.resize(1 << (ell + num_var), E::Fr::zero());
@@ -91,17 +93,28 @@ pub(crate) fn multi_open_internal<E: PairingEngine>(
     let proof = <PolyIOP<E::Fr> as SumCheck<E::Fr>>::prove(&sum_check_vp, transcript)?;
     let tilde_g_eval = tilde_g.evaluate(&proof.point).unwrap();
 
+    let a1 = &proof.point[..ell];
     let a2 = &proof.point[ell..];
     let f_i_eval = polynomials
         .iter()
         .map(|p| p.evaluate(a2).unwrap())
         .collect::<Vec<E::Fr>>();
 
+    // build g'(a2)
+    let g_prime = Rc::new(tilde_g.fix_variables(a1));
+    let (g_prime_proof, g_prime_eval) = MultilinearKzgPCS::open(
+        &(ml_prover_param, uni_prover_param),
+        &g_prime,
+        a2.to_vec().as_ref(),
+    )?;
+    assert_eq!(g_prime_eval, tilde_g_eval);
+
     end_timer!(open_timer);
     Ok(NewBatchProof {
         sum_check_proof: proof,
         tilde_g_eval,
         f_i_eval,
+        g_prime_proof,
     })
 }
 
@@ -110,10 +123,7 @@ pub(crate) fn multi_open_internal<E: PairingEngine>(
 pub(crate) fn batch_internal<E: PairingEngine>(
     uni_prover_param: UnivariateVerifierParam<E>,
     ml_prover_param: MultilinearVerifierParam<E>,
-    num_vars: usize,
     f_i_commitments: &[Commitment<E>],
-
-    // f_i(a_2)
     f_i_eval: &[E::Fr],
     proof: &NewBatchProof<E>,
     transcript: &mut IOPTranscript<E::Fr>,
@@ -124,7 +134,6 @@ pub(crate) fn batch_internal<E: PairingEngine>(
 
     let k = f_i_commitments.len();
     let ell = log2(k) as usize;
-    let merged_num_var = num_vars + ell;
 
     // challenge point t
     let t = transcript.get_and_append_challenge_vectors("t".as_ref(), ell)?;
@@ -134,8 +143,8 @@ pub(crate) fn batch_internal<E: PairingEngine>(
     let a2 = &proof.sum_check_proof.point[ell..];
 
     // build g' commitment
-    let eq_a1_list = get_eq_x(a1, ell);
-    let eq_t_list = get_eq_x(t.as_ref(), ell);
+    let eq_a1_list = get_eq_x(a1)?;
+    let eq_t_list = get_eq_x(t.as_ref())?;
 
     let mut g_prime_eval = E::Fr::zero();
     let mut g_prime_commit = E::G1Affine::zero().into_projective();
@@ -156,8 +165,7 @@ pub(crate) fn batch_internal<E: PairingEngine>(
         &Commitment(g_prime_commit.into_affine()),
         a2.to_vec().as_ref(),
         &g_prime_eval,
-        // what is this proof?
-        proof,
+        &proof.g_prime_proof,
     )?;
 
     end_timer!(open_timer);
@@ -165,6 +173,6 @@ pub(crate) fn batch_internal<E: PairingEngine>(
 }
 
 // generate a list of evals which are eq(\vec t, <i>) for i in 0..2^index_len
-fn get_eq_x<F: PrimeField>(t: &[F], index_len: usize) -> Vec<F> {
-    todo!()
+fn get_eq_x<F: PrimeField>(t: &[F]) -> Result<Vec<F>, HyperPlonkErrors> {
+    Ok(build_eq_x_r_vec(t)?)
 }

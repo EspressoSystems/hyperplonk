@@ -333,7 +333,19 @@ impl<F: PrimeField> VirtualPolynomial<F> {
 pub fn build_eq_x_r<F: PrimeField>(
     r: &[F],
 ) -> Result<Rc<DenseMultilinearExtension<F>>, ArithErrors> {
-    let start = start_timer!(|| "zero check build eq_x_r");
+    let evals = build_eq_x_r_vec(r)?;
+    let mle = DenseMultilinearExtension::from_evaluations_vec(r.len(), evals);
+
+    Ok(Rc::new(mle))
+}
+// This function build the eq(x, r) polynomial for any given r.
+//
+// Evaluate
+//      eq(x,y) = \prod_i=1^num_var (x_i * y_i + (1-x_i)*(1-y_i))
+// over r, which is
+//      eq(x,y) = \prod_i=1^num_var (x_i * r_i + (1-x_i)*(1-r_i))
+pub fn build_eq_x_r_vec<F: PrimeField>(r: &[F]) -> Result<Vec<F>, ArithErrors> {
+    let start = start_timer!(|| "build eq_x_r");
 
     // we build eq(x,r) from its evaluations
     // we want to evaluate eq(x,r) over x \in {0, 1}^num_vars
@@ -349,11 +361,8 @@ pub fn build_eq_x_r<F: PrimeField>(
     let mut eval = Vec::new();
     build_eq_x_r_helper(r, &mut eval)?;
 
-    let mle = DenseMultilinearExtension::from_evaluations_vec(r.len(), eval);
-
-    let res = Rc::new(mle);
     end_timer!(start);
-    Ok(res)
+    Ok(eval)
 }
 
 /// A helper function to build eq(x, r) recursively.
