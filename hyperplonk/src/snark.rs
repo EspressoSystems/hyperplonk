@@ -13,12 +13,12 @@ use arithmetic::{
 use ark_ec::PairingEngine;
 use ark_poly::DenseMultilinearExtension;
 use ark_std::{end_timer, log2, start_timer, One, Zero};
-use pcs::prelude::{compute_qx_degree, Commitment, PolynomialCommitmentScheme};
+use pcs::prelude::{Commitment, PolynomialCommitmentScheme};
 use poly_iop::{
     prelude::{PermutationCheck, ZeroCheck},
     PolyIOP,
 };
-use std::{cmp::max, marker::PhantomData, rc::Rc};
+use std::{marker::PhantomData, rc::Rc};
 use transcript::IOPTranscript;
 
 impl<E, PCS> HyperPlonkSNARK<E, PCS> for PolyIOP<E::Fr>
@@ -47,32 +47,16 @@ where
         let num_vars = index.num_variables();
 
         let log_num_witness_polys = log2(index.num_witness_columns()) as usize;
-        let log_num_selector_polys = log2(index.num_selector_columns()) as usize;
-
         let witness_merged_nv = num_vars + log_num_witness_polys;
-        let selector_merged_nv = num_vars + log_num_selector_polys;
 
         let log_chunk_size = log_num_witness_polys + 1;
         let prod_x_nv = num_vars + log_chunk_size;
 
-        let max_nv = max(witness_merged_nv + 1, selector_merged_nv);
-        let max_points = max(
-            // prod(x) has 5 points
-            5,
-            max(
-                // selector points
-                index.num_selector_columns(),
-                // witness points + public input point + perm point
-                index.num_witness_columns() + 2,
-            ),
-        );
-
-        let supported_uni_degree = compute_qx_degree(max_nv, max_points);
-        let supported_ml_degree = max_nv;
+        let supported_ml_degree = prod_x_nv;
 
         // extract PCS prover and verifier keys from SRS
         let (pcs_prover_param, pcs_verifier_param) =
-            PCS::trim(pcs_srs, supported_uni_degree, Some(supported_ml_degree))?;
+            PCS::trim(pcs_srs, None, Some(supported_ml_degree))?;
 
         // build permutation oracles
         let permutation_oracle = Rc::new(DenseMultilinearExtension::from_evaluations_slice(

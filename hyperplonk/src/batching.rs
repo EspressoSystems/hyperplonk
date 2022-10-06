@@ -231,33 +231,24 @@ mod tests {
     use ark_ec::PairingEngine;
     use ark_poly::{DenseMultilinearExtension, MultilinearExtension};
     use ark_std::{
-        log2,
         rand::{CryptoRng, RngCore},
         test_rng,
         vec::Vec,
         UniformRand,
     };
     use pcs::{
-        prelude::{
-            compute_qx_degree, MultilinearKzgPCS, MultilinearUniversalParams,
-            UnivariateUniversalParams,
-        },
+        prelude::{MultilinearKzgPCS, MultilinearUniversalParams},
         StructuredReferenceString,
     };
 
     type Fr = <E as PairingEngine>::Fr;
 
     fn test_multi_open_helper<R: RngCore + CryptoRng>(
-        uni_params: &UnivariateUniversalParams<E>,
         ml_params: &MultilinearUniversalParams<E>,
         polys: &[Rc<DenseMultilinearExtension<Fr>>],
         rng: &mut R,
     ) -> Result<(), HyperPlonkErrors> {
         let merged_nv = get_batched_nv(polys[0].num_vars(), polys.len());
-        let qx_degree = compute_qx_degree(merged_nv, polys.len());
-        let padded_qx_degree = 1usize << log2(qx_degree);
-
-        let (uni_ck, uni_vk) = uni_params.trim(padded_qx_degree)?;
         let (ml_ck, ml_vk) = ml_params.trim(merged_nv)?;
 
         let mut points = Vec::new();
@@ -276,14 +267,14 @@ mod tests {
 
         let commitments = polys
             .iter()
-            .map(|poly| MultilinearKzgPCS::commit(&(ml_ck.clone(), uni_ck.clone()), poly).unwrap())
+            .map(|poly| MultilinearKzgPCS::commit(&ml_ck.clone(), poly).unwrap())
             .collect::<Vec<_>>();
 
         let mut transcript = IOPTranscript::new("test transcript".as_ref());
         transcript.append_field_element("init".as_ref(), &Fr::zero())?;
 
         let batch_proof = multi_open_internal::<E, MultilinearKzgPCS<E>>(
-            &(ml_ck.clone(), uni_ck.clone()),
+            &ml_ck,
             polys,
             &points,
             &evals,
@@ -294,7 +285,7 @@ mod tests {
         let mut transcript = IOPTranscript::new("test transcript".as_ref());
         transcript.append_field_element("init".as_ref(), &Fr::zero())?;
         assert!(batch_verify_internal::<E, MultilinearKzgPCS<E>>(
-            &(ml_vk, uni_vk),
+            &ml_vk,
             &commitments,
             &points,
             &batch_proof,
@@ -308,15 +299,13 @@ mod tests {
     fn test_multi_open_internal() -> Result<(), HyperPlonkErrors> {
         let mut rng = test_rng();
 
-        let uni_params =
-            UnivariateUniversalParams::<E>::gen_srs_for_testing(&mut rng, 1usize << 10)?;
         let ml_params = MultilinearUniversalParams::<E>::gen_srs_for_testing(&mut rng, 20)?;
         for num_poly in 5..6 {
             for nv in 15..16 {
                 let polys1: Vec<_> = (0..num_poly)
                     .map(|_| Rc::new(DenseMultilinearExtension::rand(nv, &mut rng)))
                     .collect();
-                test_multi_open_helper(&uni_params, &ml_params, &polys1, &mut rng)?;
+                test_multi_open_helper(&ml_params, &polys1, &mut rng)?;
             }
         }
 

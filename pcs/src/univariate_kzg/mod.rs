@@ -20,12 +20,9 @@ use ark_std::{
     string::ToString,
     vec,
     vec::Vec,
-    One, UniformRand, Zero,
+    One,
 };
-#[cfg(feature = "parallel")]
-use rayon::prelude::*;
 use srs::{UnivariateProverParam, UnivariateUniversalParams, UnivariateVerifierParam};
-use util::parallelizable_slice_iter;
 
 pub(crate) mod srs;
 
@@ -55,9 +52,7 @@ impl<E: PairingEngine> PolynomialCommitmentScheme<E> for UnivariateKzgPCS<E> {
     type Evaluation = E::Fr;
     // Polynomial and its associated types
     type Commitment = Commitment<E>;
-    type BatchCommitment = Vec<Self::Commitment>;
     type Proof = UnivariateKzgProof<E>;
-    type BatchProof = UnivariateKzgBatchProof<E>;
 
     /// Build SRS for testing.
     ///
@@ -77,15 +72,16 @@ impl<E: PairingEngine> PolynomialCommitmentScheme<E> for UnivariateKzgPCS<E> {
     /// `supported_num_vars` must be None or an error is returned.
     fn trim(
         srs: impl Borrow<Self::SRS>,
-        supported_degree: usize,
+        supported_degree: Option<usize>,
         supported_num_vars: Option<usize>,
     ) -> Result<(Self::ProverParam, Self::VerifierParam), PCSError> {
+        assert!(supported_num_vars.is_none());
         if supported_num_vars.is_some() {
             return Err(PCSError::InvalidParameters(
                 "univariate should not receive a num_var param".to_string(),
             ));
         }
-        srs.borrow().trim(supported_degree)
+        srs.borrow().trim(supported_degree.unwrap())
     }
 
     /// Generate a commitment for a polynomial
@@ -120,21 +116,6 @@ impl<E: PairingEngine> PolynomialCommitmentScheme<E> for UnivariateKzgPCS<E> {
         Ok(Commitment(commitment))
     }
 
-    /// Generate a commitment for a list of polynomials
-    fn multi_commit(
-        prover_param: impl Borrow<Self::ProverParam>,
-        polys: &[Self::Polynomial],
-    ) -> Result<Self::BatchCommitment, PCSError> {
-        let prover_param = prover_param.borrow();
-        let commit_time = start_timer!(|| format!("batch commit {} polynomials", polys.len()));
-        let res = parallelizable_slice_iter(polys)
-            .map(|poly| Self::commit(prover_param, poly))
-            .collect::<Result<Vec<Self::Commitment>, PCSError>>()?;
-
-        end_timer!(commit_time);
-        Ok(res)
-    }
-
     /// On input a polynomial `p` and a point `point`, outputs a proof for the
     /// same.
     fn open(
@@ -165,61 +146,6 @@ impl<E: PairingEngine> PolynomialCommitmentScheme<E> for UnivariateKzgPCS<E> {
         Ok((Self::Proof { proof }, eval))
     }
 
-    /// Input a list of polynomials, and a same number of points,
-    /// compute a multi-opening for all the polynomials.
-    // This is a naive approach
-    // TODO: to implement the more efficient batch opening algorithm
-    // (e.g., the appendix C.4 in https://eprint.iacr.org/2020/1536.pdf)
-    fn multi_open(
-        prover_param: impl Borrow<Self::ProverParam>,
-        _multi_commitment: &Self::BatchCommitment,
-        polynomials: &[Self::Polynomial],
-        points: &[Self::Point],
-    ) -> Result<(Self::BatchProof, Vec<Self::Evaluation>), PCSError> {
-        let open_time = start_timer!(|| format!("batch opening {} polynomials", polynomials.len()));
-        if polynomials.len() != points.len() {
-            return Err(PCSError::InvalidParameters(format!(
-                "poly length {} is different from points length {}",
-                polynomials.len(),
-                points.len()
-            )));
-        }
-        let mut batch_proof = vec![];
-        let mut evals = vec![];
-        for (poly, point) in polynomials.iter().zip(points.iter()) {
-            let (proof, eval) = Self::open(prover_param.borrow(), poly, point)?;
-            batch_proof.push(proof);
-            evals.push(eval);
-        }
-
-        end_timer!(open_time);
-        Ok((batch_proof, evals))
-    }
-
-    /// Input a multilinear extension, and a number of points, and
-    /// a transcript, compute a multi-opening for all the polynomials.
-    fn multi_open_single_poly(
-        _prover_param: impl Borrow<Self::ProverParam>,
-        _commitment: &Self::Commitment,
-        _polynomials: &Self::Polynomial,
-        _points: &[Self::Point],
-    ) -> Result<(Self::BatchProof, Vec<Self::Evaluation>), PCSError> {
-        unimplemented!()
-    }
-
-    /// Input a multilinear extension, and a number of points, and
-    /// a transcript, compute a multi-opening for all the polynomials.
-    /// The first `overlap_len` variables of each point must be the same.
-    fn multi_open_single_poly_overlap_points(
-        _prover_param: impl Borrow<Self::ProverParam>,
-        _commitment: &Self::Commitment,
-        _polynomial: &Self::Polynomial,
-        _points: &[Self::Point],
-        _overlap_len: usize,
-    ) -> Result<(Self::BatchProof, Vec<Self::Evaluation>), PCSError> {
-        unimplemented!()
-    }
-
     /// Verifies that `value` is the evaluation at `x` of the polynomial
     /// committed inside `comm`.
     fn verify(
@@ -246,92 +172,6 @@ impl<E: PairingEngine> PolynomialCommitmentScheme<E> for UnivariateKzgPCS<E> {
 
         end_timer!(check_time, || format!("Result: {}", res));
         Ok(res)
-    }
-
-    /// Verifies that `value_i` is the evaluation at `x_i` of the polynomial
-    /// `poly_i` committed inside `comm`.
-    // This is a naive approach
-    // TODO: to implement the more efficient batch verification algorithm
-    // (e.g., the appendix C.4 in https://eprint.iacr.org/2020/1536.pdf)
-    fn batch_verify<R: RngCore + CryptoRng>(
-        verifier_param: &Self::VerifierParam,
-        multi_commitment: &Self::BatchCommitment,
-        points: &[Self::Point],
-        values: &[E::Fr],
-        batch_proof: &Self::BatchProof,
-        rng: &mut R,
-    ) -> Result<bool, PCSError> {
-        let check_time =
-            start_timer!(|| format!("Checking {} evaluation proofs", multi_commitment.len()));
-
-        let mut total_c = <E::G1Projective>::zero();
-        let mut total_w = <E::G1Projective>::zero();
-
-        let combination_time = start_timer!(|| "Combining commitments and proofs");
-        let mut randomizer = E::Fr::one();
-        // Instead of multiplying g and gamma_g in each turn, we simply accumulate
-        // their coefficients and perform a final multiplication at the end.
-        let mut g_multiplier = E::Fr::zero();
-        for (((c, z), v), proof) in multi_commitment
-            .iter()
-            .zip(points)
-            .zip(values)
-            .zip(batch_proof)
-        {
-            let w = proof.proof;
-            let mut temp = w.mul(*z);
-            temp.add_assign_mixed(&c.0);
-            let c = temp;
-            g_multiplier += &(randomizer * v);
-            total_c += &c.mul(randomizer.into_repr());
-            total_w += &w.mul(randomizer.into_repr());
-            // We don't need to sample randomizers from the full field,
-            // only from 128-bit strings.
-            randomizer = u128::rand(rng).into();
-        }
-        total_c -= &verifier_param.g.mul(g_multiplier);
-        end_timer!(combination_time);
-
-        let to_affine_time = start_timer!(|| "Converting results to affine for pairing");
-        let affine_points = E::G1Projective::batch_normalization_into_affine(&[-total_w, total_c]);
-        let (total_w, total_c) = (affine_points[0], affine_points[1]);
-        end_timer!(to_affine_time);
-
-        let pairing_time = start_timer!(|| "Performing product of pairings");
-        let result = E::product_of_pairings(&[
-            (total_w.into(), verifier_param.beta_h.into()),
-            (total_c.into(), verifier_param.h.into()),
-        ])
-        .is_one();
-        end_timer!(pairing_time);
-        end_timer!(check_time, || format!("Result: {}", result));
-        Ok(result)
-    }
-
-    /// Verifies that `value_i` is the evaluation at `x_i` of the polynomial
-    /// `poly` committed inside `comm`.
-    fn batch_verify_single_poly(
-        _verifier_param: &Self::VerifierParam,
-        _commitment: &Self::Commitment,
-        _points: &[Self::Point],
-        _values: &[E::Fr],
-        _batch_proof: &Self::BatchProof,
-    ) -> Result<bool, PCSError> {
-        unimplemented!()
-    }
-
-    /// Verifies that `value_i` is the evaluation at `x_i` of the polynomial
-    /// `poly` committed inside `comm`.
-    /// The first `overlap_len` variables of each point must be the same.
-    fn batch_verify_single_poly_overlap_points(
-        _verifier_param: &Self::VerifierParam,
-        _commitment: &Self::Commitment,
-        _points: &[Self::Point],
-        _values: &[E::Fr],
-        _batch_proof: &Self::BatchProof,
-        _overlap_len: usize,
-    ) -> Result<bool, PCSError> {
-        unimplemented!()
     }
 }
 
@@ -412,43 +252,6 @@ mod tests {
         Ok(())
     }
 
-    fn batch_check_test_template<E>() -> Result<(), PCSError>
-    where
-        E: PairingEngine,
-    {
-        let rng = &mut test_rng();
-        for _ in 0..10 {
-            let mut degree = 0;
-            while degree <= 1 {
-                degree = usize::rand(rng) % 20;
-            }
-            let pp = UnivariateKzgPCS::<E>::gen_srs_for_testing(rng, degree)?;
-            let (ck, vk) = UnivariateKzgPCS::<E>::trim(&pp, degree, None)?;
-            let mut comms = Vec::new();
-            let mut values = Vec::new();
-            let mut points = Vec::new();
-            let mut proofs = Vec::new();
-            for _ in 0..10 {
-                let p = <DensePolynomial<E::Fr> as UVPolynomial<E::Fr>>::rand(degree, rng);
-                let comm = UnivariateKzgPCS::<E>::commit(&ck, &p)?;
-                let point = E::Fr::rand(rng);
-                let (proof, value) = UnivariateKzgPCS::<E>::open(&ck, &p, &point)?;
-
-                assert!(UnivariateKzgPCS::<E>::verify(
-                    &vk, &comm, &point, &value, &proof
-                )?);
-                comms.push(comm);
-                values.push(value);
-                points.push(point);
-                proofs.push(proof);
-            }
-            assert!(UnivariateKzgPCS::<E>::batch_verify(
-                &vk, &comms, &points, &values, &proofs, rng
-            )?);
-        }
-        Ok(())
-    }
-
     #[test]
     fn end_to_end_test() {
         end_to_end_test_template::<Bls12_381>().expect("test failed for bls12-381");
@@ -457,9 +260,5 @@ mod tests {
     #[test]
     fn linear_polynomial_test() {
         linear_polynomial_test_template::<Bls12_381>().expect("test failed for bls12-381");
-    }
-    #[test]
-    fn batch_check_test() {
-        batch_check_test_template::<Bls12_381>().expect("test failed for bls12-381");
     }
 }

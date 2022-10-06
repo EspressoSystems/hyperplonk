@@ -217,7 +217,7 @@ mod test {
         let mut rng = test_rng();
 
         let srs = MultilinearKzgPCS::<Bls12_381>::gen_srs_for_testing(&mut rng, nv + 1)?;
-        let (pcs_param, _) = MultilinearKzgPCS::<Bls12_381>::trim(&srs, nv + 1, Some(nv + 1))?;
+        let (pcs_param, _) = MultilinearKzgPCS::<Bls12_381>::trim(&srs, None, Some(nv + 1))?;
 
         {
             // good path: w is a permutation of w itself under the identify map
@@ -233,14 +233,10 @@ mod test {
             // s_perm is a random map
             let s_perm = random_permutation_mle(nv, &mut rng);
 
-            if nv == 1 {
-                test_permutation_check_helper::<Bls12_381, KZG>(&pcs_param, &w, &w, &s_perm)?;
-            } else {
-                assert!(test_permutation_check_helper::<Bls12_381, KZG>(
-                    &pcs_param, &w, &w, &s_perm
-                )
-                .is_err());
-            }
+            assert!(
+                test_permutation_check_helper::<Bls12_381, KZG>(&pcs_param, &w, &w, &s_perm)
+                    .is_err()
+            );
         }
 
         {

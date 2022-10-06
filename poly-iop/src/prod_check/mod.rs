@@ -282,7 +282,7 @@ mod test {
         g.evaluations.reverse();
 
         let srs = MultilinearKzgPCS::<Bls12_381>::gen_srs_for_testing(&mut rng, nv + 1)?;
-        let (pcs_param, _) = MultilinearKzgPCS::<Bls12_381>::trim(&srs, nv + 1, Some(nv + 1))?;
+        let (pcs_param, _) = MultilinearKzgPCS::<Bls12_381>::trim(&srs, None, Some(nv + 1))?;
 
         test_product_check_helper::<Bls12_381, MultilinearKzgPCS<Bls12_381>>(&f, &g, &pcs_param)?;
 

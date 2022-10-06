@@ -136,7 +136,7 @@ mod test {
     use crate::{errors::HyperPlonkErrors, HyperPlonkSNARK};
     use ark_bls12_381::{Bls12_381, Fr};
     use pcs::{
-        prelude::{MultilinearKzgPCS, MultilinearUniversalParams, UnivariateUniversalParams},
+        prelude::{MultilinearKzgPCS, MultilinearUniversalParams},
         PolynomialCommitmentScheme,
     };
     use poly_iop::PolyIOP;
@@ -165,10 +165,7 @@ mod test {
     fn test_mock_circuit_zkp_helper(
         nv: usize,
         gate: &CustomizedGates,
-        pcs_srs: &(
-            MultilinearUniversalParams<Bls12_381>,
-            UnivariateUniversalParams<Bls12_381>,
-        ),
+        pcs_srs: &MultilinearUniversalParams<Bls12_381>,
     ) -> Result<(), HyperPlonkErrors> {
         let circuit = MockCircuit::<Fr>::new(1 << nv, gate);
         assert!(circuit.is_satisfied());

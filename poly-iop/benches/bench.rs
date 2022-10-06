@@ -132,7 +132,7 @@ fn bench_permutation_check() -> Result<(), PolyIOPErrors> {
 
     for nv in 4..20 {
         let srs = KZG::gen_srs_for_testing(&mut rng, nv + 1)?;
-        let (pcs_param, _) = KZG::trim(&srs, nv + 1, Some(nv + 1))?;
+        let (pcs_param, _) = KZG::trim(&srs, None, Some(nv + 1))?;
 
         let repetition = if nv < 10 {
             100
@@ -203,7 +203,7 @@ fn bench_prod_check() -> Result<(), PolyIOPErrors> {
 
     for nv in 4..20 {
         let srs = KZG::gen_srs_for_testing(&mut rng, nv + 1)?;
-        let (pcs_param, _) = KZG::trim(&srs, nv + 1, Some(nv + 1))?;
+        let (pcs_param, _) = KZG::trim(&srs, None, Some(nv + 1))?;
 
         let repetition = if nv < 10 {
             100
