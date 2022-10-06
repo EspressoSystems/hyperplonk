@@ -356,6 +356,22 @@ pub fn build_eq_x_r<F: PrimeField>(
     Ok(res)
 }
 
+/// Evaluate eq polynomial.
+pub fn eq_eval<F: PrimeField>(x: &[F], y: &[F]) -> Result<F, ArithErrors> {
+    if x.len() != y.len() {
+        return Err(ArithErrors::InvalidParameters(
+            "x and y have different length".to_string(),
+        ));
+    }
+    let start = start_timer!(|| "eq_eval");
+    let mut res = F::one();
+    for (&xi, &yi) in x.iter().zip(y.iter()) {
+        let xi_yi = xi * yi;
+        res *= xi_yi + xi_yi - xi - yi + F::one();
+    }
+    end_timer!(start);
+    Ok(res)
+}
 /// A helper function to build eq(x, r) recursively.
 /// This function takes `r.len()` steps, and for each step it requires a maximum
 /// `r.len()-1` multiplications.

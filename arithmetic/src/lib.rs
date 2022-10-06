@@ -12,4 +12,4 @@ pub use multilinear_polynomial::{
 };
 pub use univariate_polynomial::{build_l, get_uni_domain};
 pub use util::{bit_decompose, gen_eval_point, get_batched_nv, get_index};
-pub use virtual_polynomial::{build_eq_x_r, VPAuxInfo, VirtualPolynomial};
+pub use virtual_polynomial::{build_eq_x_r, eq_eval, VPAuxInfo, VirtualPolynomial};

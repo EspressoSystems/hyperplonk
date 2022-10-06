@@ -3,9 +3,8 @@
 use std::fmt::Debug;
 
 use crate::{errors::PolyIOPErrors, sum_check::SumCheck, PolyIOP};
-use arithmetic::build_eq_x_r;
+use arithmetic::eq_eval;
 use ark_ff::PrimeField;
-use ark_poly::MultilinearExtension;
 use ark_std::{end_timer, start_timer};
 use transcript::IOPTranscript;
 
@@ -103,11 +102,8 @@ impl<F: PrimeField> ZeroCheck<F> for PolyIOP<F> {
 
         // expected_eval = sumcheck.expect_eval/eq(v, r)
         // where v = sum_check_sub_claim.point
-        let eq_x_r = build_eq_x_r(&r)?;
-        let expected_evaluation = sum_subclaim.expected_evaluation
-            / eq_x_r.evaluate(&sum_subclaim.point).ok_or_else(|| {
-                PolyIOPErrors::InvalidParameters("evaluation dimension does not match".to_string())
-            })?;
+        let eq_x_r_eval = eq_eval(&sum_subclaim.point, &r)?;
+        let expected_evaluation = sum_subclaim.expected_evaluation / eq_x_r_eval;
 
         end_timer!(start);
         Ok(ZeroCheckSubClaim {
