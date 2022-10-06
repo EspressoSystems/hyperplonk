@@ -1,6 +1,6 @@
 //! Main module for the HyperPlonk PolyIOP.
 
-use crate::{custom_gate::CustomizedGates, selectors::SelectorColumn};
+use crate::{batching::NewBatchProof, custom_gate::CustomizedGates, selectors::SelectorColumn};
 use ark_ec::PairingEngine;
 use ark_ff::PrimeField;
 use ark_poly::DenseMultilinearExtension;
@@ -14,7 +14,7 @@ use std::rc::Rc;
 ///   - a batch opening to all the MLEs at certain index
 ///   - the zero-check proof for checking custom gate-satisfiability
 ///   - the permutation-check proof for checking the copy constraints
-#[derive(Clone, Debug, Default, PartialEq)]
+#[derive(Clone, Debug, PartialEq)]
 pub struct HyperPlonkProof<E, PC, PCS>
 where
     E: PairingEngine,
@@ -25,17 +25,19 @@ where
     // witness related
     // =======================================================================
     // PCS commit for witnesses
+    pub(crate) w_merged_batch_opening: NewBatchProof<E, PCS>,
+
     pub w_merged_com: PCS::Commitment,
     // Batch opening for witness commitment
     // - PermCheck eval: 1 point
     // - ZeroCheck evals: #witness points
     // - public input eval: 1 point
-    pub w_merged_batch_opening: PCS::BatchProof,
+    // pub w_merged_batch_opening: PCS::BatchProof,
     // Evaluations of Witness
     // - PermCheck eval: 1 point
     // - ZeroCheck evals: #witness points
     // - public input eval: 1 point
-    pub w_merged_batch_evals: Vec<E::Fr>,
+    // pub w_merged_batch_evals: Vec<E::Fr>,
     // =======================================================================
     // prod(x) related
     // =======================================================================
@@ -45,21 +47,21 @@ where
     // - prod(x, 0),
     // - prod(x, 1),
     // - prod(1, ..., 1,0)
-    pub prod_batch_openings: PCS::BatchProof,
+    pub(crate) prod_batch_openings: NewBatchProof<E, PCS>,
     // prod(x)'s evaluations
     // - prod(0, x),
     // - prod(1, x),
     // - prod(x, 0),
     // - prod(x, 1),
     // - prod(1, ..., 1,0)
-    pub prod_batch_evals: Vec<E::Fr>,
+    // pub prod_batch_evals: Vec<E::Fr>,
     // =======================================================================
     // selectors related
     // =======================================================================
     // PCS openings for selectors on zero check point
-    pub selector_batch_opening: PCS::BatchProof,
+    pub(crate) selector_batch_openings: NewBatchProof<E, PCS>,
     // Evaluates of selectors on zero check point
-    pub selector_batch_evals: Vec<E::Fr>,
+    // pub selector_batch_evals: Vec<E::Fr>,
     // =======================================================================
     // IOP proofs
     // =======================================================================

@@ -1,122 +1,72 @@
 use crate::{
-    custom_gate::CustomizedGates, errors::HyperPlonkErrors, structs::HyperPlonkParams,
+    batching::{multi_open_internal, NewBatchProof},
+    custom_gate::CustomizedGates,
+    errors::HyperPlonkErrors,
+    structs::HyperPlonkParams,
     witness::WitnessColumn,
 };
 use arithmetic::VirtualPolynomial;
 use ark_ec::PairingEngine;
 use ark_ff::PrimeField;
 use ark_poly::DenseMultilinearExtension;
-use pcs::PolynomialCommitmentScheme;
+use pcs::{prelude::Commitment, PolynomialCommitmentScheme};
 use std::{borrow::Borrow, rc::Rc};
+use transcript::IOPTranscript;
 
 /// An accumulator structure that holds a polynomial and
 /// its opening points
 #[derive(Debug)]
 pub(super) struct PcsAccumulator<E: PairingEngine, PCS: PolynomialCommitmentScheme<E>> {
-    pub(crate) polynomial: Option<PCS::Polynomial>,
-    pub(crate) poly_commit: Option<PCS::Commitment>,
+    pub(crate) polynomials: Vec<PCS::Polynomial>,
+    pub(crate) commitments: Vec<PCS::Commitment>,
     pub(crate) points: Vec<PCS::Point>,
 }
 
-impl<E: PairingEngine, PCS: PolynomialCommitmentScheme<E>> PcsAccumulator<E, PCS> {
+impl<E, PCS> PcsAccumulator<E, PCS>
+where
+    E: PairingEngine,
+    PCS: PolynomialCommitmentScheme<
+        E,
+        Polynomial = Rc<DenseMultilinearExtension<E::Fr>>,
+        Point = Vec<E::Fr>,
+        Evaluation = E::Fr,
+        Commitment = Commitment<E>,
+    >,
+{
     /// Create an empty accumulator.
     pub(super) fn new() -> Self {
         Self {
-            polynomial: None,
-            poly_commit: None,
+            polynomials: vec![],
+            commitments: vec![],
             points: vec![],
         }
     }
 
-    /// Initialize the polynomial; requires both the polynomial
-    /// and its commitment.
-    pub(super) fn init_poly(
-        &mut self,
-        polynomial: PCS::Polynomial,
-        commitment: PCS::Commitment,
-    ) -> Result<(), HyperPlonkErrors> {
-        if self.polynomial.is_some() || self.poly_commit.is_some() {
-            return Err(HyperPlonkErrors::InvalidProver(
-                "poly already set for accumulator".to_string(),
-            ));
-        }
-
-        self.polynomial = Some(polynomial);
-        self.poly_commit = Some(commitment);
-        Ok(())
-    }
-
     /// Push a new evaluation point into the accumulator
-    pub(super) fn insert_point(&mut self, point: &PCS::Point) {
+    pub(super) fn insert_poly_and_points(
+        &mut self,
+        poly: &PCS::Polynomial,
+        commit: &PCS::Commitment,
+        point: &PCS::Point,
+    ) {
+        self.polynomials.push(poly.clone());
+        self.commitments.push(commit.clone());
         self.points.push(point.clone())
     }
 
     /// Batch open all the points over a merged polynomial.
     /// A simple wrapper of PCS::multi_open
-    pub(super) fn batch_open(
+    pub(super) fn multi_open(
         &self,
         prover_param: impl Borrow<PCS::ProverParam>,
-    ) -> Result<(PCS::BatchProof, Vec<PCS::Evaluation>), HyperPlonkErrors> {
-        let poly = match &self.polynomial {
-            Some(p) => p,
-            None => {
-                return Err(HyperPlonkErrors::InvalidProver(
-                    "poly is set for accumulator".to_string(),
-                ))
-            },
-        };
-
-        let commitment = match &self.poly_commit {
-            Some(p) => p,
-            None => {
-                return Err(HyperPlonkErrors::InvalidProver(
-                    "poly is set for accumulator".to_string(),
-                ))
-            },
-        };
-        Ok(PCS::multi_open_single_poly(
+        transcript: &mut IOPTranscript<E::Fr>,
+    ) -> Result<NewBatchProof<E, PCS>, HyperPlonkErrors> {
+        multi_open_internal(
             prover_param.borrow(),
-            commitment,
-            poly,
-            &self.points,
-        )?)
-    }
-
-    /// Batch open all the points over a merged polynomial.
-    /// A simple wrapper of PCS::multi_open
-    pub(super) fn batch_open_overlapped_points(
-        &self,
-        prover_param: impl Borrow<PCS::ProverParam>,
-        overlap_len: usize,
-    ) -> Result<(PCS::BatchProof, Vec<PCS::Evaluation>), HyperPlonkErrors> {
-        if self.points.len() == 1 {
-            return self.batch_open(prover_param);
-        }
-
-        let poly = match &self.polynomial {
-            Some(p) => p,
-            None => {
-                return Err(HyperPlonkErrors::InvalidProver(
-                    "poly is set for accumulator".to_string(),
-                ))
-            },
-        };
-
-        let commitment = match &self.poly_commit {
-            Some(p) => p,
-            None => {
-                return Err(HyperPlonkErrors::InvalidProver(
-                    "poly is set for accumulator".to_string(),
-                ))
-            },
-        };
-        Ok(PCS::multi_open_single_poly_overlap_points(
-            prover_param.borrow(),
-            commitment,
-            poly,
-            &self.points,
-            overlap_len,
-        )?)
+            self.polynomials.as_ref(),
+            self.points.as_ref(),
+            transcript,
+        )
     }
 }
 

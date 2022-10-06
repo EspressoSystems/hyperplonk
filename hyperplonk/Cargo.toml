@@ -34,9 +34,9 @@ harness = false
 
 [features]
 # default = [ ] 
-default = [ "parallel" ]
+# default = [ "parallel" ]
 # default = [ "parallel", "print-trace" ]
-# default = [ "parallel",  "extensive_sanity_checks" ]
+default = [ "parallel",  "extensive_sanity_checks" ]
 bench = [ "parallel" ]
 # extensive sanity checks that are useful for debugging
 extensive_sanity_checks = [
