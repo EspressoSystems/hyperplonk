@@ -345,7 +345,7 @@ pub fn build_eq_x_r<F: PrimeField>(
 // over r, which is
 //      eq(x,y) = \prod_i=1^num_var (x_i * r_i + (1-x_i)*(1-r_i))
 pub fn build_eq_x_r_vec<F: PrimeField>(r: &[F]) -> Result<Vec<F>, ArithErrors> {
-    let start = start_timer!(|| "build eq_x_r");
+    let start = start_timer!(|| format!("build eq_x_r of size {}", r.len()));
 
     // we build eq(x,r) from its evaluations
     // we want to evaluate eq(x,r) over x \in {0, 1}^num_vars

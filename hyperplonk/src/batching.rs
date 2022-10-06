@@ -55,7 +55,7 @@ where
         Evaluation = E::Fr,
     >,
 {
-    let open_timer = start_timer!(|| "multi open");
+    let open_timer = start_timer!(|| format!("multi open {} points", points.len()));
 
     // TODO: sanity checks
 
@@ -106,24 +106,30 @@ where
     let tilde_g_eval = tilde_g.evaluate(&proof.point).unwrap();
 
     // (a1, a2) := sumcheck's point
+    let step = start_timer!(|| "open at a2");
     let a1 = &proof.point[num_var..];
     let a2 = &proof.point[..num_var];
     let f_i_eval_at_a2 = polynomials
         .iter()
         .map(|p| p.evaluate(a2).unwrap())
         .collect::<Vec<E::Fr>>();
+    end_timer!(step);
 
     // build g'(a2)
+    let step = start_timer!(|| "evaluate at a2");
     let g_prime = Rc::new(fix_last_variables(&tilde_g, a1));
+    end_timer!(step);
+
     let (g_prime_proof, g_prime_eval) = PCS::open(prover_param, &g_prime, a2.to_vec().as_ref())?;
     assert_eq!(g_prime_eval, tilde_g_eval);
 
+    let step = start_timer!(|| "evaluate fi(pi)");
     let f_i_eval_at_point_i = polynomials
         .iter()
         .zip(points.iter())
         .map(|(f, p)| f.evaluate(p).unwrap())
         .collect();
-
+    end_timer!(step);
     end_timer!(open_timer);
     Ok(NewBatchProof {
         sum_check_proof: proof,

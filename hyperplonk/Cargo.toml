@@ -59,4 +59,5 @@ print-trace = [
     "ark-std/print-trace",
     "poly-iop/print-trace",
     "arithmetic/print-trace",
+    "pcs/print-trace"
     ] 
