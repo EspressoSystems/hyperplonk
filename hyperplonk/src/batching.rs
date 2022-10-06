@@ -4,7 +4,7 @@
 // The sumcheck based batch opening therefore cannot stay in the PCS repo --
 // which creates a cyclic dependency.
 
-use arithmetic::{build_eq_x_r, DenseMultilinearExtension, VirtualPolynomial, build_eq_x_r_vec};
+use arithmetic::{build_eq_x_r_vec, DenseMultilinearExtension, VirtualPolynomial};
 use ark_ec::{AffineCurve, PairingEngine, ProjectiveCurve};
 use ark_ff::PrimeField;
 use ark_poly::MultilinearExtension;
@@ -54,11 +54,13 @@ pub(crate) fn multi_open_internal<E: PairingEngine>(
     let ell = log2(k) as usize;
     let merged_num_var = num_var + ell;
 
+    println!("ell {}, num_var {}", ell, num_var);
+
     // challenge point t
     let t = transcript.get_and_append_challenge_vectors("t".as_ref(), ell)?;
 
     // eq(t, i) for i in [0..k]
-    let eq_t_i_list = get_eq_x(t.as_ref())?;
+    let eq_t_i_list = build_eq_x_r_vec(t.as_ref())?;
 
     // \tilde g(i, b) = eq(t, i) * f_i(b)
     let mut tilde_g_eval = vec![];
@@ -77,7 +79,7 @@ pub(crate) fn multi_open_internal<E: PairingEngine>(
     // merge all evals into a nv + ell mle
     let mut tilde_eq_eval = vec![];
     for point in points.iter() {
-        let eq_b_zi = get_eq_x(&point)?;
+        let eq_b_zi = build_eq_x_r_vec(&point)?;
         tilde_eq_eval.extend_from_slice(eq_b_zi.as_slice());
     }
     tilde_eq_eval.resize(1 << (ell + num_var), E::Fr::zero());
@@ -120,11 +122,10 @@ pub(crate) fn multi_open_internal<E: PairingEngine>(
 
 /// Steps:
 /// 1. todo...
-pub(crate) fn batch_internal<E: PairingEngine>(
+pub(crate) fn batch_verify_internal<E: PairingEngine>(
     uni_prover_param: UnivariateVerifierParam<E>,
     ml_prover_param: MultilinearVerifierParam<E>,
     f_i_commitments: &[Commitment<E>],
-    f_i_eval: &[E::Fr],
     proof: &NewBatchProof<E>,
     transcript: &mut IOPTranscript<E::Fr>,
 ) -> Result<bool, HyperPlonkErrors> {
@@ -134,28 +135,31 @@ pub(crate) fn batch_internal<E: PairingEngine>(
 
     let k = f_i_commitments.len();
     let ell = log2(k) as usize;
+    let num_var = proof.sum_check_proof.point.len() - ell;
+    println!("ell {}, num_var {}", ell, num_var);
 
     // challenge point t
     let t = transcript.get_and_append_challenge_vectors("t".as_ref(), ell)?;
 
     // sum check point (a1, a2)
-    let a1 = &proof.sum_check_proof.point[0..ell];
-    let a2 = &proof.sum_check_proof.point[ell..];
+    let a1 = &proof.sum_check_proof.point[ell..];
+    let a2 = &proof.sum_check_proof.point[..ell];
 
     // build g' commitment
-    let eq_a1_list = get_eq_x(a1)?;
-    let eq_t_list = get_eq_x(t.as_ref())?;
+    let eq_a1_list = build_eq_x_r_vec(a1)?;
+    let eq_t_list = build_eq_x_r_vec(t.as_ref())?;
 
     let mut g_prime_eval = E::Fr::zero();
     let mut g_prime_commit = E::G1Affine::zero().into_projective();
     for i in 0..k {
         let tmp = eq_a1_list[i] * eq_t_list[i];
-        g_prime_eval += tmp * f_i_eval[i];
+        g_prime_eval += tmp * proof.f_i_eval[i];
         g_prime_commit += &f_i_commitments[i].0.mul(tmp);
     }
 
     // ensure g'(a_2) == \tilde g(a1, a2)
     if proof.tilde_g_eval != g_prime_eval {
+        println!("eval not match");
         return Ok(false);
     }
 
@@ -172,7 +176,97 @@ pub(crate) fn batch_internal<E: PairingEngine>(
     Ok(res)
 }
 
-// generate a list of evals which are eq(\vec t, <i>) for i in 0..2^index_len
-fn get_eq_x<F: PrimeField>(t: &[F]) -> Result<Vec<F>, HyperPlonkErrors> {
-    Ok(build_eq_x_r_vec(t)?)
+#[cfg(test)]
+mod tests {
+    use super::*;
+    use arithmetic::get_batched_nv;
+    use ark_bls12_381::Bls12_381 as E;
+    use ark_ec::PairingEngine;
+    use ark_poly::{DenseMultilinearExtension, MultilinearExtension};
+    use ark_std::{
+        log2,
+        rand::{CryptoRng, RngCore},
+        test_rng,
+        vec::Vec,
+        UniformRand,
+    };
+    use pcs::{
+        prelude::{compute_qx_degree, MultilinearUniversalParams, UnivariateUniversalParams},
+        StructuredReferenceString,
+    };
+
+    type Fr = <E as PairingEngine>::Fr;
+
+    fn test_multi_open_helper<R: RngCore + CryptoRng>(
+        uni_params: &UnivariateUniversalParams<E>,
+        ml_params: &MultilinearUniversalParams<E>,
+        polys: &[Rc<DenseMultilinearExtension<Fr>>],
+        rng: &mut R,
+    ) -> Result<(), HyperPlonkErrors> {
+        let merged_nv = get_batched_nv(polys[0].num_vars(), polys.len());
+        let qx_degree = compute_qx_degree(merged_nv, polys.len());
+        let padded_qx_degree = 1usize << log2(qx_degree);
+
+        let (uni_ck, uni_vk) = uni_params.trim(padded_qx_degree)?;
+        let (ml_ck, ml_vk) = ml_params.trim(merged_nv)?;
+
+        let mut points = Vec::new();
+        for poly in polys.iter() {
+            let point = (0..poly.num_vars())
+                .map(|_| Fr::rand(rng))
+                .collect::<Vec<Fr>>();
+            points.push(point);
+        }
+
+        let evals = polys
+            .iter()
+            .zip(points.iter())
+            .map(|(f, p)| f.evaluate(p).unwrap())
+            .collect::<Vec<_>>();
+
+        let commitments = polys
+            .iter()
+            .map(|poly| MultilinearKzgPCS::commit(&(ml_ck.clone(), uni_ck.clone()), poly).unwrap())
+            .collect::<Vec<_>>();
+
+        let mut transcript = IOPTranscript::new("test transcript".as_ref());
+        transcript.append_field_element("init".as_ref(), &Fr::zero())?;
+
+        println!("prove");
+        let batch_proof = multi_open_internal(uni_ck, ml_ck, polys, &points, &mut transcript)?;
+
+        // good path
+
+        println!("verify");
+        let mut transcript = IOPTranscript::new("test transcript".as_ref());
+        transcript.append_field_element("init".as_ref(), &Fr::zero())?;
+        assert!(batch_verify_internal(
+            uni_vk,
+            ml_vk,
+            &commitments,
+            &batch_proof,
+            &mut transcript
+        )?);
+
+        Ok(())
+    }
+
+    #[test]
+    fn test_multi_open_internal() -> Result<(), HyperPlonkErrors> {
+        let mut rng = test_rng();
+
+        let uni_params =
+            UnivariateUniversalParams::<E>::gen_srs_for_testing(&mut rng, 1usize << 15)?;
+        let ml_params = MultilinearUniversalParams::<E>::gen_srs_for_testing(&mut rng, 15)?;
+        for num_poly in 2..10 {
+            for nv in 1..5 {
+                let polys1: Vec<_> = (0..num_poly)
+                    .map(|_| Rc::new(DenseMultilinearExtension::rand(nv, &mut rng)))
+                    .collect();
+                test_multi_open_helper(&uni_params, &ml_params, &polys1, &mut rng)?;
+            }
+        }
+
+        Ok(())
+    }
 }
