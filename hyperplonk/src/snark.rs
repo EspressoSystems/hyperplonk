@@ -596,52 +596,25 @@ where
             prod_final_query.0,
         ];
 
-        // if !PCS::batch_verify_single_poly(
-        //     &vk.pcs_param,
-        //     &proof.perm_check_proof.prod_x_comm,
-        //     &points,
-        //     &proof.prod_batch_evals,
-        //     &proof.prod_batch_openings,
-        // )? {
-        //     return Err(HyperPlonkErrors::InvalidProof(
-        //         "prod(0, x) pcs verification failed".to_string(),
-        //     ));
-        // }
-
         // =======================================================================
         // 3.2 open selectors' evaluations
         // =======================================================================
-        let log_num_selector_polys = log2(vk.params.num_selector_columns()) as usize;
         let mut selector_points = vec![];
         for i in 0..vk.params.num_selector_columns() {
-            let tmp_point =
-                gen_eval_point(i, log_num_selector_polys, &proof.zero_check_proof.point);
+            let tmp_point = gen_eval_point(
+                i % chunk_size,
+                log_chunk_size,
+                &proof.zero_check_proof.point,
+            );
             selector_points.push(tmp_point);
         }
 
-        // if proof.se.len() == 2 {
-        //     if !PCS::batch_verify_single_poly(
-        //         &vk.pcs_param,
-        //         &vk.selector_com,
-        //         &points,
-        //         &proof.selector_batch_evals,
-        //         &proof.selector_batch_opening,
-        //     )? {
-        //         return Err(HyperPlonkErrors::InvalidProof(
-        //             "selector pcs verification failed".to_string(),
-        //         ));
-        //     }
-        // } else if !PCS::batch_verify_single_poly_overlap_points(
-        //     &vk.pcs_param,
-        //     &vk.selector_com,
-        //     &points,
-        //     &proof.selector_batch_evals,
-        //     &proof.selector_batch_opening,
-        //     proof.zero_check_proof.point.len(),
-        // )? {
-        //     return Err(HyperPlonkErrors::InvalidProof(
-        //         "selector pcs verification failed".to_string(),
-        //     ));
+        // let log_num_selector_polys = log2(vk.params.num_selector_columns()) as usize;
+        // let mut selector_points = vec![];
+        // for i in  {
+        //     let tmp_point =
+        //         gen_eval_point(i, log_chunk_size, &proof.zero_check_proof.point);
+        //     selector_points.push(tmp_point);
         // }
 
         // =======================================================================
@@ -654,27 +627,15 @@ where
         r_pi = [
             vec![E::Fr::zero(); num_vars - ell],
             r_pi,
-            vec![E::Fr::zero(); log_num_witness_polys],
+            vec![E::Fr::zero(); log_chunk_size],
         ]
         .concat();
 
         let mut w_merged_points = vec![perm_check_point.clone()];
 
-        for i in 0..proof.w_merged_batch_opening.f_i_eval_at_point_i.len() - 2 {
-            w_merged_points.push(gen_eval_point(i, log_num_witness_polys, zero_check_point))
+        for i in 0..num_witnesses - 2 {
+            w_merged_points.push(gen_eval_point(i, log_chunk_size, zero_check_point))
         }
-        w_merged_points.push(r_pi);
-        // if !PCS::batch_verify_single_poly(
-        //     &vk.pcs_param,
-        //     &proof.w_merged_ext_com,
-        //     &points,
-        //     &proof.w_merged_batch_evals,
-        //     &proof.w_merged_batch_opening,
-        // )? {
-        //     return Err(HyperPlonkErrors::InvalidProof(
-        //         "witness for permutation check pcs verification failed".to_string(),
-        //     ));
-        // }
 
         // sequence:
         // - prod(x) at 5 points
@@ -698,23 +659,18 @@ where
         ]
         .concat();
 
-        // let res = batch_verify_internal(
-        //     &vk.pcs_param,
-        //     vec![proof.w_merged_ext_com; vk.params.num_witness_columns() +
-        // 2].as_ref(),     &proof.w_merged_batch_opening,
-        //     &mut transcript,
-        // )?;
-        // assert!(res);
-        // let res = batch_verify_internal(
-        //     &vk.pcs_param,
-        //     vec![proof.perm_check_proof.prod_x_comm; 5].as_ref(),
-        //     &proof.prod_batch_openings,
-        //     &mut transcript,
-        // )?;
-        // assert!(res);
+        let points = [
+            prod_points.as_ref(),
+            w_merged_points.as_ref(),
+            selector_points.as_ref(),
+            &[r_pi],
+        ]
+        .concat();
+
         let res = batch_verify_internal(
             &vk.pcs_param,
             commitments.as_ref(),
+            &points,
             &proof.batch_openings,
             &mut transcript,
         )?;

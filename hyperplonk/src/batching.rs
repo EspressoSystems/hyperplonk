@@ -138,10 +138,9 @@ where
     let step = start_timer!(|| "evaluate fi(pi)");
     end_timer!(step);
     end_timer!(open_timer);
+
     Ok(NewBatchProof {
         sum_check_proof: proof,
-        tilde_g_eval,
-        f_i_eval_at_a2,
         f_i_eval_at_point_i: evals.to_vec(),
         g_prime_proof,
     })
@@ -224,7 +223,7 @@ where
         &proof.g_prime_proof,
     )?;
 
-    // println!("res {}", res);
+    println!("res {}", res);
     end_timer!(open_timer);
     Ok(res)
 }
