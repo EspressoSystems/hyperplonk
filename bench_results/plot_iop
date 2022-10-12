@@ -1,0 +1,59 @@
+set terminal postscript eps enhanced color font "18"
+sumcheck = 'iop/sum_check.txt'
+zerocheck = 'iop/zero_check.txt'
+permcheck = 'iop/perm_check.txt'
+prodcheck = 'iop/prod_check.txt'
+
+set output "iop_prover.eps" 
+
+set font "64"
+
+set key left
+set grid
+set logscale y
+
+set title font ",64" 
+set key font ",18"
+set xtics font  ",20"
+set ytics font  ",20"
+set xlabel font  ",20"
+set ylabel font  ",20"
+
+set key title "IOP proving time" 
+set key title font ", 20"
+set xlabel "\#variables"
+set ylabel 'time (ms)'
+# set xtics (4,8,16,32,64)
+plot sumcheck using 1:2 w lp t "Sum Check",\
+     zerocheck using 1:2 w lp t "Zero Check",\
+     prodcheck using 1:2 w lp t "Prod Check",\
+     permcheck using 1:2 w lp t "Perm Check",
+reset
+
+
+# set terminal postscript eps enhanced color 
+# sumcheck = 'iop/sum_check.txt'
+# zerocheck = 'iop/zero_check.txt'
+# permcheck = 'iop/perm_check.txt'
+# prodcheck = 'iop/prod_check.txt'
+
+# set output "iop_verifier.eps" 
+
+# set font "32"
+
+# set key left
+# set grid
+# set logscale y
+
+# set title font ",10" 
+# set key title "IOP verifier time" 
+# set xlabel "\#variables"
+# set ylabel 'log time (us)'
+# # set xtics (4,8,16,32,64)
+# plot sumcheck using 1:3 w lp t "Sum Check",\
+#      zerocheck using 1:3 w lp t "Zero Check",\
+#      prodcheck using 1:3 w lp t "Prod Check",\
+#      permcheck using 1:3 w lp t "Perm Check",
+# reset
+
+

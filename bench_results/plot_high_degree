@@ -1,0 +1,31 @@
+set terminal postscript eps enhanced color font "18"
+filename = '64threads_growing_degree.txt'
+set output "grow_degree.eps" 
+
+# set font "32"
+
+set key left top
+set grid
+# set logscale y
+# set logscale x
+
+
+set title font ",64" 
+set key font ",18"
+set xtics font  ",20"
+set ytics font  ",20"
+set xlabel font  ",20"
+set ylabel font  ",20"
+
+# set key title "IOP proving time" 
+set key title font ", 20"
+# set key title "2^{15} constraints" 
+set xlabel "degree d"
+set ylabel 'time (us)'
+# set yrange []
+# set xrange [500000:1100000]
+# set xtics (0, 1,2,4,8,16,32)
+plot filename using 1:2 w lp  t "q_Lw_1 + q_Rw_2 + q_Mw_1^{d-1}w_2 + q_C = 0",
+
+
+reset

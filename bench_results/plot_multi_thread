@@ -1,0 +1,32 @@
+set terminal postscript eps enhanced color  "18"
+filename = 'degree_16_grow_threads_1006.txt'
+set output "vanilla_multi_threads.eps" 
+
+# set font "32"
+
+# set font "32"
+
+set key left
+set grid
+set logscale y
+
+set title font ",64" 
+set key font ",18"
+set xtics font  ",20"
+set ytics font  ",20"
+set xlabel font  ",20"
+set ylabel font  ",20"
+set key title font ", 20"
+
+set key title "Multi-threading\n performance" 
+set xlabel "\#threads"
+set ylabel 'time (us)'
+plot filename using 1:2 w lp t "1 thread",\
+     filename using 1:3 w lp t "2 threads",\
+     filename using 1:4 w lp t "4 threads",\
+     filename using 1:5 w lp t "8 threads",\
+     filename using 1:6 w lp t "16 threads",\
+     filename using 1:7 w lp t "32 threads",\
+
+
+reset

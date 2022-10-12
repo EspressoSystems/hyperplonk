@@ -16,24 +16,25 @@ use rayon::ThreadPoolBuilder;
 
 fn main() -> Result<(), HyperPlonkErrors> {
     let args: Vec<String> = env::args().collect();
-    let thread = args[1].parse().unwrap_or(12);
-
+    let thread = args[1].parse().unwrap_or(24);
+    let mut rng = test_rng();
+    let pcs_srs = MultilinearKzgPCS::<Bls12_381>::gen_srs_for_testing(&mut rng, 24)?;
     ThreadPoolBuilder::new()
         .num_threads(thread)
         .build_global()
         .unwrap();
-    bench_vanilla_plonk(thread)?;
-    for degree in [1, 2, 4, 8, 16, 32] {
-        bench_high_degree_plonk(degree, thread)?;
+    bench_vanilla_plonk(&pcs_srs, thread)?;
+    for degree in 1..32 {
+        bench_high_degree_plonk(&pcs_srs, degree, thread)?;
     }
 
     Ok(())
 }
 
-fn bench_vanilla_plonk(thread: usize) -> Result<(), HyperPlonkErrors> {
-    let mut rng = test_rng();
-    let pcs_srs = MultilinearKzgPCS::<Bls12_381>::gen_srs_for_testing(&mut rng, 25)?;
-
+fn bench_vanilla_plonk(
+    pcs_srs: &MultilinearUniversalParams<Bls12_381>,
+    thread: usize,
+) -> Result<(), HyperPlonkErrors> {
     let filename = format!("vanilla threads {}.txt", thread);
     let mut file = File::create(filename).unwrap();
     for nv in 2..25 {
@@ -44,13 +45,14 @@ fn bench_vanilla_plonk(thread: usize) -> Result<(), HyperPlonkErrors> {
     Ok(())
 }
 
-fn bench_high_degree_plonk(degree: usize, thread: usize) -> Result<(), HyperPlonkErrors> {
-    let mut rng = test_rng();
-    let pcs_srs = MultilinearKzgPCS::<Bls12_381>::gen_srs_for_testing(&mut rng, 23)?;
-
+fn bench_high_degree_plonk(
+    pcs_srs: &MultilinearUniversalParams<Bls12_381>,
+    degree: usize,
+    thread: usize,
+) -> Result<(), HyperPlonkErrors> {
     let filename = format!("high degree {} thread {}.txt", degree, thread);
     let mut file = File::create(filename).unwrap();
-    for nv in [10, 15, 18, 20] {
+    for nv in [15] {
         let vanilla_gate = CustomizedGates::mock_gate(2, degree);
         bench_mock_circuit_zkp_helper(&mut file, nv, &vanilla_gate, &pcs_srs)?;
     }
@@ -117,7 +119,7 @@ fn bench_mock_circuit_zkp_helper(
             )?;
     }
     let t = start.elapsed().as_micros() / repetition as u128;
-    println!("proving for {} variables: {} us", nv, t);
+
     file.write_all(format!("{} {}\n", nv, t).as_ref()).unwrap();
 
     let proof = <PolyIOP<Fr> as HyperPlonkSNARK<Bls12_381, MultilinearKzgPCS<Bls12_381>>>::prove(
