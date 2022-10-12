@@ -145,13 +145,14 @@ impl CustomizedGates {
     pub fn mock_gate(num_witness: usize, degree: usize) -> Self {
         let mut gates = vec![];
 
-        let high_degree_term = vec![0; degree];
+        let mut high_degree_term = vec![0; degree - 1];
+        high_degree_term.push(1);
 
         gates.push((1, Some(0), high_degree_term));
-        for i in 1..num_witness {
-            gates.push((1, Some(i), vec![i]))
+        for i in 0..num_witness {
+            gates.push((1, Some(i + 1), vec![i]))
         }
-        gates.push((1, Some(num_witness), vec![]));
+        gates.push((1, Some(num_witness + 1), vec![]));
 
         CustomizedGates { gates }
     }

@@ -12,7 +12,6 @@ use ark_ff::PrimeField;
 use ark_std::{end_timer, log2, start_timer, One, Zero};
 use pcs::{prelude::Commitment, PolynomialCommitmentScheme};
 use poly_iop::{prelude::SumCheck, PolyIOP};
-use rayon::prelude::{IntoParallelIterator, ParallelIterator};
 use std::{marker::PhantomData, rc::Rc};
 use transcript::IOPTranscript;
 
@@ -52,21 +51,13 @@ where
 
     // \tilde g(i, b) = eq(t, i) * f_i(b)
     let timer = start_timer!(|| format!("compute tilde g for {} points", points.len()));
-
-    let mut tilde_g_eval = polynomials
-        .iter()
-        .enumerate()
-        .map(|(index, f_i)| {
-            f_i.evaluations
-                .clone()
-                .into_par_iter()
-                .map(|x| x * eq_t_i_list[index])
-                .collect::<Vec<_>>()
-        })
-        .flatten()
-        .collect::<Vec<_>>();
-
-    tilde_g_eval.resize(1 << (ell + num_var), E::Fr::zero());
+    let mut tilde_g_eval = vec![E::Fr::zero(); 1 << (ell + num_var)];
+    let block_size = 1 << num_var;
+    for (index, f_i) in polynomials.iter().enumerate() {
+        for (j, &f_i_eval) in f_i.iter().enumerate() {
+            tilde_g_eval[index * block_size + j] = f_i_eval * eq_t_i_list[index];
+        }
+    }
     let tilde_g = Rc::new(DenseMultilinearExtension::from_evaluations_vec(
         merged_num_var,
         tilde_g_eval,
@@ -74,13 +65,12 @@ where
     end_timer!(timer);
 
     let timer = start_timer!(|| format!("compute tilde eq for {} points", points.len()));
-    let mut tilde_eq_eval = points
-        .into_par_iter()
-        .map(|point| build_eq_x_r_vec(point).unwrap())
-        .flatten()
-        .collect::<Vec<_>>();
-
-    tilde_eq_eval.resize(1 << (ell + num_var), E::Fr::zero());
+    let mut tilde_eq_eval = vec![E::Fr::zero(); 1 << (ell + num_var)];
+    for (index, point) in points.iter().enumerate() {
+        let eq_b_zi = build_eq_x_r_vec(point)?;
+        let start = index * block_size;
+        tilde_eq_eval[start..start + block_size].copy_from_slice(eq_b_zi.as_slice());
+    }
     let tilde_eq = Rc::new(DenseMultilinearExtension::from_evaluations_vec(
         merged_num_var,
         tilde_eq_eval,

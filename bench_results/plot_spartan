@@ -1,0 +1,55 @@
+set terminal postscript eps enhanced color  font "18"
+spartan = 'comparison/spartan.txt'
+hyperplonk = 'comparison/hyperplonk.txt'
+jellyfish = 'comparison/jellyfish.txt'
+
+set output "spartan_prover.eps" 
+
+set title font ",64" 
+set key font ",18"
+set xtics font  ",20"
+set ytics font  ",20"
+set xlabel font  ",20"
+set ylabel font  ",20"
+
+set key left
+set grid
+set logscale y
+
+set xrange [9:20]
+# set title font ",10" 
+# set key title "Proving time" 
+set xlabel "log \# constraits"
+set ylabel 'time (sec)'
+# set xtics (4,8,16,32,64)
+plot spartan using 1:2 w lp t "spartan",\
+     jellyfish using 1:2 w lp t "jellyfish plonk",\
+     hyperplonk using 1:2 w lp t "hyperplonk",
+reset
+
+set terminal postscript eps enhanced color  font "18"
+ratio = 'comparison/ratio.txt'
+
+set output "ratio.eps" 
+
+
+set title font ",64" 
+set key font ",18"
+set xtics font  ",20"
+set ytics font  ",20"
+set xlabel font  ",20"
+set ylabel font  ",20"
+# set font "32"
+
+set key left
+set grid
+# set logscale y
+
+set xrange [9:20]
+set title font ",10" 
+# set key title "Proving time" 
+set xlabel "log \# constraits"
+set ylabel 'ratio '
+# set xtics (4,8,16,32,64)
+plot ratio using 1:6 w lp t "Jellyfish/Hyperplonk",\
+     ratio using 1:7 w lp t "Spartan/Hyperplonk"

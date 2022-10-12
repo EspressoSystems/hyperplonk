@@ -22,8 +22,12 @@ where
     PCS: PolynomialCommitmentScheme<E>,
 {
     // PCS commit for witnesses
-    pub w_merged_ext_com: PCS::Commitment,
-    pub(crate) batch_openings: BatchProof<E, PCS>,
+    pub witness_merged_commit: PCS::Commitment,
+    pub witness_commits: Vec<PCS::Commitment>,
+    pub batch_prod_x_openings: BatchProof<E, PCS>,
+    pub batch_witness_and_selector_openings: BatchProof<E, PCS>,
+    pub perm_check_opening: PCS::Proof,
+    pub perm_check_eval: PCS::Evaluation,
     // =======================================================================
     // IOP proofs
     // =======================================================================
@@ -132,7 +136,7 @@ pub struct HyperPlonkVerifyingKey<E: PairingEngine, PCS: PolynomialCommitmentSch
 }
 
 #[derive(Clone, Debug, Default, PartialEq)]
-pub(crate) struct BatchProof<E, PCS>
+pub struct BatchProof<E, PCS>
 where
     E: PairingEngine,
     PCS: PolynomialCommitmentScheme<E>,

@@ -5,10 +5,10 @@ use crate::{
     structs::{BatchProof, HyperPlonkParams},
     witness::WitnessColumn,
 };
-use arithmetic::VirtualPolynomial;
+use arithmetic::{evaluate_opt, VirtualPolynomial};
 use ark_ec::PairingEngine;
 use ark_ff::PrimeField;
-use ark_poly::{DenseMultilinearExtension, MultilinearExtension};
+use ark_poly::DenseMultilinearExtension;
 use pcs::{prelude::Commitment, PolynomialCommitmentScheme};
 use std::{borrow::Borrow, rc::Rc};
 use transcript::IOPTranscript;
@@ -62,7 +62,7 @@ where
         assert!(poly.num_vars == point.len());
         assert!(poly.num_vars == self.num_var);
 
-        let eval = poly.evaluate(point).unwrap();
+        let eval = evaluate_opt(poly, point);
 
         self.evals.push(eval);
         self.polynomials.push(poly.clone());
