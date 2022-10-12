@@ -1,9 +1,9 @@
 //! Error module.
 
+use crate::pcs::prelude::PCSError;
 use arithmetic::ArithErrors;
 use ark_std::string::String;
 use displaydoc::Display;
-use pcs::prelude::PCSError;
 use transcript::TranscriptError;
 
 /// A `enum` specifying the possible failure modes of the PolyIOP.

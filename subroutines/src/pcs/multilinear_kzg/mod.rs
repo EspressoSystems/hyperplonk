@@ -9,7 +9,9 @@
 pub(crate) mod srs;
 pub(crate) mod util;
 
-use crate::{prelude::Commitment, PCSError, PolynomialCommitmentScheme, StructuredReferenceString};
+use crate::pcs::{
+    prelude::Commitment, PCSError, PolynomialCommitmentScheme, StructuredReferenceString,
+};
 use arithmetic::evaluate_opt;
 use ark_ec::{
     msm::{FixedBaseMSM, VariableBaseMSM},

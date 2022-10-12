@@ -7,12 +7,14 @@ use hyperplonk::{
     prelude::{CustomizedGates, HyperPlonkErrors, MockCircuit},
     HyperPlonkSNARK,
 };
-use pcs::{
-    prelude::{MultilinearKzgPCS, MultilinearUniversalParams},
-    PolynomialCommitmentScheme,
-};
-use poly_iop::PolyIOP;
 use rayon::ThreadPoolBuilder;
+use subroutines::{
+    pcs::{
+        prelude::{MultilinearKzgPCS, MultilinearUniversalParams},
+        PolynomialCommitmentScheme,
+    },
+    poly_iop::PolyIOP,
+};
 
 fn main() -> Result<(), HyperPlonkErrors> {
     let args: Vec<String> = env::args().collect();

@@ -10,9 +10,11 @@ use arithmetic::{
 use ark_ec::{AffineCurve, PairingEngine, ProjectiveCurve};
 use ark_ff::PrimeField;
 use ark_std::{end_timer, log2, start_timer, One, Zero};
-use pcs::{prelude::Commitment, PolynomialCommitmentScheme};
-use poly_iop::{prelude::SumCheck, PolyIOP};
 use std::{marker::PhantomData, rc::Rc};
+use subroutines::{
+    pcs::{prelude::Commitment, PolynomialCommitmentScheme},
+    poly_iop::{prelude::SumCheck, PolyIOP},
+};
 use transcript::IOPTranscript;
 
 use crate::{prelude::HyperPlonkErrors, structs::BatchProof};
@@ -225,7 +227,7 @@ mod tests {
         vec::Vec,
         UniformRand,
     };
-    use pcs::{
+    use subroutines::pcs::{
         prelude::{MultilinearKzgPCS, MultilinearUniversalParams},
         StructuredReferenceString,
     };

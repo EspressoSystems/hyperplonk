@@ -1,17 +1,19 @@
 //! Main module for the Product Check protocol
 
 use crate::{
-    errors::PolyIOPErrors,
-    prod_check::util::{compute_product_poly, prove_zero_check},
-    zero_check::ZeroCheck,
-    PolyIOP,
+    pcs::PolynomialCommitmentScheme,
+    poly_iop::{
+        errors::PolyIOPErrors,
+        prod_check::util::{compute_product_poly, prove_zero_check},
+        zero_check::ZeroCheck,
+        PolyIOP,
+    },
 };
 use arithmetic::VPAuxInfo;
 use ark_ec::PairingEngine;
 use ark_ff::{One, PrimeField, Zero};
 use ark_poly::DenseMultilinearExtension;
 use ark_std::{end_timer, start_timer};
-use pcs::PolynomialCommitmentScheme;
 use std::rc::Rc;
 use transcript::IOPTranscript;
 
@@ -201,13 +203,15 @@ where
 #[cfg(test)]
 mod test {
     use super::ProductCheck;
-    use crate::{errors::PolyIOPErrors, PolyIOP};
+    use crate::{
+        pcs::{prelude::MultilinearKzgPCS, PolynomialCommitmentScheme},
+        poly_iop::{errors::PolyIOPErrors, PolyIOP},
+    };
     use arithmetic::VPAuxInfo;
     use ark_bls12_381::{Bls12_381, Fr};
     use ark_ec::PairingEngine;
     use ark_poly::{DenseMultilinearExtension, MultilinearExtension};
     use ark_std::test_rng;
-    use pcs::{prelude::MultilinearKzgPCS, PolynomialCommitmentScheme};
     use std::{marker::PhantomData, rc::Rc};
 
     // f and g are guaranteed to have the same product

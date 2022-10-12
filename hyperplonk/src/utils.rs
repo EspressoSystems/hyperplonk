@@ -9,8 +9,8 @@ use arithmetic::{evaluate_opt, VirtualPolynomial};
 use ark_ec::PairingEngine;
 use ark_ff::PrimeField;
 use ark_poly::DenseMultilinearExtension;
-use pcs::{prelude::Commitment, PolynomialCommitmentScheme};
 use std::{borrow::Borrow, rc::Rc};
+use subroutines::pcs::{prelude::Commitment, PolynomialCommitmentScheme};
 use transcript::IOPTranscript;
 
 /// An accumulator structure that holds a polynomial and

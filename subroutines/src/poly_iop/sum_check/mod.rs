@@ -1,6 +1,6 @@
 //! This module implements the sum check protocol.
 
-use crate::{
+use crate::poly_iop::{
     errors::PolyIOPErrors,
     structs::{IOPProof, IOPProverState, IOPVerifierState},
     PolyIOP,

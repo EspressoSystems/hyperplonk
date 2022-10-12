@@ -4,8 +4,7 @@ use arithmetic::ArithErrors;
 use ark_serialize::SerializationError;
 use ark_std::string::String;
 use displaydoc::Display;
-use pcs::prelude::PCSError;
-use poly_iop::prelude::PolyIOPErrors;
+use subroutines::{pcs::prelude::PCSError, poly_iop::prelude::PolyIOPErrors};
 use transcript::TranscriptError;
 
 /// A `enum` specifying the possible failure modes of hyperplonk.

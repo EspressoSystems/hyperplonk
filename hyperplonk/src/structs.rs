@@ -5,9 +5,11 @@ use ark_ec::PairingEngine;
 use ark_ff::PrimeField;
 use ark_poly::DenseMultilinearExtension;
 use ark_std::log2;
-use pcs::PolynomialCommitmentScheme;
-use poly_iop::prelude::{IOPProof, PermutationCheck, ZeroCheck};
 use std::rc::Rc;
+use subroutines::{
+    pcs::PolynomialCommitmentScheme,
+    poly_iop::prelude::{IOPProof, PermutationCheck, ZeroCheck},
+};
 
 /// The proof for the HyperPlonk PolyIOP, consists of the following:
 ///   - a batch commitment to all the witness MLEs

@@ -1,7 +1,7 @@
 //! Prover subroutines for a SumCheck protocol.
 
 use super::SumCheckProver;
-use crate::{
+use crate::poly_iop::{
     errors::PolyIOPErrors,
     structs::{IOPProverMessage, IOPProverState},
 };

@@ -5,7 +5,9 @@
 // along with the Jellyfish library. If not, see <https://mit-license.org/>.
 
 //! Implementing Structured Reference Strings for multilinear polynomial KZG
-use crate::{multilinear_kzg::util::eq_extension, prelude::PCSError, StructuredReferenceString};
+use crate::pcs::{
+    multilinear_kzg::util::eq_extension, prelude::PCSError, StructuredReferenceString,
+};
 use ark_ec::{msm::FixedBaseMSM, AffineCurve, PairingEngine, ProjectiveCurve};
 use ark_ff::{Field, PrimeField};
 use ark_poly::DenseMultilinearExtension;

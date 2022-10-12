@@ -10,12 +10,14 @@ use arithmetic::{evaluate_opt, identity_permutation_mle, merge_polynomials, VPAu
 use ark_ec::PairingEngine;
 use ark_poly::DenseMultilinearExtension;
 use ark_std::{end_timer, log2, start_timer, One, Zero};
-use pcs::prelude::{Commitment, PolynomialCommitmentScheme};
-use poly_iop::{
-    prelude::{PermutationCheck, ZeroCheck},
-    PolyIOP,
-};
 use std::{marker::PhantomData, rc::Rc};
+use subroutines::{
+    pcs::prelude::{Commitment, PolynomialCommitmentScheme},
+    poly_iop::{
+        prelude::{PermutationCheck, ZeroCheck},
+        PolyIOP,
+    },
+};
 use transcript::IOPTranscript;
 
 impl<E, PCS> HyperPlonkSNARK<E, PCS> for PolyIOP<E::Fr>
@@ -629,7 +631,7 @@ mod tests {
     use arithmetic::random_permutation_mle;
     use ark_bls12_381::Bls12_381;
     use ark_std::test_rng;
-    use pcs::prelude::MultilinearKzgPCS;
+    use subroutines::pcs::prelude::MultilinearKzgPCS;
 
     #[test]
     fn test_hyperplonk_e2e() -> Result<(), HyperPlonkErrors> {

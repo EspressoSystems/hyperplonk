@@ -1,11 +1,13 @@
 //! Main module for the Permutation Check protocol
 
 use self::util::computer_num_and_denom;
-use crate::{errors::PolyIOPErrors, prelude::ProductCheck, PolyIOP};
+use crate::{
+    pcs::PolynomialCommitmentScheme,
+    poly_iop::{errors::PolyIOPErrors, prelude::ProductCheck, PolyIOP},
+};
 use ark_ec::PairingEngine;
 use ark_poly::DenseMultilinearExtension;
 use ark_std::{end_timer, start_timer};
-use pcs::PolynomialCommitmentScheme;
 use std::rc::Rc;
 use transcript::IOPTranscript;
 
@@ -153,13 +155,15 @@ where
 #[cfg(test)]
 mod test {
     use super::PermutationCheck;
-    use crate::{errors::PolyIOPErrors, PolyIOP};
+    use crate::{
+        pcs::{prelude::MultilinearKzgPCS, PolynomialCommitmentScheme},
+        poly_iop::{errors::PolyIOPErrors, PolyIOP},
+    };
     use arithmetic::{evaluate_opt, identity_permutation_mle, random_permutation_mle, VPAuxInfo};
     use ark_bls12_381::Bls12_381;
     use ark_ec::PairingEngine;
     use ark_poly::{DenseMultilinearExtension, MultilinearExtension};
     use ark_std::test_rng;
-    use pcs::{prelude::MultilinearKzgPCS, PolynomialCommitmentScheme};
     use std::{marker::PhantomData, rc::Rc};
 
     type KZG = MultilinearKzgPCS<Bls12_381>;

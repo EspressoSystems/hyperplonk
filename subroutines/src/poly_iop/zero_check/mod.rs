@@ -2,7 +2,7 @@
 
 use std::fmt::Debug;
 
-use crate::{errors::PolyIOPErrors, sum_check::SumCheck, PolyIOP};
+use crate::poly_iop::{errors::PolyIOPErrors, sum_check::SumCheck, PolyIOP};
 use arithmetic::build_eq_x_r;
 use ark_ff::PrimeField;
 use ark_poly::MultilinearExtension;
@@ -122,7 +122,7 @@ impl<F: PrimeField> ZeroCheck<F> for PolyIOP<F> {
 mod test {
 
     use super::ZeroCheck;
-    use crate::{errors::PolyIOPErrors, PolyIOP};
+    use crate::poly_iop::{errors::PolyIOPErrors, PolyIOP};
     use arithmetic::VirtualPolynomial;
     use ark_bls12_381::Fr;
     use ark_std::test_rng;

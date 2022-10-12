@@ -2,11 +2,13 @@ use arithmetic::{identity_permutation_mle, VPAuxInfo, VirtualPolynomial};
 use ark_bls12_381::{Bls12_381, Fr};
 use ark_poly::{DenseMultilinearExtension, MultilinearExtension};
 use ark_std::test_rng;
-use pcs::{prelude::MultilinearKzgPCS, PolynomialCommitmentScheme};
-use poly_iop::prelude::{
-    PermutationCheck, PolyIOP, PolyIOPErrors, ProductCheck, SumCheck, ZeroCheck,
-};
 use std::{marker::PhantomData, rc::Rc, time::Instant};
+use subroutines::{
+    pcs::{prelude::MultilinearKzgPCS, PolynomialCommitmentScheme},
+    poly_iop::prelude::{
+        PermutationCheck, PolyIOP, PolyIOPErrors, ProductCheck, SumCheck, ZeroCheck,
+    },
+};
 
 type KZG = MultilinearKzgPCS<Bls12_381>;
 

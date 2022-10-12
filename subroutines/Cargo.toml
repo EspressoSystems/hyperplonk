@@ -1,5 +1,5 @@
 [package]
-name = "pcs"
+name = "subroutines"
 version = "0.1.0"
 edition = "2021"
 
@@ -7,33 +7,39 @@ edition = "2021"
 
 [dependencies]
 
-ark-std = { version = "^0.3.0", default-features = false }
-ark-serialize = { version = "^0.3.0", default-features = false, features = [ "derive" ] }
 ark-ff = { version = "^0.3.0", default-features = false }
+ark-std = { version = "^0.3.0", default-features = false }
 ark-ec = { version = "^0.3.0", default-features = false }
-ark-poly = {version = "^0.3.0", default-features = false }
-ark-sponge = {version = "^0.3.0", default-features = false}
+ark-poly = { version = "^0.3.0", default-features = false }
+ark-serialize =  { version = "^0.3.0", default-features = false }
 ark-bls12-381 = { version = "0.3.0", default-features = false, features = [ "curve" ] }
 
+rand_chacha = { version = "0.3.0", default-features = false }
 displaydoc = { version = "0.2.3", default-features = false }
+rayon = { version = "1.5.2", default-features = false, optional = true }
 derivative = { version = "2", features = ["use_core"] }
+itertools = { version = "0.10.4", optional = true }
 
-arithmetic = { path = "../arithmetic" }
 transcript = { path = "../transcript" }
+arithmetic = { path = "../arithmetic" }
 util = { path = "../util" }
 
-rayon = { version = "1.5.2", default-features = false, optional = true }
-itertools = { version = "0.10.4", optional = true }
+# Benchmarks
+[[bench]]
+name = "poly-iop-benches"
+path = "benches/iop_bench.rs"
+harness = false
 
 # Benchmarks
 [[bench]]
 name = "pcs-benches"
-path = "benches/bench.rs"
+path = "benches/pcs_bench.rs"
 harness = false
 
 [features]
 # default = [ "parallel", "print-trace" ]
 default = [ "parallel" ]
+# extensive sanity checks that are useful for debugging
 extensive_sanity_checks = [ ]
 parallel = [ 
     "rayon",
@@ -43,9 +49,9 @@ parallel = [
     "ark-poly/parallel", 
     "ark-ec/parallel",
     "util/parallel",
-    "arithmetic/parallel", 
+    "arithmetic/parallel",
     ]
 print-trace = [ 
-    "ark-std/print-trace",
     "arithmetic/print-trace",
+    "ark-std/print-trace",
     ] 

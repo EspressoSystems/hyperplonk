@@ -135,11 +135,13 @@ mod test {
     use super::*;
     use crate::{errors::HyperPlonkErrors, HyperPlonkSNARK};
     use ark_bls12_381::{Bls12_381, Fr};
-    use pcs::{
-        prelude::{MultilinearKzgPCS, MultilinearUniversalParams},
-        PolynomialCommitmentScheme,
+    use subroutines::{
+        pcs::{
+            prelude::{MultilinearKzgPCS, MultilinearUniversalParams},
+            PolynomialCommitmentScheme,
+        },
+        poly_iop::PolyIOP,
     };
-    use poly_iop::PolyIOP;
 
     #[test]
     fn test_mock_circuit_sat() {

@@ -15,8 +15,7 @@ ark-serialize = { version = "^0.3.0", default-features = false, features = [ "de
 
 displaydoc = { version = "0.2.3", default-features = false }
 
-poly-iop = { path = "../poly-iop" }
-pcs = { path = "../pcs" }
+subroutines = { path = "../subroutines" }
 transcript = { path = "../transcript" }
 arithmetic = { path = "../arithmetic" }
 util = { path = "../util" }
@@ -33,15 +32,14 @@ path = "benches/bench.rs"
 harness = false
 
 [features]
-# default = [ ] 
+# default = [ ]
 # default = [ "parallel" ]
 # default = [ "parallel", "print-trace" ]
 default = [ "parallel",  "extensive_sanity_checks" ]
 bench = [ "parallel" ]
 # extensive sanity checks that are useful for debugging
 extensive_sanity_checks = [
-    "poly-iop/extensive_sanity_checks",
-    "pcs/extensive_sanity_checks",
+    "subroutines/extensive_sanity_checks",
  ]
 parallel = [ 
     "rayon",
@@ -49,15 +47,13 @@ parallel = [
     "ark-ff/parallel",  
     "ark-poly/parallel", 
     "ark-ec/parallel",
-    
-    "poly-iop/parallel",
+
     "arithmetic/parallel",
-    "pcs/parallel",
+    "subroutines/parallel",
     "util/parallel"
     ]
 print-trace = [ 
     "ark-std/print-trace",
-    "poly-iop/print-trace",
     "arithmetic/print-trace",
-    "pcs/print-trace"
+    "subroutines/print-trace"
     ] 

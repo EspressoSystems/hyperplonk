@@ -1,6 +1,6 @@
 //! This module implements useful functions for the permutation check protocol.
 
-use crate::errors::PolyIOPErrors;
+use crate::poly_iop::errors::PolyIOPErrors;
 use arithmetic::identity_permutation_mle;
 use ark_ff::PrimeField;
 use ark_poly::DenseMultilinearExtension;

@@ -2,11 +2,11 @@ use ark_bls12_381::{Bls12_381, Fr};
 use ark_ff::UniformRand;
 use ark_poly::{DenseMultilinearExtension, MultilinearExtension};
 use ark_std::{rc::Rc, test_rng};
-use pcs::{
+use std::time::Instant;
+use subroutines::pcs::{
     prelude::{MultilinearKzgPCS, PCSError, PolynomialCommitmentScheme},
     StructuredReferenceString,
 };
-use std::time::Instant;
 
 fn main() -> Result<(), PCSError> {
     bench_pcs()

@@ -6,7 +6,7 @@
 
 //! Implementing Structured Reference Strings for univariate polynomial KZG
 
-use crate::{PCSError, StructuredReferenceString};
+use crate::pcs::{PCSError, StructuredReferenceString};
 use ark_ec::{msm::FixedBaseMSM, AffineCurve, PairingEngine, ProjectiveCurve};
 use ark_ff::PrimeField;
 use ark_serialize::{CanonicalDeserialize, CanonicalSerialize, Read, SerializationError, Write};
