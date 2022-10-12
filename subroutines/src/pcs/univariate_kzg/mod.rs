@@ -56,6 +56,9 @@ impl<E: PairingEngine> PolynomialCommitmentScheme<E> for UnivariateKzgPCS<E> {
     type Commitment = Commitment<E>;
     type Proof = UnivariateKzgProof<E>;
 
+    // We do not implement batch univariate KZG at the current version.
+    type BatchProof = ();
+
     /// Build SRS for testing.
     ///
     /// - For univariate polynomials, `supported_size` is the maximum degree.

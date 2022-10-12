@@ -121,15 +121,14 @@ impl<F: PrimeField> SumCheckProver<F> for IOPProverState<F> {
                         // evaluate P_round(t)
                         let table0 = &flattened_ml_extensions[products_list[0].1[0]];
                         let table1 = &flattened_ml_extensions[products_list[0].1[1]];
-                        let val = if t == 0 {
+                        if t == 0 {
                             table0[b << 1] * table1[b << 1]
                         } else if t == 1 {
                             table0[(b << 1) + 1] * table1[(b << 1) + 1]
                         } else {
                             (table0[(b << 1) + 1] + table0[(b << 1) + 1] - table0[b << 1])
                                 * (table1[(b << 1) + 1] + table1[(b << 1) + 1] - table1[b << 1])
-                        };
-                        val
+                        }
                     })
                     .collect::<Vec<F>>();
                 for val in evals.iter() {

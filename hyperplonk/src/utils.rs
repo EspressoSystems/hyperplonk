@@ -1,8 +1,5 @@
 use crate::{
-    batching::multi_open_internal,
-    custom_gate::CustomizedGates,
-    errors::HyperPlonkErrors,
-    structs::{BatchProof, HyperPlonkParams},
+    custom_gate::CustomizedGates, errors::HyperPlonkErrors, structs::HyperPlonkParams,
     witness::WitnessColumn,
 };
 use arithmetic::{evaluate_opt, VirtualPolynomial};
@@ -67,7 +64,7 @@ where
         self.evals.push(eval);
         self.polynomials.push(poly.clone());
         self.points.push(point.clone());
-        self.commitments.push(commit.clone());
+        self.commitments.push(*commit);
     }
 
     /// Batch open all the points over a merged polynomial.
@@ -76,14 +73,14 @@ where
         &self,
         prover_param: impl Borrow<PCS::ProverParam>,
         transcript: &mut IOPTranscript<E::Fr>,
-    ) -> Result<BatchProof<E, PCS>, HyperPlonkErrors> {
-        multi_open_internal(
+    ) -> Result<PCS::BatchProof, HyperPlonkErrors> {
+        Ok(PCS::multi_open(
             prover_param.borrow(),
             self.polynomials.as_ref(),
             self.points.as_ref(),
             self.evals.as_ref(),
             transcript,
-        )
+        )?)
     }
 }
 

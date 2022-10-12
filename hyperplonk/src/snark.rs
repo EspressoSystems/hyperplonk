@@ -1,5 +1,4 @@
 use crate::{
-    batching::batch_verify_internal,
     errors::HyperPlonkErrors,
     structs::{HyperPlonkIndex, HyperPlonkProof, HyperPlonkProvingKey, HyperPlonkVerifyingKey},
     utils::{build_f, eval_f, prover_sanity_check, PcsAccumulator},
@@ -17,6 +16,7 @@ use subroutines::{
         prelude::{PermutationCheck, ZeroCheck},
         PolyIOP,
     },
+    BatchProof,
 };
 use transcript::IOPTranscript;
 
@@ -32,6 +32,7 @@ where
         Point = Vec<E::Fr>,
         Evaluation = E::Fr,
         Commitment = Commitment<E>,
+        BatchProof = BatchProof<E, PCS>,
     >,
 {
     type Index = HyperPlonkIndex<E::Fr>;
@@ -474,7 +475,7 @@ where
         let zero_check_point = &zero_check_sub_claim.point;
 
         // check zero check subclaim
-        let f_eval = eval_f(&vk.params.gate_func, selector_evals, &witness_evals)?;
+        let f_eval = eval_f(&vk.params.gate_func, selector_evals, witness_evals)?;
         if f_eval != zero_check_sub_claim.expected_evaluation {
             return Err(HyperPlonkErrors::InvalidProof(
                 "zero check evaluation failed".to_string(),
@@ -566,7 +567,7 @@ where
 
         let mut r_pi = transcript.get_and_append_challenge_vectors(b"r_pi", ell)?;
 
-        let res = batch_verify_internal(
+        let res = PCS::batch_verify(
             &vk.pcs_param,
             [proof.perm_check_proof.prod_x_comm; 4].as_ref(),
             prod_points.as_ref(),
@@ -582,7 +583,7 @@ where
         let res = PCS::verify(
             &vk.pcs_param,
             &proof.witness_merged_commit,
-            &perm_check_point,
+            perm_check_point,
             &proof.perm_check_eval,
             &proof.perm_check_opening,
         )?;
@@ -605,7 +606,7 @@ where
         ]
         .concat();
 
-        let res = batch_verify_internal(
+        let res = PCS::batch_verify(
             &vk.pcs_param,
             commitments.as_ref(),
             points.as_ref(),

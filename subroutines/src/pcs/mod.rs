@@ -11,6 +11,7 @@ use ark_serialize::{CanonicalDeserialize, CanonicalSerialize};
 use ark_std::rand::{CryptoRng, RngCore};
 use errors::PCSError;
 use std::{borrow::Borrow, fmt::Debug, hash::Hash};
+use transcript::IOPTranscript;
 
 /// This trait defines APIs for polynomial commitment schemes.
 /// Note that for our usage of PCS, we do not require the hiding property.
@@ -37,6 +38,8 @@ pub trait PolynomialCommitmentScheme<E: PairingEngine> {
     type Commitment: Clone + CanonicalSerialize + CanonicalDeserialize + Debug + PartialEq + Eq;
     /// Proofs
     type Proof: Clone + CanonicalSerialize + CanonicalDeserialize + Debug + PartialEq + Eq;
+    /// Batch proofs
+    type BatchProof;
 
     /// Build SRS for testing.
     ///
@@ -89,6 +92,18 @@ pub trait PolynomialCommitmentScheme<E: PairingEngine> {
         point: &Self::Point,
     ) -> Result<(Self::Proof, Self::Evaluation), PCSError>;
 
+    /// Input a list of multilinear extensions, and a same number of points, and
+    /// a transcript, compute a multi-opening for all the polynomials.
+    fn multi_open(
+        _prover_param: impl Borrow<Self::ProverParam>,
+        _polynomials: &[Self::Polynomial],
+        _points: &[Self::Point],
+        _evals: &[Self::Evaluation],
+        _transcript: &mut IOPTranscript<E::Fr>,
+    ) -> Result<Self::BatchProof, PCSError> {
+        unimplemented!()
+    }
+
     /// Verifies that `value` is the evaluation at `x` of the polynomial
     /// committed inside `comm`.
     fn verify(
@@ -98,6 +113,18 @@ pub trait PolynomialCommitmentScheme<E: PairingEngine> {
         value: &E::Fr,
         proof: &Self::Proof,
     ) -> Result<bool, PCSError>;
+
+    /// Verifies that `value_i` is the evaluation at `x_i` of the polynomial
+    /// `poly_i` committed inside `comm`.
+    fn batch_verify(
+        _verifier_param: &Self::VerifierParam,
+        _commitments: &[Self::Commitment],
+        _points: &[Self::Point],
+        _batch_proof: &Self::BatchProof,
+        _transcript: &mut IOPTranscript<E::Fr>,
+    ) -> Result<bool, PCSError> {
+        unimplemented!()
+    }
 }
 
 /// API definitions for structured reference string

@@ -6,11 +6,13 @@
 
 //! Main module for multilinear KZG commitment scheme
 
+pub(crate) mod batching;
 pub(crate) mod srs;
 pub(crate) mod util;
 
-use crate::pcs::{
-    prelude::Commitment, PCSError, PolynomialCommitmentScheme, StructuredReferenceString,
+use crate::{
+    pcs::{prelude::Commitment, PCSError, PolynomialCommitmentScheme, StructuredReferenceString},
+    BatchProof,
 };
 use arithmetic::evaluate_opt;
 use ark_ec::{
@@ -34,6 +36,9 @@ use ark_std::{
 };
 // use batching::{batch_verify_internal, multi_open_internal};
 use srs::{MultilinearProverParam, MultilinearUniversalParams, MultilinearVerifierParam};
+use transcript::IOPTranscript;
+
+use self::batching::{batch_verify_internal, multi_open_internal};
 
 /// KZG Polynomial Commitment Scheme on multilinear polynomials.
 pub struct MultilinearKzgPCS<E: PairingEngine> {
@@ -60,6 +65,7 @@ impl<E: PairingEngine> PolynomialCommitmentScheme<E> for MultilinearKzgPCS<E> {
     // Commitments and proofs
     type Commitment = Commitment<E>;
     type Proof = MultilinearKzgProof<E>;
+    type BatchProof = BatchProof<E, Self>;
 
     /// Build SRS for testing.
     ///
@@ -144,7 +150,25 @@ impl<E: PairingEngine> PolynomialCommitmentScheme<E> for MultilinearKzgPCS<E> {
         polynomial: &Self::Polynomial,
         point: &Self::Point,
     ) -> Result<(Self::Proof, Self::Evaluation), PCSError> {
-        open_internal(&prover_param.borrow(), polynomial, point)
+        open_internal(prover_param.borrow(), polynomial, point)
+    }
+
+    /// Input a list of multilinear extensions, and a same number of points, and
+    /// a transcript, compute a multi-opening for all the polynomials.
+    fn multi_open(
+        prover_param: impl Borrow<Self::ProverParam>,
+        polynomials: &[Self::Polynomial],
+        points: &[Self::Point],
+        evals: &[Self::Evaluation],
+        transcript: &mut IOPTranscript<E::Fr>,
+    ) -> Result<BatchProof<E, Self>, PCSError> {
+        multi_open_internal(
+            prover_param.borrow(),
+            polynomials,
+            points,
+            evals,
+            transcript,
+        )
     }
 
     /// Verifies that `value` is the evaluation at `x` of the polynomial
@@ -160,7 +184,19 @@ impl<E: PairingEngine> PolynomialCommitmentScheme<E> for MultilinearKzgPCS<E> {
         value: &E::Fr,
         proof: &Self::Proof,
     ) -> Result<bool, PCSError> {
-        verify_internal(&verifier_param, commitment, point, value, proof)
+        verify_internal(verifier_param, commitment, point, value, proof)
+    }
+
+    /// Verifies that `value_i` is the evaluation at `x_i` of the polynomial
+    /// `poly_i` committed inside `comm`.
+    fn batch_verify(
+        verifier_param: &Self::VerifierParam,
+        commitments: &[Self::Commitment],
+        points: &[Self::Point],
+        batch_proof: &Self::BatchProof,
+        transcript: &mut IOPTranscript<E::Fr>,
+    ) -> Result<bool, PCSError> {
+        batch_verify_internal(verifier_param, commitments, points, batch_proof, transcript)
     }
 }
 

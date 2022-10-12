@@ -246,7 +246,7 @@ pub fn fix_last_variables_no_par<F: PrimeField>(
     poly: &DenseMultilinearExtension<F>,
     partial_point: &[F],
 ) -> DenseMultilinearExtension<F> {
-    let mut res = fix_last_variable_no_par(poly, &partial_point.last().unwrap());
+    let mut res = fix_last_variable_no_par(poly, partial_point.last().unwrap());
     for p in partial_point.iter().rev().skip(1) {
         res = fix_last_variable_no_par(&res, p);
     }
@@ -261,9 +261,8 @@ pub fn fix_last_variable_no_par<F: PrimeField>(
     let half_len = 1 << (nv - 1);
     let mut res = vec![F::zero(); half_len];
     let one_minus_p = F::one() - partial_point;
-    for i in 0..half_len {
-        res[i] =
-            one_minus_p * poly.evaluations[i] + *partial_point * poly.evaluations[i + half_len];
+    for (i, e) in res.iter_mut().enumerate().take(half_len) {
+        *e = one_minus_p * poly.evaluations[i] + *partial_point * poly.evaluations[i + half_len];
     }
     DenseMultilinearExtension::from_evaluations_vec(nv - 1, res)
 }

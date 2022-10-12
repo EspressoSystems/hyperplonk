@@ -8,7 +8,7 @@ use ark_std::log2;
 use std::rc::Rc;
 use subroutines::{
     pcs::PolynomialCommitmentScheme,
-    poly_iop::prelude::{IOPProof, PermutationCheck, ZeroCheck},
+    poly_iop::prelude::{PermutationCheck, ZeroCheck},
 };
 
 /// The proof for the HyperPlonk PolyIOP, consists of the following:
@@ -26,8 +26,8 @@ where
     // PCS commit for witnesses
     pub witness_merged_commit: PCS::Commitment,
     pub witness_commits: Vec<PCS::Commitment>,
-    pub batch_prod_x_openings: BatchProof<E, PCS>,
-    pub batch_witness_and_selector_openings: BatchProof<E, PCS>,
+    pub batch_prod_x_openings: PCS::BatchProof,
+    pub batch_witness_and_selector_openings: PCS::BatchProof,
     pub perm_check_opening: PCS::Proof,
     pub perm_check_eval: PCS::Evaluation,
     // =======================================================================
@@ -135,18 +135,4 @@ pub struct HyperPlonkVerifyingKey<E: PairingEngine, PCS: PolynomialCommitmentSch
     pub selector_commitments: Vec<PCS::Commitment>,
     /// Permutation oracle's commitment
     pub perm_com: PCS::Commitment,
-}
-
-#[derive(Clone, Debug, Default, PartialEq)]
-pub struct BatchProof<E, PCS>
-where
-    E: PairingEngine,
-    PCS: PolynomialCommitmentScheme<E>,
-{
-    /// A sum check proof proving tilde g's sum
-    pub(crate) sum_check_proof: IOPProof<E::Fr>,
-    /// f_i(point_i)
-    pub(crate) f_i_eval_at_point_i: Vec<E::Fr>,
-    /// proof for g'(a_2)
-    pub(crate) g_prime_proof: PCS::Proof,
 }

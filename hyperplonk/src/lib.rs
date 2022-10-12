@@ -5,7 +5,6 @@ use errors::HyperPlonkErrors;
 use subroutines::{pcs::prelude::PolynomialCommitmentScheme, poly_iop::prelude::PermutationCheck};
 use witness::WitnessColumn;
 
-mod batching;
 mod custom_gate;
 mod errors;
 mod mock;

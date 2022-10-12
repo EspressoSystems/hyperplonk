@@ -8,6 +8,7 @@
 pub use crate::pcs::{
     errors::PCSError,
     multilinear_kzg::{
+        batching::BatchProof,
         srs::{MultilinearProverParam, MultilinearUniversalParams, MultilinearVerifierParam},
         MultilinearKzgPCS, MultilinearKzgProof,
     },

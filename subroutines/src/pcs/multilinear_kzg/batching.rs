@@ -4,6 +4,14 @@
 // The sumcheck based batch opening therefore cannot stay in the PCS repo --
 // which creates a cyclic dependency.
 
+use crate::{
+    pcs::{
+        prelude::{Commitment, PCSError},
+        PolynomialCommitmentScheme,
+    },
+    poly_iop::{prelude::SumCheck, PolyIOP},
+    IOPProof,
+};
 use arithmetic::{
     build_eq_x_r_vec, fix_last_variables, DenseMultilinearExtension, VPAuxInfo, VirtualPolynomial,
 };
@@ -11,23 +19,36 @@ use ark_ec::{AffineCurve, PairingEngine, ProjectiveCurve};
 use ark_ff::PrimeField;
 use ark_std::{end_timer, log2, start_timer, One, Zero};
 use std::{marker::PhantomData, rc::Rc};
-use subroutines::{
-    pcs::{prelude::Commitment, PolynomialCommitmentScheme},
-    poly_iop::{prelude::SumCheck, PolyIOP},
-};
 use transcript::IOPTranscript;
 
-use crate::{prelude::HyperPlonkErrors, structs::BatchProof};
+#[derive(Clone, Debug, Default, PartialEq, Eq)]
+pub struct BatchProof<E, PCS>
+where
+    E: PairingEngine,
+    PCS: PolynomialCommitmentScheme<E>,
+{
+    /// A sum check proof proving tilde g's sum
+    pub(crate) sum_check_proof: IOPProof<E::Fr>,
+    /// f_i(point_i)
+    pub f_i_eval_at_point_i: Vec<E::Fr>,
+    /// proof for g'(a_2)
+    pub(crate) g_prime_proof: PCS::Proof,
+}
 
 /// Steps:
-/// 1. todo...
+/// 1. get challenge point t from transcript
+/// 2. build eq(t,i) for i in [0..k]
+/// 3. build \tilde g(i, b) = eq(t, i) * f_i(b)
+/// 4. compute \tilde eq
+/// 5. run sumcheck on \tilde eq * \tilde g(i, b)
+/// 6. build g'(a2) where (a1, a2) is the sumcheck's point
 pub(crate) fn multi_open_internal<E, PCS>(
     prover_param: &PCS::ProverParam,
     polynomials: &[PCS::Polynomial],
     points: &[PCS::Point],
     evals: &[PCS::Evaluation],
     transcript: &mut IOPTranscript<E::Fr>,
-) -> Result<BatchProof<E, PCS>, HyperPlonkErrors>
+) -> Result<BatchProof<E, PCS>, PCSError>
 where
     E: PairingEngine,
     PCS: PolynomialCommitmentScheme<
@@ -87,7 +108,16 @@ where
     sum_check_vp.add_mle_list([tilde_g.clone(), tilde_eq], E::Fr::one())?;
     end_timer!(step);
 
-    let proof = <PolyIOP<E::Fr> as SumCheck<E::Fr>>::prove(&sum_check_vp, transcript)?;
+    let proof = match <PolyIOP<E::Fr> as SumCheck<E::Fr>>::prove(&sum_check_vp, transcript) {
+        Ok(p) => p,
+        Err(_e) => {
+            // cannot wrap IOPError with PCSError due to cyclic dependency
+            return Err(PCSError::InvalidProver(
+                "Sumcheck in batch proving Failed".to_string(),
+            ));
+        },
+    };
+
     end_timer!(timer);
 
     // (a1, a2) := sumcheck's point
@@ -118,14 +148,17 @@ where
 }
 
 /// Steps:
-/// 1. todo...
+/// 1. get challenge point t from transcript
+/// 2. build g' commitment
+/// 3. ensure \sum_i eq(t, <i>) * f_i_evals matches the sum via SumCheck
+/// verification 4. verify commitment
 pub(crate) fn batch_verify_internal<E, PCS>(
     verifier_param: &PCS::VerifierParam,
     f_i_commitments: &[Commitment<E>],
     points: &[PCS::Point],
     proof: &BatchProof<E, PCS>,
     transcript: &mut IOPTranscript<E::Fr>,
-) -> Result<bool, HyperPlonkErrors>
+) -> Result<bool, PCSError>
 where
     E: PairingEngine,
     PCS: PolynomialCommitmentScheme<
@@ -164,20 +197,28 @@ where
     // ensure \sum_i eq(t, <i>) * f_i_evals matches the sum via SumCheck
     // verification
     let mut sum = E::Fr::zero();
-    for i in 0..k {
-        sum += eq_t_list[i] * proof.f_i_eval_at_point_i[i];
+    for (i, &e) in eq_t_list.iter().enumerate().take(k) {
+        sum += e * proof.f_i_eval_at_point_i[i];
     }
     let aux_info = VPAuxInfo {
         max_degree: 2,
         num_variables: num_var + ell,
         phantom: PhantomData,
     };
-    let subclaim = <PolyIOP<E::Fr> as SumCheck<E::Fr>>::verify(
+    let subclaim = match <PolyIOP<E::Fr> as SumCheck<E::Fr>>::verify(
         sum,
         &proof.sum_check_proof,
         &aux_info,
         transcript,
-    )?;
+    ) {
+        Ok(p) => p,
+        Err(_e) => {
+            // cannot wrap IOPError with PCSError due to cyclic dependency
+            return Err(PCSError::InvalidProver(
+                "Sumcheck in batch verification failed".to_string(),
+            ));
+        },
+    };
     let mut eq_tilde_eval = E::Fr::zero();
     for (point, &coef) in points.iter().zip(eq_a1_list.iter()) {
         eq_tilde_eval += coef * eq_eval_internal(a2, point);
@@ -217,6 +258,10 @@ fn eq_eval_internal<F: PrimeField>(x: &[F], y: &[F]) -> F {
 #[cfg(test)]
 mod tests {
     use super::*;
+    use crate::pcs::{
+        prelude::{MultilinearKzgPCS, MultilinearUniversalParams},
+        StructuredReferenceString,
+    };
     use arithmetic::get_batched_nv;
     use ark_bls12_381::Bls12_381 as E;
     use ark_ec::PairingEngine;
@@ -227,10 +272,6 @@ mod tests {
         vec::Vec,
         UniformRand,
     };
-    use subroutines::pcs::{
-        prelude::{MultilinearKzgPCS, MultilinearUniversalParams},
-        StructuredReferenceString,
-    };
 
     type Fr = <E as PairingEngine>::Fr;
 
@@ -238,7 +279,7 @@ mod tests {
         ml_params: &MultilinearUniversalParams<E>,
         polys: &[Rc<DenseMultilinearExtension<Fr>>],
         rng: &mut R,
-    ) -> Result<(), HyperPlonkErrors> {
+    ) -> Result<(), PCSError> {
         let merged_nv = get_batched_nv(polys[0].num_vars(), polys.len());
         let (ml_ck, ml_vk) = ml_params.trim(merged_nv)?;
 
@@ -287,7 +328,7 @@ mod tests {
     }
 
     #[test]
-    fn test_multi_open_internal() -> Result<(), HyperPlonkErrors> {
+    fn test_multi_open_internal() -> Result<(), PCSError> {
         let mut rng = test_rng();
 
         let ml_params = MultilinearUniversalParams::<E>::gen_srs_for_testing(&mut rng, 20)?;
