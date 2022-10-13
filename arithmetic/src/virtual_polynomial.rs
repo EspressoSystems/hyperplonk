@@ -325,12 +325,12 @@ impl<F: PrimeField> VirtualPolynomial<F> {
     }
 }
 
-// This function build the eq(x, r) polynomial for any given r.
-//
-// Evaluate
-//      eq(x,y) = \prod_i=1^num_var (x_i * y_i + (1-x_i)*(1-y_i))
-// over r, which is
-//      eq(x,y) = \prod_i=1^num_var (x_i * r_i + (1-x_i)*(1-r_i))
+/// This function build the eq(x, r) polynomial for any given r.
+///
+/// Evaluate
+///      eq(x,y) = \prod_i=1^num_var (x_i * y_i + (1-x_i)*(1-y_i))
+/// over r, which is
+///      eq(x,y) = \prod_i=1^num_var (x_i * r_i + (1-x_i)*(1-r_i))
 pub fn build_eq_x_r<F: PrimeField>(
     r: &[F],
 ) -> Result<Rc<DenseMultilinearExtension<F>>, ArithErrors> {
@@ -339,12 +339,13 @@ pub fn build_eq_x_r<F: PrimeField>(
 
     Ok(Rc::new(mle))
 }
-// This function build the eq(x, r) polynomial for any given r.
-//
-// Evaluate
-//      eq(x,y) = \prod_i=1^num_var (x_i * y_i + (1-x_i)*(1-y_i))
-// over r, which is
-//      eq(x,y) = \prod_i=1^num_var (x_i * r_i + (1-x_i)*(1-r_i))
+/// This function build the eq(x, r) polynomial for any given r, and output the
+/// evaluation of eq(x, r) in its vector form.
+///
+/// Evaluate
+///      eq(x,y) = \prod_i=1^num_var (x_i * y_i + (1-x_i)*(1-y_i))
+/// over r, which is
+///      eq(x,y) = \prod_i=1^num_var (x_i * r_i + (1-x_i)*(1-r_i))
 pub fn build_eq_x_r_vec<F: PrimeField>(r: &[F]) -> Result<Vec<F>, ArithErrors> {
     let start = start_timer!(|| format!("build eq_x_r of size {}", r.len()));
 

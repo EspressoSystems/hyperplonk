@@ -30,3 +30,20 @@ pub(crate) fn eq_extension<F: PrimeField>(t: &[F]) -> Vec<DenseMultilinearExtens
     end_timer!(start);
     result
 }
+
+/// Evaluate eq polynomial. use the public one later
+pub(crate) fn eq_eval_internal<F: PrimeField>(x: &[F], y: &[F]) -> F {
+    // if x.len() != y.len() {
+    //     return Err(ArithErrors::InvalidParameters(
+    //         "x and y have different length".to_string(),
+    //     ));
+    // }
+    let start = start_timer!(|| "eq_eval");
+    let mut res = F::one();
+    for (&xi, &yi) in x.iter().zip(y.iter()) {
+        let xi_yi = xi * yi;
+        res *= xi_yi + xi_yi - xi - yi + F::one();
+    }
+    end_timer!(start);
+    res
+}

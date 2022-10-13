@@ -24,11 +24,11 @@ transcript = { path = "../transcript" }
 arithmetic = { path = "../arithmetic" }
 util = { path = "../util" }
 
-# Benchmarks
-[[bench]]
-name = "poly-iop-benches"
-path = "benches/iop_bench.rs"
-harness = false
+# # Benchmarks
+# [[bench]]
+# name = "poly-iop-benches"
+# path = "benches/iop_bench.rs"
+# harness = false
 
 # Benchmarks
 [[bench]]

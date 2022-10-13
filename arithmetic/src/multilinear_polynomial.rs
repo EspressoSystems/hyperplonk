@@ -123,36 +123,24 @@ pub fn fix_variables<F: Field>(
     DenseMultilinearExtension::<F>::from_evaluations_slice(nv - dim, &poly[..(1 << (nv - dim))])
 }
 
-pub fn fix_first_variable<F: Field>(
-    poly: &DenseMultilinearExtension<F>,
-    partial_point: &F,
-) -> DenseMultilinearExtension<F> {
-    assert!(poly.num_vars != 0, "invalid size of partial point");
-
-    let nv = poly.num_vars;
-    let res = fix_one_variable_helper(&poly.evaluations, nv, partial_point);
-    DenseMultilinearExtension::<F>::from_evaluations_slice(nv - 1, &res)
-}
-
 fn fix_one_variable_helper<F: Field>(data: &[F], nv: usize, point: &F) -> Vec<F> {
     let mut res = vec![F::zero(); 1 << (nv - 1)];
-    let one_minus_p = F::one() - point;
 
     // evaluate single variable of partial point from left to right
     #[cfg(not(feature = "parallel"))]
-    for b in 0..(1 << (nv - 1)) {
-        res[b] = data[b << 1] * one_minus_p + data[(b << 1) + 1] * point;
+    for i in 0..(1 << (nv - 1)) {
+        res[i] = data[i] + (data[(i << 1) + 1] - data[i << 1]) * point;
     }
 
     #[cfg(feature = "parallel")]
     if nv >= 13 {
         // on my computer we parallelization doesn't help till nv >= 13
         res.par_iter_mut().enumerate().for_each(|(i, x)| {
-            *x = data[i << 1] * one_minus_p + data[(i << 1) + 1] * point;
+            *x = data[i << 1] + (data[(i << 1) + 1] - data[i << 1]) * point;
         });
     } else {
-        for b in 0..(1 << (nv - 1)) {
-            res[b] = data[b << 1] * one_minus_p + data[(b << 1) + 1] * point;
+        for i in 0..(1 << (nv - 1)) {
+            res[i] = data[i << 1] + (data[(i << 1) + 1] - data[i << 1]) * point;
         }
     }
 
@@ -178,43 +166,11 @@ fn fix_variables_no_par<F: Field>(
     // evaluate single variable of partial point from left to right
     for i in 1..dim + 1 {
         let r = partial_point[i - 1];
-        let one_minus_r = F::one() - r;
         for b in 0..(1 << (nv - i)) {
-            poly[b] = poly[b << 1] * one_minus_r + poly[(b << 1) + 1] * r;
+            poly[b] = poly[b << 1] + (poly[(b << 1) + 1] - poly[b << 1]) * r;
         }
     }
     DenseMultilinearExtension::from_evaluations_slice(nv - dim, &poly[..(1 << (nv - dim))])
-}
-
-/// TODO
-pub fn pad_and_merge_polynomials<F: PrimeField>(
-    polynomials: &[Rc<DenseMultilinearExtension<F>>],
-    target_nv: usize,
-) -> Result<Rc<DenseMultilinearExtension<F>>, ArithErrors> {
-    let nv = polynomials[0].num_vars();
-    for poly in polynomials.iter() {
-        if nv != poly.num_vars() {
-            return Err(ArithErrors::InvalidParameters(
-                "num_vars do not match for polynomials".to_string(),
-            ));
-        }
-    }
-
-    let merged_nv = get_batched_nv(nv, polynomials.len());
-    if merged_nv > target_nv {
-        return Err(ArithErrors::InvalidParameters(
-            "target is smaller than merged nv".to_string(),
-        ));
-    }
-
-    let mut scalars = vec![];
-    for poly in polynomials.iter() {
-        scalars.extend_from_slice(poly.to_evaluations().as_slice());
-    }
-    scalars.extend_from_slice(vec![F::zero(); (1 << target_nv) - scalars.len()].as_ref());
-    Ok(Rc::new(DenseMultilinearExtension::from_evaluations_vec(
-        target_nv, scalars,
-    )))
 }
 
 /// merge a set of polynomials. Returns an error if the
@@ -253,16 +209,16 @@ pub fn fix_last_variables_no_par<F: PrimeField>(
     res
 }
 
-pub fn fix_last_variable_no_par<F: PrimeField>(
+fn fix_last_variable_no_par<F: PrimeField>(
     poly: &DenseMultilinearExtension<F>,
     partial_point: &F,
 ) -> DenseMultilinearExtension<F> {
     let nv = poly.num_vars();
     let half_len = 1 << (nv - 1);
     let mut res = vec![F::zero(); half_len];
-    let one_minus_p = F::one() - partial_point;
     for (i, e) in res.iter_mut().enumerate().take(half_len) {
-        *e = one_minus_p * poly.evaluations[i] + *partial_point * poly.evaluations[i + half_len];
+        *e = poly.evaluations[i]
+            + *partial_point * (poly.evaluations[i + half_len] - poly.evaluations[i]);
     }
     DenseMultilinearExtension::from_evaluations_vec(nv - 1, res)
 }
@@ -285,37 +241,25 @@ pub fn fix_last_variables<F: PrimeField>(
     DenseMultilinearExtension::<F>::from_evaluations_slice(nv - dim, &poly[..(1 << (nv - dim))])
 }
 
-pub fn fix_last_variable<F: PrimeField>(
-    poly: &DenseMultilinearExtension<F>,
-    partial_point: &F,
-) -> DenseMultilinearExtension<F> {
-    assert!(poly.num_vars != 0, "invalid size of partial point");
-
-    let nv = poly.num_vars;
-    let res = fix_last_variable_helper(&poly.evaluations, nv, partial_point);
-    DenseMultilinearExtension::<F>::from_evaluations_slice(nv - 1, &res)
-}
-
 fn fix_last_variable_helper<F: Field>(data: &[F], nv: usize, point: &F) -> Vec<F> {
-    let one_minus_p = F::one() - point;
     let half_len = 1 << (nv - 1);
     let mut res = vec![F::zero(); half_len];
 
     // evaluate single variable of partial point from left to right
     #[cfg(not(feature = "parallel"))]
     for b in 0..half_len {
-        res[b] = data[b] * one_minus_p + data[b + half_len] * point;
+        res[b] = data[b] + (data[b + half_len] - data[b]) * point;
     }
 
     #[cfg(feature = "parallel")]
     if nv >= 13 {
         // on my computer we parallelization doesn't help till nv >= 13
         res.par_iter_mut().enumerate().for_each(|(i, x)| {
-            *x = data[i] * one_minus_p + data[i + half_len] * point;
+            *x = data[i] + (data[i + half_len] - data[i]) * point;
         });
     } else {
         for b in 0..(1 << (nv - 1)) {
-            res[b] = data[b] * one_minus_p + data[b + half_len] * point;
+            res[b] = data[b] + (data[b + half_len] - data[b]) * point;
         }
     }
 

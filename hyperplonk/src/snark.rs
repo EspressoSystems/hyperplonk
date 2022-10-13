@@ -208,7 +208,7 @@ where
             )));
         }
 
-        // TODO: use PCS to compute this
+        // TODO: we'll remove one of witness_merged_commit and witness_commits later.
         let witness_merged_commit = PCS::commit(&pk.pcs_param, &w_merged)?;
         transcript.append_serializable_element(b"w", &witness_merged_commit)?;
 

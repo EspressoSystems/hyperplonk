@@ -5,7 +5,7 @@ use crate::poly_iop::{
     errors::PolyIOPErrors,
     structs::{IOPProverMessage, IOPProverState},
 };
-use arithmetic::{fix_first_variable, VirtualPolynomial};
+use arithmetic::{fix_variables, VirtualPolynomial};
 use ark_ff::PrimeField;
 use ark_poly::DenseMultilinearExtension;
 use ark_std::{end_timer, start_timer, vec::Vec};
@@ -87,7 +87,7 @@ impl<F: PrimeField> SumCheckProver<F> for IOPProverState<F> {
             #[cfg(feature = "parallel")]
             flattened_ml_extensions
                 .par_iter_mut()
-                .for_each(|mle| *mle = fix_first_variable(mle, &r));
+                .for_each(|mle| *mle = fix_variables(mle, &[r]));
             #[cfg(not(feature = "parallel"))]
             flattened_ml_extensions
                 .iter_mut()

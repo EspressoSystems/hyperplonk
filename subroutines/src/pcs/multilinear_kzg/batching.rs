@@ -6,6 +6,7 @@
 
 use crate::{
     pcs::{
+        multilinear_kzg::util::eq_eval_internal,
         prelude::{Commitment, PCSError},
         PolynomialCommitmentScheme,
     },
@@ -16,7 +17,6 @@ use arithmetic::{
     build_eq_x_r_vec, fix_last_variables, DenseMultilinearExtension, VPAuxInfo, VirtualPolynomial,
 };
 use ark_ec::{AffineCurve, PairingEngine, ProjectiveCurve};
-use ark_ff::PrimeField;
 use ark_std::{end_timer, log2, start_timer, One, Zero};
 use std::{marker::PhantomData, rc::Rc};
 use transcript::IOPTranscript;
@@ -236,23 +236,6 @@ where
 
     end_timer!(open_timer);
     Ok(res)
-}
-
-/// Evaluate eq polynomial. use the public one later
-fn eq_eval_internal<F: PrimeField>(x: &[F], y: &[F]) -> F {
-    // if x.len() != y.len() {
-    //     return Err(ArithErrors::InvalidParameters(
-    //         "x and y have different length".to_string(),
-    //     ));
-    // }
-    let start = start_timer!(|| "eq_eval");
-    let mut res = F::one();
-    for (&xi, &yi) in x.iter().zip(y.iter()) {
-        let xi_yi = xi * yi;
-        res *= xi_yi + xi_yi - xi - yi + F::one();
-    }
-    end_timer!(start);
-    res
 }
 
 #[cfg(test)]

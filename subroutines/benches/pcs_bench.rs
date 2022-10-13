@@ -16,15 +16,15 @@ fn bench_pcs() -> Result<(), PCSError> {
     let mut rng = test_rng();
 
     // normal polynomials
-    let uni_params = MultilinearKzgPCS::<Bls12_381>::gen_srs_for_testing(&mut rng, 18)?;
+    let uni_params = MultilinearKzgPCS::<Bls12_381>::gen_srs_for_testing(&mut rng, 24)?;
 
-    for nv in 4..19 {
+    for nv in 4..25 {
         let repetition = if nv < 10 {
-            100
-        } else if nv < 20 {
-            50
-        } else {
             10
+        } else if nv < 20 {
+            5
+        } else {
+            2
         };
 
         let poly = Rc::new(DenseMultilinearExtension::rand(nv, &mut rng));

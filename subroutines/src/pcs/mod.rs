@@ -101,6 +101,8 @@ pub trait PolynomialCommitmentScheme<E: PairingEngine> {
         _evals: &[Self::Evaluation],
         _transcript: &mut IOPTranscript<E::Fr>,
     ) -> Result<Self::BatchProof, PCSError> {
+        // the reason we use unimplemented!() is to enable developers to implement the
+        // trait without always implementing the batching APIs.
         unimplemented!()
     }
 
@@ -123,6 +125,8 @@ pub trait PolynomialCommitmentScheme<E: PairingEngine> {
         _batch_proof: &Self::BatchProof,
         _transcript: &mut IOPTranscript<E::Fr>,
     ) -> Result<bool, PCSError> {
+        // the reason we use unimplemented!() is to enable developers to implement the
+        // trait without always implementing the batching APIs.
         unimplemented!()
     }
 }

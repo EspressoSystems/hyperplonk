@@ -16,17 +16,23 @@ use subroutines::{
     poly_iop::PolyIOP,
 };
 
+const SUPPORTED_SIZE: usize = 20;
+const MIN_NUM_VARS: usize = 8;
+const MAX_NUM_VARS: usize = 15;
+const MIN_CUSTOM_DEGREE: usize = 1;
+const MAX_CUSTOM_DEGREE: usize = 32;
+
 fn main() -> Result<(), HyperPlonkErrors> {
     let args: Vec<String> = env::args().collect();
     let thread = args[1].parse().unwrap_or(24);
     let mut rng = test_rng();
-    let pcs_srs = MultilinearKzgPCS::<Bls12_381>::gen_srs_for_testing(&mut rng, 24)?;
+    let pcs_srs = MultilinearKzgPCS::<Bls12_381>::gen_srs_for_testing(&mut rng, SUPPORTED_SIZE)?;
     ThreadPoolBuilder::new()
         .num_threads(thread)
         .build_global()
         .unwrap();
     bench_vanilla_plonk(&pcs_srs, thread)?;
-    for degree in 1..32 {
+    for degree in MIN_CUSTOM_DEGREE..MAX_CUSTOM_DEGREE {
         bench_high_degree_plonk(&pcs_srs, degree, thread)?;
     }
 
@@ -39,7 +45,7 @@ fn bench_vanilla_plonk(
 ) -> Result<(), HyperPlonkErrors> {
     let filename = format!("vanilla threads {}.txt", thread);
     let mut file = File::create(filename).unwrap();
-    for nv in 2..25 {
+    for nv in MIN_NUM_VARS..MAX_NUM_VARS {
         let vanilla_gate = CustomizedGates::vanilla_plonk_gate();
         bench_mock_circuit_zkp_helper(&mut file, nv, &vanilla_gate, &pcs_srs)?;
     }
@@ -54,7 +60,7 @@ fn bench_high_degree_plonk(
 ) -> Result<(), HyperPlonkErrors> {
     let filename = format!("high degree {} thread {}.txt", degree, thread);
     let mut file = File::create(filename).unwrap();
-    for nv in [15] {
+    for nv in MIN_NUM_VARS..MAX_NUM_VARS {
         let vanilla_gate = CustomizedGates::mock_gate(2, degree);
         bench_mock_circuit_zkp_helper(&mut file, nv, &vanilla_gate, &pcs_srs)?;
     }
