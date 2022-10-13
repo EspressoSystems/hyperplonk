@@ -143,6 +143,11 @@ mod test {
         poly_iop::PolyIOP,
     };
 
+    const SUPPORTED_SIZE: usize = 20;
+    const MIN_NUM_VARS: usize = 8;
+    const MAX_NUM_VARS: usize = 15;
+    const CUSTOM_DEGREE: [usize; 6] = [1, 2, 4, 8, 16, 32];
+
     #[test]
     fn test_mock_circuit_sat() {
         for i in 1..10 {
@@ -155,7 +160,7 @@ mod test {
             assert!(circuit.is_satisfied());
 
             for num_witness in 2..10 {
-                for degree in 1..10 {
+                for degree in CUSTOM_DEGREE {
                     let mock_gate = CustomizedGates::mock_gate(num_witness, degree);
                     let circuit = MockCircuit::<Fr>::new(1 << i, &mock_gate);
                     assert!(circuit.is_satisfied());
@@ -200,18 +205,19 @@ mod test {
     #[test]
     fn test_mock_circuit_zkp() -> Result<(), HyperPlonkErrors> {
         let mut rng = test_rng();
-        let pcs_srs = MultilinearKzgPCS::<Bls12_381>::gen_srs_for_testing(&mut rng, 16)?;
-        for nv in 1..10 {
+        let pcs_srs =
+            MultilinearKzgPCS::<Bls12_381>::gen_srs_for_testing(&mut rng, SUPPORTED_SIZE)?;
+        for nv in MIN_NUM_VARS..MAX_NUM_VARS {
             let vanilla_gate = CustomizedGates::vanilla_plonk_gate();
             test_mock_circuit_zkp_helper(nv, &vanilla_gate, &pcs_srs)?;
         }
-        for nv in 1..10 {
+        for nv in MIN_NUM_VARS..MAX_NUM_VARS {
             let tubro_gate = CustomizedGates::jellyfish_turbo_plonk_gate();
             test_mock_circuit_zkp_helper(nv, &tubro_gate, &pcs_srs)?;
         }
         let nv = 5;
         for num_witness in 2..10 {
-            for degree in [1, 2, 4, 8, 16] {
+            for degree in CUSTOM_DEGREE {
                 let mock_gate = CustomizedGates::mock_gate(num_witness, degree);
                 test_mock_circuit_zkp_helper(nv, &mock_gate, &pcs_srs)?;
             }
@@ -223,8 +229,9 @@ mod test {
     #[test]
     fn test_mock_circuit_e2e() -> Result<(), HyperPlonkErrors> {
         let mut rng = test_rng();
-        let pcs_srs = MultilinearKzgPCS::<Bls12_381>::gen_srs_for_testing(&mut rng, 21)?;
-        let nv = 18;
+        let pcs_srs =
+            MultilinearKzgPCS::<Bls12_381>::gen_srs_for_testing(&mut rng, SUPPORTED_SIZE)?;
+        let nv = MAX_NUM_VARS;
 
         let vanilla_gate = CustomizedGates::vanilla_plonk_gate();
         test_mock_circuit_zkp_helper(nv, &vanilla_gate, &pcs_srs)?;
@@ -235,8 +242,9 @@ mod test {
     #[test]
     fn test_mock_long_selector_e2e() -> Result<(), HyperPlonkErrors> {
         let mut rng = test_rng();
-        let pcs_srs = MultilinearKzgPCS::<Bls12_381>::gen_srs_for_testing(&mut rng, 23)?;
-        let nv = 20;
+        let pcs_srs =
+            MultilinearKzgPCS::<Bls12_381>::gen_srs_for_testing(&mut rng, SUPPORTED_SIZE)?;
+        let nv = MAX_NUM_VARS;
 
         let long_selector_gate = CustomizedGates::super_long_selector_gate();
         test_mock_circuit_zkp_helper(nv, &long_selector_gate, &pcs_srs)?;
