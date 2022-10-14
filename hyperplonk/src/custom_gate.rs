@@ -145,14 +145,43 @@ impl CustomizedGates {
     pub fn mock_gate(num_witness: usize, degree: usize) -> Self {
         let mut gates = vec![];
 
-        let high_degree_term = vec![0; degree];
+        let mut high_degree_term = vec![0; degree - 1];
+        high_degree_term.push(1);
 
         gates.push((1, Some(0), high_degree_term));
-        for i in 1..num_witness {
-            gates.push((1, Some(i), vec![i]))
+        for i in 0..num_witness {
+            gates.push((1, Some(i + 1), vec![i]))
         }
-        gates.push((1, Some(num_witness), vec![]));
+        gates.push((1, Some(num_witness + 1), vec![]));
 
         CustomizedGates { gates }
+    }
+
+    /// Return a plonk gate where #selector > #witness * 2
+    /// ``` ignore
+    ///   q_1 w_1   + q_2 w_2   + q_3 w_3   +
+    ///   q_4 w1w2  + q_5 w1w3  + q_6 w2w3  +
+    ///   q_7 = 0
+    /// ```
+    /// which is
+    /// ``` ignore
+    ///     (1,    Some(id_qL),     vec![id_W1]),
+    ///     (1,    Some(id_qR),     vec![id_W2]),
+    ///     (1,    Some(id_qO),     vec![id_W3]),
+    ///     (1,    Some(id_qM),     vec![id_W1, id_w2]),
+    ///     (1,    Some(id_qC),     vec![]),
+    /// ```
+    pub fn super_long_selector_gate() -> Self {
+        Self {
+            gates: vec![
+                (1, Some(0), vec![0]),
+                (1, Some(1), vec![1]),
+                (1, Some(2), vec![2]),
+                (1, Some(3), vec![0, 1]),
+                (1, Some(4), vec![0, 2]),
+                (1, Some(5), vec![1, 2]),
+                (1, Some(6), vec![]),
+            ],
+        }
     }
 }

@@ -5,61 +5,31 @@ use ark_ec::PairingEngine;
 use ark_ff::PrimeField;
 use ark_poly::DenseMultilinearExtension;
 use ark_std::log2;
-use pcs::PolynomialCommitmentScheme;
-use poly_iop::prelude::{PermutationCheck, ZeroCheck};
 use std::rc::Rc;
+use subroutines::{
+    pcs::PolynomialCommitmentScheme,
+    poly_iop::prelude::{PermutationCheck, ZeroCheck},
+};
 
 /// The proof for the HyperPlonk PolyIOP, consists of the following:
 ///   - a batch commitment to all the witness MLEs
 ///   - a batch opening to all the MLEs at certain index
 ///   - the zero-check proof for checking custom gate-satisfiability
 ///   - the permutation-check proof for checking the copy constraints
-#[derive(Clone, Debug, Default, PartialEq)]
+#[derive(Clone, Debug, PartialEq)]
 pub struct HyperPlonkProof<E, PC, PCS>
 where
     E: PairingEngine,
     PC: PermutationCheck<E, PCS>,
     PCS: PolynomialCommitmentScheme<E>,
 {
-    // =======================================================================
-    // witness related
-    // =======================================================================
     // PCS commit for witnesses
-    pub w_merged_com: PCS::Commitment,
-    // Batch opening for witness commitment
-    // - PermCheck eval: 1 point
-    // - ZeroCheck evals: #witness points
-    // - public input eval: 1 point
-    pub w_merged_batch_opening: PCS::BatchProof,
-    // Evaluations of Witness
-    // - PermCheck eval: 1 point
-    // - ZeroCheck evals: #witness points
-    // - public input eval: 1 point
-    pub w_merged_batch_evals: Vec<E::Fr>,
-    // =======================================================================
-    // prod(x) related
-    // =======================================================================
-    // prod(x)'s openings
-    // - prod(0, x),
-    // - prod(1, x),
-    // - prod(x, 0),
-    // - prod(x, 1),
-    // - prod(1, ..., 1,0)
-    pub prod_batch_openings: PCS::BatchProof,
-    // prod(x)'s evaluations
-    // - prod(0, x),
-    // - prod(1, x),
-    // - prod(x, 0),
-    // - prod(x, 1),
-    // - prod(1, ..., 1,0)
-    pub prod_batch_evals: Vec<E::Fr>,
-    // =======================================================================
-    // selectors related
-    // =======================================================================
-    // PCS openings for selectors on zero check point
-    pub selector_batch_opening: PCS::BatchProof,
-    // Evaluates of selectors on zero check point
-    pub selector_batch_evals: Vec<E::Fr>,
+    pub witness_merged_commit: PCS::Commitment,
+    pub witness_commits: Vec<PCS::Commitment>,
+    pub batch_prod_x_openings: PCS::BatchProof,
+    pub batch_witness_and_selector_openings: PCS::BatchProof,
+    pub perm_check_opening: PCS::Proof,
+    pub perm_check_eval: PCS::Evaluation,
     // =======================================================================
     // IOP proofs
     // =======================================================================
@@ -144,7 +114,7 @@ pub struct HyperPlonkProvingKey<E: PairingEngine, PCS: PolynomialCommitmentSchem
     /// The preprocessed selector polynomials
     pub selector_oracles: Vec<Rc<DenseMultilinearExtension<E::Fr>>>,
     /// A commitment to the preprocessed selector polynomials
-    pub selector_com: PCS::Commitment,
+    pub selector_commitments: Vec<PCS::Commitment>,
     /// The parameters for PCS commitment
     pub pcs_param: PCS::ProverParam,
 }
@@ -162,7 +132,7 @@ pub struct HyperPlonkVerifyingKey<E: PairingEngine, PCS: PolynomialCommitmentSch
     /// The parameters for PCS commitment
     pub pcs_param: PCS::VerifierParam,
     /// A commitment to the preprocessed selector polynomials
-    pub selector_com: PCS::Commitment,
+    pub selector_commitments: Vec<PCS::Commitment>,
     /// Permutation oracle's commitment
     pub perm_com: PCS::Commitment,
 }

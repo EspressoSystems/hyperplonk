@@ -2,7 +2,7 @@
 members = [
   "arithmetic",
   "hyperplonk",
-  "poly-iop",
+  "subroutines",
   "transcript",
   "util"
 ]
