@@ -6,7 +6,7 @@
 
 use crate::{
     pcs::{
-        multilinear_kzg::util::eq_eval_internal,
+        multilinear_kzg::util::eq_eval,
         prelude::{Commitment, PCSError},
         PolynomialCommitmentScheme,
     },
@@ -221,7 +221,7 @@ where
     };
     let mut eq_tilde_eval = E::Fr::zero();
     for (point, &coef) in points.iter().zip(eq_a1_list.iter()) {
-        eq_tilde_eval += coef * eq_eval_internal(a2, point);
+        eq_tilde_eval += coef * eq_eval(a2, point)?;
     }
     let tilde_g_eval = subclaim.expected_evaluation / eq_tilde_eval;
 

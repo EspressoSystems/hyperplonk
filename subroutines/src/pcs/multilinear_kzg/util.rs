@@ -9,6 +9,8 @@ use ark_ff::PrimeField;
 use ark_poly::DenseMultilinearExtension;
 use ark_std::{end_timer, start_timer, vec::Vec};
 
+use crate::PCSError;
+
 /// Generate eq(t,x), a product of multilinear polynomials with fixed t.
 /// eq(a,b) is takes extensions of a,b in {0,1}^num_vars such that if a and b in
 /// {0,1}^num_vars are equal then this polynomial evaluates to 1.
@@ -32,12 +34,12 @@ pub(crate) fn eq_extension<F: PrimeField>(t: &[F]) -> Vec<DenseMultilinearExtens
 }
 
 /// Evaluate eq polynomial. use the public one later
-pub(crate) fn eq_eval_internal<F: PrimeField>(x: &[F], y: &[F]) -> F {
-    // if x.len() != y.len() {
-    //     return Err(ArithErrors::InvalidParameters(
-    //         "x and y have different length".to_string(),
-    //     ));
-    // }
+pub(crate) fn eq_eval<F: PrimeField>(x: &[F], y: &[F]) -> Result<F, PCSError> {
+    if x.len() != y.len() {
+        return Err(PCSError::InvalidParameters(
+            "x and y have different length".to_string(),
+        ));
+    }
     let start = start_timer!(|| "eq_eval");
     let mut res = F::one();
     for (&xi, &yi) in x.iter().zip(y.iter()) {
@@ -45,5 +47,5 @@ pub(crate) fn eq_eval_internal<F: PrimeField>(x: &[F], y: &[F]) -> F {
         res *= xi_yi + xi_yi - xi - yi + F::one();
     }
     end_timer!(start);
-    res
+    Ok(res)
 }
