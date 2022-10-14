@@ -70,13 +70,11 @@
 <span id="70">70</span>
 <span id="71">71</span>
 <span id="72">72</span>
-<span id="73">73</span>
 </pre><pre class="rust"><code><span class="doccomment">//! Main module for the HyperPlonk SNARK.</span>
 
 <span class="kw">use</span> <span class="ident">ark_ec::PairingEngine</span>;
 <span class="kw">use</span> <span class="ident">errors::HyperPlonkErrors</span>;
-<span class="kw">use</span> <span class="ident">pcs::prelude::PolynomialCommitmentScheme</span>;
-<span class="kw">use</span> <span class="ident">poly_iop::prelude::PermutationCheck</span>;
+<span class="kw">use</span> <span class="ident">subroutines</span>::{<span class="ident">pcs::prelude::PolynomialCommitmentScheme</span>, <span class="ident">poly_iop::prelude::PermutationCheck</span>};
 <span class="kw">use</span> <span class="ident">witness::WitnessColumn</span>;
 
 <span class="kw">mod</span> <span class="ident">custom_gate</span>;

@@ -1,1 +1,1 @@
-window.ALL_CRATES = ["arithmetic","hyperplonk","pcs","poly_iop","transcript","util"];
+window.ALL_CRATES = ["arithmetic","hyperplonk","pcs","poly_iop","subroutines","transcript","util"];

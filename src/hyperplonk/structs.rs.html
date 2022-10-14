@@ -136,36 +136,6 @@
 <span id="136">136</span>
 <span id="137">137</span>
 <span id="138">138</span>
-<span id="139">139</span>
-<span id="140">140</span>
-<span id="141">141</span>
-<span id="142">142</span>
-<span id="143">143</span>
-<span id="144">144</span>
-<span id="145">145</span>
-<span id="146">146</span>
-<span id="147">147</span>
-<span id="148">148</span>
-<span id="149">149</span>
-<span id="150">150</span>
-<span id="151">151</span>
-<span id="152">152</span>
-<span id="153">153</span>
-<span id="154">154</span>
-<span id="155">155</span>
-<span id="156">156</span>
-<span id="157">157</span>
-<span id="158">158</span>
-<span id="159">159</span>
-<span id="160">160</span>
-<span id="161">161</span>
-<span id="162">162</span>
-<span id="163">163</span>
-<span id="164">164</span>
-<span id="165">165</span>
-<span id="166">166</span>
-<span id="167">167</span>
-<span id="168">168</span>
 </pre><pre class="rust"><code><span class="doccomment">//! Main module for the HyperPlonk PolyIOP.</span>
 
 <span class="kw">use</span> <span class="kw">crate</span>::{<span class="ident">custom_gate::CustomizedGates</span>, <span class="ident">selectors::SelectorColumn</span>};
@@ -173,61 +143,31 @@
 <span class="kw">use</span> <span class="ident">ark_ff::PrimeField</span>;
 <span class="kw">use</span> <span class="ident">ark_poly::DenseMultilinearExtension</span>;
 <span class="kw">use</span> <span class="ident">ark_std::log2</span>;
-<span class="kw">use</span> <span class="ident">pcs::PolynomialCommitmentScheme</span>;
-<span class="kw">use</span> <span class="ident">poly_iop::prelude</span>::{<span class="ident">PermutationCheck</span>, <span class="ident">ZeroCheck</span>};
 <span class="kw">use</span> <span class="ident">std::rc::Rc</span>;
+<span class="kw">use</span> <span class="ident">subroutines</span>::{
+    <span class="ident">pcs::PolynomialCommitmentScheme</span>,
+    <span class="ident">poly_iop::prelude</span>::{<span class="ident">PermutationCheck</span>, <span class="ident">ZeroCheck</span>},
+};
 
 <span class="doccomment">/// The proof for the HyperPlonk PolyIOP, consists of the following:</span>
 <span class="doccomment">///   - a batch commitment to all the witness MLEs</span>
 <span class="doccomment">///   - a batch opening to all the MLEs at certain index</span>
 <span class="doccomment">///   - the zero-check proof for checking custom gate-satisfiability</span>
 <span class="doccomment">///   - the permutation-check proof for checking the copy constraints</span>
-<span class="attribute">#[<span class="ident">derive</span>(<span class="ident">Clone</span>, <span class="ident">Debug</span>, <span class="ident">Default</span>, <span class="ident">PartialEq</span>)]</span>
+<span class="attribute">#[<span class="ident">derive</span>(<span class="ident">Clone</span>, <span class="ident">Debug</span>, <span class="ident">PartialEq</span>)]</span>
 <span class="kw">pub</span> <span class="kw">struct</span> <span class="ident">HyperPlonkProof</span><span class="op">&lt;</span><span class="ident">E</span>, <span class="ident">PC</span>, <span class="ident">PCS</span><span class="op">&gt;</span>
 <span class="kw">where</span>
     <span class="ident">E</span>: <span class="ident">PairingEngine</span>,
     <span class="ident">PC</span>: <span class="ident">PermutationCheck</span><span class="op">&lt;</span><span class="ident">E</span>, <span class="ident">PCS</span><span class="op">&gt;</span>,
     <span class="ident">PCS</span>: <span class="ident">PolynomialCommitmentScheme</span><span class="op">&lt;</span><span class="ident">E</span><span class="op">&gt;</span>,
 {
-    <span class="comment">// =======================================================================</span>
-    <span class="comment">// witness related</span>
-    <span class="comment">// =======================================================================</span>
     <span class="comment">// PCS commit for witnesses</span>
-    <span class="kw">pub</span> <span class="ident">w_merged_com</span>: <span class="ident">PCS::Commitment</span>,
-    <span class="comment">// Batch opening for witness commitment</span>
-    <span class="comment">// - PermCheck eval: 1 point</span>
-    <span class="comment">// - ZeroCheck evals: #witness points</span>
-    <span class="comment">// - public input eval: 1 point</span>
-    <span class="kw">pub</span> <span class="ident">w_merged_batch_opening</span>: <span class="ident">PCS::BatchProof</span>,
-    <span class="comment">// Evaluations of Witness</span>
-    <span class="comment">// - PermCheck eval: 1 point</span>
-    <span class="comment">// - ZeroCheck evals: #witness points</span>
-    <span class="comment">// - public input eval: 1 point</span>
-    <span class="kw">pub</span> <span class="ident">w_merged_batch_evals</span>: <span class="ident">Vec</span><span class="op">&lt;</span><span class="ident">E::Fr</span><span class="op">&gt;</span>,
-    <span class="comment">// =======================================================================</span>
-    <span class="comment">// prod(x) related</span>
-    <span class="comment">// =======================================================================</span>
-    <span class="comment">// prod(x)&#39;s openings</span>
-    <span class="comment">// - prod(0, x),</span>
-    <span class="comment">// - prod(1, x),</span>
-    <span class="comment">// - prod(x, 0),</span>
-    <span class="comment">// - prod(x, 1),</span>
-    <span class="comment">// - prod(1, ..., 1,0)</span>
-    <span class="kw">pub</span> <span class="ident">prod_batch_openings</span>: <span class="ident">PCS::BatchProof</span>,
-    <span class="comment">// prod(x)&#39;s evaluations</span>
-    <span class="comment">// - prod(0, x),</span>
-    <span class="comment">// - prod(1, x),</span>
-    <span class="comment">// - prod(x, 0),</span>
-    <span class="comment">// - prod(x, 1),</span>
-    <span class="comment">// - prod(1, ..., 1,0)</span>
-    <span class="kw">pub</span> <span class="ident">prod_batch_evals</span>: <span class="ident">Vec</span><span class="op">&lt;</span><span class="ident">E::Fr</span><span class="op">&gt;</span>,
-    <span class="comment">// =======================================================================</span>
-    <span class="comment">// selectors related</span>
-    <span class="comment">// =======================================================================</span>
-    <span class="comment">// PCS openings for selectors on zero check point</span>
-    <span class="kw">pub</span> <span class="ident">selector_batch_opening</span>: <span class="ident">PCS::BatchProof</span>,
-    <span class="comment">// Evaluates of selectors on zero check point</span>
-    <span class="kw">pub</span> <span class="ident">selector_batch_evals</span>: <span class="ident">Vec</span><span class="op">&lt;</span><span class="ident">E::Fr</span><span class="op">&gt;</span>,
+    <span class="kw">pub</span> <span class="ident">witness_merged_commit</span>: <span class="ident">PCS::Commitment</span>,
+    <span class="kw">pub</span> <span class="ident">witness_commits</span>: <span class="ident">Vec</span><span class="op">&lt;</span><span class="ident">PCS::Commitment</span><span class="op">&gt;</span>,
+    <span class="kw">pub</span> <span class="ident">batch_prod_x_openings</span>: <span class="ident">PCS::BatchProof</span>,
+    <span class="kw">pub</span> <span class="ident">batch_witness_and_selector_openings</span>: <span class="ident">PCS::BatchProof</span>,
+    <span class="kw">pub</span> <span class="ident">perm_check_opening</span>: <span class="ident">PCS::Proof</span>,
+    <span class="kw">pub</span> <span class="ident">perm_check_eval</span>: <span class="ident">PCS::Evaluation</span>,
     <span class="comment">// =======================================================================</span>
     <span class="comment">// IOP proofs</span>
     <span class="comment">// =======================================================================</span>
@@ -312,7 +252,7 @@
     <span class="doccomment">/// The preprocessed selector polynomials</span>
     <span class="kw">pub</span> <span class="ident">selector_oracles</span>: <span class="ident">Vec</span><span class="op">&lt;</span><span class="ident">Rc</span><span class="op">&lt;</span><span class="ident">DenseMultilinearExtension</span><span class="op">&lt;</span><span class="ident">E::Fr</span><span class="op">&gt;</span><span class="op">&gt;</span><span class="op">&gt;</span>,
     <span class="doccomment">/// A commitment to the preprocessed selector polynomials</span>
-    <span class="kw">pub</span> <span class="ident">selector_com</span>: <span class="ident">PCS::Commitment</span>,
+    <span class="kw">pub</span> <span class="ident">selector_commitments</span>: <span class="ident">Vec</span><span class="op">&lt;</span><span class="ident">PCS::Commitment</span><span class="op">&gt;</span>,
     <span class="doccomment">/// The parameters for PCS commitment</span>
     <span class="kw">pub</span> <span class="ident">pcs_param</span>: <span class="ident">PCS::ProverParam</span>,
 }
@@ -330,7 +270,7 @@
     <span class="doccomment">/// The parameters for PCS commitment</span>
     <span class="kw">pub</span> <span class="ident">pcs_param</span>: <span class="ident">PCS::VerifierParam</span>,
     <span class="doccomment">/// A commitment to the preprocessed selector polynomials</span>
-    <span class="kw">pub</span> <span class="ident">selector_com</span>: <span class="ident">PCS::Commitment</span>,
+    <span class="kw">pub</span> <span class="ident">selector_commitments</span>: <span class="ident">Vec</span><span class="op">&lt;</span><span class="ident">PCS::Commitment</span><span class="op">&gt;</span>,
     <span class="doccomment">/// Permutation oracle&#39;s commitment</span>
     <span class="kw">pub</span> <span class="ident">perm_com</span>: <span class="ident">PCS::Commitment</span>,
 }

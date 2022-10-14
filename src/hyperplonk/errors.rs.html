@@ -59,15 +59,13 @@
 <span id="59">59</span>
 <span id="60">60</span>
 <span id="61">61</span>
-<span id="62">62</span>
 </pre><pre class="rust"><code><span class="doccomment">//! Error module.</span>
 
 <span class="kw">use</span> <span class="ident">arithmetic::ArithErrors</span>;
 <span class="kw">use</span> <span class="ident">ark_serialize::SerializationError</span>;
 <span class="kw">use</span> <span class="ident">ark_std::string::String</span>;
 <span class="kw">use</span> <span class="ident">displaydoc::Display</span>;
-<span class="kw">use</span> <span class="ident">pcs::prelude::PCSError</span>;
-<span class="kw">use</span> <span class="ident">poly_iop::prelude::PolyIOPErrors</span>;
+<span class="kw">use</span> <span class="ident">subroutines</span>::{<span class="ident">pcs::prelude::PCSError</span>, <span class="ident">poly_iop::prelude::PolyIOPErrors</span>};
 <span class="kw">use</span> <span class="ident">transcript::TranscriptError</span>;
 
 <span class="doccomment">/// A `enum` specifying the possible failure modes of hyperplonk.</span>

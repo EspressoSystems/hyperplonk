@@ -511,6 +511,28 @@
 <span id="511">511</span>
 <span id="512">512</span>
 <span id="513">513</span>
+<span id="514">514</span>
+<span id="515">515</span>
+<span id="516">516</span>
+<span id="517">517</span>
+<span id="518">518</span>
+<span id="519">519</span>
+<span id="520">520</span>
+<span id="521">521</span>
+<span id="522">522</span>
+<span id="523">523</span>
+<span id="524">524</span>
+<span id="525">525</span>
+<span id="526">526</span>
+<span id="527">527</span>
+<span id="528">528</span>
+<span id="529">529</span>
+<span id="530">530</span>
+<span id="531">531</span>
+<span id="532">532</span>
+<span id="533">533</span>
+<span id="534">534</span>
+<span id="535">535</span>
 </pre><pre class="rust"><code><span class="doccomment">//! This module defines our main mathematical object `VirtualPolynomial`; and</span>
 <span class="doccomment">//! various functions associated with it.</span>
 
@@ -523,6 +545,7 @@
     <span class="ident">rand</span>::{<span class="ident">Rng</span>, <span class="ident">RngCore</span>},
     <span class="ident">start_timer</span>,
 };
+<span class="kw">use</span> <span class="ident">rayon::prelude</span>::<span class="kw-2">*</span>;
 <span class="kw">use</span> <span class="ident">std</span>::{<span class="ident">cmp::max</span>, <span class="ident">collections::HashMap</span>, <span class="ident">marker::PhantomData</span>, <span class="ident">ops::Add</span>, <span class="ident">rc::Rc</span>};
 
 <span class="attribute">#[<span class="ident">rustfmt::skip</span>]</span>
@@ -837,16 +860,29 @@
     }
 }
 
-<span class="comment">// This function build the eq(x, r) polynomial for any given r.</span>
-<span class="comment">//</span>
-<span class="comment">// Evaluate</span>
-<span class="comment">//      eq(x,y) = \prod_i=1^num_var (x_i * y_i + (1-x_i)*(1-y_i))</span>
-<span class="comment">// over r, which is</span>
-<span class="comment">//      eq(x,y) = \prod_i=1^num_var (x_i * r_i + (1-x_i)*(1-r_i))</span>
+<span class="doccomment">/// This function build the eq(x, r) polynomial for any given r.</span>
+<span class="doccomment">///</span>
+<span class="doccomment">/// Evaluate</span>
+<span class="doccomment">///      eq(x,y) = \prod_i=1^num_var (x_i * y_i + (1-x_i)*(1-y_i))</span>
+<span class="doccomment">/// over r, which is</span>
+<span class="doccomment">///      eq(x,y) = \prod_i=1^num_var (x_i * r_i + (1-x_i)*(1-r_i))</span>
 <span class="kw">pub</span> <span class="kw">fn</span> <span class="ident">build_eq_x_r</span><span class="op">&lt;</span><span class="ident">F</span>: <span class="ident">PrimeField</span><span class="op">&gt;</span>(
     <span class="ident">r</span>: <span class="kw-2">&amp;</span>[<span class="ident">F</span>],
 ) -&gt; <span class="prelude-ty">Result</span><span class="op">&lt;</span><span class="ident">Rc</span><span class="op">&lt;</span><span class="ident">DenseMultilinearExtension</span><span class="op">&lt;</span><span class="ident">F</span><span class="op">&gt;</span><span class="op">&gt;</span>, <span class="ident">ArithErrors</span><span class="op">&gt;</span> {
-    <span class="kw">let</span> <span class="ident">start</span> <span class="op">=</span> <span class="macro">start_timer!</span>(<span class="op">|</span><span class="op">|</span> <span class="string">&quot;zero check build eq_x_r&quot;</span>);
+    <span class="kw">let</span> <span class="ident">evals</span> <span class="op">=</span> <span class="ident">build_eq_x_r_vec</span>(<span class="ident">r</span>)<span class="question-mark">?</span>;
+    <span class="kw">let</span> <span class="ident">mle</span> <span class="op">=</span> <span class="ident">DenseMultilinearExtension::from_evaluations_vec</span>(<span class="ident">r</span>.<span class="ident">len</span>(), <span class="ident">evals</span>);
+
+    <span class="prelude-val">Ok</span>(<span class="ident">Rc::new</span>(<span class="ident">mle</span>))
+}
+<span class="doccomment">/// This function build the eq(x, r) polynomial for any given r, and output the</span>
+<span class="doccomment">/// evaluation of eq(x, r) in its vector form.</span>
+<span class="doccomment">///</span>
+<span class="doccomment">/// Evaluate</span>
+<span class="doccomment">///      eq(x,y) = \prod_i=1^num_var (x_i * y_i + (1-x_i)*(1-y_i))</span>
+<span class="doccomment">/// over r, which is</span>
+<span class="doccomment">///      eq(x,y) = \prod_i=1^num_var (x_i * r_i + (1-x_i)*(1-r_i))</span>
+<span class="kw">pub</span> <span class="kw">fn</span> <span class="ident">build_eq_x_r_vec</span><span class="op">&lt;</span><span class="ident">F</span>: <span class="ident">PrimeField</span><span class="op">&gt;</span>(<span class="ident">r</span>: <span class="kw-2">&amp;</span>[<span class="ident">F</span>]) -&gt; <span class="prelude-ty">Result</span><span class="op">&lt;</span><span class="ident">Vec</span><span class="op">&lt;</span><span class="ident">F</span><span class="op">&gt;</span>, <span class="ident">ArithErrors</span><span class="op">&gt;</span> {
+    <span class="kw">let</span> <span class="ident">start</span> <span class="op">=</span> <span class="macro">start_timer!</span>(<span class="op">|</span><span class="op">|</span> <span class="macro">format!</span>(<span class="string">&quot;build eq_x_r of size {}&quot;</span>, <span class="ident">r</span>.<span class="ident">len</span>()));
 
     <span class="comment">// we build eq(x,r) from its evaluations</span>
     <span class="comment">// we want to evaluate eq(x,r) over x \in {0, 1}^num_vars</span>
@@ -862,11 +898,8 @@
     <span class="kw">let</span> <span class="kw-2">mut</span> <span class="ident">eval</span> <span class="op">=</span> <span class="ident">Vec::new</span>();
     <span class="ident">build_eq_x_r_helper</span>(<span class="ident">r</span>, <span class="kw-2">&amp;mut</span> <span class="ident">eval</span>)<span class="question-mark">?</span>;
 
-    <span class="kw">let</span> <span class="ident">mle</span> <span class="op">=</span> <span class="ident">DenseMultilinearExtension::from_evaluations_vec</span>(<span class="ident">r</span>.<span class="ident">len</span>(), <span class="ident">eval</span>);
-
-    <span class="kw">let</span> <span class="ident">res</span> <span class="op">=</span> <span class="ident">Rc::new</span>(<span class="ident">mle</span>);
     <span class="macro">end_timer!</span>(<span class="ident">start</span>);
-    <span class="prelude-val">Ok</span>(<span class="ident">res</span>)
+    <span class="prelude-val">Ok</span>(<span class="ident">eval</span>)
 }
 
 <span class="doccomment">/// A helper function to build eq(x, r) recursively.</span>
@@ -886,13 +919,24 @@
         <span class="comment">// for the current step we will need</span>
         <span class="comment">// if x_0 = 0:   (1-r0) * [b_1, ..., b_k]</span>
         <span class="comment">// if x_0 = 1:   r0 * [b_1, ..., b_k]</span>
+        <span class="comment">// let mut res = vec![];</span>
+        <span class="comment">// for &amp;b_i in buf.iter() {</span>
+        <span class="comment">//     let tmp = r[0] * b_i;</span>
+        <span class="comment">//     res.push(b_i - tmp);</span>
+        <span class="comment">//     res.push(tmp);</span>
+        <span class="comment">// }</span>
+        <span class="comment">// *buf = res;</span>
 
-        <span class="kw">let</span> <span class="kw-2">mut</span> <span class="ident">res</span> <span class="op">=</span> <span class="macro">vec!</span>[];
-        <span class="kw">for</span> <span class="kw-2">&amp;</span><span class="ident">b_i</span> <span class="kw">in</span> <span class="ident">buf</span>.<span class="ident">iter</span>() {
-            <span class="kw">let</span> <span class="ident">tmp</span> <span class="op">=</span> <span class="ident">r</span>[<span class="number">0</span>] <span class="op">*</span> <span class="ident">b_i</span>;
-            <span class="ident">res</span>.<span class="ident">push</span>(<span class="ident">b_i</span> <span class="op">-</span> <span class="ident">tmp</span>);
-            <span class="ident">res</span>.<span class="ident">push</span>(<span class="ident">tmp</span>);
-        }
+        <span class="kw">let</span> <span class="kw-2">mut</span> <span class="ident">res</span> <span class="op">=</span> <span class="macro">vec!</span>[<span class="ident">F::zero</span>(); <span class="ident">buf</span>.<span class="ident">len</span>() <span class="op">&lt;</span><span class="op">&lt;</span> <span class="number">1</span>];
+        <span class="ident">res</span>.<span class="ident">par_iter_mut</span>().<span class="ident">enumerate</span>().<span class="ident">for_each</span>(<span class="op">|</span>(<span class="ident">i</span>, <span class="ident">val</span>)<span class="op">|</span> {
+            <span class="kw">let</span> <span class="ident">bi</span> <span class="op">=</span> <span class="ident">buf</span>[<span class="ident">i</span> <span class="op">&gt;</span><span class="op">&gt;</span> <span class="number">1</span>];
+            <span class="kw">let</span> <span class="ident">tmp</span> <span class="op">=</span> <span class="ident">r</span>[<span class="number">0</span>] <span class="op">*</span> <span class="ident">bi</span>;
+            <span class="kw">if</span> <span class="ident">i</span> <span class="op">&amp;</span> <span class="number">1</span> <span class="op">==</span> <span class="number">0</span> {
+                <span class="kw-2">*</span><span class="ident">val</span> <span class="op">=</span> <span class="ident">bi</span> <span class="op">-</span> <span class="ident">tmp</span>;
+            } <span class="kw">else</span> {
+                <span class="kw-2">*</span><span class="ident">val</span> <span class="op">=</span> <span class="ident">tmp</span>;
+            }
+        });
         <span class="kw-2">*</span><span class="ident">buf</span> <span class="op">=</span> <span class="ident">res</span>;
     }
 

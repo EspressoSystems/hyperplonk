@@ -745,88 +745,6 @@
 <span id="745">745</span>
 <span id="746">746</span>
 <span id="747">747</span>
-<span id="748">748</span>
-<span id="749">749</span>
-<span id="750">750</span>
-<span id="751">751</span>
-<span id="752">752</span>
-<span id="753">753</span>
-<span id="754">754</span>
-<span id="755">755</span>
-<span id="756">756</span>
-<span id="757">757</span>
-<span id="758">758</span>
-<span id="759">759</span>
-<span id="760">760</span>
-<span id="761">761</span>
-<span id="762">762</span>
-<span id="763">763</span>
-<span id="764">764</span>
-<span id="765">765</span>
-<span id="766">766</span>
-<span id="767">767</span>
-<span id="768">768</span>
-<span id="769">769</span>
-<span id="770">770</span>
-<span id="771">771</span>
-<span id="772">772</span>
-<span id="773">773</span>
-<span id="774">774</span>
-<span id="775">775</span>
-<span id="776">776</span>
-<span id="777">777</span>
-<span id="778">778</span>
-<span id="779">779</span>
-<span id="780">780</span>
-<span id="781">781</span>
-<span id="782">782</span>
-<span id="783">783</span>
-<span id="784">784</span>
-<span id="785">785</span>
-<span id="786">786</span>
-<span id="787">787</span>
-<span id="788">788</span>
-<span id="789">789</span>
-<span id="790">790</span>
-<span id="791">791</span>
-<span id="792">792</span>
-<span id="793">793</span>
-<span id="794">794</span>
-<span id="795">795</span>
-<span id="796">796</span>
-<span id="797">797</span>
-<span id="798">798</span>
-<span id="799">799</span>
-<span id="800">800</span>
-<span id="801">801</span>
-<span id="802">802</span>
-<span id="803">803</span>
-<span id="804">804</span>
-<span id="805">805</span>
-<span id="806">806</span>
-<span id="807">807</span>
-<span id="808">808</span>
-<span id="809">809</span>
-<span id="810">810</span>
-<span id="811">811</span>
-<span id="812">812</span>
-<span id="813">813</span>
-<span id="814">814</span>
-<span id="815">815</span>
-<span id="816">816</span>
-<span id="817">817</span>
-<span id="818">818</span>
-<span id="819">819</span>
-<span id="820">820</span>
-<span id="821">821</span>
-<span id="822">822</span>
-<span id="823">823</span>
-<span id="824">824</span>
-<span id="825">825</span>
-<span id="826">826</span>
-<span id="827">827</span>
-<span id="828">828</span>
-<span id="829">829</span>
 </pre><pre class="rust"><code><span class="kw">use</span> <span class="kw">crate</span>::{
     <span class="ident">errors::HyperPlonkErrors</span>,
     <span class="ident">structs</span>::{<span class="ident">HyperPlonkIndex</span>, <span class="ident">HyperPlonkProof</span>, <span class="ident">HyperPlonkProvingKey</span>, <span class="ident">HyperPlonkVerifyingKey</span>},
@@ -834,18 +752,19 @@
     <span class="ident">witness::WitnessColumn</span>,
     <span class="ident">HyperPlonkSNARK</span>,
 };
-<span class="kw">use</span> <span class="ident">arithmetic</span>::{
-    <span class="ident">evaluate_opt</span>, <span class="ident">gen_eval_point</span>, <span class="ident">identity_permutation_mle</span>, <span class="ident">merge_polynomials</span>, <span class="ident">VPAuxInfo</span>,
-};
+<span class="kw">use</span> <span class="ident">arithmetic</span>::{<span class="ident">evaluate_opt</span>, <span class="ident">identity_permutation_mle</span>, <span class="ident">merge_polynomials</span>, <span class="ident">VPAuxInfo</span>};
 <span class="kw">use</span> <span class="ident">ark_ec::PairingEngine</span>;
 <span class="kw">use</span> <span class="ident">ark_poly::DenseMultilinearExtension</span>;
 <span class="kw">use</span> <span class="ident">ark_std</span>::{<span class="ident">end_timer</span>, <span class="ident">log2</span>, <span class="ident">start_timer</span>, <span class="ident">One</span>, <span class="ident">Zero</span>};
-<span class="kw">use</span> <span class="ident">pcs::prelude</span>::{<span class="ident">compute_qx_degree</span>, <span class="ident">PolynomialCommitmentScheme</span>};
-<span class="kw">use</span> <span class="ident">poly_iop</span>::{
-    <span class="ident">prelude</span>::{<span class="ident">PermutationCheck</span>, <span class="ident">ZeroCheck</span>},
-    <span class="ident">PolyIOP</span>,
+<span class="kw">use</span> <span class="ident">std</span>::{<span class="ident">marker::PhantomData</span>, <span class="ident">rc::Rc</span>};
+<span class="kw">use</span> <span class="ident">subroutines</span>::{
+    <span class="ident">pcs::prelude</span>::{<span class="ident">Commitment</span>, <span class="ident">PolynomialCommitmentScheme</span>},
+    <span class="ident">poly_iop</span>::{
+        <span class="ident">prelude</span>::{<span class="ident">PermutationCheck</span>, <span class="ident">ZeroCheck</span>},
+        <span class="ident">PolyIOP</span>,
+    },
+    <span class="ident">BatchProof</span>,
 };
-<span class="kw">use</span> <span class="ident">std</span>::{<span class="ident">cmp::max</span>, <span class="ident">marker::PhantomData</span>, <span class="ident">rc::Rc</span>};
 <span class="kw">use</span> <span class="ident">transcript::IOPTranscript</span>;
 
 <span class="kw">impl</span><span class="op">&lt;</span><span class="ident">E</span>, <span class="ident">PCS</span><span class="op">&gt;</span> <span class="ident">HyperPlonkSNARK</span><span class="op">&lt;</span><span class="ident">E</span>, <span class="ident">PCS</span><span class="op">&gt;</span> <span class="kw">for</span> <span class="ident">PolyIOP</span><span class="op">&lt;</span><span class="ident">E::Fr</span><span class="op">&gt;</span>
@@ -859,6 +778,8 @@
         <span class="ident">Polynomial</span> <span class="op">=</span> <span class="ident">Rc</span><span class="op">&lt;</span><span class="ident">DenseMultilinearExtension</span><span class="op">&lt;</span><span class="ident">E::Fr</span><span class="op">&gt;</span><span class="op">&gt;</span>,
         <span class="ident">Point</span> <span class="op">=</span> <span class="ident">Vec</span><span class="op">&lt;</span><span class="ident">E::Fr</span><span class="op">&gt;</span>,
         <span class="ident">Evaluation</span> <span class="op">=</span> <span class="ident">E::Fr</span>,
+        <span class="ident">Commitment</span> <span class="op">=</span> <span class="ident">Commitment</span><span class="op">&lt;</span><span class="ident">E</span><span class="op">&gt;</span>,
+        <span class="ident">BatchProof</span> <span class="op">=</span> <span class="ident">BatchProof</span><span class="op">&lt;</span><span class="ident">E</span>, <span class="ident">PCS</span><span class="op">&gt;</span>,
     <span class="op">&gt;</span>,
 {
     <span class="kw">type</span> <span class="ident">Index</span> <span class="op">=</span> <span class="ident">HyperPlonkIndex</span><span class="op">&lt;</span><span class="ident">E::Fr</span><span class="op">&gt;</span>;
@@ -873,29 +794,16 @@
         <span class="kw">let</span> <span class="ident">num_vars</span> <span class="op">=</span> <span class="ident">index</span>.<span class="ident">num_variables</span>();
 
         <span class="kw">let</span> <span class="ident">log_num_witness_polys</span> <span class="op">=</span> <span class="ident">log2</span>(<span class="ident">index</span>.<span class="ident">num_witness_columns</span>()) <span class="kw">as</span> <span class="ident">usize</span>;
-        <span class="kw">let</span> <span class="ident">log_num_selector_polys</span> <span class="op">=</span> <span class="ident">log2</span>(<span class="ident">index</span>.<span class="ident">num_selector_columns</span>()) <span class="kw">as</span> <span class="ident">usize</span>;
-
         <span class="kw">let</span> <span class="ident">witness_merged_nv</span> <span class="op">=</span> <span class="ident">num_vars</span> <span class="op">+</span> <span class="ident">log_num_witness_polys</span>;
-        <span class="kw">let</span> <span class="ident">selector_merged_nv</span> <span class="op">=</span> <span class="ident">num_vars</span> <span class="op">+</span> <span class="ident">log_num_selector_polys</span>;
 
-        <span class="kw">let</span> <span class="ident">max_nv</span> <span class="op">=</span> <span class="ident">max</span>(<span class="ident">witness_merged_nv</span> <span class="op">+</span> <span class="number">1</span>, <span class="ident">selector_merged_nv</span>);
-        <span class="kw">let</span> <span class="ident">max_points</span> <span class="op">=</span> <span class="ident">max</span>(
-            <span class="comment">// prod(x) has 5 points</span>
-            <span class="number">5</span>,
-            <span class="ident">max</span>(
-                <span class="comment">// selector points</span>
-                <span class="ident">index</span>.<span class="ident">num_selector_columns</span>(),
-                <span class="comment">// witness points + public input point + perm point</span>
-                <span class="ident">index</span>.<span class="ident">num_witness_columns</span>() <span class="op">+</span> <span class="number">2</span>,
-            ),
-        );
+        <span class="kw">let</span> <span class="ident">log_chunk_size</span> <span class="op">=</span> <span class="ident">log_num_witness_polys</span> <span class="op">+</span> <span class="number">1</span>;
+        <span class="kw">let</span> <span class="ident">prod_x_nv</span> <span class="op">=</span> <span class="ident">num_vars</span> <span class="op">+</span> <span class="ident">log_chunk_size</span>;
 
-        <span class="kw">let</span> <span class="ident">supported_uni_degree</span> <span class="op">=</span> <span class="ident">compute_qx_degree</span>(<span class="ident">max_nv</span>, <span class="ident">max_points</span>);
-        <span class="kw">let</span> <span class="ident">supported_ml_degree</span> <span class="op">=</span> <span class="ident">max_nv</span>;
+        <span class="kw">let</span> <span class="ident">supported_ml_degree</span> <span class="op">=</span> <span class="ident">prod_x_nv</span>;
 
         <span class="comment">// extract PCS prover and verifier keys from SRS</span>
         <span class="kw">let</span> (<span class="ident">pcs_prover_param</span>, <span class="ident">pcs_verifier_param</span>) <span class="op">=</span>
-            <span class="ident">PCS::trim</span>(<span class="ident">pcs_srs</span>, <span class="ident">supported_uni_degree</span>, <span class="prelude-val">Some</span>(<span class="ident">supported_ml_degree</span>))<span class="question-mark">?</span>;
+            <span class="ident">PCS::trim</span>(<span class="ident">pcs_srs</span>, <span class="prelude-val">None</span>, <span class="prelude-val">Some</span>(<span class="ident">supported_ml_degree</span>))<span class="question-mark">?</span>;
 
         <span class="comment">// build permutation oracles</span>
         <span class="kw">let</span> <span class="ident">permutation_oracle</span> <span class="op">=</span> <span class="ident">Rc::new</span>(<span class="ident">DenseMultilinearExtension::from_evaluations_slice</span>(
@@ -911,22 +819,27 @@
             .<span class="ident">map</span>(<span class="op">|</span><span class="ident">s</span><span class="op">|</span> <span class="ident">Rc::new</span>(<span class="ident">DenseMultilinearExtension::from</span>(<span class="ident">s</span>)))
             .<span class="ident">collect</span>();
 
-        <span class="kw">let</span> <span class="ident">selector_merged</span> <span class="op">=</span> <span class="ident">merge_polynomials</span>(<span class="kw-2">&amp;</span><span class="ident">selector_oracles</span>)<span class="question-mark">?</span>;
-        <span class="kw">let</span> <span class="ident">selector_com</span> <span class="op">=</span> <span class="ident">PCS::commit</span>(<span class="kw-2">&amp;</span><span class="ident">pcs_prover_param</span>, <span class="kw-2">&amp;</span><span class="ident">selector_merged</span>)<span class="question-mark">?</span>;
+        <span class="kw">let</span> <span class="ident">selector_commitments</span> <span class="op">=</span> <span class="ident">selector_oracles</span>
+            .<span class="ident">iter</span>()
+            .<span class="ident">map</span>(<span class="op">|</span><span class="ident">poly</span><span class="op">|</span> <span class="ident">PCS::commit</span>(<span class="kw-2">&amp;</span><span class="ident">pcs_prover_param</span>, <span class="ident">poly</span>))
+            .<span class="ident">collect</span>::<span class="op">&lt;</span><span class="prelude-ty">Result</span><span class="op">&lt;</span><span class="ident">Vec</span><span class="op">&lt;</span><span class="kw">_</span><span class="op">&gt;</span>, <span class="kw">_</span><span class="op">&gt;</span><span class="op">&gt;</span>()<span class="question-mark">?</span>;
+
+        <span class="comment">// let selector_merged = merge_polynomials(&amp;selector_oracles)?;</span>
+        <span class="comment">// let selector_com = PCS::commit(&amp;pcs_prover_param, &amp;selector_merged)?;</span>
 
         <span class="prelude-val">Ok</span>((
             <span class="ident"><span class="self">Self</span>::ProvingKey</span> {
                 <span class="ident">params</span>: <span class="ident">index</span>.<span class="ident">params</span>.<span class="ident">clone</span>(),
                 <span class="ident">permutation_oracle</span>: <span class="ident">permutation_oracle</span>.<span class="ident">clone</span>(),
                 <span class="ident">selector_oracles</span>,
-                <span class="ident">selector_com</span>: <span class="ident">selector_com</span>.<span class="ident">clone</span>(),
+                <span class="ident">selector_commitments</span>: <span class="ident">selector_commitments</span>.<span class="ident">clone</span>(),
                 <span class="ident">pcs_param</span>: <span class="ident">pcs_prover_param</span>,
             },
             <span class="ident"><span class="self">Self</span>::VerifyingKey</span> {
                 <span class="ident">params</span>: <span class="ident">index</span>.<span class="ident">params</span>.<span class="ident">clone</span>(),
                 <span class="ident">permutation_oracle</span>,
                 <span class="ident">pcs_param</span>: <span class="ident">pcs_verifier_param</span>,
-                <span class="ident">selector_com</span>,
+                <span class="ident">selector_commitments</span>,
                 <span class="ident">perm_com</span>,
             },
         ))
@@ -992,9 +905,13 @@
         <span class="comment">// witness assignment of length 2^n</span>
         <span class="kw">let</span> <span class="ident">num_vars</span> <span class="op">=</span> <span class="ident">pk</span>.<span class="ident">params</span>.<span class="ident">num_variables</span>();
         <span class="kw">let</span> <span class="ident">log_num_witness_polys</span> <span class="op">=</span> <span class="ident">log2</span>(<span class="ident">pk</span>.<span class="ident">params</span>.<span class="ident">num_witness_columns</span>()) <span class="kw">as</span> <span class="ident">usize</span>;
-        <span class="kw">let</span> <span class="ident">log_num_selector_polys</span> <span class="op">=</span> <span class="ident">log2</span>(<span class="ident">pk</span>.<span class="ident">params</span>.<span class="ident">num_selector_columns</span>()) <span class="kw">as</span> <span class="ident">usize</span>;
-        <span class="comment">// number of variables in merged polynomial for Multilinear-KZG</span>
         <span class="kw">let</span> <span class="ident">merged_nv</span> <span class="op">=</span> <span class="ident">num_vars</span> <span class="op">+</span> <span class="ident">log_num_witness_polys</span>;
+
+        <span class="comment">// number of nv in prod(x) which is supposed to be the cap</span>
+        <span class="comment">// so each chunk we we store maximum 1 &lt;&lt; (prod_x_nv - num_var) selectors</span>
+        <span class="kw">let</span> <span class="ident">log_chunk_size</span> <span class="op">=</span> <span class="ident">log_num_witness_polys</span> <span class="op">+</span> <span class="number">1</span>;
+        <span class="kw">let</span> <span class="ident">prod_x_nv</span> <span class="op">=</span> <span class="ident">num_vars</span> <span class="op">+</span> <span class="ident">log_chunk_size</span>;
+
         <span class="comment">// online public input of length 2^\ell</span>
         <span class="kw">let</span> <span class="ident">ell</span> <span class="op">=</span> <span class="ident">log2</span>(<span class="ident">pk</span>.<span class="ident">params</span>.<span class="ident">num_pub_input</span>) <span class="kw">as</span> <span class="ident">usize</span>;
 
@@ -1005,23 +922,31 @@
         <span class="comment">// - prod(x)</span>
         <span class="comment">// - selectors</span>
         <span class="comment">//</span>
-        <span class="comment">// Accumulator for w_merged and its points</span>
-        <span class="kw">let</span> <span class="kw-2">mut</span> <span class="ident">w_merged_pcs_acc</span> <span class="op">=</span> <span class="ident">PcsAccumulator</span>::<span class="op">&lt;</span><span class="ident">E</span>, <span class="ident">PCS</span><span class="op">&gt;</span><span class="ident">::new</span>();
-        <span class="comment">// Accumulator for prod(x) and its points</span>
-        <span class="kw">let</span> <span class="kw-2">mut</span> <span class="ident">prod_pcs_acc</span> <span class="op">=</span> <span class="ident">PcsAccumulator</span>::<span class="op">&lt;</span><span class="ident">E</span>, <span class="ident">PCS</span><span class="op">&gt;</span><span class="ident">::new</span>();
-        <span class="comment">// Accumulator for prod(x) and its points</span>
-        <span class="kw">let</span> <span class="kw-2">mut</span> <span class="ident">selector_pcs_acc</span> <span class="op">=</span> <span class="ident">PcsAccumulator</span>::<span class="op">&lt;</span><span class="ident">E</span>, <span class="ident">PCS</span><span class="op">&gt;</span><span class="ident">::new</span>();
-
-        <span class="kw">let</span> <span class="ident">witness_polys</span>: <span class="ident">Vec</span><span class="op">&lt;</span><span class="ident">Rc</span><span class="op">&lt;</span><span class="ident">DenseMultilinearExtension</span><span class="op">&lt;</span><span class="ident">E::Fr</span><span class="op">&gt;</span><span class="op">&gt;</span><span class="op">&gt;</span> <span class="op">=</span> <span class="ident">witnesses</span>
-            .<span class="ident">iter</span>()
-            .<span class="ident">map</span>(<span class="op">|</span><span class="ident">w</span><span class="op">|</span> <span class="ident">Rc::new</span>(<span class="ident">DenseMultilinearExtension::from</span>(<span class="ident">w</span>)))
-            .<span class="ident">collect</span>();
+        <span class="comment">// Accumulator&#39;s nv is bounded by prod(x) that means</span>
+        <span class="comment">// we need to split the selectors into multiple chunks if</span>
+        <span class="comment">// #selectors &gt; chunk_size</span>
+        <span class="comment">// let mut pcs_acc = PcsAccumulator::&lt;E, PCS&gt;::new(prod_x_nv);</span>
+        <span class="kw">let</span> <span class="kw-2">mut</span> <span class="ident">prod_x_pcs_acc</span> <span class="op">=</span> <span class="ident">PcsAccumulator</span>::<span class="op">&lt;</span><span class="ident">E</span>, <span class="ident">PCS</span><span class="op">&gt;</span><span class="ident">::new</span>(<span class="ident">prod_x_nv</span>);
+        <span class="kw">let</span> <span class="kw-2">mut</span> <span class="ident">witness_and_selector_x_pcs_acc</span> <span class="op">=</span> <span class="ident">PcsAccumulator</span>::<span class="op">&lt;</span><span class="ident">E</span>, <span class="ident">PCS</span><span class="op">&gt;</span><span class="ident">::new</span>(<span class="ident">num_vars</span>);
 
         <span class="comment">// =======================================================================</span>
         <span class="comment">// 1. Commit Witness polynomials `w_i(x)` and append commitment to</span>
         <span class="comment">// transcript</span>
         <span class="comment">// =======================================================================</span>
         <span class="kw">let</span> <span class="ident">step</span> <span class="op">=</span> <span class="macro">start_timer!</span>(<span class="op">|</span><span class="op">|</span> <span class="string">&quot;commit witnesses&quot;</span>);
+
+        <span class="kw">let</span> <span class="ident">witness_polys</span>: <span class="ident">Vec</span><span class="op">&lt;</span><span class="ident">Rc</span><span class="op">&lt;</span><span class="ident">DenseMultilinearExtension</span><span class="op">&lt;</span><span class="ident">E::Fr</span><span class="op">&gt;</span><span class="op">&gt;</span><span class="op">&gt;</span> <span class="op">=</span> <span class="ident">witnesses</span>
+            .<span class="ident">iter</span>()
+            .<span class="ident">map</span>(<span class="op">|</span><span class="ident">w</span><span class="op">|</span> <span class="ident">Rc::new</span>(<span class="ident">DenseMultilinearExtension::from</span>(<span class="ident">w</span>)))
+            .<span class="ident">collect</span>();
+
+        <span class="kw">let</span> <span class="ident">witness_commits</span> <span class="op">=</span> <span class="ident">witness_polys</span>
+            .<span class="ident">iter</span>()
+            .<span class="ident">map</span>(<span class="op">|</span><span class="ident">x</span><span class="op">|</span> <span class="ident">PCS::commit</span>(<span class="kw-2">&amp;</span><span class="ident">pk</span>.<span class="ident">pcs_param</span>, <span class="ident">x</span>).<span class="ident">unwrap</span>())
+            .<span class="ident">collect</span>::<span class="op">&lt;</span><span class="ident">Vec</span><span class="op">&lt;</span><span class="kw">_</span><span class="op">&gt;</span><span class="op">&gt;</span>();
+
+        <span class="comment">// merge all witness into a single MLE - we will run perm check on it</span>
+        <span class="comment">// to obtain prod(x)</span>
         <span class="kw">let</span> <span class="ident">w_merged</span> <span class="op">=</span> <span class="ident">merge_polynomials</span>(<span class="kw-2">&amp;</span><span class="ident">witness_polys</span>)<span class="question-mark">?</span>;
         <span class="kw">if</span> <span class="ident">w_merged</span>.<span class="ident">num_vars</span> <span class="op">!</span><span class="op">=</span> <span class="ident">merged_nv</span> {
             <span class="kw">return</span> <span class="prelude-val">Err</span>(<span class="ident">HyperPlonkErrors::InvalidParameters</span>(<span class="macro">format!</span>(
@@ -1029,9 +954,11 @@
                 <span class="ident">w_merged</span>.<span class="ident">num_vars</span>, <span class="ident">merged_nv</span>
             )));
         }
-        <span class="kw">let</span> <span class="ident">w_merged_com</span> <span class="op">=</span> <span class="ident">PCS::commit</span>(<span class="kw-2">&amp;</span><span class="ident">pk</span>.<span class="ident">pcs_param</span>, <span class="kw-2">&amp;</span><span class="ident">w_merged</span>)<span class="question-mark">?</span>;
-        <span class="ident">w_merged_pcs_acc</span>.<span class="ident">init_poly</span>(<span class="ident">w_merged</span>.<span class="ident">clone</span>(), <span class="ident">w_merged_com</span>.<span class="ident">clone</span>())<span class="question-mark">?</span>;
-        <span class="ident">transcript</span>.<span class="ident">append_serializable_element</span>(<span class="string">b&quot;w&quot;</span>, <span class="kw-2">&amp;</span><span class="ident">w_merged_com</span>)<span class="question-mark">?</span>;
+
+        <span class="comment">// TODO: we&#39;ll remove one of witness_merged_commit and witness_commits later.</span>
+        <span class="kw">let</span> <span class="ident">witness_merged_commit</span> <span class="op">=</span> <span class="ident">PCS::commit</span>(<span class="kw-2">&amp;</span><span class="ident">pk</span>.<span class="ident">pcs_param</span>, <span class="kw-2">&amp;</span><span class="ident">w_merged</span>)<span class="question-mark">?</span>;
+        <span class="ident">transcript</span>.<span class="ident">append_serializable_element</span>(<span class="string">b&quot;w&quot;</span>, <span class="kw-2">&amp;</span><span class="ident">witness_merged_commit</span>)<span class="question-mark">?</span>;
+
         <span class="macro">end_timer!</span>(<span class="ident">step</span>);
         <span class="comment">// =======================================================================</span>
         <span class="comment">// 2 Run ZeroCheck on</span>
@@ -1095,7 +1022,6 @@
 
         <span class="comment">// 4.1 (deferred) open prod(0,x), prod(1, x), prod(x, 0), prod(x, 1)</span>
         <span class="comment">// perm_check_point</span>
-        <span class="ident">prod_pcs_acc</span>.<span class="ident">init_poly</span>(<span class="ident">prod_x</span>, <span class="ident">perm_check_proof</span>.<span class="ident">prod_x_comm</span>.<span class="ident">clone</span>())<span class="question-mark">?</span>;
         <span class="comment">// prod(0, x)</span>
         <span class="kw">let</span> <span class="ident">tmp_point1</span> <span class="op">=</span> [<span class="ident">perm_check_point</span>.<span class="ident">as_slice</span>(), <span class="kw-2">&amp;</span>[<span class="ident">E::Fr::zero</span>()]].<span class="ident">concat</span>();
         <span class="comment">// prod(1, x)</span>
@@ -1104,145 +1030,77 @@
         <span class="kw">let</span> <span class="ident">tmp_point3</span> <span class="op">=</span> [<span class="kw-2">&amp;</span>[<span class="ident">E::Fr::zero</span>()], <span class="ident">perm_check_point</span>.<span class="ident">as_slice</span>()].<span class="ident">concat</span>();
         <span class="comment">// prod(x, 1)</span>
         <span class="kw">let</span> <span class="ident">tmp_point4</span> <span class="op">=</span> [<span class="kw-2">&amp;</span>[<span class="ident">E::Fr::one</span>()], <span class="ident">perm_check_point</span>.<span class="ident">as_slice</span>()].<span class="ident">concat</span>();
-        <span class="comment">// prod(1, ..., 1, 0)</span>
-        <span class="kw">let</span> <span class="ident">tmp_point5</span> <span class="op">=</span> [<span class="macro">vec!</span>[<span class="ident">E::Fr::zero</span>()], <span class="macro">vec!</span>[<span class="ident">E::Fr::one</span>(); <span class="ident">merged_nv</span>]].<span class="ident">concat</span>();
+        <span class="comment">// // prod(1, ..., 1, 0)</span>
+        <span class="comment">// let tmp_point5 = [vec![E::Fr::zero()], vec![E::Fr::one();</span>
+        <span class="comment">// merged_nv]].concat();</span>
 
-        <span class="ident">prod_pcs_acc</span>.<span class="ident">insert_point</span>(<span class="kw-2">&amp;</span><span class="ident">tmp_point1</span>);
-        <span class="ident">prod_pcs_acc</span>.<span class="ident">insert_point</span>(<span class="kw-2">&amp;</span><span class="ident">tmp_point2</span>);
-        <span class="ident">prod_pcs_acc</span>.<span class="ident">insert_point</span>(<span class="kw-2">&amp;</span><span class="ident">tmp_point3</span>);
-        <span class="ident">prod_pcs_acc</span>.<span class="ident">insert_point</span>(<span class="kw-2">&amp;</span><span class="ident">tmp_point4</span>);
-        <span class="ident">prod_pcs_acc</span>.<span class="ident">insert_point</span>(<span class="kw-2">&amp;</span><span class="ident">tmp_point5</span>);
+        <span class="ident">prod_x_pcs_acc</span>.<span class="ident">insert_poly_and_points</span>(<span class="kw-2">&amp;</span><span class="ident">prod_x</span>, <span class="kw-2">&amp;</span><span class="ident">perm_check_proof</span>.<span class="ident">prod_x_comm</span>, <span class="kw-2">&amp;</span><span class="ident">tmp_point1</span>);
+        <span class="ident">prod_x_pcs_acc</span>.<span class="ident">insert_poly_and_points</span>(<span class="kw-2">&amp;</span><span class="ident">prod_x</span>, <span class="kw-2">&amp;</span><span class="ident">perm_check_proof</span>.<span class="ident">prod_x_comm</span>, <span class="kw-2">&amp;</span><span class="ident">tmp_point2</span>);
+        <span class="ident">prod_x_pcs_acc</span>.<span class="ident">insert_poly_and_points</span>(<span class="kw-2">&amp;</span><span class="ident">prod_x</span>, <span class="kw-2">&amp;</span><span class="ident">perm_check_proof</span>.<span class="ident">prod_x_comm</span>, <span class="kw-2">&amp;</span><span class="ident">tmp_point3</span>);
+        <span class="ident">prod_x_pcs_acc</span>.<span class="ident">insert_poly_and_points</span>(<span class="kw-2">&amp;</span><span class="ident">prod_x</span>, <span class="kw-2">&amp;</span><span class="ident">perm_check_proof</span>.<span class="ident">prod_x_comm</span>, <span class="kw-2">&amp;</span><span class="ident">tmp_point4</span>);
 
         <span class="comment">// 4.2  permutation check</span>
-        <span class="comment">//   - 4.2.1. (deferred) wi_poly(perm_check_point)</span>
-        <span class="ident">w_merged_pcs_acc</span>.<span class="ident">insert_point</span>(<span class="ident">perm_check_point</span>);
-
-        <span class="attribute">#[<span class="ident">cfg</span>(<span class="ident">feature</span> <span class="op">=</span> <span class="string">&quot;extensive_sanity_checks&quot;</span>)]</span>
-        {
-            <span class="comment">// sanity check</span>
-            <span class="kw">let</span> <span class="ident">eval</span> <span class="op">=</span> <span class="ident">pk</span>
-                .<span class="ident">permutation_oracle</span>
-                .<span class="ident">evaluate</span>(<span class="kw-2">&amp;</span><span class="ident">perm_check_proof</span>.<span class="ident">zero_check_proof</span>.<span class="ident">point</span>)
-                .<span class="ident">ok_or_else</span>(<span class="op">|</span><span class="op">|</span> {
-                    <span class="ident">HyperPlonkErrors::InvalidParameters</span>(
-                        <span class="string">&quot;perm_oracle evaluation dimension does not match&quot;</span>.<span class="ident">to_string</span>(),
-                    )
-                })<span class="question-mark">?</span>;
-            <span class="kw">if</span> <span class="ident">eval</span> <span class="op">!</span><span class="op">=</span> <span class="ident">perm_oracle_eval</span> {
-                <span class="kw">return</span> <span class="prelude-val">Err</span>(<span class="ident">HyperPlonkErrors::InvalidProver</span>(
-                    <span class="string">&quot;perm_oracle evaluation is different from PCS opening&quot;</span>.<span class="ident">to_string</span>(),
-                ));
-            }
-        }
+        <span class="comment">//   - 4.2.1. wi_poly(perm_check_point)</span>
+        <span class="kw">let</span> (<span class="ident">perm_check_opening</span>, <span class="ident">perm_check_eval</span>) <span class="op">=</span>
+            <span class="ident">PCS::open</span>(<span class="kw-2">&amp;</span><span class="ident">pk</span>.<span class="ident">pcs_param</span>, <span class="kw-2">&amp;</span><span class="ident">w_merged</span>, <span class="ident">perm_check_point</span>)<span class="question-mark">?</span>;
 
         <span class="comment">// - 4.3. zero check evaluations and proofs</span>
         <span class="comment">//   - 4.3.1 (deferred) wi_poly(zero_check_point)</span>
         <span class="kw">for</span> <span class="ident">i</span> <span class="kw">in</span> <span class="number">0</span>..<span class="ident">witness_polys</span>.<span class="ident">len</span>() {
-            <span class="kw">let</span> <span class="ident">tmp_point</span> <span class="op">=</span> <span class="ident">gen_eval_point</span>(<span class="ident">i</span>, <span class="ident">log_num_witness_polys</span>, <span class="kw-2">&amp;</span><span class="ident">zero_check_proof</span>.<span class="ident">point</span>);
-            <span class="comment">// Deferred opening zero check proof</span>
-            <span class="ident">w_merged_pcs_acc</span>.<span class="ident">insert_point</span>(<span class="kw-2">&amp;</span><span class="ident">tmp_point</span>);
+            <span class="ident">witness_and_selector_x_pcs_acc</span>.<span class="ident">insert_poly_and_points</span>(
+                <span class="kw-2">&amp;</span><span class="ident">witness_polys</span>[<span class="ident">i</span>],
+                <span class="kw-2">&amp;</span><span class="ident">witness_commits</span>[<span class="ident">i</span>],
+                <span class="kw-2">&amp;</span><span class="ident">zero_check_proof</span>.<span class="ident">point</span>,
+            );
         }
 
         <span class="comment">//   - 4.3.2. (deferred) selector_poly(zero_check_point)</span>
-        <span class="kw">let</span> <span class="ident">selector_merged</span> <span class="op">=</span> <span class="ident">merge_polynomials</span>(<span class="kw-2">&amp;</span><span class="ident">pk</span>.<span class="ident">selector_oracles</span>)<span class="question-mark">?</span>;
-        <span class="ident">selector_pcs_acc</span>.<span class="ident">init_poly</span>(<span class="ident">selector_merged</span>, <span class="ident">pk</span>.<span class="ident">selector_com</span>.<span class="ident">clone</span>())<span class="question-mark">?</span>;
-        <span class="kw">for</span> <span class="ident">i</span> <span class="kw">in</span> <span class="number">0</span>..<span class="ident">pk</span>.<span class="ident">selector_oracles</span>.<span class="ident">len</span>() {
-            <span class="kw">let</span> <span class="ident">tmp_point</span> <span class="op">=</span> <span class="ident">gen_eval_point</span>(<span class="ident">i</span>, <span class="ident">log_num_selector_polys</span>, <span class="kw-2">&amp;</span><span class="ident">zero_check_proof</span>.<span class="ident">point</span>);
-            <span class="comment">// Deferred opening zero check proof</span>
-            <span class="ident">selector_pcs_acc</span>.<span class="ident">insert_point</span>(<span class="kw-2">&amp;</span><span class="ident">tmp_point</span>);
-        }
+        <span class="ident">pk</span>.<span class="ident">selector_oracles</span>
+            .<span class="ident">iter</span>()
+            .<span class="ident">zip</span>(<span class="ident">pk</span>.<span class="ident">selector_commitments</span>.<span class="ident">iter</span>())
+            .<span class="ident">for_each</span>(<span class="op">|</span>(<span class="ident">poly</span>, <span class="ident">com</span>)<span class="op">|</span> {
+                <span class="ident">witness_and_selector_x_pcs_acc</span>.<span class="ident">insert_poly_and_points</span>(
+                    <span class="ident">poly</span>,
+                    <span class="ident">com</span>,
+                    <span class="kw-2">&amp;</span><span class="ident">zero_check_proof</span>.<span class="ident">point</span>,
+                )
+            });
 
         <span class="comment">// - 4.4. public input consistency checks</span>
         <span class="comment">//   - pi_poly(r_pi) where r_pi is sampled from transcript</span>
         <span class="kw">let</span> <span class="ident">r_pi</span> <span class="op">=</span> <span class="ident">transcript</span>.<span class="ident">get_and_append_challenge_vectors</span>(<span class="string">b&quot;r_pi&quot;</span>, <span class="ident">ell</span>)<span class="question-mark">?</span>;
-        <span class="kw">let</span> <span class="ident">tmp_point</span> <span class="op">=</span> [
-            <span class="macro">vec!</span>[<span class="ident">E::Fr::zero</span>(); <span class="ident">num_vars</span> <span class="op">-</span> <span class="ident">ell</span>],
-            <span class="ident">r_pi</span>,
-            <span class="macro">vec!</span>[<span class="ident">E::Fr::zero</span>(); <span class="ident">log_num_witness_polys</span>],
-        ]
-        .<span class="ident">concat</span>();
-        <span class="ident">w_merged_pcs_acc</span>.<span class="ident">insert_point</span>(<span class="kw-2">&amp;</span><span class="ident">tmp_point</span>);
-
-        <span class="attribute">#[<span class="ident">cfg</span>(<span class="ident">feature</span> <span class="op">=</span> <span class="string">&quot;extensive_sanity_checks&quot;</span>)]</span>
-        {
-            <span class="comment">// sanity check</span>
-            <span class="kw">let</span> <span class="ident">pi_poly</span> <span class="op">=</span> <span class="ident">Rc::new</span>(<span class="ident">DenseMultilinearExtension::from_evaluations_slice</span>(
-                <span class="ident">ell</span>, <span class="ident">pub_input</span>,
-            ));
-
-            <span class="kw">let</span> <span class="ident">eval</span> <span class="op">=</span> <span class="ident">pi_poly</span>.<span class="ident">evaluate</span>(<span class="kw-2">&amp;</span><span class="ident">r_pi</span>).<span class="ident">ok_or_else</span>(<span class="op">|</span><span class="op">|</span> {
-                <span class="ident">HyperPlonkErrors::InvalidParameters</span>(
-                    <span class="string">&quot;public input evaluation dimension does not match&quot;</span>.<span class="ident">to_string</span>(),
-                )
-            })<span class="question-mark">?</span>;
-            <span class="kw">if</span> <span class="ident">eval</span> <span class="op">!</span><span class="op">=</span> <span class="ident">pi_eval</span> {
-                <span class="kw">return</span> <span class="prelude-val">Err</span>(<span class="ident">HyperPlonkErrors::InvalidProver</span>(
-                    <span class="string">&quot;public input evaluation is different from PCS opening&quot;</span>.<span class="ident">to_string</span>(),
-                ));
-            }
-        }
+        <span class="kw">let</span> <span class="ident">tmp_point</span> <span class="op">=</span> [<span class="macro">vec!</span>[<span class="ident">E::Fr::zero</span>(); <span class="ident">num_vars</span> <span class="op">-</span> <span class="ident">ell</span>], <span class="ident">r_pi</span>].<span class="ident">concat</span>();
+        <span class="ident">witness_and_selector_x_pcs_acc</span>.<span class="ident">insert_poly_and_points</span>(
+            <span class="kw-2">&amp;</span><span class="ident">witness_polys</span>[<span class="number">0</span>],
+            <span class="kw-2">&amp;</span><span class="ident">witness_commits</span>[<span class="number">0</span>],
+            <span class="kw-2">&amp;</span><span class="ident">tmp_point</span>,
+        );
         <span class="macro">end_timer!</span>(<span class="ident">step</span>);
 
         <span class="comment">// =======================================================================</span>
         <span class="comment">// 5. deferred batch opening</span>
         <span class="comment">// =======================================================================</span>
-        <span class="kw">let</span> <span class="ident">step</span> <span class="op">=</span> <span class="macro">start_timer!</span>(<span class="op">|</span><span class="op">|</span> <span class="string">&quot;deferred batch openings&quot;</span>);
-        <span class="kw">let</span> <span class="ident">sub_step</span> <span class="op">=</span> <span class="macro">start_timer!</span>(<span class="op">|</span><span class="op">|</span> <span class="string">&quot;open witness&quot;</span>);
-        <span class="kw">let</span> (<span class="ident">w_merged_batch_opening</span>, <span class="ident">w_merged_batch_evals</span>) <span class="op">=</span>
-            <span class="ident">w_merged_pcs_acc</span>.<span class="ident">batch_open</span>(<span class="kw-2">&amp;</span><span class="ident">pk</span>.<span class="ident">pcs_param</span>)<span class="question-mark">?</span>;
-        <span class="macro">end_timer!</span>(<span class="ident">sub_step</span>);
-
-        <span class="kw">let</span> <span class="ident">sub_step</span> <span class="op">=</span> <span class="macro">start_timer!</span>(<span class="op">|</span><span class="op">|</span> <span class="string">&quot;open prod(x)&quot;</span>);
-        <span class="kw">let</span> (<span class="ident">prod_batch_openings</span>, <span class="ident">prod_batch_evals</span>) <span class="op">=</span> <span class="ident">prod_pcs_acc</span>.<span class="ident">batch_open</span>(<span class="kw-2">&amp;</span><span class="ident">pk</span>.<span class="ident">pcs_param</span>)<span class="question-mark">?</span>;
-        <span class="macro">end_timer!</span>(<span class="ident">sub_step</span>);
-
-        <span class="kw">let</span> <span class="ident">sub_step</span> <span class="op">=</span> <span class="macro">start_timer!</span>(<span class="op">|</span><span class="op">|</span> <span class="string">&quot;open selector&quot;</span>);
-        <span class="kw">let</span> (<span class="ident">selector_batch_opening</span>, <span class="ident">selector_batch_evals</span>) <span class="op">=</span>
-            <span class="ident">selector_pcs_acc</span>.<span class="ident">batch_open</span>(<span class="kw-2">&amp;</span><span class="ident">pk</span>.<span class="ident">pcs_param</span>)<span class="question-mark">?</span>;
-        <span class="macro">end_timer!</span>(<span class="ident">sub_step</span>);
+        <span class="kw">let</span> <span class="ident">step</span> <span class="op">=</span> <span class="macro">start_timer!</span>(<span class="op">|</span><span class="op">|</span> <span class="string">&quot;deferred batch openings prod(x)&quot;</span>);
+        <span class="kw">let</span> <span class="ident">batch_prod_x_openings</span> <span class="op">=</span> <span class="ident">prod_x_pcs_acc</span>.<span class="ident">multi_open</span>(<span class="kw-2">&amp;</span><span class="ident">pk</span>.<span class="ident">pcs_param</span>, <span class="kw-2">&amp;mut</span> <span class="ident">transcript</span>)<span class="question-mark">?</span>;
         <span class="macro">end_timer!</span>(<span class="ident">step</span>);
+
+        <span class="kw">let</span> <span class="ident">step</span> <span class="op">=</span> <span class="macro">start_timer!</span>(<span class="op">|</span><span class="op">|</span> <span class="string">&quot;deferred batch openings witness and selectors&quot;</span>);
+        <span class="kw">let</span> <span class="ident">batch_witness_and_selector_openings</span> <span class="op">=</span>
+            <span class="ident">witness_and_selector_x_pcs_acc</span>.<span class="ident">multi_open</span>(<span class="kw-2">&amp;</span><span class="ident">pk</span>.<span class="ident">pcs_param</span>, <span class="kw-2">&amp;mut</span> <span class="ident">transcript</span>)<span class="question-mark">?</span>;
+        <span class="macro">end_timer!</span>(<span class="ident">step</span>);
+
         <span class="macro">end_timer!</span>(<span class="ident">start</span>);
 
         <span class="prelude-val">Ok</span>(<span class="ident">HyperPlonkProof</span> {
-            <span class="comment">// =======================================================================</span>
-            <span class="comment">// witness related</span>
-            <span class="comment">// =======================================================================</span>
-            <span class="doccomment">/// PCS commit for witnesses</span>
-            <span class="ident">w_merged_com</span>,
-            <span class="comment">// Batch opening for witness commitment</span>
-            <span class="comment">// - PermCheck eval: 1 point</span>
-            <span class="comment">// - ZeroCheck evals: #witness points</span>
-            <span class="comment">// - public input eval: 1 point</span>
-            <span class="ident">w_merged_batch_opening</span>,
-            <span class="comment">// Evaluations of Witness</span>
-            <span class="comment">// - PermCheck eval: 1 point</span>
-            <span class="comment">// - ZeroCheck evals: #witness points</span>
-            <span class="comment">// - public input eval: 1 point</span>
-            <span class="ident">w_merged_batch_evals</span>,
-            <span class="comment">// =======================================================================</span>
-            <span class="comment">// prod(x) related</span>
-            <span class="comment">// =======================================================================</span>
-            <span class="comment">// prod(x)&#39;s openings</span>
-            <span class="comment">// - prod(0, x),</span>
-            <span class="comment">// - prod(1, x),</span>
-            <span class="comment">// - prod(x, 0),</span>
-            <span class="comment">// - prod(x, 1),</span>
-            <span class="comment">// - prod(1, ..., 1,0)</span>
-            <span class="ident">prod_batch_openings</span>,
-            <span class="comment">// prod(x)&#39;s evaluations</span>
-            <span class="comment">// - prod(0, x),</span>
-            <span class="comment">// - prod(1, x),</span>
-            <span class="comment">// - prod(x, 0),</span>
-            <span class="comment">// - prod(x, 1),</span>
-            <span class="comment">// - prod(1, ..., 1,0)</span>
-            <span class="ident">prod_batch_evals</span>,
-            <span class="comment">// =======================================================================</span>
-            <span class="comment">// selectors related</span>
-            <span class="comment">// =======================================================================</span>
-            <span class="comment">// PCS openings for selectors on zero check point</span>
-            <span class="ident">selector_batch_opening</span>,
-            <span class="comment">// Evaluates of selectors on zero check point</span>
-            <span class="ident">selector_batch_evals</span>,
+            <span class="comment">// PCS commit for witnesses</span>
+            <span class="ident">witness_merged_commit</span>,
+            <span class="ident">witness_commits</span>,
+            <span class="comment">// batch_openings,</span>
+            <span class="ident">batch_prod_x_openings</span>,
+            <span class="ident">batch_witness_and_selector_openings</span>,
+            <span class="comment">// perm check openings</span>
+            <span class="ident">perm_check_opening</span>,
+            <span class="ident">perm_check_eval</span>,
             <span class="comment">// =======================================================================</span>
             <span class="comment">// IOP proofs</span>
             <span class="comment">// =======================================================================</span>
@@ -1289,14 +1147,37 @@
         <span class="kw">let</span> <span class="ident">start</span> <span class="op">=</span> <span class="macro">start_timer!</span>(<span class="op">|</span><span class="op">|</span> <span class="string">&quot;hyperplonk verification&quot;</span>);
 
         <span class="kw">let</span> <span class="kw-2">mut</span> <span class="ident">transcript</span> <span class="op">=</span> <span class="ident">IOPTranscript</span>::<span class="op">&lt;</span><span class="ident">E::Fr</span><span class="op">&gt;</span><span class="ident">::new</span>(<span class="string">b&quot;hyperplonk&quot;</span>);
+
+        <span class="kw">let</span> <span class="ident">num_selectors</span> <span class="op">=</span> <span class="ident">vk</span>.<span class="ident">params</span>.<span class="ident">num_selector_columns</span>();
+        <span class="kw">let</span> <span class="ident">num_witnesses</span> <span class="op">=</span> <span class="ident">vk</span>.<span class="ident">params</span>.<span class="ident">num_witness_columns</span>();
+
         <span class="comment">// witness assignment of length 2^n</span>
+        <span class="kw">let</span> <span class="ident">log_num_witness_polys</span> <span class="op">=</span> <span class="ident">log2</span>(<span class="ident">num_witnesses</span>) <span class="kw">as</span> <span class="ident">usize</span>;
         <span class="kw">let</span> <span class="ident">num_vars</span> <span class="op">=</span> <span class="ident">vk</span>.<span class="ident">params</span>.<span class="ident">num_variables</span>();
-        <span class="kw">let</span> <span class="ident">log_num_witness_polys</span> <span class="op">=</span> <span class="ident">log2</span>(<span class="ident">vk</span>.<span class="ident">params</span>.<span class="ident">num_witness_columns</span>()) <span class="kw">as</span> <span class="ident">usize</span>;
         <span class="comment">// number of variables in merged polynomial for Multilinear-KZG</span>
         <span class="kw">let</span> <span class="ident">merged_nv</span> <span class="op">=</span> <span class="ident">num_vars</span> <span class="op">+</span> <span class="ident">log_num_witness_polys</span>;
 
         <span class="comment">//  online public input of length 2^\ell</span>
         <span class="kw">let</span> <span class="ident">ell</span> <span class="op">=</span> <span class="ident">log2</span>(<span class="ident">vk</span>.<span class="ident">params</span>.<span class="ident">num_pub_input</span>) <span class="kw">as</span> <span class="ident">usize</span>;
+
+        <span class="comment">// sequence:</span>
+        <span class="comment">// - prod(x) at 5 points</span>
+        <span class="comment">// - w_merged at perm check point</span>
+        <span class="comment">// - w_merged at zero check points (#witness points)</span>
+        <span class="comment">// - selector_merged at zero check points (#selector points)</span>
+        <span class="comment">// - w[0] at r_pi</span>
+        <span class="kw">let</span> <span class="ident">selector_evals</span> <span class="op">=</span> <span class="kw-2">&amp;</span><span class="ident">proof</span>
+            .<span class="ident">batch_witness_and_selector_openings</span>
+            .<span class="ident">f_i_eval_at_point_i</span>[<span class="ident">num_witnesses</span>..<span class="ident">num_witnesses</span> <span class="op">+</span> <span class="ident">num_selectors</span>];
+        <span class="kw">let</span> <span class="ident">witness_evals</span> <span class="op">=</span> <span class="kw-2">&amp;</span><span class="ident">proof</span>
+            .<span class="ident">batch_witness_and_selector_openings</span>
+            .<span class="ident">f_i_eval_at_point_i</span>[..<span class="ident">num_witnesses</span>];
+        <span class="kw">let</span> <span class="ident">prod_evals</span> <span class="op">=</span> <span class="kw-2">&amp;</span><span class="ident">proof</span>.<span class="ident">batch_prod_x_openings</span>.<span class="ident">f_i_eval_at_point_i</span>[<span class="number">0</span>..<span class="number">4</span>];
+        <span class="kw">let</span> <span class="ident">pi_eval</span> <span class="op">=</span> <span class="ident">proof</span>
+            .<span class="ident">batch_witness_and_selector_openings</span>
+            .<span class="ident">f_i_eval_at_point_i</span>
+            .<span class="ident">last</span>()
+            .<span class="ident">unwrap</span>();
 
         <span class="kw">let</span> <span class="ident">pi_poly</span> <span class="op">=</span> <span class="ident">DenseMultilinearExtension::from_evaluations_slice</span>(<span class="ident">ell</span> <span class="kw">as</span> <span class="ident">usize</span>, <span class="ident">pub_input</span>);
 
@@ -1309,27 +1190,6 @@
                 <span class="string">&quot;Public input length is not correct: got {}, expect {}&quot;</span>,
                 <span class="ident">pub_input</span>.<span class="ident">len</span>(),
                 <span class="number">1</span> <span class="op">&lt;</span><span class="op">&lt;</span> <span class="ident">ell</span>
-            )));
-        }
-        <span class="kw">if</span> <span class="ident">proof</span>.<span class="ident">selector_batch_evals</span>.<span class="ident">len</span>() <span class="op">-</span> <span class="number">1</span> <span class="op">!</span><span class="op">=</span> <span class="ident">vk</span>.<span class="ident">params</span>.<span class="ident">num_selector_columns</span>() {
-            <span class="kw">return</span> <span class="prelude-val">Err</span>(<span class="ident">HyperPlonkErrors::InvalidVerifier</span>(<span class="macro">format!</span>(
-                <span class="string">&quot;Selector length is not correct: got {}, expect {}&quot;</span>,
-                <span class="ident">proof</span>.<span class="ident">selector_batch_evals</span>.<span class="ident">len</span>() <span class="op">-</span> <span class="number">1</span>,
-                <span class="number">1</span> <span class="op">&lt;</span><span class="op">&lt;</span> <span class="ident">vk</span>.<span class="ident">params</span>.<span class="ident">num_selector_columns</span>()
-            )));
-        }
-        <span class="kw">if</span> <span class="ident">proof</span>.<span class="ident">w_merged_batch_evals</span>.<span class="ident">len</span>() <span class="op">!</span><span class="op">=</span> <span class="ident">vk</span>.<span class="ident">params</span>.<span class="ident">num_witness_columns</span>() <span class="op">+</span> <span class="number">3</span> {
-            <span class="kw">return</span> <span class="prelude-val">Err</span>(<span class="ident">HyperPlonkErrors::InvalidVerifier</span>(<span class="macro">format!</span>(
-                <span class="string">&quot;Witness length is not correct: got {}, expect {}&quot;</span>,
-                <span class="ident">proof</span>.<span class="ident">w_merged_batch_evals</span>.<span class="ident">len</span>() <span class="op">-</span> <span class="number">3</span>,
-                <span class="ident">vk</span>.<span class="ident">params</span>.<span class="ident">num_witness_columns</span>()
-            )));
-        }
-        <span class="kw">if</span> <span class="ident">proof</span>.<span class="ident">prod_batch_evals</span>.<span class="ident">len</span>() <span class="op">-</span> <span class="number">1</span> <span class="op">!</span><span class="op">=</span> <span class="number">5</span> {
-            <span class="kw">return</span> <span class="prelude-val">Err</span>(<span class="ident">HyperPlonkErrors::InvalidVerifier</span>(<span class="macro">format!</span>(
-                <span class="string">&quot;the number of product polynomial evaluations is not correct: got {}, expect {}&quot;</span>,
-                <span class="ident">proof</span>.<span class="ident">prod_batch_evals</span>.<span class="ident">len</span>() <span class="op">-</span> <span class="number">1</span>,
-                <span class="number">5</span>
             )));
         }
 
@@ -1351,7 +1211,7 @@
             <span class="ident">phantom</span>: <span class="ident">PhantomData::default</span>(),
         };
         <span class="comment">// push witness to transcript</span>
-        <span class="ident">transcript</span>.<span class="ident">append_serializable_element</span>(<span class="string">b&quot;w&quot;</span>, <span class="kw-2">&amp;</span><span class="ident">proof</span>.<span class="ident">w_merged_com</span>)<span class="question-mark">?</span>;
+        <span class="ident">transcript</span>.<span class="ident">append_serializable_element</span>(<span class="string">b&quot;w&quot;</span>, <span class="kw-2">&amp;</span><span class="ident">proof</span>.<span class="ident">witness_merged_commit</span>)<span class="question-mark">?</span>;
 
         <span class="kw">let</span> <span class="ident">zero_check_sub_claim</span> <span class="op">=</span> <span class="op">&lt;</span><span class="self">Self</span> <span class="kw">as</span> <span class="ident">ZeroCheck</span><span class="op">&lt;</span><span class="ident">E::Fr</span><span class="op">&gt;</span><span class="op">&gt;</span><span class="ident">::verify</span>(
             <span class="kw-2">&amp;</span><span class="ident">proof</span>.<span class="ident">zero_check_proof</span>,
@@ -1362,11 +1222,7 @@
         <span class="kw">let</span> <span class="ident">zero_check_point</span> <span class="op">=</span> <span class="kw-2">&amp;</span><span class="ident">zero_check_sub_claim</span>.<span class="ident">point</span>;
 
         <span class="comment">// check zero check subclaim</span>
-        <span class="kw">let</span> <span class="ident">f_eval</span> <span class="op">=</span> <span class="ident">eval_f</span>(
-            <span class="kw-2">&amp;</span><span class="ident">vk</span>.<span class="ident">params</span>.<span class="ident">gate_func</span>,
-            <span class="kw-2">&amp;</span><span class="ident">proof</span>.<span class="ident">selector_batch_evals</span>[..<span class="ident">vk</span>.<span class="ident">params</span>.<span class="ident">num_selector_columns</span>()],
-            <span class="kw-2">&amp;</span><span class="ident">proof</span>.<span class="ident">w_merged_batch_evals</span>[<span class="number">1</span>..],
-        )<span class="question-mark">?</span>;
+        <span class="kw">let</span> <span class="ident">f_eval</span> <span class="op">=</span> <span class="ident">eval_f</span>(<span class="kw-2">&amp;</span><span class="ident">vk</span>.<span class="ident">params</span>.<span class="ident">gate_func</span>, <span class="ident">selector_evals</span>, <span class="ident">witness_evals</span>)<span class="question-mark">?</span>;
         <span class="kw">if</span> <span class="ident">f_eval</span> <span class="op">!</span><span class="op">=</span> <span class="ident">zero_check_sub_claim</span>.<span class="ident">expected_evaluation</span> {
             <span class="kw">return</span> <span class="prelude-val">Err</span>(<span class="ident">HyperPlonkErrors::InvalidProof</span>(
                 <span class="string">&quot;zero check evaluation failed&quot;</span>.<span class="ident">to_string</span>(),
@@ -1421,12 +1277,10 @@
         <span class="kw">let</span> <span class="ident">s_id_eval</span> <span class="op">=</span> <span class="ident">evaluate_opt</span>(<span class="kw-2">&amp;</span><span class="ident">s_id</span>, <span class="ident">perm_check_point</span>);
         <span class="kw">let</span> <span class="ident">s_perm_eval</span> <span class="op">=</span> <span class="ident">evaluate_opt</span>(<span class="kw-2">&amp;</span><span class="ident">vk</span>.<span class="ident">permutation_oracle</span>, <span class="ident">perm_check_point</span>);
 
-        <span class="kw">let</span> <span class="ident">q_x_rec</span> <span class="op">=</span> <span class="ident">proof</span>.<span class="ident">prod_batch_evals</span>[<span class="number">1</span>]
-            <span class="op">-</span> <span class="ident">proof</span>.<span class="ident">prod_batch_evals</span>[<span class="number">2</span>] <span class="op">*</span> <span class="ident">proof</span>.<span class="ident">prod_batch_evals</span>[<span class="number">3</span>]
+        <span class="kw">let</span> <span class="ident">q_x_rec</span> <span class="op">=</span> <span class="ident">prod_evals</span>[<span class="number">1</span>] <span class="op">-</span> <span class="ident">prod_evals</span>[<span class="number">2</span>] <span class="op">*</span> <span class="ident">prod_evals</span>[<span class="number">3</span>]
             <span class="op">+</span> <span class="ident">alpha</span>
-                <span class="op">*</span> ((<span class="ident">proof</span>.<span class="ident">w_merged_batch_evals</span>[<span class="number">0</span>] <span class="op">+</span> <span class="ident">beta</span> <span class="op">*</span> <span class="ident">s_perm_eval</span> <span class="op">+</span> <span class="ident">gamma</span>)
-                    <span class="op">*</span> <span class="ident">proof</span>.<span class="ident">prod_batch_evals</span>[<span class="number">0</span>]
-                    <span class="op">-</span> (<span class="ident">proof</span>.<span class="ident">w_merged_batch_evals</span>[<span class="number">0</span>] <span class="op">+</span> <span class="ident">beta</span> <span class="op">*</span> <span class="ident">s_id_eval</span> <span class="op">+</span> <span class="ident">gamma</span>));
+                <span class="op">*</span> ((<span class="ident">prod_evals</span>[<span class="number">0</span>] <span class="op">+</span> <span class="ident">beta</span> <span class="op">*</span> <span class="ident">s_perm_eval</span> <span class="op">+</span> <span class="ident">gamma</span>) <span class="op">*</span> <span class="ident">prod_evals</span>[<span class="number">0</span>]
+                    <span class="op">-</span> (<span class="ident">prod_evals</span>[<span class="number">0</span>] <span class="op">+</span> <span class="ident">beta</span> <span class="op">*</span> <span class="ident">s_id_eval</span> <span class="op">+</span> <span class="ident">gamma</span>));
 
         <span class="kw">if</span> <span class="ident">q_x_rec</span>
             <span class="op">!</span><span class="op">=</span> <span class="ident">perm_check_sub_claim</span>
@@ -1448,84 +1302,66 @@
         <span class="comment">// =======================================================================</span>
         <span class="comment">// 3.1 open prod(x)&#39; evaluations</span>
         <span class="comment">// =======================================================================</span>
-        <span class="kw">let</span> <span class="ident">prod_final_query</span> <span class="op">=</span> <span class="ident">perm_check_sub_claim</span>.<span class="ident">product_check_sub_claim</span>.<span class="ident">final_query</span>;
-        <span class="kw">let</span> <span class="ident">points</span> <span class="op">=</span> [
+        <span class="comment">// TODO: Check prod(x) at (1,...,1,0)</span>
+        <span class="kw">let</span> <span class="ident">_prod_final_query</span> <span class="op">=</span> <span class="ident">perm_check_sub_claim</span>.<span class="ident">product_check_sub_claim</span>.<span class="ident">final_query</span>;
+        <span class="kw">let</span> <span class="ident">prod_points</span> <span class="op">=</span> [
             [<span class="ident">perm_check_point</span>.<span class="ident">as_slice</span>(), <span class="kw-2">&amp;</span>[<span class="ident">E::Fr::zero</span>()]].<span class="ident">concat</span>(),
             [<span class="ident">perm_check_point</span>.<span class="ident">as_slice</span>(), <span class="kw-2">&amp;</span>[<span class="ident">E::Fr::one</span>()]].<span class="ident">concat</span>(),
             [<span class="kw-2">&amp;</span>[<span class="ident">E::Fr::zero</span>()], <span class="ident">perm_check_point</span>.<span class="ident">as_slice</span>()].<span class="ident">concat</span>(),
             [<span class="kw-2">&amp;</span>[<span class="ident">E::Fr::one</span>()], <span class="ident">perm_check_point</span>.<span class="ident">as_slice</span>()].<span class="ident">concat</span>(),
-            <span class="ident">prod_final_query</span>.<span class="number">0</span>,
+            <span class="comment">// prod_final_query.0,</span>
         ];
 
-        <span class="kw">if</span> <span class="op">!</span><span class="ident">PCS::batch_verify_single_poly</span>(
-            <span class="kw-2">&amp;</span><span class="ident">vk</span>.<span class="ident">pcs_param</span>,
-            <span class="kw-2">&amp;</span><span class="ident">proof</span>.<span class="ident">perm_check_proof</span>.<span class="ident">prod_x_comm</span>,
-            <span class="kw-2">&amp;</span><span class="ident">points</span>,
-            <span class="kw-2">&amp;</span><span class="ident">proof</span>.<span class="ident">prod_batch_evals</span>,
-            <span class="kw-2">&amp;</span><span class="ident">proof</span>.<span class="ident">prod_batch_openings</span>,
-        )<span class="question-mark">?</span> {
-            <span class="kw">return</span> <span class="prelude-val">Err</span>(<span class="ident">HyperPlonkErrors::InvalidProof</span>(
-                <span class="string">&quot;prod(0, x) pcs verification failed&quot;</span>.<span class="ident">to_string</span>(),
-            ));
-        }
-
-        <span class="comment">// =======================================================================</span>
-        <span class="comment">// 3.2 open selectors&#39; evaluations</span>
-        <span class="comment">// =======================================================================</span>
-        <span class="kw">let</span> <span class="ident">log_num_selector_polys</span> <span class="op">=</span> <span class="ident">log2</span>(<span class="ident">vk</span>.<span class="ident">params</span>.<span class="ident">num_selector_columns</span>()) <span class="kw">as</span> <span class="ident">usize</span>;
-        <span class="kw">let</span> <span class="kw-2">mut</span> <span class="ident">points</span> <span class="op">=</span> <span class="macro">vec!</span>[];
-        <span class="kw">for</span> <span class="ident">i</span> <span class="kw">in</span> <span class="number">0</span>..<span class="ident">vk</span>.<span class="ident">params</span>.<span class="ident">num_selector_columns</span>() {
-            <span class="kw">let</span> <span class="ident">tmp_point</span> <span class="op">=</span>
-                <span class="ident">gen_eval_point</span>(<span class="ident">i</span>, <span class="ident">log_num_selector_polys</span>, <span class="kw-2">&amp;</span><span class="ident">proof</span>.<span class="ident">zero_check_proof</span>.<span class="ident">point</span>);
-            <span class="ident">points</span>.<span class="ident">push</span>(<span class="ident">tmp_point</span>);
-        }
-
-        <span class="kw">if</span> <span class="op">!</span><span class="ident">PCS::batch_verify_single_poly</span>(
-            <span class="kw-2">&amp;</span><span class="ident">vk</span>.<span class="ident">pcs_param</span>,
-            <span class="kw-2">&amp;</span><span class="ident">vk</span>.<span class="ident">selector_com</span>,
-            <span class="kw-2">&amp;</span><span class="ident">points</span>,
-            <span class="kw-2">&amp;</span><span class="ident">proof</span>.<span class="ident">selector_batch_evals</span>,
-            <span class="kw-2">&amp;</span><span class="ident">proof</span>.<span class="ident">selector_batch_opening</span>,
-        )<span class="question-mark">?</span> {
-            <span class="kw">return</span> <span class="prelude-val">Err</span>(<span class="ident">HyperPlonkErrors::InvalidProof</span>(
-                <span class="string">&quot;selector pcs verification failed&quot;</span>.<span class="ident">to_string</span>(),
-            ));
-        }
-
-        <span class="comment">// =======================================================================</span>
-        <span class="comment">// 3.2 open witnesses&#39; evaluations</span>
-        <span class="comment">// =======================================================================</span>
         <span class="kw">let</span> <span class="kw-2">mut</span> <span class="ident">r_pi</span> <span class="op">=</span> <span class="ident">transcript</span>.<span class="ident">get_and_append_challenge_vectors</span>(<span class="string">b&quot;r_pi&quot;</span>, <span class="ident">ell</span>)<span class="question-mark">?</span>;
-        <span class="kw">let</span> <span class="ident">pi_eval</span> <span class="op">=</span> <span class="ident">evaluate_opt</span>(<span class="kw-2">&amp;</span><span class="ident">pi_poly</span>, <span class="kw-2">&amp;</span><span class="ident">r_pi</span>);
-        <span class="macro">assert_eq!</span>(
-            <span class="ident">pi_eval</span>,
-            <span class="ident">proof</span>.<span class="ident">w_merged_batch_evals</span>[<span class="ident">proof</span>.<span class="ident">w_merged_batch_evals</span>.<span class="ident">len</span>() <span class="op">-</span> <span class="number">2</span>]
-        );
 
-        <span class="ident">r_pi</span> <span class="op">=</span> [
-            <span class="macro">vec!</span>[<span class="ident">E::Fr::zero</span>(); <span class="ident">num_vars</span> <span class="op">-</span> <span class="ident">ell</span>],
-            <span class="ident">r_pi</span>,
-            <span class="macro">vec!</span>[<span class="ident">E::Fr::zero</span>(); <span class="ident">log_num_witness_polys</span>],
+        <span class="kw">let</span> <span class="ident">res</span> <span class="op">=</span> <span class="ident">PCS::batch_verify</span>(
+            <span class="kw-2">&amp;</span><span class="ident">vk</span>.<span class="ident">pcs_param</span>,
+            [<span class="ident">proof</span>.<span class="ident">perm_check_proof</span>.<span class="ident">prod_x_comm</span>; <span class="number">4</span>].<span class="ident">as_ref</span>(),
+            <span class="ident">prod_points</span>.<span class="ident">as_ref</span>(),
+            <span class="kw-2">&amp;</span><span class="ident">proof</span>.<span class="ident">batch_prod_x_openings</span>,
+            <span class="kw-2">&amp;mut</span> <span class="ident">transcript</span>,
+        )<span class="question-mark">?</span>;
+        <span class="macro">assert!</span>(<span class="ident">res</span>);
+
+        <span class="comment">// =======================================================================</span>
+        <span class="comment">// 3.3 open witnesses&#39; and selectors evaluations</span>
+        <span class="comment">// =======================================================================</span>
+
+        <span class="kw">let</span> <span class="ident">res</span> <span class="op">=</span> <span class="ident">PCS::verify</span>(
+            <span class="kw-2">&amp;</span><span class="ident">vk</span>.<span class="ident">pcs_param</span>,
+            <span class="kw-2">&amp;</span><span class="ident">proof</span>.<span class="ident">witness_merged_commit</span>,
+            <span class="ident">perm_check_point</span>,
+            <span class="kw-2">&amp;</span><span class="ident">proof</span>.<span class="ident">perm_check_eval</span>,
+            <span class="kw-2">&amp;</span><span class="ident">proof</span>.<span class="ident">perm_check_opening</span>,
+        )<span class="question-mark">?</span>;
+        <span class="macro">assert!</span>(<span class="ident">res</span>);
+
+        <span class="kw">let</span> <span class="ident">pi_eval_rec</span> <span class="op">=</span> <span class="ident">evaluate_opt</span>(<span class="kw-2">&amp;</span><span class="ident">pi_poly</span>, <span class="kw-2">&amp;</span><span class="ident">r_pi</span>);
+        <span class="macro">assert_eq!</span>(<span class="kw-2">&amp;</span><span class="ident">pi_eval_rec</span>, <span class="ident">pi_eval</span>);
+
+        <span class="ident">r_pi</span> <span class="op">=</span> [<span class="macro">vec!</span>[<span class="ident">E::Fr::zero</span>(); <span class="ident">num_vars</span> <span class="op">-</span> <span class="ident">ell</span>], <span class="ident">r_pi</span>].<span class="ident">concat</span>();
+        <span class="kw">let</span> <span class="ident">commitments</span> <span class="op">=</span> [
+            <span class="ident">proof</span>.<span class="ident">witness_commits</span>.<span class="ident">as_slice</span>(),
+            <span class="ident">vk</span>.<span class="ident">selector_commitments</span>.<span class="ident">as_slice</span>(),
+            <span class="kw-2">&amp;</span>[<span class="ident">proof</span>.<span class="ident">witness_commits</span>[<span class="number">0</span>]],
         ]
         .<span class="ident">concat</span>();
 
-        <span class="kw">let</span> <span class="kw-2">mut</span> <span class="ident">points</span> <span class="op">=</span> <span class="macro">vec!</span>[<span class="ident">perm_check_point</span>.<span class="ident">clone</span>()];
+        <span class="kw">let</span> <span class="ident">points</span> <span class="op">=</span> [
+            <span class="macro">vec!</span>[<span class="ident">zero_check_point</span>.<span class="ident">clone</span>(); <span class="ident">num_witnesses</span> <span class="op">+</span> <span class="ident">num_selectors</span>].<span class="ident">as_slice</span>(),
+            <span class="kw-2">&amp;</span>[<span class="ident">r_pi</span>],
+        ]
+        .<span class="ident">concat</span>();
 
-        <span class="kw">for</span> <span class="ident">i</span> <span class="kw">in</span> <span class="number">0</span>..<span class="ident">proof</span>.<span class="ident">w_merged_batch_evals</span>.<span class="ident">len</span>() <span class="op">-</span> <span class="number">3</span> {
-            <span class="ident">points</span>.<span class="ident">push</span>(<span class="ident">gen_eval_point</span>(<span class="ident">i</span>, <span class="ident">log_num_witness_polys</span>, <span class="ident">zero_check_point</span>))
-        }
-        <span class="ident">points</span>.<span class="ident">push</span>(<span class="ident">r_pi</span>);
-        <span class="kw">if</span> <span class="op">!</span><span class="ident">PCS::batch_verify_single_poly</span>(
+        <span class="kw">let</span> <span class="ident">res</span> <span class="op">=</span> <span class="ident">PCS::batch_verify</span>(
             <span class="kw-2">&amp;</span><span class="ident">vk</span>.<span class="ident">pcs_param</span>,
-            <span class="kw-2">&amp;</span><span class="ident">proof</span>.<span class="ident">w_merged_com</span>,
-            <span class="kw-2">&amp;</span><span class="ident">points</span>,
-            <span class="kw-2">&amp;</span><span class="ident">proof</span>.<span class="ident">w_merged_batch_evals</span>,
-            <span class="kw-2">&amp;</span><span class="ident">proof</span>.<span class="ident">w_merged_batch_opening</span>,
-        )<span class="question-mark">?</span> {
-            <span class="kw">return</span> <span class="prelude-val">Err</span>(<span class="ident">HyperPlonkErrors::InvalidProof</span>(
-                <span class="string">&quot;witness for permutation check pcs verification failed&quot;</span>.<span class="ident">to_string</span>(),
-            ));
-        }
+            <span class="ident">commitments</span>.<span class="ident">as_ref</span>(),
+            <span class="ident">points</span>.<span class="ident">as_ref</span>(),
+            <span class="kw-2">&amp;</span><span class="ident">proof</span>.<span class="ident">batch_witness_and_selector_openings</span>,
+            <span class="kw-2">&amp;mut</span> <span class="ident">transcript</span>,
+        )<span class="question-mark">?</span>;
+
+        <span class="macro">assert!</span>(<span class="ident">res</span>);
 
         <span class="macro">end_timer!</span>(<span class="ident">step</span>);
         <span class="macro">end_timer!</span>(<span class="ident">start</span>);
@@ -1543,7 +1379,7 @@
     <span class="kw">use</span> <span class="ident">arithmetic::random_permutation_mle</span>;
     <span class="kw">use</span> <span class="ident">ark_bls12_381::Bls12_381</span>;
     <span class="kw">use</span> <span class="ident">ark_std::test_rng</span>;
-    <span class="kw">use</span> <span class="ident">pcs::prelude::MultilinearKzgPCS</span>;
+    <span class="kw">use</span> <span class="ident">subroutines::pcs::prelude::MultilinearKzgPCS</span>;
 
     <span class="attribute">#[<span class="ident">test</span>]</span>
     <span class="kw">fn</span> <span class="ident">test_hyperplonk_e2e</span>() -&gt; <span class="prelude-ty">Result</span><span class="op">&lt;</span>(), <span class="ident">HyperPlonkErrors</span><span class="op">&gt;</span> {

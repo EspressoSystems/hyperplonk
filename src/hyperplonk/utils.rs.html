@@ -335,87 +335,89 @@
 <span id="335">335</span>
 <span id="336">336</span>
 <span id="337">337</span>
+<span id="338">338</span>
 </pre><pre class="rust"><code><span class="kw">use</span> <span class="kw">crate</span>::{
     <span class="ident">custom_gate::CustomizedGates</span>, <span class="ident">errors::HyperPlonkErrors</span>, <span class="ident">structs::HyperPlonkParams</span>,
     <span class="ident">witness::WitnessColumn</span>,
 };
-<span class="kw">use</span> <span class="ident">arithmetic::VirtualPolynomial</span>;
+<span class="kw">use</span> <span class="ident">arithmetic</span>::{<span class="ident">evaluate_opt</span>, <span class="ident">VirtualPolynomial</span>};
 <span class="kw">use</span> <span class="ident">ark_ec::PairingEngine</span>;
 <span class="kw">use</span> <span class="ident">ark_ff::PrimeField</span>;
 <span class="kw">use</span> <span class="ident">ark_poly::DenseMultilinearExtension</span>;
-<span class="kw">use</span> <span class="ident">pcs::PolynomialCommitmentScheme</span>;
 <span class="kw">use</span> <span class="ident">std</span>::{<span class="ident">borrow::Borrow</span>, <span class="ident">rc::Rc</span>};
+<span class="kw">use</span> <span class="ident">subroutines::pcs</span>::{<span class="ident">prelude::Commitment</span>, <span class="ident">PolynomialCommitmentScheme</span>};
+<span class="kw">use</span> <span class="ident">transcript::IOPTranscript</span>;
 
 <span class="doccomment">/// An accumulator structure that holds a polynomial and</span>
 <span class="doccomment">/// its opening points</span>
 <span class="attribute">#[<span class="ident">derive</span>(<span class="ident">Debug</span>)]</span>
 <span class="kw">pub</span>(<span class="kw">super</span>) <span class="kw">struct</span> <span class="ident">PcsAccumulator</span><span class="op">&lt;</span><span class="ident">E</span>: <span class="ident">PairingEngine</span>, <span class="ident">PCS</span>: <span class="ident">PolynomialCommitmentScheme</span><span class="op">&lt;</span><span class="ident">E</span><span class="op">&gt;</span><span class="op">&gt;</span> {
-    <span class="kw">pub</span>(<span class="kw">crate</span>) <span class="ident">polynomial</span>: <span class="prelude-ty">Option</span><span class="op">&lt;</span><span class="ident">PCS::Polynomial</span><span class="op">&gt;</span>,
-    <span class="kw">pub</span>(<span class="kw">crate</span>) <span class="ident">poly_commit</span>: <span class="prelude-ty">Option</span><span class="op">&lt;</span><span class="ident">PCS::Commitment</span><span class="op">&gt;</span>,
+    <span class="comment">// sequence:</span>
+    <span class="comment">// - prod(x) at 5 points</span>
+    <span class="comment">// - w_merged at perm check point</span>
+    <span class="comment">// - w_merged at zero check points (#witness points)</span>
+    <span class="comment">// - selector_merged at zero check points (#selector points)</span>
+    <span class="comment">// - w[0] at r_pi</span>
+    <span class="kw">pub</span>(<span class="kw">crate</span>) <span class="ident">num_var</span>: <span class="ident">usize</span>,
+    <span class="kw">pub</span>(<span class="kw">crate</span>) <span class="ident">polynomials</span>: <span class="ident">Vec</span><span class="op">&lt;</span><span class="ident">PCS::Polynomial</span><span class="op">&gt;</span>,
+    <span class="kw">pub</span>(<span class="kw">crate</span>) <span class="ident">commitments</span>: <span class="ident">Vec</span><span class="op">&lt;</span><span class="ident">PCS::Commitment</span><span class="op">&gt;</span>,
     <span class="kw">pub</span>(<span class="kw">crate</span>) <span class="ident">points</span>: <span class="ident">Vec</span><span class="op">&lt;</span><span class="ident">PCS::Point</span><span class="op">&gt;</span>,
+    <span class="kw">pub</span>(<span class="kw">crate</span>) <span class="ident">evals</span>: <span class="ident">Vec</span><span class="op">&lt;</span><span class="ident">PCS::Evaluation</span><span class="op">&gt;</span>,
 }
 
-<span class="kw">impl</span><span class="op">&lt;</span><span class="ident">E</span>: <span class="ident">PairingEngine</span>, <span class="ident">PCS</span>: <span class="ident">PolynomialCommitmentScheme</span><span class="op">&lt;</span><span class="ident">E</span><span class="op">&gt;</span><span class="op">&gt;</span> <span class="ident">PcsAccumulator</span><span class="op">&lt;</span><span class="ident">E</span>, <span class="ident">PCS</span><span class="op">&gt;</span> {
+<span class="kw">impl</span><span class="op">&lt;</span><span class="ident">E</span>, <span class="ident">PCS</span><span class="op">&gt;</span> <span class="ident">PcsAccumulator</span><span class="op">&lt;</span><span class="ident">E</span>, <span class="ident">PCS</span><span class="op">&gt;</span>
+<span class="kw">where</span>
+    <span class="ident">E</span>: <span class="ident">PairingEngine</span>,
+    <span class="ident">PCS</span>: <span class="ident">PolynomialCommitmentScheme</span><span class="op">&lt;</span>
+        <span class="ident">E</span>,
+        <span class="ident">Polynomial</span> <span class="op">=</span> <span class="ident">Rc</span><span class="op">&lt;</span><span class="ident">DenseMultilinearExtension</span><span class="op">&lt;</span><span class="ident">E::Fr</span><span class="op">&gt;</span><span class="op">&gt;</span>,
+        <span class="ident">Point</span> <span class="op">=</span> <span class="ident">Vec</span><span class="op">&lt;</span><span class="ident">E::Fr</span><span class="op">&gt;</span>,
+        <span class="ident">Evaluation</span> <span class="op">=</span> <span class="ident">E::Fr</span>,
+        <span class="ident">Commitment</span> <span class="op">=</span> <span class="ident">Commitment</span><span class="op">&lt;</span><span class="ident">E</span><span class="op">&gt;</span>,
+    <span class="op">&gt;</span>,
+{
     <span class="doccomment">/// Create an empty accumulator.</span>
-    <span class="kw">pub</span>(<span class="kw">super</span>) <span class="kw">fn</span> <span class="ident">new</span>() -&gt; <span class="self">Self</span> {
+    <span class="kw">pub</span>(<span class="kw">super</span>) <span class="kw">fn</span> <span class="ident">new</span>(<span class="ident">num_var</span>: <span class="ident">usize</span>) -&gt; <span class="self">Self</span> {
         <span class="self">Self</span> {
-            <span class="ident">polynomial</span>: <span class="prelude-val">None</span>,
-            <span class="ident">poly_commit</span>: <span class="prelude-val">None</span>,
+            <span class="ident">num_var</span>,
+            <span class="ident">polynomials</span>: <span class="macro">vec!</span>[],
+            <span class="ident">commitments</span>: <span class="macro">vec!</span>[],
             <span class="ident">points</span>: <span class="macro">vec!</span>[],
+            <span class="ident">evals</span>: <span class="macro">vec!</span>[],
         }
-    }
-
-    <span class="doccomment">/// Initialize the polynomial; requires both the polynomial</span>
-    <span class="doccomment">/// and its commitment.</span>
-    <span class="kw">pub</span>(<span class="kw">super</span>) <span class="kw">fn</span> <span class="ident">init_poly</span>(
-        <span class="kw-2">&amp;mut</span> <span class="self">self</span>,
-        <span class="ident">polynomial</span>: <span class="ident">PCS::Polynomial</span>,
-        <span class="ident">commitment</span>: <span class="ident">PCS::Commitment</span>,
-    ) -&gt; <span class="prelude-ty">Result</span><span class="op">&lt;</span>(), <span class="ident">HyperPlonkErrors</span><span class="op">&gt;</span> {
-        <span class="kw">if</span> <span class="self">self</span>.<span class="ident">polynomial</span>.<span class="ident">is_some</span>() <span class="op">|</span><span class="op">|</span> <span class="self">self</span>.<span class="ident">poly_commit</span>.<span class="ident">is_some</span>() {
-            <span class="kw">return</span> <span class="prelude-val">Err</span>(<span class="ident">HyperPlonkErrors::InvalidProver</span>(
-                <span class="string">&quot;poly already set for accumulator&quot;</span>.<span class="ident">to_string</span>(),
-            ));
-        }
-
-        <span class="self">self</span>.<span class="ident">polynomial</span> <span class="op">=</span> <span class="prelude-val">Some</span>(<span class="ident">polynomial</span>);
-        <span class="self">self</span>.<span class="ident">poly_commit</span> <span class="op">=</span> <span class="prelude-val">Some</span>(<span class="ident">commitment</span>);
-        <span class="prelude-val">Ok</span>(())
     }
 
     <span class="doccomment">/// Push a new evaluation point into the accumulator</span>
-    <span class="kw">pub</span>(<span class="kw">super</span>) <span class="kw">fn</span> <span class="ident">insert_point</span>(<span class="kw-2">&amp;mut</span> <span class="self">self</span>, <span class="ident">point</span>: <span class="kw-2">&amp;</span><span class="ident">PCS::Point</span>) {
-        <span class="self">self</span>.<span class="ident">points</span>.<span class="ident">push</span>(<span class="ident">point</span>.<span class="ident">clone</span>())
+    <span class="kw">pub</span>(<span class="kw">super</span>) <span class="kw">fn</span> <span class="ident">insert_poly_and_points</span>(
+        <span class="kw-2">&amp;mut</span> <span class="self">self</span>,
+        <span class="ident">poly</span>: <span class="kw-2">&amp;</span><span class="ident">PCS::Polynomial</span>,
+        <span class="ident">commit</span>: <span class="kw-2">&amp;</span><span class="ident">PCS::Commitment</span>,
+        <span class="ident">point</span>: <span class="kw-2">&amp;</span><span class="ident">PCS::Point</span>,
+    ) {
+        <span class="macro">assert!</span>(<span class="ident">poly</span>.<span class="ident">num_vars</span> <span class="op">==</span> <span class="ident">point</span>.<span class="ident">len</span>());
+        <span class="macro">assert!</span>(<span class="ident">poly</span>.<span class="ident">num_vars</span> <span class="op">==</span> <span class="self">self</span>.<span class="ident">num_var</span>);
+
+        <span class="kw">let</span> <span class="ident">eval</span> <span class="op">=</span> <span class="ident">evaluate_opt</span>(<span class="ident">poly</span>, <span class="ident">point</span>);
+
+        <span class="self">self</span>.<span class="ident">evals</span>.<span class="ident">push</span>(<span class="ident">eval</span>);
+        <span class="self">self</span>.<span class="ident">polynomials</span>.<span class="ident">push</span>(<span class="ident">poly</span>.<span class="ident">clone</span>());
+        <span class="self">self</span>.<span class="ident">points</span>.<span class="ident">push</span>(<span class="ident">point</span>.<span class="ident">clone</span>());
+        <span class="self">self</span>.<span class="ident">commitments</span>.<span class="ident">push</span>(<span class="kw-2">*</span><span class="ident">commit</span>);
     }
 
     <span class="doccomment">/// Batch open all the points over a merged polynomial.</span>
     <span class="doccomment">/// A simple wrapper of PCS::multi_open</span>
-    <span class="kw">pub</span>(<span class="kw">super</span>) <span class="kw">fn</span> <span class="ident">batch_open</span>(
+    <span class="kw">pub</span>(<span class="kw">super</span>) <span class="kw">fn</span> <span class="ident">multi_open</span>(
         <span class="kw-2">&amp;</span><span class="self">self</span>,
         <span class="ident">prover_param</span>: <span class="kw">impl</span> <span class="ident">Borrow</span><span class="op">&lt;</span><span class="ident">PCS::ProverParam</span><span class="op">&gt;</span>,
-    ) -&gt; <span class="prelude-ty">Result</span><span class="op">&lt;</span>(<span class="ident">PCS::BatchProof</span>, <span class="ident">Vec</span><span class="op">&lt;</span><span class="ident">PCS::Evaluation</span><span class="op">&gt;</span>), <span class="ident">HyperPlonkErrors</span><span class="op">&gt;</span> {
-        <span class="kw">let</span> <span class="ident">poly</span> <span class="op">=</span> <span class="kw">match</span> <span class="kw-2">&amp;</span><span class="self">self</span>.<span class="ident">polynomial</span> {
-            <span class="prelude-val">Some</span>(<span class="ident">p</span>) =&gt; <span class="ident">p</span>,
-            <span class="prelude-val">None</span> =&gt; {
-                <span class="kw">return</span> <span class="prelude-val">Err</span>(<span class="ident">HyperPlonkErrors::InvalidProver</span>(
-                    <span class="string">&quot;poly is set for accumulator&quot;</span>.<span class="ident">to_string</span>(),
-                ))
-            },
-        };
-
-        <span class="kw">let</span> <span class="ident">commitment</span> <span class="op">=</span> <span class="kw">match</span> <span class="kw-2">&amp;</span><span class="self">self</span>.<span class="ident">poly_commit</span> {
-            <span class="prelude-val">Some</span>(<span class="ident">p</span>) =&gt; <span class="ident">p</span>,
-            <span class="prelude-val">None</span> =&gt; {
-                <span class="kw">return</span> <span class="prelude-val">Err</span>(<span class="ident">HyperPlonkErrors::InvalidProver</span>(
-                    <span class="string">&quot;poly is set for accumulator&quot;</span>.<span class="ident">to_string</span>(),
-                ))
-            },
-        };
-        <span class="prelude-val">Ok</span>(<span class="ident">PCS::multi_open_single_poly</span>(
+        <span class="ident">transcript</span>: <span class="kw-2">&amp;mut</span> <span class="ident">IOPTranscript</span><span class="op">&lt;</span><span class="ident">E::Fr</span><span class="op">&gt;</span>,
+    ) -&gt; <span class="prelude-ty">Result</span><span class="op">&lt;</span><span class="ident">PCS::BatchProof</span>, <span class="ident">HyperPlonkErrors</span><span class="op">&gt;</span> {
+        <span class="prelude-val">Ok</span>(<span class="ident">PCS::multi_open</span>(
             <span class="ident">prover_param</span>.<span class="ident">borrow</span>(),
-            <span class="ident">commitment</span>,
-            <span class="ident">poly</span>,
-            <span class="kw-2">&amp;</span><span class="self">self</span>.<span class="ident">points</span>,
+            <span class="self">self</span>.<span class="ident">polynomials</span>.<span class="ident">as_ref</span>(),
+            <span class="self">self</span>.<span class="ident">points</span>.<span class="ident">as_ref</span>(),
+            <span class="self">self</span>.<span class="ident">evals</span>.<span class="ident">as_ref</span>(),
+            <span class="ident">transcript</span>,
         )<span class="question-mark">?</span>)
     }
 }
