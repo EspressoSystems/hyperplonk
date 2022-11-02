@@ -342,9 +342,7 @@
     <span class="ident">poly_iop</span>::{<span class="ident">prelude::SumCheck</span>, <span class="ident">PolyIOP</span>},
     <span class="ident">IOPProof</span>,
 };
-<span class="kw">use</span> <span class="ident">arithmetic</span>::{
-    <span class="ident">build_eq_x_r_vec</span>, <span class="ident">fix_last_variables</span>, <span class="ident">DenseMultilinearExtension</span>, <span class="ident">VPAuxInfo</span>, <span class="ident">VirtualPolynomial</span>,
-};
+<span class="kw">use</span> <span class="ident">arithmetic</span>::{<span class="ident">build_eq_x_r_vec</span>, <span class="ident">DenseMultilinearExtension</span>, <span class="ident">VPAuxInfo</span>, <span class="ident">VirtualPolynomial</span>};
 <span class="kw">use</span> <span class="ident">ark_ec</span>::{<span class="ident">AffineCurve</span>, <span class="ident">PairingEngine</span>, <span class="ident">ProjectiveCurve</span>};
 <span class="kw">use</span> <span class="ident">ark_std</span>::{<span class="ident">end_timer</span>, <span class="ident">log2</span>, <span class="ident">start_timer</span>, <span class="ident">One</span>, <span class="ident">Zero</span>};
 <span class="kw">use</span> <span class="ident">std</span>::{<span class="ident">marker::PhantomData</span>, <span class="ident">rc::Rc</span>};
@@ -367,10 +365,11 @@
 <span class="doccomment">/// Steps:</span>
 <span class="doccomment">/// 1. get challenge point t from transcript</span>
 <span class="doccomment">/// 2. build eq(t,i) for i in [0..k]</span>
-<span class="doccomment">/// 3. build \tilde g(i, b) = eq(t, i) * f_i(b)</span>
-<span class="doccomment">/// 4. compute \tilde eq</span>
-<span class="doccomment">/// 5. run sumcheck on \tilde eq * \tilde g(i, b)</span>
-<span class="doccomment">/// 6. build g&#39;(a2) where (a1, a2) is the sumcheck&#39;s point</span>
+<span class="doccomment">/// 3. build \tilde g_i(b) = eq(t, i) * f_i(b)</span>
+<span class="doccomment">/// 4. compute \tilde eq_i(b) = eq(b, point_i)</span>
+<span class="doccomment">/// 5. run sumcheck on \sum_i=1..k \tilde eq_i * \tilde g_i</span>
+<span class="doccomment">/// 6. build g&#39;(X) = \sum_i=1..k \tilde eq_i(a2) * \tilde g_i(X) where (a2) is</span>
+<span class="doccomment">/// the sumcheck&#39;s point 7. open g&#39;(X) at point (a2)</span>
 <span class="kw">pub</span>(<span class="kw">crate</span>) <span class="kw">fn</span> <span class="ident">multi_open_internal</span><span class="op">&lt;</span><span class="ident">E</span>, <span class="ident">PCS</span><span class="op">&gt;</span>(
     <span class="ident">prover_param</span>: <span class="kw-2">&amp;</span><span class="ident">PCS::ProverParam</span>,
     <span class="ident">polynomials</span>: <span class="kw-2">&amp;</span>[<span class="ident">PCS::Polynomial</span>],
@@ -393,7 +392,6 @@
     <span class="kw">let</span> <span class="ident">num_var</span> <span class="op">=</span> <span class="ident">polynomials</span>[<span class="number">0</span>].<span class="ident">num_vars</span>;
     <span class="kw">let</span> <span class="ident">k</span> <span class="op">=</span> <span class="ident">polynomials</span>.<span class="ident">len</span>();
     <span class="kw">let</span> <span class="ident">ell</span> <span class="op">=</span> <span class="ident">log2</span>(<span class="ident">k</span>) <span class="kw">as</span> <span class="ident">usize</span>;
-    <span class="kw">let</span> <span class="ident">merged_num_var</span> <span class="op">=</span> <span class="ident">num_var</span> <span class="op">+</span> <span class="ident">ell</span>;
 
     <span class="comment">// challenge point t</span>
     <span class="kw">let</span> <span class="ident">t</span> <span class="op">=</span> <span class="ident">transcript</span>.<span class="ident">get_and_append_challenge_vectors</span>(<span class="string">&quot;t&quot;</span>.<span class="ident">as_ref</span>(), <span class="ident">ell</span>)<span class="question-mark">?</span>;
@@ -401,40 +399,39 @@
     <span class="comment">// eq(t, i) for i in [0..k]</span>
     <span class="kw">let</span> <span class="ident">eq_t_i_list</span> <span class="op">=</span> <span class="ident">build_eq_x_r_vec</span>(<span class="ident">t</span>.<span class="ident">as_ref</span>())<span class="question-mark">?</span>;
 
-    <span class="comment">// \tilde g(i, b) = eq(t, i) * f_i(b)</span>
+    <span class="comment">// \tilde g_i(b) = eq(t, i) * f_i(b)</span>
     <span class="kw">let</span> <span class="ident">timer</span> <span class="op">=</span> <span class="macro">start_timer!</span>(<span class="op">|</span><span class="op">|</span> <span class="macro">format!</span>(<span class="string">&quot;compute tilde g for {} points&quot;</span>, <span class="ident">points</span>.<span class="ident">len</span>()));
-    <span class="kw">let</span> <span class="kw-2">mut</span> <span class="ident">tilde_g_eval</span> <span class="op">=</span> <span class="macro">vec!</span>[<span class="ident">E::Fr::zero</span>(); <span class="number">1</span> <span class="op">&lt;</span><span class="op">&lt;</span> (<span class="ident">ell</span> <span class="op">+</span> <span class="ident">num_var</span>)];
-    <span class="kw">let</span> <span class="ident">block_size</span> <span class="op">=</span> <span class="number">1</span> <span class="op">&lt;</span><span class="op">&lt;</span> <span class="ident">num_var</span>;
+    <span class="kw">let</span> <span class="kw-2">mut</span> <span class="ident">tilde_gs</span> <span class="op">=</span> <span class="macro">vec!</span>[];
     <span class="kw">for</span> (<span class="ident">index</span>, <span class="ident">f_i</span>) <span class="kw">in</span> <span class="ident">polynomials</span>.<span class="ident">iter</span>().<span class="ident">enumerate</span>() {
+        <span class="kw">let</span> <span class="kw-2">mut</span> <span class="ident">tilde_g_eval</span> <span class="op">=</span> <span class="macro">vec!</span>[<span class="ident">E::Fr::zero</span>(); <span class="number">1</span> <span class="op">&lt;</span><span class="op">&lt;</span> <span class="ident">num_var</span>];
         <span class="kw">for</span> (<span class="ident">j</span>, <span class="kw-2">&amp;</span><span class="ident">f_i_eval</span>) <span class="kw">in</span> <span class="ident">f_i</span>.<span class="ident">iter</span>().<span class="ident">enumerate</span>() {
-            <span class="ident">tilde_g_eval</span>[<span class="ident">index</span> <span class="op">*</span> <span class="ident">block_size</span> <span class="op">+</span> <span class="ident">j</span>] <span class="op">=</span> <span class="ident">f_i_eval</span> <span class="op">*</span> <span class="ident">eq_t_i_list</span>[<span class="ident">index</span>];
+            <span class="ident">tilde_g_eval</span>[<span class="ident">j</span>] <span class="op">=</span> <span class="ident">f_i_eval</span> <span class="op">*</span> <span class="ident">eq_t_i_list</span>[<span class="ident">index</span>];
         }
+        <span class="ident">tilde_gs</span>.<span class="ident">push</span>(<span class="ident">Rc::new</span>(<span class="ident">DenseMultilinearExtension::from_evaluations_vec</span>(
+            <span class="ident">num_var</span>,
+            <span class="ident">tilde_g_eval</span>,
+        )));
     }
-    <span class="kw">let</span> <span class="ident">tilde_g</span> <span class="op">=</span> <span class="ident">Rc::new</span>(<span class="ident">DenseMultilinearExtension::from_evaluations_vec</span>(
-        <span class="ident">merged_num_var</span>,
-        <span class="ident">tilde_g_eval</span>,
-    ));
     <span class="macro">end_timer!</span>(<span class="ident">timer</span>);
 
     <span class="kw">let</span> <span class="ident">timer</span> <span class="op">=</span> <span class="macro">start_timer!</span>(<span class="op">|</span><span class="op">|</span> <span class="macro">format!</span>(<span class="string">&quot;compute tilde eq for {} points&quot;</span>, <span class="ident">points</span>.<span class="ident">len</span>()));
-    <span class="kw">let</span> <span class="kw-2">mut</span> <span class="ident">tilde_eq_eval</span> <span class="op">=</span> <span class="macro">vec!</span>[<span class="ident">E::Fr::zero</span>(); <span class="number">1</span> <span class="op">&lt;</span><span class="op">&lt;</span> (<span class="ident">ell</span> <span class="op">+</span> <span class="ident">num_var</span>)];
-    <span class="kw">for</span> (<span class="ident">index</span>, <span class="ident">point</span>) <span class="kw">in</span> <span class="ident">points</span>.<span class="ident">iter</span>().<span class="ident">enumerate</span>() {
+    <span class="kw">let</span> <span class="kw-2">mut</span> <span class="ident">tilde_eqs</span> <span class="op">=</span> <span class="macro">vec!</span>[];
+    <span class="kw">for</span> <span class="ident">point</span> <span class="kw">in</span> <span class="ident">points</span>.<span class="ident">iter</span>() {
         <span class="kw">let</span> <span class="ident">eq_b_zi</span> <span class="op">=</span> <span class="ident">build_eq_x_r_vec</span>(<span class="ident">point</span>)<span class="question-mark">?</span>;
-        <span class="kw">let</span> <span class="ident">start</span> <span class="op">=</span> <span class="ident">index</span> <span class="op">*</span> <span class="ident">block_size</span>;
-        <span class="ident">tilde_eq_eval</span>[<span class="ident">start</span>..<span class="ident">start</span> <span class="op">+</span> <span class="ident">block_size</span>].<span class="ident">copy_from_slice</span>(<span class="ident">eq_b_zi</span>.<span class="ident">as_slice</span>());
+        <span class="ident">tilde_eqs</span>.<span class="ident">push</span>(<span class="ident">Rc::new</span>(<span class="ident">DenseMultilinearExtension::from_evaluations_vec</span>(
+            <span class="ident">num_var</span>, <span class="ident">eq_b_zi</span>,
+        )));
     }
-    <span class="kw">let</span> <span class="ident">tilde_eq</span> <span class="op">=</span> <span class="ident">Rc::new</span>(<span class="ident">DenseMultilinearExtension::from_evaluations_vec</span>(
-        <span class="ident">merged_num_var</span>,
-        <span class="ident">tilde_eq_eval</span>,
-    ));
     <span class="macro">end_timer!</span>(<span class="ident">timer</span>);
 
     <span class="comment">// built the virtual polynomial for SumCheck</span>
-    <span class="kw">let</span> <span class="ident">timer</span> <span class="op">=</span> <span class="macro">start_timer!</span>(<span class="op">|</span><span class="op">|</span> <span class="macro">format!</span>(<span class="string">&quot;sum check prove of {} variables&quot;</span>, <span class="ident">num_var</span> <span class="op">+</span> <span class="ident">ell</span>));
+    <span class="kw">let</span> <span class="ident">timer</span> <span class="op">=</span> <span class="macro">start_timer!</span>(<span class="op">|</span><span class="op">|</span> <span class="macro">format!</span>(<span class="string">&quot;sum check prove of {} variables&quot;</span>, <span class="ident">num_var</span>));
 
     <span class="kw">let</span> <span class="ident">step</span> <span class="op">=</span> <span class="macro">start_timer!</span>(<span class="op">|</span><span class="op">|</span> <span class="string">&quot;add mle&quot;</span>);
-    <span class="kw">let</span> <span class="kw-2">mut</span> <span class="ident">sum_check_vp</span> <span class="op">=</span> <span class="ident">VirtualPolynomial::new</span>(<span class="ident">num_var</span> <span class="op">+</span> <span class="ident">ell</span>);
-    <span class="ident">sum_check_vp</span>.<span class="ident">add_mle_list</span>([<span class="ident">tilde_g</span>.<span class="ident">clone</span>(), <span class="ident">tilde_eq</span>], <span class="ident">E::Fr::one</span>())<span class="question-mark">?</span>;
+    <span class="kw">let</span> <span class="kw-2">mut</span> <span class="ident">sum_check_vp</span> <span class="op">=</span> <span class="ident">VirtualPolynomial::new</span>(<span class="ident">num_var</span>);
+    <span class="kw">for</span> (<span class="ident">tilde_g</span>, <span class="ident">tilde_eq</span>) <span class="kw">in</span> <span class="ident">tilde_gs</span>.<span class="ident">iter</span>().<span class="ident">zip</span>(<span class="ident">tilde_eqs</span>.<span class="ident">into_iter</span>()) {
+        <span class="ident">sum_check_vp</span>.<span class="ident">add_mle_list</span>([<span class="ident">tilde_g</span>.<span class="ident">clone</span>(), <span class="ident">tilde_eq</span>], <span class="ident">E::Fr::one</span>())<span class="question-mark">?</span>;
+    }
     <span class="macro">end_timer!</span>(<span class="ident">step</span>);
 
     <span class="kw">let</span> <span class="ident">proof</span> <span class="op">=</span> <span class="kw">match</span> <span class="op">&lt;</span><span class="ident">PolyIOP</span><span class="op">&lt;</span><span class="ident">E::Fr</span><span class="op">&gt;</span> <span class="kw">as</span> <span class="ident">SumCheck</span><span class="op">&lt;</span><span class="ident">E::Fr</span><span class="op">&gt;</span><span class="op">&gt;</span><span class="ident">::prove</span>(<span class="kw-2">&amp;</span><span class="ident">sum_check_vp</span>, <span class="ident">transcript</span>) {
@@ -449,15 +446,23 @@
 
     <span class="macro">end_timer!</span>(<span class="ident">timer</span>);
 
-    <span class="comment">// (a1, a2) := sumcheck&#39;s point</span>
-    <span class="kw">let</span> <span class="ident">step</span> <span class="op">=</span> <span class="macro">start_timer!</span>(<span class="op">|</span><span class="op">|</span> <span class="string">&quot;open at a2&quot;</span>);
-    <span class="kw">let</span> <span class="ident">a1</span> <span class="op">=</span> <span class="kw-2">&amp;</span><span class="ident">proof</span>.<span class="ident">point</span>[<span class="ident">num_var</span>..];
+    <span class="comment">// a2 := sumcheck&#39;s point</span>
     <span class="kw">let</span> <span class="ident">a2</span> <span class="op">=</span> <span class="kw-2">&amp;</span><span class="ident">proof</span>.<span class="ident">point</span>[..<span class="ident">num_var</span>];
-    <span class="macro">end_timer!</span>(<span class="ident">step</span>);
 
-    <span class="comment">// build g&#39;(a2)</span>
+    <span class="comment">// build g&#39;(X) = \sum_i=1..k \tilde eq_i(a2) * \tilde g_i(X) where (a2) is the</span>
+    <span class="comment">// sumcheck&#39;s point \tilde eq_i(a2) = eq(a2, point_i)</span>
     <span class="kw">let</span> <span class="ident">step</span> <span class="op">=</span> <span class="macro">start_timer!</span>(<span class="op">|</span><span class="op">|</span> <span class="string">&quot;evaluate at a2&quot;</span>);
-    <span class="kw">let</span> <span class="ident">g_prime</span> <span class="op">=</span> <span class="ident">Rc::new</span>(<span class="ident">fix_last_variables</span>(<span class="kw-2">&amp;</span><span class="ident">tilde_g</span>, <span class="ident">a1</span>));
+    <span class="kw">let</span> <span class="kw-2">mut</span> <span class="ident">g_prime_evals</span> <span class="op">=</span> <span class="macro">vec!</span>[<span class="ident">E::Fr::zero</span>(); <span class="number">1</span> <span class="op">&lt;</span><span class="op">&lt;</span> <span class="ident">num_var</span>];
+    <span class="kw">for</span> (<span class="ident">tilde_g</span>, <span class="ident">point</span>) <span class="kw">in</span> <span class="ident">tilde_gs</span>.<span class="ident">iter</span>().<span class="ident">zip</span>(<span class="ident">points</span>.<span class="ident">iter</span>()) {
+        <span class="kw">let</span> <span class="ident">eq_i_a2</span> <span class="op">=</span> <span class="ident">eq_eval</span>(<span class="ident">a2</span>, <span class="ident">point</span>)<span class="question-mark">?</span>;
+        <span class="kw">for</span> (<span class="ident">j</span>, <span class="kw-2">&amp;</span><span class="ident">tilde_g_eval</span>) <span class="kw">in</span> <span class="ident">tilde_g</span>.<span class="ident">iter</span>().<span class="ident">enumerate</span>() {
+            <span class="ident">g_prime_evals</span>[<span class="ident">j</span>] <span class="op">+</span><span class="op">=</span> <span class="ident">tilde_g_eval</span> <span class="op">*</span> <span class="ident">eq_i_a2</span>;
+        }
+    }
+    <span class="kw">let</span> <span class="ident">g_prime</span> <span class="op">=</span> <span class="ident">Rc::new</span>(<span class="ident">DenseMultilinearExtension::from_evaluations_vec</span>(
+        <span class="ident">num_var</span>,
+        <span class="ident">g_prime_evals</span>,
+    ));
     <span class="macro">end_timer!</span>(<span class="ident">step</span>);
 
     <span class="kw">let</span> <span class="ident">step</span> <span class="op">=</span> <span class="macro">start_timer!</span>(<span class="op">|</span><span class="op">|</span> <span class="string">&quot;pcs open&quot;</span>);
@@ -479,8 +484,8 @@
 <span class="doccomment">/// Steps:</span>
 <span class="doccomment">/// 1. get challenge point t from transcript</span>
 <span class="doccomment">/// 2. build g&#39; commitment</span>
-<span class="doccomment">/// 3. ensure \sum_i eq(t, &lt;i&gt;) * f_i_evals matches the sum via SumCheck</span>
-<span class="doccomment">/// verification 4. verify commitment</span>
+<span class="doccomment">/// 3. ensure \sum_i eq(a2, point_i) * eq(t, &lt;i&gt;) * f_i_evals matches the sum</span>
+<span class="doccomment">/// via SumCheck verification 4. verify commitment</span>
 <span class="kw">pub</span>(<span class="kw">crate</span>) <span class="kw">fn</span> <span class="ident">batch_verify_internal</span><span class="op">&lt;</span><span class="ident">E</span>, <span class="ident">PCS</span><span class="op">&gt;</span>(
     <span class="ident">verifier_param</span>: <span class="kw-2">&amp;</span><span class="ident">PCS::VerifierParam</span>,
     <span class="ident">f_i_commitments</span>: <span class="kw-2">&amp;</span>[<span class="ident">Commitment</span><span class="op">&lt;</span><span class="ident">E</span><span class="op">&gt;</span>],
@@ -504,34 +509,33 @@
 
     <span class="kw">let</span> <span class="ident">k</span> <span class="op">=</span> <span class="ident">f_i_commitments</span>.<span class="ident">len</span>();
     <span class="kw">let</span> <span class="ident">ell</span> <span class="op">=</span> <span class="ident">log2</span>(<span class="ident">k</span>) <span class="kw">as</span> <span class="ident">usize</span>;
-    <span class="kw">let</span> <span class="ident">num_var</span> <span class="op">=</span> <span class="ident">proof</span>.<span class="ident">sum_check_proof</span>.<span class="ident">point</span>.<span class="ident">len</span>() <span class="op">-</span> <span class="ident">ell</span>;
+    <span class="kw">let</span> <span class="ident">num_var</span> <span class="op">=</span> <span class="ident">proof</span>.<span class="ident">sum_check_proof</span>.<span class="ident">point</span>.<span class="ident">len</span>();
 
     <span class="comment">// challenge point t</span>
     <span class="kw">let</span> <span class="ident">t</span> <span class="op">=</span> <span class="ident">transcript</span>.<span class="ident">get_and_append_challenge_vectors</span>(<span class="string">&quot;t&quot;</span>.<span class="ident">as_ref</span>(), <span class="ident">ell</span>)<span class="question-mark">?</span>;
 
-    <span class="comment">// sum check point (a1, a2)</span>
-    <span class="kw">let</span> <span class="ident">a1</span> <span class="op">=</span> <span class="kw-2">&amp;</span><span class="ident">proof</span>.<span class="ident">sum_check_proof</span>.<span class="ident">point</span>[<span class="ident">num_var</span>..];
+    <span class="comment">// sum check point (a2)</span>
     <span class="kw">let</span> <span class="ident">a2</span> <span class="op">=</span> <span class="kw-2">&amp;</span><span class="ident">proof</span>.<span class="ident">sum_check_proof</span>.<span class="ident">point</span>[..<span class="ident">num_var</span>];
 
     <span class="comment">// build g&#39; commitment</span>
-    <span class="kw">let</span> <span class="ident">eq_a1_list</span> <span class="op">=</span> <span class="ident">build_eq_x_r_vec</span>(<span class="ident">a1</span>)<span class="question-mark">?</span>;
     <span class="kw">let</span> <span class="ident">eq_t_list</span> <span class="op">=</span> <span class="ident">build_eq_x_r_vec</span>(<span class="ident">t</span>.<span class="ident">as_ref</span>())<span class="question-mark">?</span>;
 
     <span class="kw">let</span> <span class="kw-2">mut</span> <span class="ident">g_prime_commit</span> <span class="op">=</span> <span class="ident">E::G1Affine::zero</span>().<span class="ident">into_projective</span>();
-    <span class="kw">for</span> <span class="ident">i</span> <span class="kw">in</span> <span class="number">0</span>..<span class="ident">k</span> {
-        <span class="kw">let</span> <span class="ident">tmp</span> <span class="op">=</span> <span class="ident">eq_a1_list</span>[<span class="ident">i</span>] <span class="op">*</span> <span class="ident">eq_t_list</span>[<span class="ident">i</span>];
+
+    <span class="kw">for</span> (<span class="ident">i</span>, <span class="ident">point</span>) <span class="kw">in</span> <span class="ident">points</span>.<span class="ident">iter</span>().<span class="ident">enumerate</span>() {
+        <span class="kw">let</span> <span class="ident">eq_i_a2</span> <span class="op">=</span> <span class="ident">eq_eval</span>(<span class="ident">a2</span>, <span class="ident">point</span>)<span class="question-mark">?</span>;
+        <span class="kw">let</span> <span class="ident">tmp</span> <span class="op">=</span> <span class="ident">eq_i_a2</span> <span class="op">*</span> <span class="ident">eq_t_list</span>[<span class="ident">i</span>];
         <span class="ident">g_prime_commit</span> <span class="op">+</span><span class="op">=</span> <span class="kw-2">&amp;</span><span class="ident">f_i_commitments</span>[<span class="ident">i</span>].<span class="number">0</span>.<span class="ident">mul</span>(<span class="ident">tmp</span>);
     }
 
     <span class="comment">// ensure \sum_i eq(t, &lt;i&gt;) * f_i_evals matches the sum via SumCheck</span>
-    <span class="comment">// verification</span>
     <span class="kw">let</span> <span class="kw-2">mut</span> <span class="ident">sum</span> <span class="op">=</span> <span class="ident">E::Fr::zero</span>();
     <span class="kw">for</span> (<span class="ident">i</span>, <span class="kw-2">&amp;</span><span class="ident">e</span>) <span class="kw">in</span> <span class="ident">eq_t_list</span>.<span class="ident">iter</span>().<span class="ident">enumerate</span>().<span class="ident">take</span>(<span class="ident">k</span>) {
         <span class="ident">sum</span> <span class="op">+</span><span class="op">=</span> <span class="ident">e</span> <span class="op">*</span> <span class="ident">proof</span>.<span class="ident">f_i_eval_at_point_i</span>[<span class="ident">i</span>];
     }
     <span class="kw">let</span> <span class="ident">aux_info</span> <span class="op">=</span> <span class="ident">VPAuxInfo</span> {
         <span class="ident">max_degree</span>: <span class="number">2</span>,
-        <span class="ident">num_variables</span>: <span class="ident">num_var</span> <span class="op">+</span> <span class="ident">ell</span>,
+        <span class="ident">num_variables</span>: <span class="ident">num_var</span>,
         <span class="ident">phantom</span>: <span class="ident">PhantomData</span>,
     };
     <span class="kw">let</span> <span class="ident">subclaim</span> <span class="op">=</span> <span class="kw">match</span> <span class="op">&lt;</span><span class="ident">PolyIOP</span><span class="op">&lt;</span><span class="ident">E::Fr</span><span class="op">&gt;</span> <span class="kw">as</span> <span class="ident">SumCheck</span><span class="op">&lt;</span><span class="ident">E::Fr</span><span class="op">&gt;</span><span class="op">&gt;</span><span class="ident">::verify</span>(
@@ -548,11 +552,7 @@
             ));
         },
     };
-    <span class="kw">let</span> <span class="kw-2">mut</span> <span class="ident">eq_tilde_eval</span> <span class="op">=</span> <span class="ident">E::Fr::zero</span>();
-    <span class="kw">for</span> (<span class="ident">point</span>, <span class="kw-2">&amp;</span><span class="ident">coef</span>) <span class="kw">in</span> <span class="ident">points</span>.<span class="ident">iter</span>().<span class="ident">zip</span>(<span class="ident">eq_a1_list</span>.<span class="ident">iter</span>()) {
-        <span class="ident">eq_tilde_eval</span> <span class="op">+</span><span class="op">=</span> <span class="ident">coef</span> <span class="op">*</span> <span class="ident">eq_eval</span>(<span class="ident">a2</span>, <span class="ident">point</span>)<span class="question-mark">?</span>;
-    }
-    <span class="kw">let</span> <span class="ident">tilde_g_eval</span> <span class="op">=</span> <span class="ident">subclaim</span>.<span class="ident">expected_evaluation</span> <span class="op">/</span> <span class="ident">eq_tilde_eval</span>;
+    <span class="kw">let</span> <span class="ident">tilde_g_eval</span> <span class="op">=</span> <span class="ident">subclaim</span>.<span class="ident">expected_evaluation</span>;
 
     <span class="comment">// verify commitment</span>
     <span class="kw">let</span> <span class="ident">res</span> <span class="op">=</span> <span class="ident">PCS::verify</span>(
