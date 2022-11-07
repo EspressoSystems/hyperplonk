@@ -1,4 +1,4 @@
-<!DOCTYPE html><html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1.0"><meta name="generator" content="rustdoc"><meta name="description" content="Source of the Rust file `arithmetic/src/util.rs`."><meta name="keywords" content="rust, rustlang, rust-lang"><title>util.rs - source</title><link rel="preload" as="font" type="font/woff2" crossorigin href="../../SourceSerif4-Regular.ttf.woff2"><link rel="preload" as="font" type="font/woff2" crossorigin href="../../FiraSans-Regular.woff2"><link rel="preload" as="font" type="font/woff2" crossorigin href="../../FiraSans-Medium.woff2"><link rel="preload" as="font" type="font/woff2" crossorigin href="../../SourceCodePro-Regular.ttf.woff2"><link rel="preload" as="font" type="font/woff2" crossorigin href="../../SourceSerif4-Bold.ttf.woff2"><link rel="preload" as="font" type="font/woff2" crossorigin href="../../SourceCodePro-Semibold.ttf.woff2"><link rel="stylesheet" type="text/css" href="../../normalize.css"><link rel="stylesheet" type="text/css" href="../../rustdoc.css" id="mainThemeStyle"><link rel="stylesheet" type="text/css" href="../../ayu.css" disabled><link rel="stylesheet" type="text/css" href="../../dark.css" disabled><link rel="stylesheet" type="text/css" href="../../light.css" id="themeStyle"><script id="default-settings" ></script><script src="../../storage.js"></script><script defer src="../../source-script.js"></script><script defer src="../../source-files.js"></script><script defer src="../../main.js"></script><noscript><link rel="stylesheet" href="../../noscript.css"></noscript><link rel="alternate icon" type="image/png" href="../../favicon-16x16.png"><link rel="alternate icon" type="image/png" href="../../favicon-32x32.png"><link rel="icon" type="image/svg+xml" href="../../favicon.svg"></head><body class="rustdoc source"><!--[if lte IE 11]><div class="warning">This old browser is unsupported and will most likely display funky things.</div><![endif]--><nav class="mobile-topbar"><button class="sidebar-menu-toggle">&#9776;</button><a class="sidebar-logo" href="../../arithmetic/index.html"><div class="logo-container"><img class="rust-logo" src="../../rust-logo.svg" alt="logo"></div></a><h2 class="location"></h2></nav><nav class="sidebar"><a class="sidebar-logo" href="../../arithmetic/index.html"><div class="logo-container"><img class="rust-logo" src="../../rust-logo.svg" alt="logo"></div></a></nav><main><div class="width-limiter"><div class="sub-container"><a class="sub-logo-container" href="../../arithmetic/index.html"><img class="rust-logo" src="../../rust-logo.svg" alt="logo"></a><nav class="sub"><form class="search-form"><div class="search-container"><span></span><input class="search-input" name="search" autocomplete="off" spellcheck="false" placeholder="Click or press ‘S’ to search, ‘?’ for more options…" type="search"><div id="help-button" title="help" tabindex="-1"><button type="button">?</button></div><div id="settings-menu" tabindex="-1"><a href="../../settings.html" title="settings"><img width="22" height="22" alt="Change settings" src="../../wheel.svg"></a></div></div></form></nav></div><section id="main-content" class="content"><div class="example-wrap"><pre class="line-numbers"><span id="1">1</span>
+<!DOCTYPE html><html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1.0"><meta name="generator" content="rustdoc"><meta name="description" content="Source of the Rust file `arithmetic/src/util.rs`."><meta name="keywords" content="rust, rustlang, rust-lang"><title>util.rs - source</title><link rel="preload" as="font" type="font/woff2" crossorigin href="../../SourceSerif4-Regular.ttf.woff2"><link rel="preload" as="font" type="font/woff2" crossorigin href="../../FiraSans-Regular.woff2"><link rel="preload" as="font" type="font/woff2" crossorigin href="../../FiraSans-Medium.woff2"><link rel="preload" as="font" type="font/woff2" crossorigin href="../../SourceCodePro-Regular.ttf.woff2"><link rel="preload" as="font" type="font/woff2" crossorigin href="../../SourceSerif4-Bold.ttf.woff2"><link rel="preload" as="font" type="font/woff2" crossorigin href="../../SourceCodePro-Semibold.ttf.woff2"><link rel="stylesheet" href="../../normalize.css"><link rel="stylesheet" href="../../rustdoc.css" id="mainThemeStyle"><link rel="stylesheet" href="../../ayu.css" disabled><link rel="stylesheet" href="../../dark.css" disabled><link rel="stylesheet" href="../../light.css" id="themeStyle"><script id="default-settings" ></script><script src="../../storage.js"></script><script defer src="../../source-script.js"></script><script defer src="../../source-files.js"></script><script defer src="../../main.js"></script><noscript><link rel="stylesheet" href="../../noscript.css"></noscript><link rel="alternate icon" type="image/png" href="../../favicon-16x16.png"><link rel="alternate icon" type="image/png" href="../../favicon-32x32.png"><link rel="icon" type="image/svg+xml" href="../../favicon.svg"></head><body class="rustdoc source"><!--[if lte IE 11]><div class="warning">This old browser is unsupported and will most likely display funky things.</div><![endif]--><nav class="mobile-topbar"><button class="sidebar-menu-toggle">&#9776;</button><a class="sidebar-logo" href="../../arithmetic/index.html"><div class="logo-container"><img class="rust-logo" src="../../rust-logo.svg" alt="logo"></div></a><h2 class="location"></h2></nav><nav class="sidebar"><a class="sidebar-logo" href="../../arithmetic/index.html"><div class="logo-container"><img class="rust-logo" src="../../rust-logo.svg" alt="logo"></div></a></nav><main><div class="width-limiter"><div class="sub-container"><a class="sub-logo-container" href="../../arithmetic/index.html"><img class="rust-logo" src="../../rust-logo.svg" alt="logo"></a><nav class="sub"><form class="search-form"><div class="search-container"><span></span><input class="search-input" name="search" autocomplete="off" spellcheck="false" placeholder="Click or press ‘S’ to search, ‘?’ for more options…" type="search"><div id="help-button" title="help" tabindex="-1"><button type="button">?</button></div><div id="settings-menu" tabindex="-1"><a href="../../settings.html" title="settings"><img width="22" height="22" alt="Change settings" src="../../wheel.svg"></a></div></div></form></nav></div><section id="main-content" class="content"><div class="example-wrap"><pre class="line-numbers"><span id="1">1</span>
 <span id="2">2</span>
 <span id="3">3</span>
 <span id="4">4</span>
@@ -94,101 +94,101 @@
 <span id="94">94</span>
 <span id="95">95</span>
 <span id="96">96</span>
-</pre><pre class="rust"><code><span class="kw">use</span> <span class="ident">ark_ff::PrimeField</span>;
-<span class="kw">use</span> <span class="ident">ark_std::log2</span>;
+</pre><pre class="rust"><code><span class="kw">use </span>ark_ff::PrimeField;
+<span class="kw">use </span>ark_std::log2;
 
-<span class="doccomment">/// Decompose an integer into a binary vector in little endian.</span>
-<span class="kw">pub</span> <span class="kw">fn</span> <span class="ident">bit_decompose</span>(<span class="ident">input</span>: <span class="ident">u64</span>, <span class="ident">num_var</span>: <span class="ident">usize</span>) -&gt; <span class="ident">Vec</span><span class="op">&lt;</span><span class="ident">bool</span><span class="op">&gt;</span> {
-    <span class="kw">let</span> <span class="kw-2">mut</span> <span class="ident">res</span> <span class="op">=</span> <span class="ident">Vec::with_capacity</span>(<span class="ident">num_var</span>);
-    <span class="kw">let</span> <span class="kw-2">mut</span> <span class="ident">i</span> <span class="op">=</span> <span class="ident">input</span>;
-    <span class="kw">for</span> <span class="kw">_</span> <span class="kw">in</span> <span class="number">0</span>..<span class="ident">num_var</span> {
-        <span class="ident">res</span>.<span class="ident">push</span>(<span class="ident">i</span> <span class="op">&amp;</span> <span class="number">1</span> <span class="op">==</span> <span class="number">1</span>);
-        <span class="ident">i</span> <span class="op">&gt;</span><span class="op">&gt;</span><span class="op">=</span> <span class="number">1</span>;
+<span class="doccomment">/// Decompose an integer into a binary vector in little endian.
+</span><span class="kw">pub fn </span>bit_decompose(input: u64, num_var: usize) -&gt; Vec&lt;bool&gt; {
+    <span class="kw">let </span><span class="kw-2">mut </span>res = Vec::with_capacity(num_var);
+    <span class="kw">let </span><span class="kw-2">mut </span>i = input;
+    <span class="kw">for _ in </span><span class="number">0</span>..num_var {
+        res.push(i &amp; <span class="number">1 </span>== <span class="number">1</span>);
+        i &gt;&gt;= <span class="number">1</span>;
     }
-    <span class="ident">res</span>
+    res
 }
 
-<span class="doccomment">/// given the evaluation input `point` of the `index`-th polynomial,</span>
-<span class="doccomment">/// obtain the evaluation point in the merged polynomial</span>
-<span class="kw">pub</span> <span class="kw">fn</span> <span class="ident">gen_eval_point</span><span class="op">&lt;</span><span class="ident">F</span>: <span class="ident">PrimeField</span><span class="op">&gt;</span>(<span class="ident">index</span>: <span class="ident">usize</span>, <span class="ident">index_len</span>: <span class="ident">usize</span>, <span class="ident">point</span>: <span class="kw-2">&amp;</span>[<span class="ident">F</span>]) -&gt; <span class="ident">Vec</span><span class="op">&lt;</span><span class="ident">F</span><span class="op">&gt;</span> {
-    <span class="kw">let</span> <span class="ident">index_vec</span>: <span class="ident">Vec</span><span class="op">&lt;</span><span class="ident">F</span><span class="op">&gt;</span> <span class="op">=</span> <span class="ident">bit_decompose</span>(<span class="ident">index</span> <span class="kw">as</span> <span class="ident">u64</span>, <span class="ident">index_len</span>)
-        .<span class="ident">into_iter</span>()
-        .<span class="ident">map</span>(<span class="op">|</span><span class="ident">x</span><span class="op">|</span> <span class="ident">F::from</span>(<span class="ident">x</span>))
-        .<span class="ident">collect</span>();
-    [<span class="ident">point</span>, <span class="kw-2">&amp;</span><span class="ident">index_vec</span>].<span class="ident">concat</span>()
+<span class="doccomment">/// given the evaluation input `point` of the `index`-th polynomial,
+/// obtain the evaluation point in the merged polynomial
+</span><span class="kw">pub fn </span>gen_eval_point&lt;F: PrimeField&gt;(index: usize, index_len: usize, point: <span class="kw-2">&amp;</span>[F]) -&gt; Vec&lt;F&gt; {
+    <span class="kw">let </span>index_vec: Vec&lt;F&gt; = bit_decompose(index <span class="kw">as </span>u64, index_len)
+        .into_iter()
+        .map(|x| F::from(x))
+        .collect();
+    [point, <span class="kw-2">&amp;</span>index_vec].concat()
 }
 
-<span class="doccomment">/// Return the number of variables that one need for an MLE to</span>
-<span class="doccomment">/// batch the list of MLEs</span>
-<span class="attribute">#[<span class="ident">inline</span>]</span>
-<span class="kw">pub</span> <span class="kw">fn</span> <span class="ident">get_batched_nv</span>(<span class="ident">num_var</span>: <span class="ident">usize</span>, <span class="ident">polynomials_len</span>: <span class="ident">usize</span>) -&gt; <span class="ident">usize</span> {
-    <span class="ident">num_var</span> <span class="op">+</span> <span class="ident">log2</span>(<span class="ident">polynomials_len</span>) <span class="kw">as</span> <span class="ident">usize</span>
+<span class="doccomment">/// Return the number of variables that one need for an MLE to
+/// batch the list of MLEs
+</span><span class="attribute">#[inline]
+</span><span class="kw">pub fn </span>get_batched_nv(num_var: usize, polynomials_len: usize) -&gt; usize {
+    num_var + log2(polynomials_len) <span class="kw">as </span>usize
 }
 
-<span class="comment">// Input index</span>
-<span class="comment">// - `i := (i_0, ...i_{n-1})`,</span>
-<span class="comment">// - `num_vars := n`</span>
-<span class="comment">// return three elements:</span>
-<span class="comment">// - `x0 := (i_1, ..., i_{n-1}, 0)`</span>
-<span class="comment">// - `x1 := (i_1, ..., i_{n-1}, 1)`</span>
-<span class="comment">// - `sign := i_0`</span>
-<span class="attribute">#[<span class="ident">inline</span>]</span>
-<span class="kw">pub</span> <span class="kw">fn</span> <span class="ident">get_index</span>(<span class="ident">i</span>: <span class="ident">usize</span>, <span class="ident">num_vars</span>: <span class="ident">usize</span>) -&gt; (<span class="ident">usize</span>, <span class="ident">usize</span>, <span class="ident">bool</span>) {
-    <span class="kw">let</span> <span class="ident">bit_sequence</span> <span class="op">=</span> <span class="ident">bit_decompose</span>(<span class="ident">i</span> <span class="kw">as</span> <span class="ident">u64</span>, <span class="ident">num_vars</span>);
+<span class="comment">// Input index
+// - `i := (i_0, ...i_{n-1})`,
+// - `num_vars := n`
+// return three elements:
+// - `x0 := (i_1, ..., i_{n-1}, 0)`
+// - `x1 := (i_1, ..., i_{n-1}, 1)`
+// - `sign := i_0`
+</span><span class="attribute">#[inline]
+</span><span class="kw">pub fn </span>get_index(i: usize, num_vars: usize) -&gt; (usize, usize, bool) {
+    <span class="kw">let </span>bit_sequence = bit_decompose(i <span class="kw">as </span>u64, num_vars);
 
-    <span class="comment">// the last bit comes first here because of LE encoding</span>
-    <span class="kw">let</span> <span class="ident">x0</span> <span class="op">=</span> <span class="ident">project</span>(<span class="kw-2">&amp;</span>[[<span class="bool-val">false</span>].<span class="ident">as_ref</span>(), <span class="ident">bit_sequence</span>[..<span class="ident">num_vars</span> <span class="op">-</span> <span class="number">1</span>].<span class="ident">as_ref</span>()].<span class="ident">concat</span>()) <span class="kw">as</span> <span class="ident">usize</span>;
-    <span class="kw">let</span> <span class="ident">x1</span> <span class="op">=</span> <span class="ident">project</span>(<span class="kw-2">&amp;</span>[[<span class="bool-val">true</span>].<span class="ident">as_ref</span>(), <span class="ident">bit_sequence</span>[..<span class="ident">num_vars</span> <span class="op">-</span> <span class="number">1</span>].<span class="ident">as_ref</span>()].<span class="ident">concat</span>()) <span class="kw">as</span> <span class="ident">usize</span>;
+    <span class="comment">// the last bit comes first here because of LE encoding
+    </span><span class="kw">let </span>x0 = project(<span class="kw-2">&amp;</span>[[<span class="bool-val">false</span>].as_ref(), bit_sequence[..num_vars - <span class="number">1</span>].as_ref()].concat()) <span class="kw">as </span>usize;
+    <span class="kw">let </span>x1 = project(<span class="kw-2">&amp;</span>[[<span class="bool-val">true</span>].as_ref(), bit_sequence[..num_vars - <span class="number">1</span>].as_ref()].concat()) <span class="kw">as </span>usize;
 
-    (<span class="ident">x0</span>, <span class="ident">x1</span>, <span class="ident">bit_sequence</span>[<span class="ident">num_vars</span> <span class="op">-</span> <span class="number">1</span>])
+    (x0, x1, bit_sequence[num_vars - <span class="number">1</span>])
 }
 
-<span class="doccomment">/// Project a little endian binary vector into an integer.</span>
-<span class="attribute">#[<span class="ident">inline</span>]</span>
-<span class="kw">pub</span>(<span class="kw">crate</span>) <span class="kw">fn</span> <span class="ident">project</span>(<span class="ident">input</span>: <span class="kw-2">&amp;</span>[<span class="ident">bool</span>]) -&gt; <span class="ident">u64</span> {
-    <span class="kw">let</span> <span class="kw-2">mut</span> <span class="ident">res</span> <span class="op">=</span> <span class="number">0</span>;
-    <span class="kw">for</span> <span class="kw-2">&amp;</span><span class="ident">e</span> <span class="kw">in</span> <span class="ident">input</span>.<span class="ident">iter</span>().<span class="ident">rev</span>() {
-        <span class="ident">res</span> <span class="op">&lt;</span><span class="op">&lt;</span><span class="op">=</span> <span class="number">1</span>;
-        <span class="ident">res</span> <span class="op">+</span><span class="op">=</span> <span class="ident">e</span> <span class="kw">as</span> <span class="ident">u64</span>;
+<span class="doccomment">/// Project a little endian binary vector into an integer.
+</span><span class="attribute">#[inline]
+</span><span class="kw">pub</span>(<span class="kw">crate</span>) <span class="kw">fn </span>project(input: <span class="kw-2">&amp;</span>[bool]) -&gt; u64 {
+    <span class="kw">let </span><span class="kw-2">mut </span>res = <span class="number">0</span>;
+    <span class="kw">for </span><span class="kw-2">&amp;</span>e <span class="kw">in </span>input.iter().rev() {
+        res &lt;&lt;= <span class="number">1</span>;
+        res += e <span class="kw">as </span>u64;
     }
-    <span class="ident">res</span>
+    res
 }
 
-<span class="attribute">#[<span class="ident">cfg</span>(<span class="ident">test</span>)]</span>
-<span class="kw">mod</span> <span class="ident">test</span> {
-    <span class="kw">use</span> <span class="kw">super</span>::{<span class="ident">bit_decompose</span>, <span class="ident">get_index</span>, <span class="ident">project</span>};
-    <span class="kw">use</span> <span class="ident">ark_std</span>::{<span class="ident">rand::RngCore</span>, <span class="ident">test_rng</span>};
+<span class="attribute">#[cfg(test)]
+</span><span class="kw">mod </span>test {
+    <span class="kw">use super</span>::{bit_decompose, get_index, project};
+    <span class="kw">use </span>ark_std::{rand::RngCore, test_rng};
 
-    <span class="attribute">#[<span class="ident">test</span>]</span>
-    <span class="kw">fn</span> <span class="ident">test_decomposition</span>() {
-        <span class="kw">let</span> <span class="kw-2">mut</span> <span class="ident">rng</span> <span class="op">=</span> <span class="ident">test_rng</span>();
-        <span class="kw">for</span> <span class="kw">_</span> <span class="kw">in</span> <span class="number">0</span>..<span class="number">100</span> {
-            <span class="kw">let</span> <span class="ident">t</span> <span class="op">=</span> <span class="ident">rng</span>.<span class="ident">next_u64</span>();
-            <span class="kw">let</span> <span class="ident">b</span> <span class="op">=</span> <span class="ident">bit_decompose</span>(<span class="ident">t</span>, <span class="number">64</span>);
-            <span class="kw">let</span> <span class="ident">r</span> <span class="op">=</span> <span class="ident">project</span>(<span class="kw-2">&amp;</span><span class="ident">b</span>);
-            <span class="macro">assert_eq!</span>(<span class="ident">t</span>, <span class="ident">r</span>)
+    <span class="attribute">#[test]
+    </span><span class="kw">fn </span>test_decomposition() {
+        <span class="kw">let </span><span class="kw-2">mut </span>rng = test_rng();
+        <span class="kw">for _ in </span><span class="number">0</span>..<span class="number">100 </span>{
+            <span class="kw">let </span>t = rng.next_u64();
+            <span class="kw">let </span>b = bit_decompose(t, <span class="number">64</span>);
+            <span class="kw">let </span>r = project(<span class="kw-2">&amp;</span>b);
+            <span class="macro">assert_eq!</span>(t, r)
         }
     }
 
-    <span class="attribute">#[<span class="ident">test</span>]</span>
-    <span class="kw">fn</span> <span class="ident">test_get_index</span>() {
-        <span class="kw">let</span> <span class="ident">a</span> <span class="op">=</span> <span class="number">0b1010</span>;
-        <span class="kw">let</span> (<span class="ident">x0</span>, <span class="ident">x1</span>, <span class="ident">sign</span>) <span class="op">=</span> <span class="ident">get_index</span>(<span class="ident">a</span>, <span class="number">4</span>);
-        <span class="macro">assert_eq!</span>(<span class="ident">x0</span>, <span class="number">0b0100</span>);
-        <span class="macro">assert_eq!</span>(<span class="ident">x1</span>, <span class="number">0b0101</span>);
-        <span class="macro">assert!</span>(<span class="ident">sign</span>);
+    <span class="attribute">#[test]
+    </span><span class="kw">fn </span>test_get_index() {
+        <span class="kw">let </span>a = <span class="number">0b1010</span>;
+        <span class="kw">let </span>(x0, x1, sign) = get_index(a, <span class="number">4</span>);
+        <span class="macro">assert_eq!</span>(x0, <span class="number">0b0100</span>);
+        <span class="macro">assert_eq!</span>(x1, <span class="number">0b0101</span>);
+        <span class="macro">assert!</span>(sign);
 
-        <span class="kw">let</span> (<span class="ident">x0</span>, <span class="ident">x1</span>, <span class="ident">sign</span>) <span class="op">=</span> <span class="ident">get_index</span>(<span class="ident">a</span>, <span class="number">5</span>);
-        <span class="macro">assert_eq!</span>(<span class="ident">x0</span>, <span class="number">0b10100</span>);
-        <span class="macro">assert_eq!</span>(<span class="ident">x1</span>, <span class="number">0b10101</span>);
-        <span class="macro">assert!</span>(<span class="op">!</span><span class="ident">sign</span>);
+        <span class="kw">let </span>(x0, x1, sign) = get_index(a, <span class="number">5</span>);
+        <span class="macro">assert_eq!</span>(x0, <span class="number">0b10100</span>);
+        <span class="macro">assert_eq!</span>(x1, <span class="number">0b10101</span>);
+        <span class="macro">assert!</span>(!sign);
 
-        <span class="kw">let</span> <span class="ident">a</span> <span class="op">=</span> <span class="number">0b1111</span>;
-        <span class="kw">let</span> (<span class="ident">x0</span>, <span class="ident">x1</span>, <span class="ident">sign</span>) <span class="op">=</span> <span class="ident">get_index</span>(<span class="ident">a</span>, <span class="number">4</span>);
-        <span class="macro">assert_eq!</span>(<span class="ident">x0</span>, <span class="number">0b1110</span>);
-        <span class="macro">assert_eq!</span>(<span class="ident">x1</span>, <span class="number">0b1111</span>);
-        <span class="macro">assert!</span>(<span class="ident">sign</span>);
+        <span class="kw">let </span>a = <span class="number">0b1111</span>;
+        <span class="kw">let </span>(x0, x1, sign) = get_index(a, <span class="number">4</span>);
+        <span class="macro">assert_eq!</span>(x0, <span class="number">0b1110</span>);
+        <span class="macro">assert_eq!</span>(x1, <span class="number">0b1111</span>);
+        <span class="macro">assert!</span>(sign);
     }
 }
 </code></pre></div>
-</section></div></main><div id="rustdoc-vars" data-root-path="../../" data-current-crate="arithmetic" data-themes="ayu,dark,light" data-resource-suffix="" data-rustdoc-version="1.64.0 (a55dd71d5 2022-09-19)" ></div></body></html>
+</section></div></main><div id="rustdoc-vars" data-root-path="../../" data-current-crate="arithmetic" data-themes="ayu,dark,light" data-resource-suffix="" data-rustdoc-version="1.65.0 (897e37553 2022-11-02)" ></div></body></html>

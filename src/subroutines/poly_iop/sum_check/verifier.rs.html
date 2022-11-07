@@ -1,4 +1,4 @@
-<!DOCTYPE html><html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1.0"><meta name="generator" content="rustdoc"><meta name="description" content="Source of the Rust file `subroutines/src/poly_iop/sum_check/verifier.rs`."><meta name="keywords" content="rust, rustlang, rust-lang"><title>verifier.rs - source</title><link rel="preload" as="font" type="font/woff2" crossorigin href="../../../../SourceSerif4-Regular.ttf.woff2"><link rel="preload" as="font" type="font/woff2" crossorigin href="../../../../FiraSans-Regular.woff2"><link rel="preload" as="font" type="font/woff2" crossorigin href="../../../../FiraSans-Medium.woff2"><link rel="preload" as="font" type="font/woff2" crossorigin href="../../../../SourceCodePro-Regular.ttf.woff2"><link rel="preload" as="font" type="font/woff2" crossorigin href="../../../../SourceSerif4-Bold.ttf.woff2"><link rel="preload" as="font" type="font/woff2" crossorigin href="../../../../SourceCodePro-Semibold.ttf.woff2"><link rel="stylesheet" type="text/css" href="../../../../normalize.css"><link rel="stylesheet" type="text/css" href="../../../../rustdoc.css" id="mainThemeStyle"><link rel="stylesheet" type="text/css" href="../../../../ayu.css" disabled><link rel="stylesheet" type="text/css" href="../../../../dark.css" disabled><link rel="stylesheet" type="text/css" href="../../../../light.css" id="themeStyle"><script id="default-settings" ></script><script src="../../../../storage.js"></script><script defer src="../../../../source-script.js"></script><script defer src="../../../../source-files.js"></script><script defer src="../../../../main.js"></script><noscript><link rel="stylesheet" href="../../../../noscript.css"></noscript><link rel="alternate icon" type="image/png" href="../../../../favicon-16x16.png"><link rel="alternate icon" type="image/png" href="../../../../favicon-32x32.png"><link rel="icon" type="image/svg+xml" href="../../../../favicon.svg"></head><body class="rustdoc source"><!--[if lte IE 11]><div class="warning">This old browser is unsupported and will most likely display funky things.</div><![endif]--><nav class="mobile-topbar"><button class="sidebar-menu-toggle">&#9776;</button><a class="sidebar-logo" href="../../../../subroutines/index.html"><div class="logo-container"><img class="rust-logo" src="../../../../rust-logo.svg" alt="logo"></div></a><h2 class="location"></h2></nav><nav class="sidebar"><a class="sidebar-logo" href="../../../../subroutines/index.html"><div class="logo-container"><img class="rust-logo" src="../../../../rust-logo.svg" alt="logo"></div></a></nav><main><div class="width-limiter"><div class="sub-container"><a class="sub-logo-container" href="../../../../subroutines/index.html"><img class="rust-logo" src="../../../../rust-logo.svg" alt="logo"></a><nav class="sub"><form class="search-form"><div class="search-container"><span></span><input class="search-input" name="search" autocomplete="off" spellcheck="false" placeholder="Click or press ‘S’ to search, ‘?’ for more options…" type="search"><div id="help-button" title="help" tabindex="-1"><button type="button">?</button></div><div id="settings-menu" tabindex="-1"><a href="../../../../settings.html" title="settings"><img width="22" height="22" alt="Change settings" src="../../../../wheel.svg"></a></div></div></form></nav></div><section id="main-content" class="content"><div class="example-wrap"><pre class="line-numbers"><span id="1">1</span>
+<!DOCTYPE html><html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1.0"><meta name="generator" content="rustdoc"><meta name="description" content="Source of the Rust file `subroutines/src/poly_iop/sum_check/verifier.rs`."><meta name="keywords" content="rust, rustlang, rust-lang"><title>verifier.rs - source</title><link rel="preload" as="font" type="font/woff2" crossorigin href="../../../../SourceSerif4-Regular.ttf.woff2"><link rel="preload" as="font" type="font/woff2" crossorigin href="../../../../FiraSans-Regular.woff2"><link rel="preload" as="font" type="font/woff2" crossorigin href="../../../../FiraSans-Medium.woff2"><link rel="preload" as="font" type="font/woff2" crossorigin href="../../../../SourceCodePro-Regular.ttf.woff2"><link rel="preload" as="font" type="font/woff2" crossorigin href="../../../../SourceSerif4-Bold.ttf.woff2"><link rel="preload" as="font" type="font/woff2" crossorigin href="../../../../SourceCodePro-Semibold.ttf.woff2"><link rel="stylesheet" href="../../../../normalize.css"><link rel="stylesheet" href="../../../../rustdoc.css" id="mainThemeStyle"><link rel="stylesheet" href="../../../../ayu.css" disabled><link rel="stylesheet" href="../../../../dark.css" disabled><link rel="stylesheet" href="../../../../light.css" id="themeStyle"><script id="default-settings" ></script><script src="../../../../storage.js"></script><script defer src="../../../../source-script.js"></script><script defer src="../../../../source-files.js"></script><script defer src="../../../../main.js"></script><noscript><link rel="stylesheet" href="../../../../noscript.css"></noscript><link rel="alternate icon" type="image/png" href="../../../../favicon-16x16.png"><link rel="alternate icon" type="image/png" href="../../../../favicon-32x32.png"><link rel="icon" type="image/svg+xml" href="../../../../favicon.svg"></head><body class="rustdoc source"><!--[if lte IE 11]><div class="warning">This old browser is unsupported and will most likely display funky things.</div><![endif]--><nav class="mobile-topbar"><button class="sidebar-menu-toggle">&#9776;</button><a class="sidebar-logo" href="../../../../subroutines/index.html"><div class="logo-container"><img class="rust-logo" src="../../../../rust-logo.svg" alt="logo"></div></a><h2 class="location"></h2></nav><nav class="sidebar"><a class="sidebar-logo" href="../../../../subroutines/index.html"><div class="logo-container"><img class="rust-logo" src="../../../../rust-logo.svg" alt="logo"></div></a></nav><main><div class="width-limiter"><div class="sub-container"><a class="sub-logo-container" href="../../../../subroutines/index.html"><img class="rust-logo" src="../../../../rust-logo.svg" alt="logo"></a><nav class="sub"><form class="search-form"><div class="search-container"><span></span><input class="search-input" name="search" autocomplete="off" spellcheck="false" placeholder="Click or press ‘S’ to search, ‘?’ for more options…" type="search"><div id="help-button" title="help" tabindex="-1"><button type="button">?</button></div><div id="settings-menu" tabindex="-1"><a href="../../../../settings.html" title="settings"><img width="22" height="22" alt="Change settings" src="../../../../wheel.svg"></a></div></div></form></nav></div><section id="main-content" class="content"><div class="example-wrap"><pre class="line-numbers"><span id="1">1</span>
 <span id="2">2</span>
 <span id="3">3</span>
 <span id="4">4</span>
@@ -350,357 +350,357 @@
 <span id="350">350</span>
 <span id="351">351</span>
 <span id="352">352</span>
-</pre><pre class="rust"><code><span class="doccomment">//! Verifier subroutines for a SumCheck protocol.</span>
+</pre><pre class="rust"><code><span class="doccomment">//! Verifier subroutines for a SumCheck protocol.
 
-<span class="kw">use</span> <span class="kw">super</span>::{<span class="ident">SumCheckSubClaim</span>, <span class="ident">SumCheckVerifier</span>};
-<span class="kw">use</span> <span class="ident"><span class="kw">crate</span>::poly_iop</span>::{
-    <span class="ident">errors::PolyIOPErrors</span>,
-    <span class="ident">structs</span>::{<span class="ident">IOPProverMessage</span>, <span class="ident">IOPVerifierState</span>},
+</span><span class="kw">use super</span>::{SumCheckSubClaim, SumCheckVerifier};
+<span class="kw">use </span><span class="kw">crate</span>::poly_iop::{
+    errors::PolyIOPErrors,
+    structs::{IOPProverMessage, IOPVerifierState},
 };
-<span class="kw">use</span> <span class="ident">arithmetic::VPAuxInfo</span>;
-<span class="kw">use</span> <span class="ident">ark_ff::PrimeField</span>;
-<span class="kw">use</span> <span class="ident">ark_std</span>::{<span class="ident">end_timer</span>, <span class="ident">start_timer</span>};
-<span class="kw">use</span> <span class="ident">transcript::IOPTranscript</span>;
+<span class="kw">use </span>arithmetic::VPAuxInfo;
+<span class="kw">use </span>ark_ff::PrimeField;
+<span class="kw">use </span>ark_std::{end_timer, start_timer};
+<span class="kw">use </span>transcript::IOPTranscript;
 
-<span class="attribute">#[<span class="ident">cfg</span>(<span class="ident">feature</span> <span class="op">=</span> <span class="string">&quot;parallel&quot;</span>)]</span>
-<span class="kw">use</span> <span class="ident">rayon::iter</span>::{<span class="ident">IndexedParallelIterator</span>, <span class="ident">IntoParallelIterator</span>, <span class="ident">ParallelIterator</span>};
+<span class="attribute">#[cfg(feature = <span class="string">&quot;parallel&quot;</span>)]
+</span><span class="kw">use </span>rayon::iter::{IndexedParallelIterator, IntoParallelIterator, ParallelIterator};
 
-<span class="kw">impl</span><span class="op">&lt;</span><span class="ident">F</span>: <span class="ident">PrimeField</span><span class="op">&gt;</span> <span class="ident">SumCheckVerifier</span><span class="op">&lt;</span><span class="ident">F</span><span class="op">&gt;</span> <span class="kw">for</span> <span class="ident">IOPVerifierState</span><span class="op">&lt;</span><span class="ident">F</span><span class="op">&gt;</span> {
-    <span class="kw">type</span> <span class="ident">VPAuxInfo</span> <span class="op">=</span> <span class="ident">VPAuxInfo</span><span class="op">&lt;</span><span class="ident">F</span><span class="op">&gt;</span>;
-    <span class="kw">type</span> <span class="ident">ProverMessage</span> <span class="op">=</span> <span class="ident">IOPProverMessage</span><span class="op">&lt;</span><span class="ident">F</span><span class="op">&gt;</span>;
-    <span class="kw">type</span> <span class="ident">Challenge</span> <span class="op">=</span> <span class="ident">F</span>;
-    <span class="kw">type</span> <span class="ident">Transcript</span> <span class="op">=</span> <span class="ident">IOPTranscript</span><span class="op">&lt;</span><span class="ident">F</span><span class="op">&gt;</span>;
-    <span class="kw">type</span> <span class="ident">SumCheckSubClaim</span> <span class="op">=</span> <span class="ident">SumCheckSubClaim</span><span class="op">&lt;</span><span class="ident">F</span><span class="op">&gt;</span>;
+<span class="kw">impl</span>&lt;F: PrimeField&gt; SumCheckVerifier&lt;F&gt; <span class="kw">for </span>IOPVerifierState&lt;F&gt; {
+    <span class="kw">type </span>VPAuxInfo = VPAuxInfo&lt;F&gt;;
+    <span class="kw">type </span>ProverMessage = IOPProverMessage&lt;F&gt;;
+    <span class="kw">type </span>Challenge = F;
+    <span class="kw">type </span>Transcript = IOPTranscript&lt;F&gt;;
+    <span class="kw">type </span>SumCheckSubClaim = SumCheckSubClaim&lt;F&gt;;
 
-    <span class="doccomment">/// Initialize the verifier&#39;s state.</span>
-    <span class="kw">fn</span> <span class="ident">verifier_init</span>(<span class="ident">index_info</span>: <span class="kw-2">&amp;</span><span class="ident"><span class="self">Self</span>::VPAuxInfo</span>) -&gt; <span class="self">Self</span> {
-        <span class="kw">let</span> <span class="ident">start</span> <span class="op">=</span> <span class="macro">start_timer!</span>(<span class="op">|</span><span class="op">|</span> <span class="string">&quot;sum check verifier init&quot;</span>);
-        <span class="kw">let</span> <span class="ident">res</span> <span class="op">=</span> <span class="self">Self</span> {
-            <span class="ident">round</span>: <span class="number">1</span>,
-            <span class="ident">num_vars</span>: <span class="ident">index_info</span>.<span class="ident">num_variables</span>,
-            <span class="ident">max_degree</span>: <span class="ident">index_info</span>.<span class="ident">max_degree</span>,
-            <span class="ident">finished</span>: <span class="bool-val">false</span>,
-            <span class="ident">polynomials_received</span>: <span class="ident">Vec::with_capacity</span>(<span class="ident">index_info</span>.<span class="ident">num_variables</span>),
-            <span class="ident">challenges</span>: <span class="ident">Vec::with_capacity</span>(<span class="ident">index_info</span>.<span class="ident">num_variables</span>),
+    <span class="doccomment">/// Initialize the verifier&#39;s state.
+    </span><span class="kw">fn </span>verifier_init(index_info: <span class="kw-2">&amp;</span><span class="self">Self</span>::VPAuxInfo) -&gt; <span class="self">Self </span>{
+        <span class="kw">let </span>start = <span class="macro">start_timer!</span>(|| <span class="string">&quot;sum check verifier init&quot;</span>);
+        <span class="kw">let </span>res = <span class="self">Self </span>{
+            round: <span class="number">1</span>,
+            num_vars: index_info.num_variables,
+            max_degree: index_info.max_degree,
+            finished: <span class="bool-val">false</span>,
+            polynomials_received: Vec::with_capacity(index_info.num_variables),
+            challenges: Vec::with_capacity(index_info.num_variables),
         };
-        <span class="macro">end_timer!</span>(<span class="ident">start</span>);
-        <span class="ident">res</span>
+        <span class="macro">end_timer!</span>(start);
+        res
     }
 
-    <span class="doccomment">/// Run verifier for the current round, given a prover message.</span>
-    <span class="doccomment">///</span>
-    <span class="doccomment">/// Note that `verify_round_and_update_state` only samples and stores</span>
-    <span class="doccomment">/// challenges; and update the verifier&#39;s state accordingly. The actual</span>
-    <span class="doccomment">/// verifications are deferred (in batch) to `check_and_generate_subclaim`</span>
-    <span class="doccomment">/// at the last step.</span>
-    <span class="kw">fn</span> <span class="ident">verify_round_and_update_state</span>(
-        <span class="kw-2">&amp;mut</span> <span class="self">self</span>,
-        <span class="ident">prover_msg</span>: <span class="kw-2">&amp;</span><span class="ident"><span class="self">Self</span>::ProverMessage</span>,
-        <span class="ident">transcript</span>: <span class="kw-2">&amp;mut</span> <span class="ident"><span class="self">Self</span>::Transcript</span>,
-    ) -&gt; <span class="prelude-ty">Result</span><span class="op">&lt;</span><span class="ident"><span class="self">Self</span>::Challenge</span>, <span class="ident">PolyIOPErrors</span><span class="op">&gt;</span> {
-        <span class="kw">let</span> <span class="ident">start</span> <span class="op">=</span>
-            <span class="macro">start_timer!</span>(<span class="op">|</span><span class="op">|</span> <span class="macro">format!</span>(<span class="string">&quot;sum check verify {}-th round and update state&quot;</span>, <span class="self">self</span>.<span class="ident">round</span>));
+    <span class="doccomment">/// Run verifier for the current round, given a prover message.
+    ///
+    /// Note that `verify_round_and_update_state` only samples and stores
+    /// challenges; and update the verifier&#39;s state accordingly. The actual
+    /// verifications are deferred (in batch) to `check_and_generate_subclaim`
+    /// at the last step.
+    </span><span class="kw">fn </span>verify_round_and_update_state(
+        <span class="kw-2">&amp;mut </span><span class="self">self</span>,
+        prover_msg: <span class="kw-2">&amp;</span><span class="self">Self</span>::ProverMessage,
+        transcript: <span class="kw-2">&amp;mut </span><span class="self">Self</span>::Transcript,
+    ) -&gt; <span class="prelude-ty">Result</span>&lt;<span class="self">Self</span>::Challenge, PolyIOPErrors&gt; {
+        <span class="kw">let </span>start =
+            <span class="macro">start_timer!</span>(|| <span class="macro">format!</span>(<span class="string">&quot;sum check verify {}-th round and update state&quot;</span>, <span class="self">self</span>.round));
 
-        <span class="kw">if</span> <span class="self">self</span>.<span class="ident">finished</span> {
-            <span class="kw">return</span> <span class="prelude-val">Err</span>(<span class="ident">PolyIOPErrors::InvalidVerifier</span>(
-                <span class="string">&quot;Incorrect verifier state: Verifier is already finished.&quot;</span>.<span class="ident">to_string</span>(),
+        <span class="kw">if </span><span class="self">self</span>.finished {
+            <span class="kw">return </span><span class="prelude-val">Err</span>(PolyIOPErrors::InvalidVerifier(
+                <span class="string">&quot;Incorrect verifier state: Verifier is already finished.&quot;</span>.to_string(),
             ));
         }
 
-        <span class="comment">// In an interactive protocol, the verifier should</span>
-        <span class="comment">//</span>
-        <span class="comment">// 1. check if the received &#39;P(0) + P(1) = expected`.</span>
-        <span class="comment">// 2. set `expected` to P(r)`</span>
-        <span class="comment">//</span>
-        <span class="comment">// When we turn the protocol to a non-interactive one, it is sufficient to defer</span>
-        <span class="comment">// such checks to `check_and_generate_subclaim` after the last round.</span>
+        <span class="comment">// In an interactive protocol, the verifier should
+        //
+        // 1. check if the received &#39;P(0) + P(1) = expected`.
+        // 2. set `expected` to P(r)`
+        //
+        // When we turn the protocol to a non-interactive one, it is sufficient to defer
+        // such checks to `check_and_generate_subclaim` after the last round.
 
-        <span class="kw">let</span> <span class="ident">challenge</span> <span class="op">=</span> <span class="ident">transcript</span>.<span class="ident">get_and_append_challenge</span>(<span class="string">b&quot;Internal round&quot;</span>)<span class="question-mark">?</span>;
-        <span class="self">self</span>.<span class="ident">challenges</span>.<span class="ident">push</span>(<span class="ident">challenge</span>);
-        <span class="self">self</span>.<span class="ident">polynomials_received</span>
-            .<span class="ident">push</span>(<span class="ident">prover_msg</span>.<span class="ident">evaluations</span>.<span class="ident">to_vec</span>());
+        </span><span class="kw">let </span>challenge = transcript.get_and_append_challenge(<span class="string">b&quot;Internal round&quot;</span>)<span class="question-mark">?</span>;
+        <span class="self">self</span>.challenges.push(challenge);
+        <span class="self">self</span>.polynomials_received
+            .push(prover_msg.evaluations.to_vec());
 
-        <span class="kw">if</span> <span class="self">self</span>.<span class="ident">round</span> <span class="op">==</span> <span class="self">self</span>.<span class="ident">num_vars</span> {
-            <span class="comment">// accept and close</span>
-            <span class="self">self</span>.<span class="ident">finished</span> <span class="op">=</span> <span class="bool-val">true</span>;
-        } <span class="kw">else</span> {
-            <span class="comment">// proceed to the next round</span>
-            <span class="self">self</span>.<span class="ident">round</span> <span class="op">+</span><span class="op">=</span> <span class="number">1</span>;
+        <span class="kw">if </span><span class="self">self</span>.round == <span class="self">self</span>.num_vars {
+            <span class="comment">// accept and close
+            </span><span class="self">self</span>.finished = <span class="bool-val">true</span>;
+        } <span class="kw">else </span>{
+            <span class="comment">// proceed to the next round
+            </span><span class="self">self</span>.round += <span class="number">1</span>;
         }
 
-        <span class="macro">end_timer!</span>(<span class="ident">start</span>);
-        <span class="prelude-val">Ok</span>(<span class="ident">challenge</span>)
+        <span class="macro">end_timer!</span>(start);
+        <span class="prelude-val">Ok</span>(challenge)
     }
 
-    <span class="doccomment">/// This function verifies the deferred checks in the interactive version of</span>
-    <span class="doccomment">/// the protocol; and generate the subclaim. Returns an error if the</span>
-    <span class="doccomment">/// proof failed to verify.</span>
-    <span class="doccomment">///</span>
-    <span class="doccomment">/// If the asserted sum is correct, then the multilinear polynomial</span>
-    <span class="doccomment">/// evaluated at `subclaim.point` will be `subclaim.expected_evaluation`.</span>
-    <span class="doccomment">/// Otherwise, it is highly unlikely that those two will be equal.</span>
-    <span class="doccomment">/// Larger field size guarantees smaller soundness error.</span>
-    <span class="kw">fn</span> <span class="ident">check_and_generate_subclaim</span>(
+    <span class="doccomment">/// This function verifies the deferred checks in the interactive version of
+    /// the protocol; and generate the subclaim. Returns an error if the
+    /// proof failed to verify.
+    ///
+    /// If the asserted sum is correct, then the multilinear polynomial
+    /// evaluated at `subclaim.point` will be `subclaim.expected_evaluation`.
+    /// Otherwise, it is highly unlikely that those two will be equal.
+    /// Larger field size guarantees smaller soundness error.
+    </span><span class="kw">fn </span>check_and_generate_subclaim(
         <span class="kw-2">&amp;</span><span class="self">self</span>,
-        <span class="ident">asserted_sum</span>: <span class="kw-2">&amp;</span><span class="ident">F</span>,
-    ) -&gt; <span class="prelude-ty">Result</span><span class="op">&lt;</span><span class="ident"><span class="self">Self</span>::SumCheckSubClaim</span>, <span class="ident">PolyIOPErrors</span><span class="op">&gt;</span> {
-        <span class="kw">let</span> <span class="ident">start</span> <span class="op">=</span> <span class="macro">start_timer!</span>(<span class="op">|</span><span class="op">|</span> <span class="string">&quot;sum check check and generate subclaim&quot;</span>);
-        <span class="kw">if</span> <span class="op">!</span><span class="self">self</span>.<span class="ident">finished</span> {
-            <span class="kw">return</span> <span class="prelude-val">Err</span>(<span class="ident">PolyIOPErrors::InvalidVerifier</span>(
-                <span class="string">&quot;Incorrect verifier state: Verifier has not finished.&quot;</span>.<span class="ident">to_string</span>(),
+        asserted_sum: <span class="kw-2">&amp;</span>F,
+    ) -&gt; <span class="prelude-ty">Result</span>&lt;<span class="self">Self</span>::SumCheckSubClaim, PolyIOPErrors&gt; {
+        <span class="kw">let </span>start = <span class="macro">start_timer!</span>(|| <span class="string">&quot;sum check check and generate subclaim&quot;</span>);
+        <span class="kw">if </span>!<span class="self">self</span>.finished {
+            <span class="kw">return </span><span class="prelude-val">Err</span>(PolyIOPErrors::InvalidVerifier(
+                <span class="string">&quot;Incorrect verifier state: Verifier has not finished.&quot;</span>.to_string(),
             ));
         }
 
-        <span class="kw">if</span> <span class="self">self</span>.<span class="ident">polynomials_received</span>.<span class="ident">len</span>() <span class="op">!</span><span class="op">=</span> <span class="self">self</span>.<span class="ident">num_vars</span> {
-            <span class="kw">return</span> <span class="prelude-val">Err</span>(<span class="ident">PolyIOPErrors::InvalidVerifier</span>(
-                <span class="string">&quot;insufficient rounds&quot;</span>.<span class="ident">to_string</span>(),
+        <span class="kw">if </span><span class="self">self</span>.polynomials_received.len() != <span class="self">self</span>.num_vars {
+            <span class="kw">return </span><span class="prelude-val">Err</span>(PolyIOPErrors::InvalidVerifier(
+                <span class="string">&quot;insufficient rounds&quot;</span>.to_string(),
             ));
         }
 
-        <span class="comment">// the deferred check during the interactive phase:</span>
-        <span class="comment">// 2. set `expected` to P(r)`</span>
-        <span class="attribute">#[<span class="ident">cfg</span>(<span class="ident">feature</span> <span class="op">=</span> <span class="string">&quot;parallel&quot;</span>)]</span>
-        <span class="kw">let</span> <span class="kw-2">mut</span> <span class="ident">expected_vec</span> <span class="op">=</span> <span class="self">self</span>
-            .<span class="ident">polynomials_received</span>
-            .<span class="ident">clone</span>()
-            .<span class="ident">into_par_iter</span>()
-            .<span class="ident">zip</span>(<span class="self">self</span>.<span class="ident">challenges</span>.<span class="ident">clone</span>().<span class="ident">into_par_iter</span>())
-            .<span class="ident">map</span>(<span class="op">|</span>(<span class="ident">evaluations</span>, <span class="ident">challenge</span>)<span class="op">|</span> {
-                <span class="kw">if</span> <span class="ident">evaluations</span>.<span class="ident">len</span>() <span class="op">!</span><span class="op">=</span> <span class="self">self</span>.<span class="ident">max_degree</span> <span class="op">+</span> <span class="number">1</span> {
-                    <span class="kw">return</span> <span class="prelude-val">Err</span>(<span class="ident">PolyIOPErrors::InvalidVerifier</span>(<span class="macro">format!</span>(
+        <span class="comment">// the deferred check during the interactive phase:
+        // 2. set `expected` to P(r)`
+        </span><span class="attribute">#[cfg(feature = <span class="string">&quot;parallel&quot;</span>)]
+        </span><span class="kw">let </span><span class="kw-2">mut </span>expected_vec = <span class="self">self
+            </span>.polynomials_received
+            .clone()
+            .into_par_iter()
+            .zip(<span class="self">self</span>.challenges.clone().into_par_iter())
+            .map(|(evaluations, challenge)| {
+                <span class="kw">if </span>evaluations.len() != <span class="self">self</span>.max_degree + <span class="number">1 </span>{
+                    <span class="kw">return </span><span class="prelude-val">Err</span>(PolyIOPErrors::InvalidVerifier(<span class="macro">format!</span>(
                         <span class="string">&quot;incorrect number of evaluations: {} vs {}&quot;</span>,
-                        <span class="ident">evaluations</span>.<span class="ident">len</span>(),
-                        <span class="self">self</span>.<span class="ident">max_degree</span> <span class="op">+</span> <span class="number">1</span>
-                    )));
+                        evaluations.len(),
+                        <span class="self">self</span>.max_degree + <span class="number">1
+                    </span>)));
                 }
-                <span class="ident">interpolate_uni_poly</span>::<span class="op">&lt;</span><span class="ident">F</span><span class="op">&gt;</span>(<span class="kw-2">&amp;</span><span class="ident">evaluations</span>, <span class="ident">challenge</span>)
+                interpolate_uni_poly::&lt;F&gt;(<span class="kw-2">&amp;</span>evaluations, challenge)
             })
-            .<span class="ident">collect</span>::<span class="op">&lt;</span><span class="prelude-ty">Result</span><span class="op">&lt;</span><span class="ident">Vec</span><span class="op">&lt;</span><span class="kw">_</span><span class="op">&gt;</span>, <span class="ident">PolyIOPErrors</span><span class="op">&gt;</span><span class="op">&gt;</span>()<span class="question-mark">?</span>;
+            .collect::&lt;<span class="prelude-ty">Result</span>&lt;Vec&lt;<span class="kw">_</span>&gt;, PolyIOPErrors&gt;&gt;()<span class="question-mark">?</span>;
 
-        <span class="attribute">#[<span class="ident">cfg</span>(<span class="ident">not</span>(<span class="ident">feature</span> <span class="op">=</span> <span class="string">&quot;parallel&quot;</span>))]</span>
-        <span class="kw">let</span> <span class="kw-2">mut</span> <span class="ident">expected_vec</span> <span class="op">=</span> <span class="self">self</span>
-            .<span class="ident">polynomials_received</span>
-            .<span class="ident">clone</span>()
-            .<span class="ident">into_iter</span>()
-            .<span class="ident">zip</span>(<span class="self">self</span>.<span class="ident">challenges</span>.<span class="ident">clone</span>().<span class="ident">into_iter</span>())
-            .<span class="ident">map</span>(<span class="op">|</span>(<span class="ident">evaluations</span>, <span class="ident">challenge</span>)<span class="op">|</span> {
-                <span class="kw">if</span> <span class="ident">evaluations</span>.<span class="ident">len</span>() <span class="op">!</span><span class="op">=</span> <span class="self">self</span>.<span class="ident">max_degree</span> <span class="op">+</span> <span class="number">1</span> {
-                    <span class="kw">return</span> <span class="prelude-val">Err</span>(<span class="ident">PolyIOPErrors::InvalidVerifier</span>(<span class="macro">format!</span>(
+        <span class="attribute">#[cfg(not(feature = <span class="string">&quot;parallel&quot;</span>))]
+        </span><span class="kw">let </span><span class="kw-2">mut </span>expected_vec = <span class="self">self
+            </span>.polynomials_received
+            .clone()
+            .into_iter()
+            .zip(<span class="self">self</span>.challenges.clone().into_iter())
+            .map(|(evaluations, challenge)| {
+                <span class="kw">if </span>evaluations.len() != <span class="self">self</span>.max_degree + <span class="number">1 </span>{
+                    <span class="kw">return </span><span class="prelude-val">Err</span>(PolyIOPErrors::InvalidVerifier(<span class="macro">format!</span>(
                         <span class="string">&quot;incorrect number of evaluations: {} vs {}&quot;</span>,
-                        <span class="ident">evaluations</span>.<span class="ident">len</span>(),
-                        <span class="self">self</span>.<span class="ident">max_degree</span> <span class="op">+</span> <span class="number">1</span>
-                    )));
+                        evaluations.len(),
+                        <span class="self">self</span>.max_degree + <span class="number">1
+                    </span>)));
                 }
-                <span class="ident">interpolate_uni_poly</span>::<span class="op">&lt;</span><span class="ident">F</span><span class="op">&gt;</span>(<span class="kw-2">&amp;</span><span class="ident">evaluations</span>, <span class="ident">challenge</span>)
+                interpolate_uni_poly::&lt;F&gt;(<span class="kw-2">&amp;</span>evaluations, challenge)
             })
-            .<span class="ident">collect</span>::<span class="op">&lt;</span><span class="prelude-ty">Result</span><span class="op">&lt;</span><span class="ident">Vec</span><span class="op">&lt;</span><span class="kw">_</span><span class="op">&gt;</span>, <span class="ident">PolyIOPErrors</span><span class="op">&gt;</span><span class="op">&gt;</span>()<span class="question-mark">?</span>;
+            .collect::&lt;<span class="prelude-ty">Result</span>&lt;Vec&lt;<span class="kw">_</span>&gt;, PolyIOPErrors&gt;&gt;()<span class="question-mark">?</span>;
 
-        <span class="comment">// insert the asserted_sum to the first position of the expected vector</span>
-        <span class="ident">expected_vec</span>.<span class="ident">insert</span>(<span class="number">0</span>, <span class="kw-2">*</span><span class="ident">asserted_sum</span>);
+        <span class="comment">// insert the asserted_sum to the first position of the expected vector
+        </span>expected_vec.insert(<span class="number">0</span>, <span class="kw-2">*</span>asserted_sum);
 
-        <span class="kw">for</span> (<span class="ident">evaluations</span>, <span class="kw-2">&amp;</span><span class="ident">expected</span>) <span class="kw">in</span> <span class="self">self</span>
-            .<span class="ident">polynomials_received</span>
-            .<span class="ident">iter</span>()
-            .<span class="ident">zip</span>(<span class="ident">expected_vec</span>.<span class="ident">iter</span>())
-            .<span class="ident">take</span>(<span class="self">self</span>.<span class="ident">num_vars</span>)
+        <span class="kw">for </span>(evaluations, <span class="kw-2">&amp;</span>expected) <span class="kw">in </span><span class="self">self
+            </span>.polynomials_received
+            .iter()
+            .zip(expected_vec.iter())
+            .take(<span class="self">self</span>.num_vars)
         {
-            <span class="comment">// the deferred check during the interactive phase:</span>
-            <span class="comment">// 1. check if the received &#39;P(0) + P(1) = expected`.</span>
-            <span class="kw">if</span> <span class="ident">evaluations</span>[<span class="number">0</span>] <span class="op">+</span> <span class="ident">evaluations</span>[<span class="number">1</span>] <span class="op">!</span><span class="op">=</span> <span class="ident">expected</span> {
-                <span class="kw">return</span> <span class="prelude-val">Err</span>(<span class="ident">PolyIOPErrors::InvalidProof</span>(
-                    <span class="string">&quot;Prover message is not consistent with the claim.&quot;</span>.<span class="ident">to_string</span>(),
+            <span class="comment">// the deferred check during the interactive phase:
+            // 1. check if the received &#39;P(0) + P(1) = expected`.
+            </span><span class="kw">if </span>evaluations[<span class="number">0</span>] + evaluations[<span class="number">1</span>] != expected {
+                <span class="kw">return </span><span class="prelude-val">Err</span>(PolyIOPErrors::InvalidProof(
+                    <span class="string">&quot;Prover message is not consistent with the claim.&quot;</span>.to_string(),
                 ));
             }
         }
-        <span class="macro">end_timer!</span>(<span class="ident">start</span>);
-        <span class="prelude-val">Ok</span>(<span class="ident">SumCheckSubClaim</span> {
-            <span class="ident">point</span>: <span class="self">self</span>.<span class="ident">challenges</span>.<span class="ident">clone</span>(),
-            <span class="comment">// the last expected value (not checked within this function) will be included in the</span>
-            <span class="comment">// subclaim</span>
-            <span class="ident">expected_evaluation</span>: <span class="ident">expected_vec</span>[<span class="self">self</span>.<span class="ident">num_vars</span>],
+        <span class="macro">end_timer!</span>(start);
+        <span class="prelude-val">Ok</span>(SumCheckSubClaim {
+            point: <span class="self">self</span>.challenges.clone(),
+            <span class="comment">// the last expected value (not checked within this function) will be included in the
+            // subclaim
+            </span>expected_evaluation: expected_vec[<span class="self">self</span>.num_vars],
         })
     }
 }
 
-<span class="doccomment">/// Interpolate a uni-variate degree-`p_i.len()-1` polynomial and evaluate this</span>
-<span class="doccomment">/// polynomial at `eval_at`:</span>
-<span class="doccomment">///</span>
-<span class="doccomment">///   \sum_{i=0}^len p_i * (\prod_{j!=i} (eval_at - j)/(i-j) )</span>
-<span class="doccomment">///</span>
-<span class="doccomment">/// This implementation is linear in number of inputs in terms of field</span>
-<span class="doccomment">/// operations. It also has a quadratic term in primitive operations which is</span>
-<span class="doccomment">/// negligible compared to field operations.</span>
-<span class="kw">fn</span> <span class="ident">interpolate_uni_poly</span><span class="op">&lt;</span><span class="ident">F</span>: <span class="ident">PrimeField</span><span class="op">&gt;</span>(<span class="ident">p_i</span>: <span class="kw-2">&amp;</span>[<span class="ident">F</span>], <span class="ident">eval_at</span>: <span class="ident">F</span>) -&gt; <span class="prelude-ty">Result</span><span class="op">&lt;</span><span class="ident">F</span>, <span class="ident">PolyIOPErrors</span><span class="op">&gt;</span> {
-    <span class="kw">let</span> <span class="ident">start</span> <span class="op">=</span> <span class="macro">start_timer!</span>(<span class="op">|</span><span class="op">|</span> <span class="string">&quot;sum check interpolate uni poly opt&quot;</span>);
+<span class="doccomment">/// Interpolate a uni-variate degree-`p_i.len()-1` polynomial and evaluate this
+/// polynomial at `eval_at`:
+///
+///   \sum_{i=0}^len p_i * (\prod_{j!=i} (eval_at - j)/(i-j) )
+///
+/// This implementation is linear in number of inputs in terms of field
+/// operations. It also has a quadratic term in primitive operations which is
+/// negligible compared to field operations.
+</span><span class="kw">fn </span>interpolate_uni_poly&lt;F: PrimeField&gt;(p_i: <span class="kw-2">&amp;</span>[F], eval_at: F) -&gt; <span class="prelude-ty">Result</span>&lt;F, PolyIOPErrors&gt; {
+    <span class="kw">let </span>start = <span class="macro">start_timer!</span>(|| <span class="string">&quot;sum check interpolate uni poly opt&quot;</span>);
 
-    <span class="kw">let</span> <span class="ident">len</span> <span class="op">=</span> <span class="ident">p_i</span>.<span class="ident">len</span>();
-    <span class="kw">let</span> <span class="kw-2">mut</span> <span class="ident">evals</span> <span class="op">=</span> <span class="macro">vec!</span>[];
-    <span class="kw">let</span> <span class="kw-2">mut</span> <span class="ident">prod</span> <span class="op">=</span> <span class="ident">eval_at</span>;
-    <span class="ident">evals</span>.<span class="ident">push</span>(<span class="ident">eval_at</span>);
+    <span class="kw">let </span>len = p_i.len();
+    <span class="kw">let </span><span class="kw-2">mut </span>evals = <span class="macro">vec!</span>[];
+    <span class="kw">let </span><span class="kw-2">mut </span>prod = eval_at;
+    evals.push(eval_at);
 
-    <span class="comment">// `prod = \prod_{j} (eval_at - j)`</span>
-    <span class="kw">for</span> <span class="ident">e</span> <span class="kw">in</span> <span class="number">1</span>..<span class="ident">len</span> {
-        <span class="kw">let</span> <span class="ident">tmp</span> <span class="op">=</span> <span class="ident">eval_at</span> <span class="op">-</span> <span class="ident">F::from</span>(<span class="ident">e</span> <span class="kw">as</span> <span class="ident">u64</span>);
-        <span class="ident">evals</span>.<span class="ident">push</span>(<span class="ident">tmp</span>);
-        <span class="ident">prod</span> <span class="kw-2">*</span><span class="op">=</span> <span class="ident">tmp</span>;
+    <span class="comment">// `prod = \prod_{j} (eval_at - j)`
+    </span><span class="kw">for </span>e <span class="kw">in </span><span class="number">1</span>..len {
+        <span class="kw">let </span>tmp = eval_at - F::from(e <span class="kw">as </span>u64);
+        evals.push(tmp);
+        prod <span class="kw-2">*</span>= tmp;
     }
-    <span class="kw">let</span> <span class="kw-2">mut</span> <span class="ident">res</span> <span class="op">=</span> <span class="ident">F::zero</span>();
-    <span class="comment">// we want to compute \prod (j!=i) (i-j) for a given i</span>
-    <span class="comment">//</span>
-    <span class="comment">// we start from the last step, which is</span>
-    <span class="comment">//  denom[len-1] = (len-1) * (len-2) *... * 2 * 1</span>
-    <span class="comment">// the step before that is</span>
-    <span class="comment">//  denom[len-2] = (len-2) * (len-3) * ... * 2 * 1 * -1</span>
-    <span class="comment">// and the step before that is</span>
-    <span class="comment">//  denom[len-3] = (len-3) * (len-4) * ... * 2 * 1 * -1 * -2</span>
-    <span class="comment">//</span>
-    <span class="comment">// i.e., for any i, the one before this will be derived from</span>
-    <span class="comment">//  denom[i-1] = denom[i] * (len-i) / i</span>
-    <span class="comment">//</span>
-    <span class="comment">// that is, we only need to store</span>
-    <span class="comment">// - the last denom for i = len-1, and</span>
-    <span class="comment">// - the ratio between current step and fhe last step, which is the product of</span>
-    <span class="comment">//   (len-i) / i from all previous steps and we store this product as a fraction</span>
-    <span class="comment">//   number to reduce field divisions.</span>
+    <span class="kw">let </span><span class="kw-2">mut </span>res = F::zero();
+    <span class="comment">// we want to compute \prod (j!=i) (i-j) for a given i
+    //
+    // we start from the last step, which is
+    //  denom[len-1] = (len-1) * (len-2) *... * 2 * 1
+    // the step before that is
+    //  denom[len-2] = (len-2) * (len-3) * ... * 2 * 1 * -1
+    // and the step before that is
+    //  denom[len-3] = (len-3) * (len-4) * ... * 2 * 1 * -1 * -2
+    //
+    // i.e., for any i, the one before this will be derived from
+    //  denom[i-1] = denom[i] * (len-i) / i
+    //
+    // that is, we only need to store
+    // - the last denom for i = len-1, and
+    // - the ratio between current step and fhe last step, which is the product of
+    //   (len-i) / i from all previous steps and we store this product as a fraction
+    //   number to reduce field divisions.
 
-    <span class="comment">// We know</span>
-    <span class="comment">//  - 2^61 &lt; factorial(20) &lt; 2^62</span>
-    <span class="comment">//  - 2^122 &lt; factorial(33) &lt; 2^123</span>
-    <span class="comment">// so we will be able to compute the ratio</span>
-    <span class="comment">//  - for len &lt;= 20 with i64</span>
-    <span class="comment">//  - for len &lt;= 33 with i128</span>
-    <span class="comment">//  - for len &gt;  33 with BigInt</span>
-    <span class="kw">if</span> <span class="ident">p_i</span>.<span class="ident">len</span>() <span class="op">&lt;</span><span class="op">=</span> <span class="number">20</span> {
-        <span class="kw">let</span> <span class="ident">last_denominator</span> <span class="op">=</span> <span class="ident">F::from</span>(<span class="ident">u64_factorial</span>(<span class="ident">len</span> <span class="op">-</span> <span class="number">1</span>));
-        <span class="kw">let</span> <span class="kw-2">mut</span> <span class="ident">ratio_numerator</span> <span class="op">=</span> <span class="number">1i64</span>;
-        <span class="kw">let</span> <span class="kw-2">mut</span> <span class="ident">ratio_denominator</span> <span class="op">=</span> <span class="number">1u64</span>;
+    // We know
+    //  - 2^61 &lt; factorial(20) &lt; 2^62
+    //  - 2^122 &lt; factorial(33) &lt; 2^123
+    // so we will be able to compute the ratio
+    //  - for len &lt;= 20 with i64
+    //  - for len &lt;= 33 with i128
+    //  - for len &gt;  33 with BigInt
+    </span><span class="kw">if </span>p_i.len() &lt;= <span class="number">20 </span>{
+        <span class="kw">let </span>last_denominator = F::from(u64_factorial(len - <span class="number">1</span>));
+        <span class="kw">let </span><span class="kw-2">mut </span>ratio_numerator = <span class="number">1i64</span>;
+        <span class="kw">let </span><span class="kw-2">mut </span>ratio_denominator = <span class="number">1u64</span>;
 
-        <span class="kw">for</span> <span class="ident">i</span> <span class="kw">in</span> (<span class="number">0</span>..<span class="ident">len</span>).<span class="ident">rev</span>() {
-            <span class="kw">let</span> <span class="ident">ratio_numerator_f</span> <span class="op">=</span> <span class="kw">if</span> <span class="ident">ratio_numerator</span> <span class="op">&lt;</span> <span class="number">0</span> {
-                <span class="op">-</span><span class="ident">F::from</span>((<span class="op">-</span><span class="ident">ratio_numerator</span>) <span class="kw">as</span> <span class="ident">u64</span>)
-            } <span class="kw">else</span> {
-                <span class="ident">F::from</span>(<span class="ident">ratio_numerator</span> <span class="kw">as</span> <span class="ident">u64</span>)
+        <span class="kw">for </span>i <span class="kw">in </span>(<span class="number">0</span>..len).rev() {
+            <span class="kw">let </span>ratio_numerator_f = <span class="kw">if </span>ratio_numerator &lt; <span class="number">0 </span>{
+                -F::from((-ratio_numerator) <span class="kw">as </span>u64)
+            } <span class="kw">else </span>{
+                F::from(ratio_numerator <span class="kw">as </span>u64)
             };
 
-            <span class="ident">res</span> <span class="op">+</span><span class="op">=</span> <span class="ident">p_i</span>[<span class="ident">i</span>] <span class="op">*</span> <span class="ident">prod</span> <span class="op">*</span> <span class="ident">F::from</span>(<span class="ident">ratio_denominator</span>)
-                <span class="op">/</span> (<span class="ident">last_denominator</span> <span class="op">*</span> <span class="ident">ratio_numerator_f</span> <span class="op">*</span> <span class="ident">evals</span>[<span class="ident">i</span>]);
+            res += p_i[i] * prod * F::from(ratio_denominator)
+                / (last_denominator * ratio_numerator_f * evals[i]);
 
-            <span class="comment">// compute denom for the next step is current_denom * (len-i)/i</span>
-            <span class="kw">if</span> <span class="ident">i</span> <span class="op">!</span><span class="op">=</span> <span class="number">0</span> {
-                <span class="ident">ratio_numerator</span> <span class="kw-2">*</span><span class="op">=</span> <span class="op">-</span>(<span class="ident">len</span> <span class="kw">as</span> <span class="ident">i64</span> <span class="op">-</span> <span class="ident">i</span> <span class="kw">as</span> <span class="ident">i64</span>);
-                <span class="ident">ratio_denominator</span> <span class="kw-2">*</span><span class="op">=</span> <span class="ident">i</span> <span class="kw">as</span> <span class="ident">u64</span>;
+            <span class="comment">// compute denom for the next step is current_denom * (len-i)/i
+            </span><span class="kw">if </span>i != <span class="number">0 </span>{
+                ratio_numerator <span class="kw-2">*</span>= -(len <span class="kw">as </span>i64 - i <span class="kw">as </span>i64);
+                ratio_denominator <span class="kw-2">*</span>= i <span class="kw">as </span>u64;
             }
         }
-    } <span class="kw">else</span> <span class="kw">if</span> <span class="ident">p_i</span>.<span class="ident">len</span>() <span class="op">&lt;</span><span class="op">=</span> <span class="number">33</span> {
-        <span class="kw">let</span> <span class="ident">last_denominator</span> <span class="op">=</span> <span class="ident">F::from</span>(<span class="ident">u128_factorial</span>(<span class="ident">len</span> <span class="op">-</span> <span class="number">1</span>));
-        <span class="kw">let</span> <span class="kw-2">mut</span> <span class="ident">ratio_numerator</span> <span class="op">=</span> <span class="number">1i128</span>;
-        <span class="kw">let</span> <span class="kw-2">mut</span> <span class="ident">ratio_denominator</span> <span class="op">=</span> <span class="number">1u128</span>;
+    } <span class="kw">else if </span>p_i.len() &lt;= <span class="number">33 </span>{
+        <span class="kw">let </span>last_denominator = F::from(u128_factorial(len - <span class="number">1</span>));
+        <span class="kw">let </span><span class="kw-2">mut </span>ratio_numerator = <span class="number">1i128</span>;
+        <span class="kw">let </span><span class="kw-2">mut </span>ratio_denominator = <span class="number">1u128</span>;
 
-        <span class="kw">for</span> <span class="ident">i</span> <span class="kw">in</span> (<span class="number">0</span>..<span class="ident">len</span>).<span class="ident">rev</span>() {
-            <span class="kw">let</span> <span class="ident">ratio_numerator_f</span> <span class="op">=</span> <span class="kw">if</span> <span class="ident">ratio_numerator</span> <span class="op">&lt;</span> <span class="number">0</span> {
-                <span class="op">-</span><span class="ident">F::from</span>((<span class="op">-</span><span class="ident">ratio_numerator</span>) <span class="kw">as</span> <span class="ident">u128</span>)
-            } <span class="kw">else</span> {
-                <span class="ident">F::from</span>(<span class="ident">ratio_numerator</span> <span class="kw">as</span> <span class="ident">u128</span>)
+        <span class="kw">for </span>i <span class="kw">in </span>(<span class="number">0</span>..len).rev() {
+            <span class="kw">let </span>ratio_numerator_f = <span class="kw">if </span>ratio_numerator &lt; <span class="number">0 </span>{
+                -F::from((-ratio_numerator) <span class="kw">as </span>u128)
+            } <span class="kw">else </span>{
+                F::from(ratio_numerator <span class="kw">as </span>u128)
             };
 
-            <span class="ident">res</span> <span class="op">+</span><span class="op">=</span> <span class="ident">p_i</span>[<span class="ident">i</span>] <span class="op">*</span> <span class="ident">prod</span> <span class="op">*</span> <span class="ident">F::from</span>(<span class="ident">ratio_denominator</span>)
-                <span class="op">/</span> (<span class="ident">last_denominator</span> <span class="op">*</span> <span class="ident">ratio_numerator_f</span> <span class="op">*</span> <span class="ident">evals</span>[<span class="ident">i</span>]);
+            res += p_i[i] * prod * F::from(ratio_denominator)
+                / (last_denominator * ratio_numerator_f * evals[i]);
 
-            <span class="comment">// compute denom for the next step is current_denom * (len-i)/i</span>
-            <span class="kw">if</span> <span class="ident">i</span> <span class="op">!</span><span class="op">=</span> <span class="number">0</span> {
-                <span class="ident">ratio_numerator</span> <span class="kw-2">*</span><span class="op">=</span> <span class="op">-</span>(<span class="ident">len</span> <span class="kw">as</span> <span class="ident">i128</span> <span class="op">-</span> <span class="ident">i</span> <span class="kw">as</span> <span class="ident">i128</span>);
-                <span class="ident">ratio_denominator</span> <span class="kw-2">*</span><span class="op">=</span> <span class="ident">i</span> <span class="kw">as</span> <span class="ident">u128</span>;
+            <span class="comment">// compute denom for the next step is current_denom * (len-i)/i
+            </span><span class="kw">if </span>i != <span class="number">0 </span>{
+                ratio_numerator <span class="kw-2">*</span>= -(len <span class="kw">as </span>i128 - i <span class="kw">as </span>i128);
+                ratio_denominator <span class="kw-2">*</span>= i <span class="kw">as </span>u128;
             }
         }
-    } <span class="kw">else</span> {
-        <span class="kw">let</span> <span class="kw-2">mut</span> <span class="ident">denom_up</span> <span class="op">=</span> <span class="ident">field_factorial</span>::<span class="op">&lt;</span><span class="ident">F</span><span class="op">&gt;</span>(<span class="ident">len</span> <span class="op">-</span> <span class="number">1</span>);
-        <span class="kw">let</span> <span class="kw-2">mut</span> <span class="ident">denom_down</span> <span class="op">=</span> <span class="ident">F::one</span>();
+    } <span class="kw">else </span>{
+        <span class="kw">let </span><span class="kw-2">mut </span>denom_up = field_factorial::&lt;F&gt;(len - <span class="number">1</span>);
+        <span class="kw">let </span><span class="kw-2">mut </span>denom_down = F::one();
 
-        <span class="kw">for</span> <span class="ident">i</span> <span class="kw">in</span> (<span class="number">0</span>..<span class="ident">len</span>).<span class="ident">rev</span>() {
-            <span class="ident">res</span> <span class="op">+</span><span class="op">=</span> <span class="ident">p_i</span>[<span class="ident">i</span>] <span class="op">*</span> <span class="ident">prod</span> <span class="op">*</span> <span class="ident">denom_down</span> <span class="op">/</span> (<span class="ident">denom_up</span> <span class="op">*</span> <span class="ident">evals</span>[<span class="ident">i</span>]);
+        <span class="kw">for </span>i <span class="kw">in </span>(<span class="number">0</span>..len).rev() {
+            res += p_i[i] * prod * denom_down / (denom_up * evals[i]);
 
-            <span class="comment">// compute denom for the next step is current_denom * (len-i)/i</span>
-            <span class="kw">if</span> <span class="ident">i</span> <span class="op">!</span><span class="op">=</span> <span class="number">0</span> {
-                <span class="ident">denom_up</span> <span class="kw-2">*</span><span class="op">=</span> <span class="op">-</span><span class="ident">F::from</span>((<span class="ident">len</span> <span class="op">-</span> <span class="ident">i</span>) <span class="kw">as</span> <span class="ident">u64</span>);
-                <span class="ident">denom_down</span> <span class="kw-2">*</span><span class="op">=</span> <span class="ident">F::from</span>(<span class="ident">i</span> <span class="kw">as</span> <span class="ident">u64</span>);
+            <span class="comment">// compute denom for the next step is current_denom * (len-i)/i
+            </span><span class="kw">if </span>i != <span class="number">0 </span>{
+                denom_up <span class="kw-2">*</span>= -F::from((len - i) <span class="kw">as </span>u64);
+                denom_down <span class="kw-2">*</span>= F::from(i <span class="kw">as </span>u64);
             }
         }
     }
-    <span class="macro">end_timer!</span>(<span class="ident">start</span>);
-    <span class="prelude-val">Ok</span>(<span class="ident">res</span>)
+    <span class="macro">end_timer!</span>(start);
+    <span class="prelude-val">Ok</span>(res)
 }
 
-<span class="doccomment">/// compute the factorial(a) = 1 * 2 * ... * a</span>
-<span class="attribute">#[<span class="ident">inline</span>]</span>
-<span class="kw">fn</span> <span class="ident">field_factorial</span><span class="op">&lt;</span><span class="ident">F</span>: <span class="ident">PrimeField</span><span class="op">&gt;</span>(<span class="ident">a</span>: <span class="ident">usize</span>) -&gt; <span class="ident">F</span> {
-    <span class="kw">let</span> <span class="kw-2">mut</span> <span class="ident">res</span> <span class="op">=</span> <span class="ident">F::one</span>();
-    <span class="kw">for</span> <span class="ident">i</span> <span class="kw">in</span> <span class="number">2</span>..<span class="op">=</span><span class="ident">a</span> {
-        <span class="ident">res</span> <span class="kw-2">*</span><span class="op">=</span> <span class="ident">F::from</span>(<span class="ident">i</span> <span class="kw">as</span> <span class="ident">u64</span>);
+<span class="doccomment">/// compute the factorial(a) = 1 * 2 * ... * a
+</span><span class="attribute">#[inline]
+</span><span class="kw">fn </span>field_factorial&lt;F: PrimeField&gt;(a: usize) -&gt; F {
+    <span class="kw">let </span><span class="kw-2">mut </span>res = F::one();
+    <span class="kw">for </span>i <span class="kw">in </span><span class="number">2</span>..=a {
+        res <span class="kw-2">*</span>= F::from(i <span class="kw">as </span>u64);
     }
-    <span class="ident">res</span>
+    res
 }
 
-<span class="doccomment">/// compute the factorial(a) = 1 * 2 * ... * a</span>
-<span class="attribute">#[<span class="ident">inline</span>]</span>
-<span class="kw">fn</span> <span class="ident">u128_factorial</span>(<span class="ident">a</span>: <span class="ident">usize</span>) -&gt; <span class="ident">u128</span> {
-    <span class="kw">let</span> <span class="kw-2">mut</span> <span class="ident">res</span> <span class="op">=</span> <span class="number">1u128</span>;
-    <span class="kw">for</span> <span class="ident">i</span> <span class="kw">in</span> <span class="number">2</span>..<span class="op">=</span><span class="ident">a</span> {
-        <span class="ident">res</span> <span class="kw-2">*</span><span class="op">=</span> <span class="ident">i</span> <span class="kw">as</span> <span class="ident">u128</span>;
+<span class="doccomment">/// compute the factorial(a) = 1 * 2 * ... * a
+</span><span class="attribute">#[inline]
+</span><span class="kw">fn </span>u128_factorial(a: usize) -&gt; u128 {
+    <span class="kw">let </span><span class="kw-2">mut </span>res = <span class="number">1u128</span>;
+    <span class="kw">for </span>i <span class="kw">in </span><span class="number">2</span>..=a {
+        res <span class="kw-2">*</span>= i <span class="kw">as </span>u128;
     }
-    <span class="ident">res</span>
+    res
 }
 
-<span class="doccomment">/// compute the factorial(a) = 1 * 2 * ... * a</span>
-<span class="attribute">#[<span class="ident">inline</span>]</span>
-<span class="kw">fn</span> <span class="ident">u64_factorial</span>(<span class="ident">a</span>: <span class="ident">usize</span>) -&gt; <span class="ident">u64</span> {
-    <span class="kw">let</span> <span class="kw-2">mut</span> <span class="ident">res</span> <span class="op">=</span> <span class="number">1u64</span>;
-    <span class="kw">for</span> <span class="ident">i</span> <span class="kw">in</span> <span class="number">2</span>..<span class="op">=</span><span class="ident">a</span> {
-        <span class="ident">res</span> <span class="kw-2">*</span><span class="op">=</span> <span class="ident">i</span> <span class="kw">as</span> <span class="ident">u64</span>;
+<span class="doccomment">/// compute the factorial(a) = 1 * 2 * ... * a
+</span><span class="attribute">#[inline]
+</span><span class="kw">fn </span>u64_factorial(a: usize) -&gt; u64 {
+    <span class="kw">let </span><span class="kw-2">mut </span>res = <span class="number">1u64</span>;
+    <span class="kw">for </span>i <span class="kw">in </span><span class="number">2</span>..=a {
+        res <span class="kw-2">*</span>= i <span class="kw">as </span>u64;
     }
-    <span class="ident">res</span>
+    res
 }
 
-<span class="attribute">#[<span class="ident">cfg</span>(<span class="ident">test</span>)]</span>
-<span class="kw">mod</span> <span class="ident">test</span> {
-    <span class="kw">use</span> <span class="ident"><span class="kw">super</span>::interpolate_uni_poly</span>;
-    <span class="kw">use</span> <span class="ident"><span class="kw">crate</span>::poly_iop::errors::PolyIOPErrors</span>;
-    <span class="kw">use</span> <span class="ident">ark_bls12_381::Fr</span>;
-    <span class="kw">use</span> <span class="ident">ark_poly</span>::{<span class="ident">univariate::DensePolynomial</span>, <span class="ident">Polynomial</span>, <span class="ident">UVPolynomial</span>};
-    <span class="kw">use</span> <span class="ident">ark_std</span>::{<span class="ident">vec::Vec</span>, <span class="ident">UniformRand</span>};
+<span class="attribute">#[cfg(test)]
+</span><span class="kw">mod </span>test {
+    <span class="kw">use </span><span class="kw">super</span>::interpolate_uni_poly;
+    <span class="kw">use </span><span class="kw">crate</span>::poly_iop::errors::PolyIOPErrors;
+    <span class="kw">use </span>ark_bls12_381::Fr;
+    <span class="kw">use </span>ark_poly::{univariate::DensePolynomial, Polynomial, UVPolynomial};
+    <span class="kw">use </span>ark_std::{vec::Vec, UniformRand};
 
-    <span class="attribute">#[<span class="ident">test</span>]</span>
-    <span class="kw">fn</span> <span class="ident">test_interpolation</span>() -&gt; <span class="prelude-ty">Result</span><span class="op">&lt;</span>(), <span class="ident">PolyIOPErrors</span><span class="op">&gt;</span> {
-        <span class="kw">let</span> <span class="kw-2">mut</span> <span class="ident">prng</span> <span class="op">=</span> <span class="ident">ark_std::test_rng</span>();
+    <span class="attribute">#[test]
+    </span><span class="kw">fn </span>test_interpolation() -&gt; <span class="prelude-ty">Result</span>&lt;(), PolyIOPErrors&gt; {
+        <span class="kw">let </span><span class="kw-2">mut </span>prng = ark_std::test_rng();
 
-        <span class="comment">// test a polynomial with 20 known points, i.e., with degree 19</span>
-        <span class="kw">let</span> <span class="ident">poly</span> <span class="op">=</span> <span class="ident">DensePolynomial</span>::<span class="op">&lt;</span><span class="ident">Fr</span><span class="op">&gt;</span><span class="ident">::rand</span>(<span class="number">20</span> <span class="op">-</span> <span class="number">1</span>, <span class="kw-2">&amp;mut</span> <span class="ident">prng</span>);
-        <span class="kw">let</span> <span class="ident">evals</span> <span class="op">=</span> (<span class="number">0</span>..<span class="number">20</span>)
-            .<span class="ident">map</span>(<span class="op">|</span><span class="ident">i</span><span class="op">|</span> <span class="ident">poly</span>.<span class="ident">evaluate</span>(<span class="kw-2">&amp;</span><span class="ident">Fr::from</span>(<span class="ident">i</span>)))
-            .<span class="ident">collect</span>::<span class="op">&lt;</span><span class="ident">Vec</span><span class="op">&lt;</span><span class="ident">Fr</span><span class="op">&gt;</span><span class="op">&gt;</span>();
-        <span class="kw">let</span> <span class="ident">query</span> <span class="op">=</span> <span class="ident">Fr::rand</span>(<span class="kw-2">&amp;mut</span> <span class="ident">prng</span>);
+        <span class="comment">// test a polynomial with 20 known points, i.e., with degree 19
+        </span><span class="kw">let </span>poly = DensePolynomial::&lt;Fr&gt;::rand(<span class="number">20 </span>- <span class="number">1</span>, <span class="kw-2">&amp;mut </span>prng);
+        <span class="kw">let </span>evals = (<span class="number">0</span>..<span class="number">20</span>)
+            .map(|i| poly.evaluate(<span class="kw-2">&amp;</span>Fr::from(i)))
+            .collect::&lt;Vec&lt;Fr&gt;&gt;();
+        <span class="kw">let </span>query = Fr::rand(<span class="kw-2">&amp;mut </span>prng);
 
-        <span class="macro">assert_eq!</span>(<span class="ident">poly</span>.<span class="ident">evaluate</span>(<span class="kw-2">&amp;</span><span class="ident">query</span>), <span class="ident">interpolate_uni_poly</span>(<span class="kw-2">&amp;</span><span class="ident">evals</span>, <span class="ident">query</span>)<span class="question-mark">?</span>);
+        <span class="macro">assert_eq!</span>(poly.evaluate(<span class="kw-2">&amp;</span>query), interpolate_uni_poly(<span class="kw-2">&amp;</span>evals, query)<span class="question-mark">?</span>);
 
-        <span class="comment">// test a polynomial with 33 known points, i.e., with degree 32</span>
-        <span class="kw">let</span> <span class="ident">poly</span> <span class="op">=</span> <span class="ident">DensePolynomial</span>::<span class="op">&lt;</span><span class="ident">Fr</span><span class="op">&gt;</span><span class="ident">::rand</span>(<span class="number">33</span> <span class="op">-</span> <span class="number">1</span>, <span class="kw-2">&amp;mut</span> <span class="ident">prng</span>);
-        <span class="kw">let</span> <span class="ident">evals</span> <span class="op">=</span> (<span class="number">0</span>..<span class="number">33</span>)
-            .<span class="ident">map</span>(<span class="op">|</span><span class="ident">i</span><span class="op">|</span> <span class="ident">poly</span>.<span class="ident">evaluate</span>(<span class="kw-2">&amp;</span><span class="ident">Fr::from</span>(<span class="ident">i</span>)))
-            .<span class="ident">collect</span>::<span class="op">&lt;</span><span class="ident">Vec</span><span class="op">&lt;</span><span class="ident">Fr</span><span class="op">&gt;</span><span class="op">&gt;</span>();
-        <span class="kw">let</span> <span class="ident">query</span> <span class="op">=</span> <span class="ident">Fr::rand</span>(<span class="kw-2">&amp;mut</span> <span class="ident">prng</span>);
+        <span class="comment">// test a polynomial with 33 known points, i.e., with degree 32
+        </span><span class="kw">let </span>poly = DensePolynomial::&lt;Fr&gt;::rand(<span class="number">33 </span>- <span class="number">1</span>, <span class="kw-2">&amp;mut </span>prng);
+        <span class="kw">let </span>evals = (<span class="number">0</span>..<span class="number">33</span>)
+            .map(|i| poly.evaluate(<span class="kw-2">&amp;</span>Fr::from(i)))
+            .collect::&lt;Vec&lt;Fr&gt;&gt;();
+        <span class="kw">let </span>query = Fr::rand(<span class="kw-2">&amp;mut </span>prng);
 
-        <span class="macro">assert_eq!</span>(<span class="ident">poly</span>.<span class="ident">evaluate</span>(<span class="kw-2">&amp;</span><span class="ident">query</span>), <span class="ident">interpolate_uni_poly</span>(<span class="kw-2">&amp;</span><span class="ident">evals</span>, <span class="ident">query</span>)<span class="question-mark">?</span>);
+        <span class="macro">assert_eq!</span>(poly.evaluate(<span class="kw-2">&amp;</span>query), interpolate_uni_poly(<span class="kw-2">&amp;</span>evals, query)<span class="question-mark">?</span>);
 
-        <span class="comment">// test a polynomial with 64 known points, i.e., with degree 63</span>
-        <span class="kw">let</span> <span class="ident">poly</span> <span class="op">=</span> <span class="ident">DensePolynomial</span>::<span class="op">&lt;</span><span class="ident">Fr</span><span class="op">&gt;</span><span class="ident">::rand</span>(<span class="number">64</span> <span class="op">-</span> <span class="number">1</span>, <span class="kw-2">&amp;mut</span> <span class="ident">prng</span>);
-        <span class="kw">let</span> <span class="ident">evals</span> <span class="op">=</span> (<span class="number">0</span>..<span class="number">64</span>)
-            .<span class="ident">map</span>(<span class="op">|</span><span class="ident">i</span><span class="op">|</span> <span class="ident">poly</span>.<span class="ident">evaluate</span>(<span class="kw-2">&amp;</span><span class="ident">Fr::from</span>(<span class="ident">i</span>)))
-            .<span class="ident">collect</span>::<span class="op">&lt;</span><span class="ident">Vec</span><span class="op">&lt;</span><span class="ident">Fr</span><span class="op">&gt;</span><span class="op">&gt;</span>();
-        <span class="kw">let</span> <span class="ident">query</span> <span class="op">=</span> <span class="ident">Fr::rand</span>(<span class="kw-2">&amp;mut</span> <span class="ident">prng</span>);
+        <span class="comment">// test a polynomial with 64 known points, i.e., with degree 63
+        </span><span class="kw">let </span>poly = DensePolynomial::&lt;Fr&gt;::rand(<span class="number">64 </span>- <span class="number">1</span>, <span class="kw-2">&amp;mut </span>prng);
+        <span class="kw">let </span>evals = (<span class="number">0</span>..<span class="number">64</span>)
+            .map(|i| poly.evaluate(<span class="kw-2">&amp;</span>Fr::from(i)))
+            .collect::&lt;Vec&lt;Fr&gt;&gt;();
+        <span class="kw">let </span>query = Fr::rand(<span class="kw-2">&amp;mut </span>prng);
 
-        <span class="macro">assert_eq!</span>(<span class="ident">poly</span>.<span class="ident">evaluate</span>(<span class="kw-2">&amp;</span><span class="ident">query</span>), <span class="ident">interpolate_uni_poly</span>(<span class="kw-2">&amp;</span><span class="ident">evals</span>, <span class="ident">query</span>)<span class="question-mark">?</span>);
+        <span class="macro">assert_eq!</span>(poly.evaluate(<span class="kw-2">&amp;</span>query), interpolate_uni_poly(<span class="kw-2">&amp;</span>evals, query)<span class="question-mark">?</span>);
 
         <span class="prelude-val">Ok</span>(())
     }
 }
 </code></pre></div>
-</section></div></main><div id="rustdoc-vars" data-root-path="../../../../" data-current-crate="subroutines" data-themes="ayu,dark,light" data-resource-suffix="" data-rustdoc-version="1.64.0 (a55dd71d5 2022-09-19)" ></div></body></html>
+</section></div></main><div id="rustdoc-vars" data-root-path="../../../../" data-current-crate="subroutines" data-themes="ayu,dark,light" data-resource-suffix="" data-rustdoc-version="1.65.0 (897e37553 2022-11-02)" ></div></body></html>

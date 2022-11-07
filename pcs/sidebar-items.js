@@ -1,1 +1,0 @@
-window.SIDEBAR_ITEMS = {"mod":[["prelude","Prelude"]],"trait":[["PolynomialCommitmentScheme","This trait defines APIs for polynomial commitment schemes. Note that for our usage of PCS, we do not require the hiding property."],["StructuredReferenceString","API definitions for structured reference string"]]};

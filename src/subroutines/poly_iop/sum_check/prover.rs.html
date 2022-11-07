@@ -1,4 +1,4 @@
-<!DOCTYPE html><html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1.0"><meta name="generator" content="rustdoc"><meta name="description" content="Source of the Rust file `subroutines/src/poly_iop/sum_check/prover.rs`."><meta name="keywords" content="rust, rustlang, rust-lang"><title>prover.rs - source</title><link rel="preload" as="font" type="font/woff2" crossorigin href="../../../../SourceSerif4-Regular.ttf.woff2"><link rel="preload" as="font" type="font/woff2" crossorigin href="../../../../FiraSans-Regular.woff2"><link rel="preload" as="font" type="font/woff2" crossorigin href="../../../../FiraSans-Medium.woff2"><link rel="preload" as="font" type="font/woff2" crossorigin href="../../../../SourceCodePro-Regular.ttf.woff2"><link rel="preload" as="font" type="font/woff2" crossorigin href="../../../../SourceSerif4-Bold.ttf.woff2"><link rel="preload" as="font" type="font/woff2" crossorigin href="../../../../SourceCodePro-Semibold.ttf.woff2"><link rel="stylesheet" type="text/css" href="../../../../normalize.css"><link rel="stylesheet" type="text/css" href="../../../../rustdoc.css" id="mainThemeStyle"><link rel="stylesheet" type="text/css" href="../../../../ayu.css" disabled><link rel="stylesheet" type="text/css" href="../../../../dark.css" disabled><link rel="stylesheet" type="text/css" href="../../../../light.css" id="themeStyle"><script id="default-settings" ></script><script src="../../../../storage.js"></script><script defer src="../../../../source-script.js"></script><script defer src="../../../../source-files.js"></script><script defer src="../../../../main.js"></script><noscript><link rel="stylesheet" href="../../../../noscript.css"></noscript><link rel="alternate icon" type="image/png" href="../../../../favicon-16x16.png"><link rel="alternate icon" type="image/png" href="../../../../favicon-32x32.png"><link rel="icon" type="image/svg+xml" href="../../../../favicon.svg"></head><body class="rustdoc source"><!--[if lte IE 11]><div class="warning">This old browser is unsupported and will most likely display funky things.</div><![endif]--><nav class="mobile-topbar"><button class="sidebar-menu-toggle">&#9776;</button><a class="sidebar-logo" href="../../../../subroutines/index.html"><div class="logo-container"><img class="rust-logo" src="../../../../rust-logo.svg" alt="logo"></div></a><h2 class="location"></h2></nav><nav class="sidebar"><a class="sidebar-logo" href="../../../../subroutines/index.html"><div class="logo-container"><img class="rust-logo" src="../../../../rust-logo.svg" alt="logo"></div></a></nav><main><div class="width-limiter"><div class="sub-container"><a class="sub-logo-container" href="../../../../subroutines/index.html"><img class="rust-logo" src="../../../../rust-logo.svg" alt="logo"></a><nav class="sub"><form class="search-form"><div class="search-container"><span></span><input class="search-input" name="search" autocomplete="off" spellcheck="false" placeholder="Click or press ‘S’ to search, ‘?’ for more options…" type="search"><div id="help-button" title="help" tabindex="-1"><button type="button">?</button></div><div id="settings-menu" tabindex="-1"><a href="../../../../settings.html" title="settings"><img width="22" height="22" alt="Change settings" src="../../../../wheel.svg"></a></div></div></form></nav></div><section id="main-content" class="content"><div class="example-wrap"><pre class="line-numbers"><span id="1">1</span>
+<!DOCTYPE html><html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1.0"><meta name="generator" content="rustdoc"><meta name="description" content="Source of the Rust file `subroutines/src/poly_iop/sum_check/prover.rs`."><meta name="keywords" content="rust, rustlang, rust-lang"><title>prover.rs - source</title><link rel="preload" as="font" type="font/woff2" crossorigin href="../../../../SourceSerif4-Regular.ttf.woff2"><link rel="preload" as="font" type="font/woff2" crossorigin href="../../../../FiraSans-Regular.woff2"><link rel="preload" as="font" type="font/woff2" crossorigin href="../../../../FiraSans-Medium.woff2"><link rel="preload" as="font" type="font/woff2" crossorigin href="../../../../SourceCodePro-Regular.ttf.woff2"><link rel="preload" as="font" type="font/woff2" crossorigin href="../../../../SourceSerif4-Bold.ttf.woff2"><link rel="preload" as="font" type="font/woff2" crossorigin href="../../../../SourceCodePro-Semibold.ttf.woff2"><link rel="stylesheet" href="../../../../normalize.css"><link rel="stylesheet" href="../../../../rustdoc.css" id="mainThemeStyle"><link rel="stylesheet" href="../../../../ayu.css" disabled><link rel="stylesheet" href="../../../../dark.css" disabled><link rel="stylesheet" href="../../../../light.css" id="themeStyle"><script id="default-settings" ></script><script src="../../../../storage.js"></script><script defer src="../../../../source-script.js"></script><script defer src="../../../../source-files.js"></script><script defer src="../../../../main.js"></script><noscript><link rel="stylesheet" href="../../../../noscript.css"></noscript><link rel="alternate icon" type="image/png" href="../../../../favicon-16x16.png"><link rel="alternate icon" type="image/png" href="../../../../favicon-32x32.png"><link rel="icon" type="image/svg+xml" href="../../../../favicon.svg"></head><body class="rustdoc source"><!--[if lte IE 11]><div class="warning">This old browser is unsupported and will most likely display funky things.</div><![endif]--><nav class="mobile-topbar"><button class="sidebar-menu-toggle">&#9776;</button><a class="sidebar-logo" href="../../../../subroutines/index.html"><div class="logo-container"><img class="rust-logo" src="../../../../rust-logo.svg" alt="logo"></div></a><h2 class="location"></h2></nav><nav class="sidebar"><a class="sidebar-logo" href="../../../../subroutines/index.html"><div class="logo-container"><img class="rust-logo" src="../../../../rust-logo.svg" alt="logo"></div></a></nav><main><div class="width-limiter"><div class="sub-container"><a class="sub-logo-container" href="../../../../subroutines/index.html"><img class="rust-logo" src="../../../../rust-logo.svg" alt="logo"></a><nav class="sub"><form class="search-form"><div class="search-container"><span></span><input class="search-input" name="search" autocomplete="off" spellcheck="false" placeholder="Click or press ‘S’ to search, ‘?’ for more options…" type="search"><div id="help-button" title="help" tabindex="-1"><button type="button">?</button></div><div id="settings-menu" tabindex="-1"><a href="../../../../settings.html" title="settings"><img width="22" height="22" alt="Change settings" src="../../../../wheel.svg"></a></div></div></form></nav></div><section id="main-content" class="content"><div class="example-wrap"><pre class="line-numbers"><span id="1">1</span>
 <span id="2">2</span>
 <span id="3">3</span>
 <span id="4">4</span>
@@ -198,205 +198,205 @@
 <span id="198">198</span>
 <span id="199">199</span>
 <span id="200">200</span>
-</pre><pre class="rust"><code><span class="doccomment">//! Prover subroutines for a SumCheck protocol.</span>
+</pre><pre class="rust"><code><span class="doccomment">//! Prover subroutines for a SumCheck protocol.
 
-<span class="kw">use</span> <span class="ident"><span class="kw">super</span>::SumCheckProver</span>;
-<span class="kw">use</span> <span class="ident"><span class="kw">crate</span>::poly_iop</span>::{
-    <span class="ident">errors::PolyIOPErrors</span>,
-    <span class="ident">structs</span>::{<span class="ident">IOPProverMessage</span>, <span class="ident">IOPProverState</span>},
+</span><span class="kw">use </span><span class="kw">super</span>::SumCheckProver;
+<span class="kw">use </span><span class="kw">crate</span>::poly_iop::{
+    errors::PolyIOPErrors,
+    structs::{IOPProverMessage, IOPProverState},
 };
-<span class="kw">use</span> <span class="ident">arithmetic</span>::{<span class="ident">fix_variables</span>, <span class="ident">VirtualPolynomial</span>};
-<span class="kw">use</span> <span class="ident">ark_ff::PrimeField</span>;
-<span class="kw">use</span> <span class="ident">ark_poly::DenseMultilinearExtension</span>;
-<span class="kw">use</span> <span class="ident">ark_std</span>::{<span class="ident">end_timer</span>, <span class="ident">start_timer</span>, <span class="ident">vec::Vec</span>};
-<span class="kw">use</span> <span class="ident">rayon::prelude::IntoParallelIterator</span>;
-<span class="kw">use</span> <span class="ident">std::rc::Rc</span>;
+<span class="kw">use </span>arithmetic::{fix_variables, VirtualPolynomial};
+<span class="kw">use </span>ark_ff::PrimeField;
+<span class="kw">use </span>ark_poly::DenseMultilinearExtension;
+<span class="kw">use </span>ark_std::{end_timer, start_timer, vec::Vec};
+<span class="kw">use </span>rayon::prelude::IntoParallelIterator;
+<span class="kw">use </span>std::rc::Rc;
 
-<span class="attribute">#[<span class="ident">cfg</span>(<span class="ident">feature</span> <span class="op">=</span> <span class="string">&quot;parallel&quot;</span>)]</span>
-<span class="kw">use</span> <span class="ident">rayon::iter</span>::{<span class="ident">IntoParallelRefMutIterator</span>, <span class="ident">ParallelIterator</span>};
+<span class="attribute">#[cfg(feature = <span class="string">&quot;parallel&quot;</span>)]
+</span><span class="kw">use </span>rayon::iter::{IntoParallelRefMutIterator, ParallelIterator};
 
-<span class="kw">impl</span><span class="op">&lt;</span><span class="ident">F</span>: <span class="ident">PrimeField</span><span class="op">&gt;</span> <span class="ident">SumCheckProver</span><span class="op">&lt;</span><span class="ident">F</span><span class="op">&gt;</span> <span class="kw">for</span> <span class="ident">IOPProverState</span><span class="op">&lt;</span><span class="ident">F</span><span class="op">&gt;</span> {
-    <span class="kw">type</span> <span class="ident">VirtualPolynomial</span> <span class="op">=</span> <span class="ident">VirtualPolynomial</span><span class="op">&lt;</span><span class="ident">F</span><span class="op">&gt;</span>;
-    <span class="kw">type</span> <span class="ident">ProverMessage</span> <span class="op">=</span> <span class="ident">IOPProverMessage</span><span class="op">&lt;</span><span class="ident">F</span><span class="op">&gt;</span>;
+<span class="kw">impl</span>&lt;F: PrimeField&gt; SumCheckProver&lt;F&gt; <span class="kw">for </span>IOPProverState&lt;F&gt; {
+    <span class="kw">type </span>VirtualPolynomial = VirtualPolynomial&lt;F&gt;;
+    <span class="kw">type </span>ProverMessage = IOPProverMessage&lt;F&gt;;
 
-    <span class="doccomment">/// Initialize the prover state to argue for the sum of the input polynomial</span>
-    <span class="doccomment">/// over {0,1}^`num_vars`.</span>
-    <span class="kw">fn</span> <span class="ident">prover_init</span>(<span class="ident">polynomial</span>: <span class="kw-2">&amp;</span><span class="ident"><span class="self">Self</span>::VirtualPolynomial</span>) -&gt; <span class="prelude-ty">Result</span><span class="op">&lt;</span><span class="self">Self</span>, <span class="ident">PolyIOPErrors</span><span class="op">&gt;</span> {
-        <span class="kw">let</span> <span class="ident">start</span> <span class="op">=</span> <span class="macro">start_timer!</span>(<span class="op">|</span><span class="op">|</span> <span class="string">&quot;sum check prover init&quot;</span>);
-        <span class="kw">if</span> <span class="ident">polynomial</span>.<span class="ident">aux_info</span>.<span class="ident">num_variables</span> <span class="op">==</span> <span class="number">0</span> {
-            <span class="kw">return</span> <span class="prelude-val">Err</span>(<span class="ident">PolyIOPErrors::InvalidParameters</span>(
-                <span class="string">&quot;Attempt to prove a constant.&quot;</span>.<span class="ident">to_string</span>(),
+    <span class="doccomment">/// Initialize the prover state to argue for the sum of the input polynomial
+    /// over {0,1}^`num_vars`.
+    </span><span class="kw">fn </span>prover_init(polynomial: <span class="kw-2">&amp;</span><span class="self">Self</span>::VirtualPolynomial) -&gt; <span class="prelude-ty">Result</span>&lt;<span class="self">Self</span>, PolyIOPErrors&gt; {
+        <span class="kw">let </span>start = <span class="macro">start_timer!</span>(|| <span class="string">&quot;sum check prover init&quot;</span>);
+        <span class="kw">if </span>polynomial.aux_info.num_variables == <span class="number">0 </span>{
+            <span class="kw">return </span><span class="prelude-val">Err</span>(PolyIOPErrors::InvalidParameters(
+                <span class="string">&quot;Attempt to prove a constant.&quot;</span>.to_string(),
             ));
         }
-        <span class="macro">end_timer!</span>(<span class="ident">start</span>);
+        <span class="macro">end_timer!</span>(start);
 
-        <span class="prelude-val">Ok</span>(<span class="self">Self</span> {
-            <span class="ident">challenges</span>: <span class="ident">Vec::with_capacity</span>(<span class="ident">polynomial</span>.<span class="ident">aux_info</span>.<span class="ident">num_variables</span>),
-            <span class="ident">round</span>: <span class="number">0</span>,
-            <span class="ident">poly</span>: <span class="ident">polynomial</span>.<span class="ident">clone</span>(),
+        <span class="prelude-val">Ok</span>(<span class="self">Self </span>{
+            challenges: Vec::with_capacity(polynomial.aux_info.num_variables),
+            round: <span class="number">0</span>,
+            poly: polynomial.clone(),
         })
     }
 
-    <span class="doccomment">/// Receive message from verifier, generate prover message, and proceed to</span>
-    <span class="doccomment">/// next round.</span>
-    <span class="doccomment">///</span>
-    <span class="doccomment">/// Main algorithm used is from section 3.2 of [XZZPS19](https://eprint.iacr.org/2019/317.pdf#subsection.3.2).</span>
-    <span class="kw">fn</span> <span class="ident">prove_round_and_update_state</span>(
-        <span class="kw-2">&amp;mut</span> <span class="self">self</span>,
-        <span class="ident">challenge</span>: <span class="kw-2">&amp;</span><span class="prelude-ty">Option</span><span class="op">&lt;</span><span class="ident">F</span><span class="op">&gt;</span>,
-    ) -&gt; <span class="prelude-ty">Result</span><span class="op">&lt;</span><span class="ident"><span class="self">Self</span>::ProverMessage</span>, <span class="ident">PolyIOPErrors</span><span class="op">&gt;</span> {
-        <span class="comment">// let start =</span>
-        <span class="comment">//     start_timer!(|| format!(&quot;sum check prove {}-th round and update state&quot;,</span>
-        <span class="comment">// self.round));</span>
+    <span class="doccomment">/// Receive message from verifier, generate prover message, and proceed to
+    /// next round.
+    ///
+    /// Main algorithm used is from section 3.2 of [XZZPS19](https://eprint.iacr.org/2019/317.pdf#subsection.3.2).
+    </span><span class="kw">fn </span>prove_round_and_update_state(
+        <span class="kw-2">&amp;mut </span><span class="self">self</span>,
+        challenge: <span class="kw-2">&amp;</span><span class="prelude-ty">Option</span>&lt;F&gt;,
+    ) -&gt; <span class="prelude-ty">Result</span>&lt;<span class="self">Self</span>::ProverMessage, PolyIOPErrors&gt; {
+        <span class="comment">// let start =
+        //     start_timer!(|| format!(&quot;sum check prove {}-th round and update state&quot;,
+        // self.round));
 
-        <span class="kw">if</span> <span class="self">self</span>.<span class="ident">round</span> <span class="op">&gt;</span><span class="op">=</span> <span class="self">self</span>.<span class="ident">poly</span>.<span class="ident">aux_info</span>.<span class="ident">num_variables</span> {
-            <span class="kw">return</span> <span class="prelude-val">Err</span>(<span class="ident">PolyIOPErrors::InvalidProver</span>(
-                <span class="string">&quot;Prover is not active&quot;</span>.<span class="ident">to_string</span>(),
+        </span><span class="kw">if </span><span class="self">self</span>.round &gt;= <span class="self">self</span>.poly.aux_info.num_variables {
+            <span class="kw">return </span><span class="prelude-val">Err</span>(PolyIOPErrors::InvalidProver(
+                <span class="string">&quot;Prover is not active&quot;</span>.to_string(),
             ));
         }
 
-        <span class="comment">// let fix_argument = start_timer!(|| &quot;fix argument&quot;);</span>
+        <span class="comment">// let fix_argument = start_timer!(|| &quot;fix argument&quot;);
 
-        <span class="comment">// Step 1:</span>
-        <span class="comment">// fix argument and evaluate f(x) over x_m = r; where r is the challenge</span>
-        <span class="comment">// for the current round, and m is the round number, indexed from 1</span>
-        <span class="comment">//</span>
-        <span class="comment">// i.e.:</span>
-        <span class="comment">// at round m &lt;= n, for each mle g(x_1, ... x_n) within the flattened_mle</span>
-        <span class="comment">// which has already been evaluated to</span>
-        <span class="comment">//</span>
-        <span class="comment">//    g(r_1, ..., r_{m-1}, x_m ... x_n)</span>
-        <span class="comment">//</span>
-        <span class="comment">// eval g over r_m, and mutate g to g(r_1, ... r_m,, x_{m+1}... x_n)</span>
-        <span class="kw">let</span> <span class="kw-2">mut</span> <span class="ident">flattened_ml_extensions</span>: <span class="ident">Vec</span><span class="op">&lt;</span><span class="ident">DenseMultilinearExtension</span><span class="op">&lt;</span><span class="ident">F</span><span class="op">&gt;</span><span class="op">&gt;</span> <span class="op">=</span> <span class="self">self</span>
-            .<span class="ident">poly</span>
-            .<span class="ident">flattened_ml_extensions</span>
-            .<span class="ident">iter</span>()
-            .<span class="ident">map</span>(<span class="op">|</span><span class="ident">x</span><span class="op">|</span> <span class="ident">x</span>.<span class="ident">as_ref</span>().<span class="ident">clone</span>())
-            .<span class="ident">collect</span>();
+        // Step 1:
+        // fix argument and evaluate f(x) over x_m = r; where r is the challenge
+        // for the current round, and m is the round number, indexed from 1
+        //
+        // i.e.:
+        // at round m &lt;= n, for each mle g(x_1, ... x_n) within the flattened_mle
+        // which has already been evaluated to
+        //
+        //    g(r_1, ..., r_{m-1}, x_m ... x_n)
+        //
+        // eval g over r_m, and mutate g to g(r_1, ... r_m,, x_{m+1}... x_n)
+        </span><span class="kw">let </span><span class="kw-2">mut </span>flattened_ml_extensions: Vec&lt;DenseMultilinearExtension&lt;F&gt;&gt; = <span class="self">self
+            </span>.poly
+            .flattened_ml_extensions
+            .iter()
+            .map(|x| x.as_ref().clone())
+            .collect();
 
-        <span class="kw">if</span> <span class="kw">let</span> <span class="prelude-val">Some</span>(<span class="ident">chal</span>) <span class="op">=</span> <span class="ident">challenge</span> {
-            <span class="kw">if</span> <span class="self">self</span>.<span class="ident">round</span> <span class="op">==</span> <span class="number">0</span> {
-                <span class="kw">return</span> <span class="prelude-val">Err</span>(<span class="ident">PolyIOPErrors::InvalidProver</span>(
-                    <span class="string">&quot;first round should be prover first.&quot;</span>.<span class="ident">to_string</span>(),
+        <span class="kw">if let </span><span class="prelude-val">Some</span>(chal) = challenge {
+            <span class="kw">if </span><span class="self">self</span>.round == <span class="number">0 </span>{
+                <span class="kw">return </span><span class="prelude-val">Err</span>(PolyIOPErrors::InvalidProver(
+                    <span class="string">&quot;first round should be prover first.&quot;</span>.to_string(),
                 ));
             }
-            <span class="self">self</span>.<span class="ident">challenges</span>.<span class="ident">push</span>(<span class="kw-2">*</span><span class="ident">chal</span>);
+            <span class="self">self</span>.challenges.push(<span class="kw-2">*</span>chal);
 
-            <span class="kw">let</span> <span class="ident">r</span> <span class="op">=</span> <span class="self">self</span>.<span class="ident">challenges</span>[<span class="self">self</span>.<span class="ident">round</span> <span class="op">-</span> <span class="number">1</span>];
-            <span class="attribute">#[<span class="ident">cfg</span>(<span class="ident">feature</span> <span class="op">=</span> <span class="string">&quot;parallel&quot;</span>)]</span>
-            <span class="ident">flattened_ml_extensions</span>
-                .<span class="ident">par_iter_mut</span>()
-                .<span class="ident">for_each</span>(<span class="op">|</span><span class="ident">mle</span><span class="op">|</span> <span class="kw-2">*</span><span class="ident">mle</span> <span class="op">=</span> <span class="ident">fix_variables</span>(<span class="ident">mle</span>, <span class="kw-2">&amp;</span>[<span class="ident">r</span>]));
-            <span class="attribute">#[<span class="ident">cfg</span>(<span class="ident">not</span>(<span class="ident">feature</span> <span class="op">=</span> <span class="string">&quot;parallel&quot;</span>))]</span>
-            <span class="ident">flattened_ml_extensions</span>
-                .<span class="ident">iter_mut</span>()
-                .<span class="ident">for_each</span>(<span class="op">|</span><span class="ident">mle</span><span class="op">|</span> <span class="kw-2">*</span><span class="ident">mle</span> <span class="op">=</span> <span class="ident">fix_variables</span>(<span class="ident">mle</span>, <span class="kw-2">&amp;</span>[<span class="ident">r</span>]));
-        } <span class="kw">else</span> <span class="kw">if</span> <span class="self">self</span>.<span class="ident">round</span> <span class="op">&gt;</span> <span class="number">0</span> {
-            <span class="kw">return</span> <span class="prelude-val">Err</span>(<span class="ident">PolyIOPErrors::InvalidProver</span>(
-                <span class="string">&quot;verifier message is empty&quot;</span>.<span class="ident">to_string</span>(),
+            <span class="kw">let </span>r = <span class="self">self</span>.challenges[<span class="self">self</span>.round - <span class="number">1</span>];
+            <span class="attribute">#[cfg(feature = <span class="string">&quot;parallel&quot;</span>)]
+            </span>flattened_ml_extensions
+                .par_iter_mut()
+                .for_each(|mle| <span class="kw-2">*</span>mle = fix_variables(mle, <span class="kw-2">&amp;</span>[r]));
+            <span class="attribute">#[cfg(not(feature = <span class="string">&quot;parallel&quot;</span>))]
+            </span>flattened_ml_extensions
+                .iter_mut()
+                .for_each(|mle| <span class="kw-2">*</span>mle = fix_variables(mle, <span class="kw-2">&amp;</span>[r]));
+        } <span class="kw">else if </span><span class="self">self</span>.round &gt; <span class="number">0 </span>{
+            <span class="kw">return </span><span class="prelude-val">Err</span>(PolyIOPErrors::InvalidProver(
+                <span class="string">&quot;verifier message is empty&quot;</span>.to_string(),
             ));
         }
-        <span class="comment">// end_timer!(fix_argument);</span>
+        <span class="comment">// end_timer!(fix_argument);
 
-        <span class="self">self</span>.<span class="ident">round</span> <span class="op">+</span><span class="op">=</span> <span class="number">1</span>;
+        </span><span class="self">self</span>.round += <span class="number">1</span>;
 
-        <span class="kw">let</span> <span class="ident">products_list</span> <span class="op">=</span> <span class="self">self</span>.<span class="ident">poly</span>.<span class="ident">products</span>.<span class="ident">clone</span>();
-        <span class="kw">let</span> <span class="kw-2">mut</span> <span class="ident">products_sum</span> <span class="op">=</span> <span class="macro">vec!</span>[<span class="ident">F::zero</span>(); <span class="self">self</span>.<span class="ident">poly</span>.<span class="ident">aux_info</span>.<span class="ident">max_degree</span> <span class="op">+</span> <span class="number">1</span>];
+        <span class="kw">let </span>products_list = <span class="self">self</span>.poly.products.clone();
+        <span class="kw">let </span><span class="kw-2">mut </span>products_sum = <span class="macro">vec!</span>[F::zero(); <span class="self">self</span>.poly.aux_info.max_degree + <span class="number">1</span>];
 
-        <span class="comment">// let compute_sum = start_timer!(|| &quot;compute sum&quot;);</span>
+        <span class="comment">// let compute_sum = start_timer!(|| &quot;compute sum&quot;);
 
-        <span class="comment">// Step 2: generate sum for the partial evaluated polynomial:</span>
-        <span class="comment">// f(r_1, ... r_m,, x_{m+1}... x_n)</span>
+        // Step 2: generate sum for the partial evaluated polynomial:
+        // f(r_1, ... r_m,, x_{m+1}... x_n)
 
-        <span class="attribute">#[<span class="ident">cfg</span>(<span class="ident">feature</span> <span class="op">=</span> <span class="string">&quot;parallel&quot;</span>)]</span>
-        {
-            <span class="kw">let</span> <span class="ident">flag</span> <span class="op">=</span> (<span class="self">self</span>.<span class="ident">poly</span>.<span class="ident">aux_info</span>.<span class="ident">max_degree</span> <span class="op">==</span> <span class="number">2</span>)
-                <span class="op">&amp;&amp;</span> (<span class="ident">products_list</span>.<span class="ident">len</span>() <span class="op">==</span> <span class="number">1</span>)
-                <span class="op">&amp;&amp;</span> (<span class="ident">products_list</span>[<span class="number">0</span>].<span class="number">0</span> <span class="op">==</span> <span class="ident">F::one</span>());
-            <span class="kw">if</span> <span class="ident">flag</span> {
-                <span class="kw">for</span> (<span class="ident">t</span>, <span class="ident">e</span>) <span class="kw">in</span> <span class="ident">products_sum</span>.<span class="ident">iter_mut</span>().<span class="ident">enumerate</span>() {
-                    <span class="kw">let</span> <span class="ident">evals</span> <span class="op">=</span> (<span class="number">0</span>..<span class="number">1</span> <span class="op">&lt;</span><span class="op">&lt;</span> (<span class="self">self</span>.<span class="ident">poly</span>.<span class="ident">aux_info</span>.<span class="ident">num_variables</span> <span class="op">-</span> <span class="self">self</span>.<span class="ident">round</span>))
-                        .<span class="ident">into_par_iter</span>()
-                        .<span class="ident">map</span>(<span class="op">|</span><span class="ident">b</span><span class="op">|</span> {
-                            <span class="comment">// evaluate P_round(t)</span>
-                            <span class="kw">let</span> <span class="ident">table0</span> <span class="op">=</span> <span class="kw-2">&amp;</span><span class="ident">flattened_ml_extensions</span>[<span class="ident">products_list</span>[<span class="number">0</span>].<span class="number">1</span>[<span class="number">0</span>]];
-                            <span class="kw">let</span> <span class="ident">table1</span> <span class="op">=</span> <span class="kw-2">&amp;</span><span class="ident">flattened_ml_extensions</span>[<span class="ident">products_list</span>[<span class="number">0</span>].<span class="number">1</span>[<span class="number">1</span>]];
-                            <span class="kw">if</span> <span class="ident">t</span> <span class="op">==</span> <span class="number">0</span> {
-                                <span class="ident">table0</span>[<span class="ident">b</span> <span class="op">&lt;</span><span class="op">&lt;</span> <span class="number">1</span>] <span class="op">*</span> <span class="ident">table1</span>[<span class="ident">b</span> <span class="op">&lt;</span><span class="op">&lt;</span> <span class="number">1</span>]
-                            } <span class="kw">else</span> <span class="kw">if</span> <span class="ident">t</span> <span class="op">==</span> <span class="number">1</span> {
-                                <span class="ident">table0</span>[(<span class="ident">b</span> <span class="op">&lt;</span><span class="op">&lt;</span> <span class="number">1</span>) <span class="op">+</span> <span class="number">1</span>] <span class="op">*</span> <span class="ident">table1</span>[(<span class="ident">b</span> <span class="op">&lt;</span><span class="op">&lt;</span> <span class="number">1</span>) <span class="op">+</span> <span class="number">1</span>]
-                            } <span class="kw">else</span> {
-                                (<span class="ident">table0</span>[(<span class="ident">b</span> <span class="op">&lt;</span><span class="op">&lt;</span> <span class="number">1</span>) <span class="op">+</span> <span class="number">1</span>] <span class="op">+</span> <span class="ident">table0</span>[(<span class="ident">b</span> <span class="op">&lt;</span><span class="op">&lt;</span> <span class="number">1</span>) <span class="op">+</span> <span class="number">1</span>] <span class="op">-</span> <span class="ident">table0</span>[<span class="ident">b</span> <span class="op">&lt;</span><span class="op">&lt;</span> <span class="number">1</span>])
-                                    <span class="op">*</span> (<span class="ident">table1</span>[(<span class="ident">b</span> <span class="op">&lt;</span><span class="op">&lt;</span> <span class="number">1</span>) <span class="op">+</span> <span class="number">1</span>] <span class="op">+</span> <span class="ident">table1</span>[(<span class="ident">b</span> <span class="op">&lt;</span><span class="op">&lt;</span> <span class="number">1</span>) <span class="op">+</span> <span class="number">1</span>] <span class="op">-</span> <span class="ident">table1</span>[<span class="ident">b</span> <span class="op">&lt;</span><span class="op">&lt;</span> <span class="number">1</span>])
+        </span><span class="attribute">#[cfg(feature = <span class="string">&quot;parallel&quot;</span>)]
+        </span>{
+            <span class="kw">let </span>flag = (<span class="self">self</span>.poly.aux_info.max_degree == <span class="number">2</span>)
+                &amp;&amp; (products_list.len() == <span class="number">1</span>)
+                &amp;&amp; (products_list[<span class="number">0</span>].<span class="number">0 </span>== F::one());
+            <span class="kw">if </span>flag {
+                <span class="kw">for </span>(t, e) <span class="kw">in </span>products_sum.iter_mut().enumerate() {
+                    <span class="kw">let </span>evals = (<span class="number">0</span>..<span class="number">1 </span>&lt;&lt; (<span class="self">self</span>.poly.aux_info.num_variables - <span class="self">self</span>.round))
+                        .into_par_iter()
+                        .map(|b| {
+                            <span class="comment">// evaluate P_round(t)
+                            </span><span class="kw">let </span>table0 = <span class="kw-2">&amp;</span>flattened_ml_extensions[products_list[<span class="number">0</span>].<span class="number">1</span>[<span class="number">0</span>]];
+                            <span class="kw">let </span>table1 = <span class="kw-2">&amp;</span>flattened_ml_extensions[products_list[<span class="number">0</span>].<span class="number">1</span>[<span class="number">1</span>]];
+                            <span class="kw">if </span>t == <span class="number">0 </span>{
+                                table0[b &lt;&lt; <span class="number">1</span>] * table1[b &lt;&lt; <span class="number">1</span>]
+                            } <span class="kw">else if </span>t == <span class="number">1 </span>{
+                                table0[(b &lt;&lt; <span class="number">1</span>) + <span class="number">1</span>] * table1[(b &lt;&lt; <span class="number">1</span>) + <span class="number">1</span>]
+                            } <span class="kw">else </span>{
+                                (table0[(b &lt;&lt; <span class="number">1</span>) + <span class="number">1</span>] + table0[(b &lt;&lt; <span class="number">1</span>) + <span class="number">1</span>] - table0[b &lt;&lt; <span class="number">1</span>])
+                                    * (table1[(b &lt;&lt; <span class="number">1</span>) + <span class="number">1</span>] + table1[(b &lt;&lt; <span class="number">1</span>) + <span class="number">1</span>] - table1[b &lt;&lt; <span class="number">1</span>])
                             }
                         })
-                        .<span class="ident">collect</span>::<span class="op">&lt;</span><span class="ident">Vec</span><span class="op">&lt;</span><span class="ident">F</span><span class="op">&gt;</span><span class="op">&gt;</span>();
-                    <span class="kw">for</span> <span class="ident">val</span> <span class="kw">in</span> <span class="ident">evals</span>.<span class="ident">iter</span>() {
-                        <span class="kw-2">*</span><span class="ident">e</span> <span class="op">+</span><span class="op">=</span> <span class="ident">val</span>
+                        .collect::&lt;Vec&lt;F&gt;&gt;();
+                    <span class="kw">for </span>val <span class="kw">in </span>evals.iter() {
+                        <span class="kw-2">*</span>e += val
                     }
                 }
-            } <span class="kw">else</span> {
-                <span class="kw">for</span> (<span class="ident">t</span>, <span class="ident">e</span>) <span class="kw">in</span> <span class="ident">products_sum</span>.<span class="ident">iter_mut</span>().<span class="ident">enumerate</span>() {
-                    <span class="kw">let</span> <span class="ident">t</span> <span class="op">=</span> <span class="ident">F::from</span>(<span class="ident">t</span> <span class="kw">as</span> <span class="ident">u64</span>);
-                    <span class="kw">let</span> <span class="ident">products</span> <span class="op">=</span> (<span class="number">0</span>..<span class="number">1</span> <span class="op">&lt;</span><span class="op">&lt;</span> (<span class="self">self</span>.<span class="ident">poly</span>.<span class="ident">aux_info</span>.<span class="ident">num_variables</span> <span class="op">-</span> <span class="self">self</span>.<span class="ident">round</span>))
-                        .<span class="ident">into_par_iter</span>()
-                        .<span class="ident">map</span>(<span class="op">|</span><span class="ident">b</span><span class="op">|</span> {
-                            <span class="comment">// evaluate P_round(t)</span>
-                            <span class="kw">let</span> <span class="kw-2">mut</span> <span class="ident">tmp</span> <span class="op">=</span> <span class="ident">F::zero</span>();
-                            <span class="ident">products_list</span>.<span class="ident">iter</span>().<span class="ident">for_each</span>(<span class="op">|</span>(<span class="ident">coefficient</span>, <span class="ident">products</span>)<span class="op">|</span> {
-                                <span class="kw">let</span> <span class="ident">num_mles</span> <span class="op">=</span> <span class="ident">products</span>.<span class="ident">len</span>();
-                                <span class="kw">let</span> <span class="kw-2">mut</span> <span class="ident">product</span> <span class="op">=</span> <span class="kw-2">*</span><span class="ident">coefficient</span>;
-                                <span class="kw">for</span> <span class="kw-2">&amp;</span><span class="ident">f</span> <span class="kw">in</span> <span class="ident">products</span>.<span class="ident">iter</span>().<span class="ident">take</span>(<span class="ident">num_mles</span>) {
-                                    <span class="kw">let</span> <span class="ident">table</span> <span class="op">=</span> <span class="kw-2">&amp;</span><span class="ident">flattened_ml_extensions</span>[<span class="ident">f</span>]; <span class="comment">// f&#39;s range is checked in init</span>
-                                    <span class="ident">product</span> <span class="kw-2">*</span><span class="op">=</span>
-                                        <span class="ident">table</span>[<span class="ident">b</span> <span class="op">&lt;</span><span class="op">&lt;</span> <span class="number">1</span>] <span class="op">+</span> (<span class="ident">table</span>[(<span class="ident">b</span> <span class="op">&lt;</span><span class="op">&lt;</span> <span class="number">1</span>) <span class="op">+</span> <span class="number">1</span>] <span class="op">-</span> <span class="ident">table</span>[<span class="ident">b</span> <span class="op">&lt;</span><span class="op">&lt;</span> <span class="number">1</span>]) <span class="op">*</span> <span class="ident">t</span>;
+            } <span class="kw">else </span>{
+                <span class="kw">for </span>(t, e) <span class="kw">in </span>products_sum.iter_mut().enumerate() {
+                    <span class="kw">let </span>t = F::from(t <span class="kw">as </span>u64);
+                    <span class="kw">let </span>products = (<span class="number">0</span>..<span class="number">1 </span>&lt;&lt; (<span class="self">self</span>.poly.aux_info.num_variables - <span class="self">self</span>.round))
+                        .into_par_iter()
+                        .map(|b| {
+                            <span class="comment">// evaluate P_round(t)
+                            </span><span class="kw">let </span><span class="kw-2">mut </span>tmp = F::zero();
+                            products_list.iter().for_each(|(coefficient, products)| {
+                                <span class="kw">let </span>num_mles = products.len();
+                                <span class="kw">let </span><span class="kw-2">mut </span>product = <span class="kw-2">*</span>coefficient;
+                                <span class="kw">for </span><span class="kw-2">&amp;</span>f <span class="kw">in </span>products.iter().take(num_mles) {
+                                    <span class="kw">let </span>table = <span class="kw-2">&amp;</span>flattened_ml_extensions[f]; <span class="comment">// f&#39;s range is checked in init
+                                    </span>product <span class="kw-2">*</span>=
+                                        table[b &lt;&lt; <span class="number">1</span>] + (table[(b &lt;&lt; <span class="number">1</span>) + <span class="number">1</span>] - table[b &lt;&lt; <span class="number">1</span>]) * t;
                                 }
-                                <span class="ident">tmp</span> <span class="op">+</span><span class="op">=</span> <span class="ident">product</span>;
+                                tmp += product;
                             });
 
-                            <span class="ident">tmp</span>
+                            tmp
                         })
-                        .<span class="ident">collect</span>::<span class="op">&lt;</span><span class="ident">Vec</span><span class="op">&lt;</span><span class="ident">F</span><span class="op">&gt;</span><span class="op">&gt;</span>();
+                        .collect::&lt;Vec&lt;F&gt;&gt;();
 
-                    <span class="kw">for</span> <span class="ident">i</span> <span class="kw">in</span> <span class="ident">products</span>.<span class="ident">iter</span>() {
-                        <span class="kw-2">*</span><span class="ident">e</span> <span class="op">+</span><span class="op">=</span> <span class="ident">i</span>
+                    <span class="kw">for </span>i <span class="kw">in </span>products.iter() {
+                        <span class="kw-2">*</span>e += i
                     }
                 }
             }
         }
 
-        <span class="attribute">#[<span class="ident">cfg</span>(<span class="ident">not</span>(<span class="ident">feature</span> <span class="op">=</span> <span class="string">&quot;parallel&quot;</span>))]</span>
-        <span class="ident">products_sum</span>.<span class="ident">iter_mut</span>().<span class="ident">enumerate</span>().<span class="ident">for_each</span>(<span class="op">|</span>(<span class="ident">t</span>, <span class="ident">e</span>)<span class="op">|</span> {
-            <span class="kw">let</span> <span class="ident">t</span> <span class="op">=</span> <span class="ident">F::from</span>(<span class="ident">t</span> <span class="kw">as</span> <span class="ident">u64</span>);
-            <span class="kw">let</span> <span class="ident">one_minus_t</span> <span class="op">=</span> <span class="ident">F::one</span>() <span class="op">-</span> <span class="ident">t</span>;
+        <span class="attribute">#[cfg(not(feature = <span class="string">&quot;parallel&quot;</span>))]
+        </span>products_sum.iter_mut().enumerate().for_each(|(t, e)| {
+            <span class="kw">let </span>t = F::from(t <span class="kw">as </span>u64);
+            <span class="kw">let </span>one_minus_t = F::one() - t;
 
-            <span class="kw">for</span> <span class="ident">b</span> <span class="kw">in</span> <span class="number">0</span>..<span class="number">1</span> <span class="op">&lt;</span><span class="op">&lt;</span> (<span class="self">self</span>.<span class="ident">poly</span>.<span class="ident">aux_info</span>.<span class="ident">num_variables</span> <span class="op">-</span> <span class="self">self</span>.<span class="ident">round</span>) {
-                <span class="comment">// evaluate P_round(t)</span>
-                <span class="kw">for</span> (<span class="ident">coefficient</span>, <span class="ident">products</span>) <span class="kw">in</span> <span class="ident">products_list</span>.<span class="ident">iter</span>() {
-                    <span class="kw">let</span> <span class="ident">num_mles</span> <span class="op">=</span> <span class="ident">products</span>.<span class="ident">len</span>();
-                    <span class="kw">let</span> <span class="kw-2">mut</span> <span class="ident">product</span> <span class="op">=</span> <span class="kw-2">*</span><span class="ident">coefficient</span>;
-                    <span class="kw">for</span> <span class="kw-2">&amp;</span><span class="ident">f</span> <span class="kw">in</span> <span class="ident">products</span>.<span class="ident">iter</span>().<span class="ident">take</span>(<span class="ident">num_mles</span>) {
-                        <span class="kw">let</span> <span class="ident">table</span> <span class="op">=</span> <span class="kw-2">&amp;</span><span class="ident">flattened_ml_extensions</span>[<span class="ident">f</span>]; <span class="comment">// f&#39;s range is checked in init</span>
-                        <span class="ident">product</span> <span class="kw-2">*</span><span class="op">=</span> <span class="ident">table</span>[<span class="ident">b</span> <span class="op">&lt;</span><span class="op">&lt;</span> <span class="number">1</span>] <span class="op">+</span> (<span class="ident">table</span>[(<span class="ident">b</span> <span class="op">&lt;</span><span class="op">&lt;</span> <span class="number">1</span>) <span class="op">+</span> <span class="number">1</span>] <span class="op">-</span> <span class="ident">table</span>[<span class="ident">b</span> <span class="op">&lt;</span><span class="op">&lt;</span> <span class="number">1</span>]) <span class="op">*</span> <span class="ident">t</span>;
+            <span class="kw">for </span>b <span class="kw">in </span><span class="number">0</span>..<span class="number">1 </span>&lt;&lt; (<span class="self">self</span>.poly.aux_info.num_variables - <span class="self">self</span>.round) {
+                <span class="comment">// evaluate P_round(t)
+                </span><span class="kw">for </span>(coefficient, products) <span class="kw">in </span>products_list.iter() {
+                    <span class="kw">let </span>num_mles = products.len();
+                    <span class="kw">let </span><span class="kw-2">mut </span>product = <span class="kw-2">*</span>coefficient;
+                    <span class="kw">for </span><span class="kw-2">&amp;</span>f <span class="kw">in </span>products.iter().take(num_mles) {
+                        <span class="kw">let </span>table = <span class="kw-2">&amp;</span>flattened_ml_extensions[f]; <span class="comment">// f&#39;s range is checked in init
+                        </span>product <span class="kw-2">*</span>= table[b &lt;&lt; <span class="number">1</span>] + (table[(b &lt;&lt; <span class="number">1</span>) + <span class="number">1</span>] - table[b &lt;&lt; <span class="number">1</span>]) * t;
                     }
-                    <span class="kw-2">*</span><span class="ident">e</span> <span class="op">+</span><span class="op">=</span> <span class="ident">product</span>;
+                    <span class="kw-2">*</span>e += product;
                 }
             }
         });
 
-        <span class="comment">// update prover&#39;s state to the partial evaluated polynomial</span>
-        <span class="self">self</span>.<span class="ident">poly</span>.<span class="ident">flattened_ml_extensions</span> <span class="op">=</span> <span class="ident">flattened_ml_extensions</span>
-            .<span class="ident">iter</span>()
-            .<span class="ident">map</span>(<span class="op">|</span><span class="ident">x</span><span class="op">|</span> <span class="ident">Rc::new</span>(<span class="ident">x</span>.<span class="ident">clone</span>()))
-            .<span class="ident">collect</span>();
+        <span class="comment">// update prover&#39;s state to the partial evaluated polynomial
+        </span><span class="self">self</span>.poly.flattened_ml_extensions = flattened_ml_extensions
+            .iter()
+            .map(|x| Rc::new(x.clone()))
+            .collect();
 
-        <span class="comment">// end_timer!(compute_sum);</span>
-        <span class="comment">// end_timer!(start);</span>
-        <span class="prelude-val">Ok</span>(<span class="ident">IOPProverMessage</span> {
-            <span class="ident">evaluations</span>: <span class="ident">products_sum</span>,
+        <span class="comment">// end_timer!(compute_sum);
+        // end_timer!(start);
+        </span><span class="prelude-val">Ok</span>(IOPProverMessage {
+            evaluations: products_sum,
         })
     }
 }
 </code></pre></div>
-</section></div></main><div id="rustdoc-vars" data-root-path="../../../../" data-current-crate="subroutines" data-themes="ayu,dark,light" data-resource-suffix="" data-rustdoc-version="1.64.0 (a55dd71d5 2022-09-19)" ></div></body></html>
+</section></div></main><div id="rustdoc-vars" data-root-path="../../../../" data-current-crate="subroutines" data-themes="ayu,dark,light" data-resource-suffix="" data-rustdoc-version="1.65.0 (897e37553 2022-11-02)" ></div></body></html>

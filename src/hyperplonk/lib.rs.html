@@ -1,4 +1,4 @@
-<!DOCTYPE html><html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1.0"><meta name="generator" content="rustdoc"><meta name="description" content="Source of the Rust file `hyperplonk/src/lib.rs`."><meta name="keywords" content="rust, rustlang, rust-lang"><title>lib.rs - source</title><link rel="preload" as="font" type="font/woff2" crossorigin href="../../SourceSerif4-Regular.ttf.woff2"><link rel="preload" as="font" type="font/woff2" crossorigin href="../../FiraSans-Regular.woff2"><link rel="preload" as="font" type="font/woff2" crossorigin href="../../FiraSans-Medium.woff2"><link rel="preload" as="font" type="font/woff2" crossorigin href="../../SourceCodePro-Regular.ttf.woff2"><link rel="preload" as="font" type="font/woff2" crossorigin href="../../SourceSerif4-Bold.ttf.woff2"><link rel="preload" as="font" type="font/woff2" crossorigin href="../../SourceCodePro-Semibold.ttf.woff2"><link rel="stylesheet" type="text/css" href="../../normalize.css"><link rel="stylesheet" type="text/css" href="../../rustdoc.css" id="mainThemeStyle"><link rel="stylesheet" type="text/css" href="../../ayu.css" disabled><link rel="stylesheet" type="text/css" href="../../dark.css" disabled><link rel="stylesheet" type="text/css" href="../../light.css" id="themeStyle"><script id="default-settings" ></script><script src="../../storage.js"></script><script defer src="../../source-script.js"></script><script defer src="../../source-files.js"></script><script defer src="../../main.js"></script><noscript><link rel="stylesheet" href="../../noscript.css"></noscript><link rel="alternate icon" type="image/png" href="../../favicon-16x16.png"><link rel="alternate icon" type="image/png" href="../../favicon-32x32.png"><link rel="icon" type="image/svg+xml" href="../../favicon.svg"></head><body class="rustdoc source"><!--[if lte IE 11]><div class="warning">This old browser is unsupported and will most likely display funky things.</div><![endif]--><nav class="mobile-topbar"><button class="sidebar-menu-toggle">&#9776;</button><a class="sidebar-logo" href="../../hyperplonk/index.html"><div class="logo-container"><img class="rust-logo" src="../../rust-logo.svg" alt="logo"></div></a><h2 class="location"></h2></nav><nav class="sidebar"><a class="sidebar-logo" href="../../hyperplonk/index.html"><div class="logo-container"><img class="rust-logo" src="../../rust-logo.svg" alt="logo"></div></a></nav><main><div class="width-limiter"><div class="sub-container"><a class="sub-logo-container" href="../../hyperplonk/index.html"><img class="rust-logo" src="../../rust-logo.svg" alt="logo"></a><nav class="sub"><form class="search-form"><div class="search-container"><span></span><input class="search-input" name="search" autocomplete="off" spellcheck="false" placeholder="Click or press ‘S’ to search, ‘?’ for more options…" type="search"><div id="help-button" title="help" tabindex="-1"><button type="button">?</button></div><div id="settings-menu" tabindex="-1"><a href="../../settings.html" title="settings"><img width="22" height="22" alt="Change settings" src="../../wheel.svg"></a></div></div></form></nav></div><section id="main-content" class="content"><div class="example-wrap"><pre class="line-numbers"><span id="1">1</span>
+<!DOCTYPE html><html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1.0"><meta name="generator" content="rustdoc"><meta name="description" content="Source of the Rust file `hyperplonk/src/lib.rs`."><meta name="keywords" content="rust, rustlang, rust-lang"><title>lib.rs - source</title><link rel="preload" as="font" type="font/woff2" crossorigin href="../../SourceSerif4-Regular.ttf.woff2"><link rel="preload" as="font" type="font/woff2" crossorigin href="../../FiraSans-Regular.woff2"><link rel="preload" as="font" type="font/woff2" crossorigin href="../../FiraSans-Medium.woff2"><link rel="preload" as="font" type="font/woff2" crossorigin href="../../SourceCodePro-Regular.ttf.woff2"><link rel="preload" as="font" type="font/woff2" crossorigin href="../../SourceSerif4-Bold.ttf.woff2"><link rel="preload" as="font" type="font/woff2" crossorigin href="../../SourceCodePro-Semibold.ttf.woff2"><link rel="stylesheet" href="../../normalize.css"><link rel="stylesheet" href="../../rustdoc.css" id="mainThemeStyle"><link rel="stylesheet" href="../../ayu.css" disabled><link rel="stylesheet" href="../../dark.css" disabled><link rel="stylesheet" href="../../light.css" id="themeStyle"><script id="default-settings" ></script><script src="../../storage.js"></script><script defer src="../../source-script.js"></script><script defer src="../../source-files.js"></script><script defer src="../../main.js"></script><noscript><link rel="stylesheet" href="../../noscript.css"></noscript><link rel="alternate icon" type="image/png" href="../../favicon-16x16.png"><link rel="alternate icon" type="image/png" href="../../favicon-32x32.png"><link rel="icon" type="image/svg+xml" href="../../favicon.svg"></head><body class="rustdoc source"><!--[if lte IE 11]><div class="warning">This old browser is unsupported and will most likely display funky things.</div><![endif]--><nav class="mobile-topbar"><button class="sidebar-menu-toggle">&#9776;</button><a class="sidebar-logo" href="../../hyperplonk/index.html"><div class="logo-container"><img class="rust-logo" src="../../rust-logo.svg" alt="logo"></div></a><h2 class="location"></h2></nav><nav class="sidebar"><a class="sidebar-logo" href="../../hyperplonk/index.html"><div class="logo-container"><img class="rust-logo" src="../../rust-logo.svg" alt="logo"></div></a></nav><main><div class="width-limiter"><div class="sub-container"><a class="sub-logo-container" href="../../hyperplonk/index.html"><img class="rust-logo" src="../../rust-logo.svg" alt="logo"></a><nav class="sub"><form class="search-form"><div class="search-container"><span></span><input class="search-input" name="search" autocomplete="off" spellcheck="false" placeholder="Click or press ‘S’ to search, ‘?’ for more options…" type="search"><div id="help-button" title="help" tabindex="-1"><button type="button">?</button></div><div id="settings-menu" tabindex="-1"><a href="../../settings.html" title="settings"><img width="22" height="22" alt="Change settings" src="../../wheel.svg"></a></div></div></form></nav></div><section id="main-content" class="content"><div class="example-wrap"><pre class="line-numbers"><span id="1">1</span>
 <span id="2">2</span>
 <span id="3">3</span>
 <span id="4">4</span>
@@ -70,77 +70,77 @@
 <span id="70">70</span>
 <span id="71">71</span>
 <span id="72">72</span>
-</pre><pre class="rust"><code><span class="doccomment">//! Main module for the HyperPlonk SNARK.</span>
+</pre><pre class="rust"><code><span class="doccomment">//! Main module for the HyperPlonk SNARK.
 
-<span class="kw">use</span> <span class="ident">ark_ec::PairingEngine</span>;
-<span class="kw">use</span> <span class="ident">errors::HyperPlonkErrors</span>;
-<span class="kw">use</span> <span class="ident">subroutines</span>::{<span class="ident">pcs::prelude::PolynomialCommitmentScheme</span>, <span class="ident">poly_iop::prelude::PermutationCheck</span>};
-<span class="kw">use</span> <span class="ident">witness::WitnessColumn</span>;
+</span><span class="kw">use </span>ark_ec::PairingEngine;
+<span class="kw">use </span>errors::HyperPlonkErrors;
+<span class="kw">use </span>subroutines::{pcs::prelude::PolynomialCommitmentScheme, poly_iop::prelude::PermutationCheck};
+<span class="kw">use </span>witness::WitnessColumn;
 
-<span class="kw">mod</span> <span class="ident">custom_gate</span>;
-<span class="kw">mod</span> <span class="ident">errors</span>;
-<span class="kw">mod</span> <span class="ident">mock</span>;
-<span class="kw">pub</span> <span class="kw">mod</span> <span class="ident">prelude</span>;
-<span class="kw">mod</span> <span class="ident">selectors</span>;
-<span class="kw">mod</span> <span class="ident">snark</span>;
-<span class="kw">mod</span> <span class="ident">structs</span>;
-<span class="kw">mod</span> <span class="ident">utils</span>;
-<span class="kw">mod</span> <span class="ident">witness</span>;
+<span class="kw">mod </span>custom_gate;
+<span class="kw">mod </span>errors;
+<span class="kw">mod </span>mock;
+<span class="kw">pub mod </span>prelude;
+<span class="kw">mod </span>selectors;
+<span class="kw">mod </span>snark;
+<span class="kw">mod </span>structs;
+<span class="kw">mod </span>utils;
+<span class="kw">mod </span>witness;
 
-<span class="doccomment">/// A trait for HyperPlonk SNARKs.</span>
-<span class="doccomment">/// A HyperPlonk is derived from ZeroChecks and PermutationChecks.</span>
-<span class="kw">pub</span> <span class="kw">trait</span> <span class="ident">HyperPlonkSNARK</span><span class="op">&lt;</span><span class="ident">E</span>, <span class="ident">PCS</span><span class="op">&gt;</span>: <span class="ident">PermutationCheck</span><span class="op">&lt;</span><span class="ident">E</span>, <span class="ident">PCS</span><span class="op">&gt;</span>
-<span class="kw">where</span>
-    <span class="ident">E</span>: <span class="ident">PairingEngine</span>,
-    <span class="ident">PCS</span>: <span class="ident">PolynomialCommitmentScheme</span><span class="op">&lt;</span><span class="ident">E</span><span class="op">&gt;</span>,
+<span class="doccomment">/// A trait for HyperPlonk SNARKs.
+/// A HyperPlonk is derived from ZeroChecks and PermutationChecks.
+</span><span class="kw">pub trait </span>HyperPlonkSNARK&lt;E, PCS&gt;: PermutationCheck&lt;E, PCS&gt;
+<span class="kw">where
+    </span>E: PairingEngine,
+    PCS: PolynomialCommitmentScheme&lt;E&gt;,
 {
-    <span class="kw">type</span> <span class="ident">Index</span>;
-    <span class="kw">type</span> <span class="ident">ProvingKey</span>;
-    <span class="kw">type</span> <span class="ident">VerifyingKey</span>;
-    <span class="kw">type</span> <span class="ident">Proof</span>;
+    <span class="kw">type </span>Index;
+    <span class="kw">type </span>ProvingKey;
+    <span class="kw">type </span>VerifyingKey;
+    <span class="kw">type </span>Proof;
 
-    <span class="doccomment">/// Generate the preprocessed polynomials output by the indexer.</span>
-    <span class="doccomment">///</span>
-    <span class="doccomment">/// Inputs:</span>
-    <span class="doccomment">/// - `index`: HyperPlonk index</span>
-    <span class="doccomment">/// - `pcs_srs`: Polynomial commitment structured reference string</span>
-    <span class="doccomment">/// Outputs:</span>
-    <span class="doccomment">/// - The HyperPlonk proving key, which includes the preprocessed</span>
-    <span class="doccomment">///   polynomials.</span>
-    <span class="doccomment">/// - The HyperPlonk verifying key, which includes the preprocessed</span>
-    <span class="doccomment">///   polynomial commitments</span>
-    <span class="kw">fn</span> <span class="ident">preprocess</span>(
-        <span class="ident">index</span>: <span class="kw-2">&amp;</span><span class="ident"><span class="self">Self</span>::Index</span>,
-        <span class="ident">pcs_srs</span>: <span class="kw-2">&amp;</span><span class="ident">PCS::SRS</span>,
-    ) -&gt; <span class="prelude-ty">Result</span><span class="op">&lt;</span>(<span class="ident"><span class="self">Self</span>::ProvingKey</span>, <span class="ident"><span class="self">Self</span>::VerifyingKey</span>), <span class="ident">HyperPlonkErrors</span><span class="op">&gt;</span>;
+    <span class="doccomment">/// Generate the preprocessed polynomials output by the indexer.
+    ///
+    /// Inputs:
+    /// - `index`: HyperPlonk index
+    /// - `pcs_srs`: Polynomial commitment structured reference string
+    /// Outputs:
+    /// - The HyperPlonk proving key, which includes the preprocessed
+    ///   polynomials.
+    /// - The HyperPlonk verifying key, which includes the preprocessed
+    ///   polynomial commitments
+    </span><span class="kw">fn </span>preprocess(
+        index: <span class="kw-2">&amp;</span><span class="self">Self</span>::Index,
+        pcs_srs: <span class="kw-2">&amp;</span>PCS::SRS,
+    ) -&gt; <span class="prelude-ty">Result</span>&lt;(<span class="self">Self</span>::ProvingKey, <span class="self">Self</span>::VerifyingKey), HyperPlonkErrors&gt;;
 
-    <span class="doccomment">/// Generate HyperPlonk SNARK proof.</span>
-    <span class="doccomment">///</span>
-    <span class="doccomment">/// Inputs:</span>
-    <span class="doccomment">/// - `pk`: circuit proving key</span>
-    <span class="doccomment">/// - `pub_input`: online public input</span>
-    <span class="doccomment">/// - `witness`: witness assignment</span>
-    <span class="doccomment">/// Outputs:</span>
-    <span class="doccomment">/// - The HyperPlonk SNARK proof.</span>
-    <span class="kw">fn</span> <span class="ident">prove</span>(
-        <span class="ident">pk</span>: <span class="kw-2">&amp;</span><span class="ident"><span class="self">Self</span>::ProvingKey</span>,
-        <span class="ident">pub_input</span>: <span class="kw-2">&amp;</span>[<span class="ident">E::Fr</span>],
-        <span class="ident">witnesses</span>: <span class="kw-2">&amp;</span>[<span class="ident">WitnessColumn</span><span class="op">&lt;</span><span class="ident">E::Fr</span><span class="op">&gt;</span>],
-    ) -&gt; <span class="prelude-ty">Result</span><span class="op">&lt;</span><span class="ident"><span class="self">Self</span>::Proof</span>, <span class="ident">HyperPlonkErrors</span><span class="op">&gt;</span>;
+    <span class="doccomment">/// Generate HyperPlonk SNARK proof.
+    ///
+    /// Inputs:
+    /// - `pk`: circuit proving key
+    /// - `pub_input`: online public input
+    /// - `witness`: witness assignment
+    /// Outputs:
+    /// - The HyperPlonk SNARK proof.
+    </span><span class="kw">fn </span>prove(
+        pk: <span class="kw-2">&amp;</span><span class="self">Self</span>::ProvingKey,
+        pub_input: <span class="kw-2">&amp;</span>[E::Fr],
+        witnesses: <span class="kw-2">&amp;</span>[WitnessColumn&lt;E::Fr&gt;],
+    ) -&gt; <span class="prelude-ty">Result</span>&lt;<span class="self">Self</span>::Proof, HyperPlonkErrors&gt;;
 
-    <span class="doccomment">/// Verify the HyperPlonk proof.</span>
-    <span class="doccomment">///</span>
-    <span class="doccomment">/// Inputs:</span>
-    <span class="doccomment">/// - `vk`: verifying key</span>
-    <span class="doccomment">/// - `pub_input`: online public input</span>
-    <span class="doccomment">/// - `proof`: HyperPlonk SNARK proof challenges</span>
-    <span class="doccomment">/// Outputs:</span>
-    <span class="doccomment">/// - Return a boolean on whether the verification is successful</span>
-    <span class="kw">fn</span> <span class="ident">verify</span>(
-        <span class="ident">vk</span>: <span class="kw-2">&amp;</span><span class="ident"><span class="self">Self</span>::VerifyingKey</span>,
-        <span class="ident">pub_input</span>: <span class="kw-2">&amp;</span>[<span class="ident">E::Fr</span>],
-        <span class="ident">proof</span>: <span class="kw-2">&amp;</span><span class="ident"><span class="self">Self</span>::Proof</span>,
-    ) -&gt; <span class="prelude-ty">Result</span><span class="op">&lt;</span><span class="ident">bool</span>, <span class="ident">HyperPlonkErrors</span><span class="op">&gt;</span>;
+    <span class="doccomment">/// Verify the HyperPlonk proof.
+    ///
+    /// Inputs:
+    /// - `vk`: verifying key
+    /// - `pub_input`: online public input
+    /// - `proof`: HyperPlonk SNARK proof challenges
+    /// Outputs:
+    /// - Return a boolean on whether the verification is successful
+    </span><span class="kw">fn </span>verify(
+        vk: <span class="kw-2">&amp;</span><span class="self">Self</span>::VerifyingKey,
+        pub_input: <span class="kw-2">&amp;</span>[E::Fr],
+        proof: <span class="kw-2">&amp;</span><span class="self">Self</span>::Proof,
+    ) -&gt; <span class="prelude-ty">Result</span>&lt;bool, HyperPlonkErrors&gt;;
 }
 </code></pre></div>
-</section></div></main><div id="rustdoc-vars" data-root-path="../../" data-current-crate="hyperplonk" data-themes="ayu,dark,light" data-resource-suffix="" data-rustdoc-version="1.64.0 (a55dd71d5 2022-09-19)" ></div></body></html>
+</section></div></main><div id="rustdoc-vars" data-root-path="../../" data-current-crate="hyperplonk" data-themes="ayu,dark,light" data-resource-suffix="" data-rustdoc-version="1.65.0 (897e37553 2022-11-02)" ></div></body></html>

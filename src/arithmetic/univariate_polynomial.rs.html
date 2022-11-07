@@ -1,4 +1,4 @@
-<!DOCTYPE html><html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1.0"><meta name="generator" content="rustdoc"><meta name="description" content="Source of the Rust file `arithmetic/src/univariate_polynomial.rs`."><meta name="keywords" content="rust, rustlang, rust-lang"><title>univariate_polynomial.rs - source</title><link rel="preload" as="font" type="font/woff2" crossorigin href="../../SourceSerif4-Regular.ttf.woff2"><link rel="preload" as="font" type="font/woff2" crossorigin href="../../FiraSans-Regular.woff2"><link rel="preload" as="font" type="font/woff2" crossorigin href="../../FiraSans-Medium.woff2"><link rel="preload" as="font" type="font/woff2" crossorigin href="../../SourceCodePro-Regular.ttf.woff2"><link rel="preload" as="font" type="font/woff2" crossorigin href="../../SourceSerif4-Bold.ttf.woff2"><link rel="preload" as="font" type="font/woff2" crossorigin href="../../SourceCodePro-Semibold.ttf.woff2"><link rel="stylesheet" type="text/css" href="../../normalize.css"><link rel="stylesheet" type="text/css" href="../../rustdoc.css" id="mainThemeStyle"><link rel="stylesheet" type="text/css" href="../../ayu.css" disabled><link rel="stylesheet" type="text/css" href="../../dark.css" disabled><link rel="stylesheet" type="text/css" href="../../light.css" id="themeStyle"><script id="default-settings" ></script><script src="../../storage.js"></script><script defer src="../../source-script.js"></script><script defer src="../../source-files.js"></script><script defer src="../../main.js"></script><noscript><link rel="stylesheet" href="../../noscript.css"></noscript><link rel="alternate icon" type="image/png" href="../../favicon-16x16.png"><link rel="alternate icon" type="image/png" href="../../favicon-32x32.png"><link rel="icon" type="image/svg+xml" href="../../favicon.svg"></head><body class="rustdoc source"><!--[if lte IE 11]><div class="warning">This old browser is unsupported and will most likely display funky things.</div><![endif]--><nav class="mobile-topbar"><button class="sidebar-menu-toggle">&#9776;</button><a class="sidebar-logo" href="../../arithmetic/index.html"><div class="logo-container"><img class="rust-logo" src="../../rust-logo.svg" alt="logo"></div></a><h2 class="location"></h2></nav><nav class="sidebar"><a class="sidebar-logo" href="../../arithmetic/index.html"><div class="logo-container"><img class="rust-logo" src="../../rust-logo.svg" alt="logo"></div></a></nav><main><div class="width-limiter"><div class="sub-container"><a class="sub-logo-container" href="../../arithmetic/index.html"><img class="rust-logo" src="../../rust-logo.svg" alt="logo"></a><nav class="sub"><form class="search-form"><div class="search-container"><span></span><input class="search-input" name="search" autocomplete="off" spellcheck="false" placeholder="Click or press ‘S’ to search, ‘?’ for more options…" type="search"><div id="help-button" title="help" tabindex="-1"><button type="button">?</button></div><div id="settings-menu" tabindex="-1"><a href="../../settings.html" title="settings"><img width="22" height="22" alt="Change settings" src="../../wheel.svg"></a></div></div></form></nav></div><section id="main-content" class="content"><div class="example-wrap"><pre class="line-numbers"><span id="1">1</span>
+<!DOCTYPE html><html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1.0"><meta name="generator" content="rustdoc"><meta name="description" content="Source of the Rust file `arithmetic/src/univariate_polynomial.rs`."><meta name="keywords" content="rust, rustlang, rust-lang"><title>univariate_polynomial.rs - source</title><link rel="preload" as="font" type="font/woff2" crossorigin href="../../SourceSerif4-Regular.ttf.woff2"><link rel="preload" as="font" type="font/woff2" crossorigin href="../../FiraSans-Regular.woff2"><link rel="preload" as="font" type="font/woff2" crossorigin href="../../FiraSans-Medium.woff2"><link rel="preload" as="font" type="font/woff2" crossorigin href="../../SourceCodePro-Regular.ttf.woff2"><link rel="preload" as="font" type="font/woff2" crossorigin href="../../SourceSerif4-Bold.ttf.woff2"><link rel="preload" as="font" type="font/woff2" crossorigin href="../../SourceCodePro-Semibold.ttf.woff2"><link rel="stylesheet" href="../../normalize.css"><link rel="stylesheet" href="../../rustdoc.css" id="mainThemeStyle"><link rel="stylesheet" href="../../ayu.css" disabled><link rel="stylesheet" href="../../dark.css" disabled><link rel="stylesheet" href="../../light.css" id="themeStyle"><script id="default-settings" ></script><script src="../../storage.js"></script><script defer src="../../source-script.js"></script><script defer src="../../source-files.js"></script><script defer src="../../main.js"></script><noscript><link rel="stylesheet" href="../../noscript.css"></noscript><link rel="alternate icon" type="image/png" href="../../favicon-16x16.png"><link rel="alternate icon" type="image/png" href="../../favicon-32x32.png"><link rel="icon" type="image/svg+xml" href="../../favicon.svg"></head><body class="rustdoc source"><!--[if lte IE 11]><div class="warning">This old browser is unsupported and will most likely display funky things.</div><![endif]--><nav class="mobile-topbar"><button class="sidebar-menu-toggle">&#9776;</button><a class="sidebar-logo" href="../../arithmetic/index.html"><div class="logo-container"><img class="rust-logo" src="../../rust-logo.svg" alt="logo"></div></a><h2 class="location"></h2></nav><nav class="sidebar"><a class="sidebar-logo" href="../../arithmetic/index.html"><div class="logo-container"><img class="rust-logo" src="../../rust-logo.svg" alt="logo"></div></a></nav><main><div class="width-limiter"><div class="sub-container"><a class="sub-logo-container" href="../../arithmetic/index.html"><img class="rust-logo" src="../../rust-logo.svg" alt="logo"></a><nav class="sub"><form class="search-form"><div class="search-container"><span></span><input class="search-input" name="search" autocomplete="off" spellcheck="false" placeholder="Click or press ‘S’ to search, ‘?’ for more options…" type="search"><div id="help-button" title="help" tabindex="-1"><button type="button">?</button></div><div id="settings-menu" tabindex="-1"><a href="../../settings.html" title="settings"><img width="22" height="22" alt="Change settings" src="../../wheel.svg"></a></div></div></form></nav></div><section id="main-content" class="content"><div class="example-wrap"><pre class="line-numbers"><span id="1">1</span>
 <span id="2">2</span>
 <span id="3">3</span>
 <span id="4">4</span>
@@ -338,345 +338,345 @@
 <span id="338">338</span>
 <span id="339">339</span>
 <span id="340">340</span>
-</pre><pre class="rust"><code><span class="comment">// TODO: remove</span>
-<span class="attribute">#![<span class="ident">allow</span>(<span class="ident">dead_code</span>)]</span>
+</pre><pre class="rust"><code><span class="comment">// TODO: remove
+</span><span class="attribute">#![allow(dead_code)]
 
-<span class="kw">use</span> <span class="kw">crate</span>::{<span class="ident">bit_decompose</span>, <span class="ident">ArithErrors</span>};
-<span class="kw">use</span> <span class="ident">ark_ff::PrimeField</span>;
-<span class="kw">use</span> <span class="ident">ark_poly</span>::{
-    <span class="ident">univariate::DensePolynomial</span>, <span class="ident">EvaluationDomain</span>, <span class="ident">Evaluations</span>, <span class="ident">Radix2EvaluationDomain</span>,
+</span><span class="kw">use crate</span>::{bit_decompose, ArithErrors};
+<span class="kw">use </span>ark_ff::PrimeField;
+<span class="kw">use </span>ark_poly::{
+    univariate::DensePolynomial, EvaluationDomain, Evaluations, Radix2EvaluationDomain,
 };
-<span class="kw">use</span> <span class="ident">ark_std::log2</span>;
+<span class="kw">use </span>ark_std::log2;
 
-<span class="doccomment">/// Given a list of points, build `l(points)` which is a list of univariate</span>
-<span class="doccomment">/// polynomials that goes through the points; extend the dimension of the points</span>
-<span class="doccomment">/// by `log(points.len())` if `with_suffix` is set.</span>
-<span class="kw">pub</span> <span class="kw">fn</span> <span class="ident">build_l</span><span class="op">&lt;</span><span class="ident">F</span>: <span class="ident">PrimeField</span><span class="op">&gt;</span>(
-    <span class="ident">points</span>: <span class="kw-2">&amp;</span>[<span class="ident">Vec</span><span class="op">&lt;</span><span class="ident">F</span><span class="op">&gt;</span>],
-    <span class="ident">domain</span>: <span class="kw-2">&amp;</span><span class="ident">Radix2EvaluationDomain</span><span class="op">&lt;</span><span class="ident">F</span><span class="op">&gt;</span>,
-    <span class="ident">with_suffix</span>: <span class="ident">bool</span>,
-) -&gt; <span class="prelude-ty">Result</span><span class="op">&lt;</span><span class="ident">Vec</span><span class="op">&lt;</span><span class="ident">DensePolynomial</span><span class="op">&lt;</span><span class="ident">F</span><span class="op">&gt;</span><span class="op">&gt;</span>, <span class="ident">ArithErrors</span><span class="op">&gt;</span> {
-    <span class="kw">let</span> <span class="kw-2">mut</span> <span class="ident">uni_polys</span> <span class="op">=</span> <span class="ident">Vec::new</span>();
-    <span class="kw">if</span> <span class="ident">with_suffix</span> {
-        <span class="comment">// 1.1 build the indexes and the univariate polys that go through the indexes</span>
-        <span class="kw">let</span> <span class="ident">prefix_len</span> <span class="op">=</span> <span class="ident">log2</span>(<span class="ident">points</span>.<span class="ident">len</span>()) <span class="kw">as</span> <span class="ident">usize</span>;
-        <span class="kw">let</span> <span class="ident">indexes</span>: <span class="ident">Vec</span><span class="op">&lt;</span><span class="ident">Vec</span><span class="op">&lt;</span><span class="ident">bool</span><span class="op">&gt;</span><span class="op">&gt;</span> <span class="op">=</span> (<span class="number">0</span>..<span class="ident">points</span>.<span class="ident">len</span>())
-            .<span class="ident">map</span>(<span class="op">|</span><span class="ident">x</span><span class="op">|</span> <span class="ident">bit_decompose</span>(<span class="ident">x</span> <span class="kw">as</span> <span class="ident">u64</span>, <span class="ident">prefix_len</span>))
-            .<span class="ident">collect</span>();
-        <span class="kw">for</span> <span class="ident">i</span> <span class="kw">in</span> <span class="number">0</span>..<span class="ident">prefix_len</span> {
-            <span class="kw">let</span> <span class="ident">eval</span>: <span class="ident">Vec</span><span class="op">&lt;</span><span class="ident">F</span><span class="op">&gt;</span> <span class="op">=</span> <span class="ident">indexes</span>
-                .<span class="ident">iter</span>()
-                .<span class="ident">map</span>(<span class="op">|</span><span class="ident">x</span><span class="op">|</span> <span class="ident">F::from</span>(<span class="ident">x</span>[<span class="ident">prefix_len</span> <span class="op">-</span> <span class="ident">i</span> <span class="op">-</span> <span class="number">1</span>]))
-                .<span class="ident">collect</span>();
+<span class="doccomment">/// Given a list of points, build `l(points)` which is a list of univariate
+/// polynomials that goes through the points; extend the dimension of the points
+/// by `log(points.len())` if `with_suffix` is set.
+</span><span class="kw">pub fn </span>build_l&lt;F: PrimeField&gt;(
+    points: <span class="kw-2">&amp;</span>[Vec&lt;F&gt;],
+    domain: <span class="kw-2">&amp;</span>Radix2EvaluationDomain&lt;F&gt;,
+    with_suffix: bool,
+) -&gt; <span class="prelude-ty">Result</span>&lt;Vec&lt;DensePolynomial&lt;F&gt;&gt;, ArithErrors&gt; {
+    <span class="kw">let </span><span class="kw-2">mut </span>uni_polys = Vec::new();
+    <span class="kw">if </span>with_suffix {
+        <span class="comment">// 1.1 build the indexes and the univariate polys that go through the indexes
+        </span><span class="kw">let </span>prefix_len = log2(points.len()) <span class="kw">as </span>usize;
+        <span class="kw">let </span>indexes: Vec&lt;Vec&lt;bool&gt;&gt; = (<span class="number">0</span>..points.len())
+            .map(|x| bit_decompose(x <span class="kw">as </span>u64, prefix_len))
+            .collect();
+        <span class="kw">for </span>i <span class="kw">in </span><span class="number">0</span>..prefix_len {
+            <span class="kw">let </span>eval: Vec&lt;F&gt; = indexes
+                .iter()
+                .map(|x| F::from(x[prefix_len - i - <span class="number">1</span>]))
+                .collect();
 
-            <span class="ident">uni_polys</span>.<span class="ident">push</span>(<span class="ident">Evaluations::from_vec_and_domain</span>(<span class="ident">eval</span>, <span class="kw-2">*</span><span class="ident">domain</span>).<span class="ident">interpolate</span>());
+            uni_polys.push(Evaluations::from_vec_and_domain(eval, <span class="kw-2">*</span>domain).interpolate());
         }
     }
-    <span class="comment">// 1.2 build the actual univariate polys that go through the points</span>
-    <span class="ident">uni_polys</span>.<span class="ident">extend_from_slice</span>(<span class="ident">build_l_internal</span>(<span class="ident">points</span>, <span class="ident">domain</span>)<span class="question-mark">?</span>.<span class="ident">as_slice</span>());
+    <span class="comment">// 1.2 build the actual univariate polys that go through the points
+    </span>uni_polys.extend_from_slice(build_l_internal(points, domain)<span class="question-mark">?</span>.as_slice());
 
-    <span class="prelude-val">Ok</span>(<span class="ident">uni_polys</span>)
+    <span class="prelude-val">Ok</span>(uni_polys)
 }
 
-<span class="doccomment">/// Given a list of points, build `l(points)` which is a list of univariate</span>
-<span class="doccomment">/// polynomials that goes through the points.</span>
-<span class="kw">pub</span>(<span class="kw">crate</span>) <span class="kw">fn</span> <span class="ident">build_l_internal</span><span class="op">&lt;</span><span class="ident">F</span>: <span class="ident">PrimeField</span><span class="op">&gt;</span>(
-    <span class="ident">points</span>: <span class="kw-2">&amp;</span>[<span class="ident">Vec</span><span class="op">&lt;</span><span class="ident">F</span><span class="op">&gt;</span>],
-    <span class="ident">domain</span>: <span class="kw-2">&amp;</span><span class="ident">Radix2EvaluationDomain</span><span class="op">&lt;</span><span class="ident">F</span><span class="op">&gt;</span>,
-) -&gt; <span class="prelude-ty">Result</span><span class="op">&lt;</span><span class="ident">Vec</span><span class="op">&lt;</span><span class="ident">DensePolynomial</span><span class="op">&lt;</span><span class="ident">F</span><span class="op">&gt;</span><span class="op">&gt;</span>, <span class="ident">ArithErrors</span><span class="op">&gt;</span> {
-    <span class="kw">let</span> <span class="kw-2">mut</span> <span class="ident">uni_polys</span> <span class="op">=</span> <span class="ident">Vec::new</span>();
-    <span class="kw">let</span> <span class="ident">num_var</span> <span class="op">=</span> <span class="ident">points</span>[<span class="number">0</span>].<span class="ident">len</span>();
-    <span class="comment">// build the actual univariate polys that go through the points</span>
-    <span class="kw">for</span> <span class="ident">i</span> <span class="kw">in</span> <span class="number">0</span>..<span class="ident">num_var</span> {
-        <span class="kw">let</span> <span class="kw-2">mut</span> <span class="ident">eval</span>: <span class="ident">Vec</span><span class="op">&lt;</span><span class="ident">F</span><span class="op">&gt;</span> <span class="op">=</span> <span class="ident">points</span>.<span class="ident">iter</span>().<span class="ident">map</span>(<span class="op">|</span><span class="ident">x</span><span class="op">|</span> <span class="ident">x</span>[<span class="ident">i</span>]).<span class="ident">collect</span>();
-        <span class="ident">eval</span>.<span class="ident">extend_from_slice</span>(<span class="macro">vec!</span>[<span class="ident">F::zero</span>(); <span class="ident">domain</span>.<span class="ident">size</span> <span class="kw">as</span> <span class="ident">usize</span> <span class="op">-</span> <span class="ident">eval</span>.<span class="ident">len</span>()].<span class="ident">as_slice</span>());
-        <span class="ident">uni_polys</span>.<span class="ident">push</span>(<span class="ident">Evaluations::from_vec_and_domain</span>(<span class="ident">eval</span>, <span class="kw-2">*</span><span class="ident">domain</span>).<span class="ident">interpolate</span>())
+<span class="doccomment">/// Given a list of points, build `l(points)` which is a list of univariate
+/// polynomials that goes through the points.
+</span><span class="kw">pub</span>(<span class="kw">crate</span>) <span class="kw">fn </span>build_l_internal&lt;F: PrimeField&gt;(
+    points: <span class="kw-2">&amp;</span>[Vec&lt;F&gt;],
+    domain: <span class="kw-2">&amp;</span>Radix2EvaluationDomain&lt;F&gt;,
+) -&gt; <span class="prelude-ty">Result</span>&lt;Vec&lt;DensePolynomial&lt;F&gt;&gt;, ArithErrors&gt; {
+    <span class="kw">let </span><span class="kw-2">mut </span>uni_polys = Vec::new();
+    <span class="kw">let </span>num_var = points[<span class="number">0</span>].len();
+    <span class="comment">// build the actual univariate polys that go through the points
+    </span><span class="kw">for </span>i <span class="kw">in </span><span class="number">0</span>..num_var {
+        <span class="kw">let </span><span class="kw-2">mut </span>eval: Vec&lt;F&gt; = points.iter().map(|x| x[i]).collect();
+        eval.extend_from_slice(<span class="macro">vec!</span>[F::zero(); domain.size <span class="kw">as </span>usize - eval.len()].as_slice());
+        uni_polys.push(Evaluations::from_vec_and_domain(eval, <span class="kw-2">*</span>domain).interpolate())
     }
-    <span class="prelude-val">Ok</span>(<span class="ident">uni_polys</span>)
+    <span class="prelude-val">Ok</span>(uni_polys)
 }
 
-<span class="doccomment">/// get the domain for the univariate polynomial</span>
-<span class="attribute">#[<span class="ident">inline</span>]</span>
-<span class="kw">pub</span> <span class="kw">fn</span> <span class="ident">get_uni_domain</span><span class="op">&lt;</span><span class="ident">F</span>: <span class="ident">PrimeField</span><span class="op">&gt;</span>(
-    <span class="ident">uni_poly_degree</span>: <span class="ident">usize</span>,
-) -&gt; <span class="prelude-ty">Result</span><span class="op">&lt;</span><span class="ident">Radix2EvaluationDomain</span><span class="op">&lt;</span><span class="ident">F</span><span class="op">&gt;</span>, <span class="ident">ArithErrors</span><span class="op">&gt;</span> {
-    <span class="kw">let</span> <span class="ident">domain</span> <span class="op">=</span> <span class="kw">match</span> <span class="ident">Radix2EvaluationDomain</span>::<span class="op">&lt;</span><span class="ident">F</span><span class="op">&gt;</span><span class="ident">::new</span>(<span class="ident">uni_poly_degree</span>) {
-        <span class="prelude-val">Some</span>(<span class="ident">p</span>) =&gt; <span class="ident">p</span>,
-        <span class="prelude-val">None</span> =&gt; {
-            <span class="kw">return</span> <span class="prelude-val">Err</span>(<span class="ident">ArithErrors::InvalidParameters</span>(
-                <span class="string">&quot;failed to build radix 2 domain&quot;</span>.<span class="ident">to_string</span>(),
+<span class="doccomment">/// get the domain for the univariate polynomial
+</span><span class="attribute">#[inline]
+</span><span class="kw">pub fn </span>get_uni_domain&lt;F: PrimeField&gt;(
+    uni_poly_degree: usize,
+) -&gt; <span class="prelude-ty">Result</span>&lt;Radix2EvaluationDomain&lt;F&gt;, ArithErrors&gt; {
+    <span class="kw">let </span>domain = <span class="kw">match </span>Radix2EvaluationDomain::&lt;F&gt;::new(uni_poly_degree) {
+        <span class="prelude-val">Some</span>(p) =&gt; p,
+        <span class="prelude-val">None </span>=&gt; {
+            <span class="kw">return </span><span class="prelude-val">Err</span>(ArithErrors::InvalidParameters(
+                <span class="string">&quot;failed to build radix 2 domain&quot;</span>.to_string(),
             ))
         },
     };
-    <span class="prelude-val">Ok</span>(<span class="ident">domain</span>)
+    <span class="prelude-val">Ok</span>(domain)
 }
 
-<span class="attribute">#[<span class="ident">cfg</span>(<span class="ident">test</span>)]</span>
-<span class="kw">mod</span> <span class="ident">test</span> {
-    <span class="kw">use</span> <span class="kw">super</span>::<span class="kw-2">*</span>;
-    <span class="kw">use</span> <span class="ident">ark_bls12_381::Fr</span>;
-    <span class="kw">use</span> <span class="ident">ark_ff</span>::{<span class="ident">field_new</span>, <span class="ident">One</span>};
-    <span class="kw">use</span> <span class="ident">ark_poly::UVPolynomial</span>;
+<span class="attribute">#[cfg(test)]
+</span><span class="kw">mod </span>test {
+    <span class="kw">use super</span>::<span class="kw-2">*</span>;
+    <span class="kw">use </span>ark_bls12_381::Fr;
+    <span class="kw">use </span>ark_ff::{field_new, One};
+    <span class="kw">use </span>ark_poly::UVPolynomial;
 
-    <span class="attribute">#[<span class="ident">test</span>]</span>
-    <span class="kw">fn</span> <span class="ident">test_build_l_with_suffix</span>() -&gt; <span class="prelude-ty">Result</span><span class="op">&lt;</span>(), <span class="ident">ArithErrors</span><span class="op">&gt;</span> {
-        <span class="ident">test_build_l_with_suffix_helper</span>::<span class="op">&lt;</span><span class="ident">Fr</span><span class="op">&gt;</span>()
+    <span class="attribute">#[test]
+    </span><span class="kw">fn </span>test_build_l_with_suffix() -&gt; <span class="prelude-ty">Result</span>&lt;(), ArithErrors&gt; {
+        test_build_l_with_suffix_helper::&lt;Fr&gt;()
     }
 
-    <span class="kw">fn</span> <span class="ident">test_build_l_with_suffix_helper</span><span class="op">&lt;</span><span class="ident">F</span>: <span class="ident">PrimeField</span><span class="op">&gt;</span>() -&gt; <span class="prelude-ty">Result</span><span class="op">&lt;</span>(), <span class="ident">ArithErrors</span><span class="op">&gt;</span> {
-        <span class="comment">// point 1 is [1, 2]</span>
-        <span class="kw">let</span> <span class="ident">point1</span> <span class="op">=</span> <span class="macro">vec!</span>[<span class="ident">Fr::from</span>(<span class="number">1u64</span>), <span class="ident">Fr::from</span>(<span class="number">2u64</span>)];
+    <span class="kw">fn </span>test_build_l_with_suffix_helper&lt;F: PrimeField&gt;() -&gt; <span class="prelude-ty">Result</span>&lt;(), ArithErrors&gt; {
+        <span class="comment">// point 1 is [1, 2]
+        </span><span class="kw">let </span>point1 = <span class="macro">vec!</span>[Fr::from(<span class="number">1u64</span>), Fr::from(<span class="number">2u64</span>)];
 
-        <span class="comment">// point 2 is [3, 4]</span>
-        <span class="kw">let</span> <span class="ident">point2</span> <span class="op">=</span> <span class="macro">vec!</span>[<span class="ident">Fr::from</span>(<span class="number">3u64</span>), <span class="ident">Fr::from</span>(<span class="number">4u64</span>)];
+        <span class="comment">// point 2 is [3, 4]
+        </span><span class="kw">let </span>point2 = <span class="macro">vec!</span>[Fr::from(<span class="number">3u64</span>), Fr::from(<span class="number">4u64</span>)];
 
-        <span class="comment">// point 3 is [5, 6]</span>
-        <span class="kw">let</span> <span class="ident">point3</span> <span class="op">=</span> <span class="macro">vec!</span>[<span class="ident">Fr::from</span>(<span class="number">5u64</span>), <span class="ident">Fr::from</span>(<span class="number">6u64</span>)];
+        <span class="comment">// point 3 is [5, 6]
+        </span><span class="kw">let </span>point3 = <span class="macro">vec!</span>[Fr::from(<span class="number">5u64</span>), Fr::from(<span class="number">6u64</span>)];
 
         {
-            <span class="kw">let</span> <span class="ident">domain</span> <span class="op">=</span> <span class="ident">get_uni_domain</span>::<span class="op">&lt;</span><span class="ident">Fr</span><span class="op">&gt;</span>(<span class="number">2</span>)<span class="question-mark">?</span>;
-            <span class="kw">let</span> <span class="ident">l</span> <span class="op">=</span> <span class="ident">build_l</span>(<span class="kw-2">&amp;</span>[<span class="ident">point1</span>.<span class="ident">clone</span>(), <span class="ident">point2</span>.<span class="ident">clone</span>()], <span class="kw-2">&amp;</span><span class="ident">domain</span>, <span class="bool-val">true</span>)<span class="question-mark">?</span>;
+            <span class="kw">let </span>domain = get_uni_domain::&lt;Fr&gt;(<span class="number">2</span>)<span class="question-mark">?</span>;
+            <span class="kw">let </span>l = build_l(<span class="kw-2">&amp;</span>[point1.clone(), point2.clone()], <span class="kw-2">&amp;</span>domain, <span class="bool-val">true</span>)<span class="question-mark">?</span>;
 
-            <span class="comment">// roots: [1, -1]</span>
-            <span class="comment">// l0 = -1/2 * x + 1/2</span>
-            <span class="comment">// l1 = -x + 2</span>
-            <span class="comment">// l2 = -x + 3</span>
-            <span class="kw">let</span> <span class="ident">l0</span> <span class="op">=</span> <span class="ident">DensePolynomial::from_coefficients_vec</span>(<span class="macro">vec!</span>[
-                <span class="ident">Fr::one</span>() <span class="op">/</span> <span class="ident">Fr::from</span>(<span class="number">2u64</span>),
-                <span class="op">-</span><span class="ident">Fr::one</span>() <span class="op">/</span> <span class="ident">Fr::from</span>(<span class="number">2u64</span>),
+            <span class="comment">// roots: [1, -1]
+            // l0 = -1/2 * x + 1/2
+            // l1 = -x + 2
+            // l2 = -x + 3
+            </span><span class="kw">let </span>l0 = DensePolynomial::from_coefficients_vec(<span class="macro">vec!</span>[
+                Fr::one() / Fr::from(<span class="number">2u64</span>),
+                -Fr::one() / Fr::from(<span class="number">2u64</span>),
             ]);
-            <span class="kw">let</span> <span class="ident">l1</span> <span class="op">=</span> <span class="ident">DensePolynomial::from_coefficients_vec</span>(<span class="macro">vec!</span>[<span class="ident">Fr::from</span>(<span class="number">2u64</span>), <span class="op">-</span><span class="ident">Fr::one</span>()]);
-            <span class="kw">let</span> <span class="ident">l2</span> <span class="op">=</span> <span class="ident">DensePolynomial::from_coefficients_vec</span>(<span class="macro">vec!</span>[<span class="ident">Fr::from</span>(<span class="number">3u64</span>), <span class="op">-</span><span class="ident">Fr::one</span>()]);
+            <span class="kw">let </span>l1 = DensePolynomial::from_coefficients_vec(<span class="macro">vec!</span>[Fr::from(<span class="number">2u64</span>), -Fr::one()]);
+            <span class="kw">let </span>l2 = DensePolynomial::from_coefficients_vec(<span class="macro">vec!</span>[Fr::from(<span class="number">3u64</span>), -Fr::one()]);
 
-            <span class="macro">assert_eq!</span>(<span class="ident">l0</span>, <span class="ident">l</span>[<span class="number">0</span>], <span class="string">&quot;l0 not equal&quot;</span>);
-            <span class="macro">assert_eq!</span>(<span class="ident">l1</span>, <span class="ident">l</span>[<span class="number">1</span>], <span class="string">&quot;l1 not equal&quot;</span>);
-            <span class="macro">assert_eq!</span>(<span class="ident">l2</span>, <span class="ident">l</span>[<span class="number">2</span>], <span class="string">&quot;l2 not equal&quot;</span>);
+            <span class="macro">assert_eq!</span>(l0, l[<span class="number">0</span>], <span class="string">&quot;l0 not equal&quot;</span>);
+            <span class="macro">assert_eq!</span>(l1, l[<span class="number">1</span>], <span class="string">&quot;l1 not equal&quot;</span>);
+            <span class="macro">assert_eq!</span>(l2, l[<span class="number">2</span>], <span class="string">&quot;l2 not equal&quot;</span>);
         }
 
         {
-            <span class="kw">let</span> <span class="ident">domain</span> <span class="op">=</span> <span class="ident">get_uni_domain</span>::<span class="op">&lt;</span><span class="ident">Fr</span><span class="op">&gt;</span>(<span class="number">3</span>)<span class="question-mark">?</span>;
-            <span class="kw">let</span> <span class="ident">l</span> <span class="op">=</span> <span class="ident">build_l</span>(<span class="kw-2">&amp;</span>[<span class="ident">point1</span>, <span class="ident">point2</span>, <span class="ident">point3</span>], <span class="kw-2">&amp;</span><span class="ident">domain</span>, <span class="bool-val">true</span>)<span class="question-mark">?</span>;
+            <span class="kw">let </span>domain = get_uni_domain::&lt;Fr&gt;(<span class="number">3</span>)<span class="question-mark">?</span>;
+            <span class="kw">let </span>l = build_l(<span class="kw-2">&amp;</span>[point1, point2, point3], <span class="kw-2">&amp;</span>domain, <span class="bool-val">true</span>)<span class="question-mark">?</span>;
 
-            <span class="comment">// sage: q = 52435875175126190479447740508185965837690552500527637822603658699938581184513</span>
-            <span class="comment">// sage: P.&lt;x&gt; = PolynomialRing(Zmod(q))</span>
-            <span class="comment">// sage: root1 = 1</span>
-            <span class="comment">// sage: root2 = 0x8D51CCCE760304D0EC030002760300000001000000000000</span>
-            <span class="comment">// sage: root3 = -1</span>
-            <span class="comment">// sage: root4 = -root2</span>
-            <span class="comment">// Arkwork&#39;s code is a bit wired: it also interpolate (root4, 0)</span>
-            <span class="comment">// which returns a degree 3 polynomial, instead of degree 2</span>
+            <span class="comment">// sage: q = 52435875175126190479447740508185965837690552500527637822603658699938581184513
+            // sage: P.&lt;x&gt; = PolynomialRing(Zmod(q))
+            // sage: root1 = 1
+            // sage: root2 = 0x8D51CCCE760304D0EC030002760300000001000000000000
+            // sage: root3 = -1
+            // sage: root4 = -root2
+            // Arkwork&#39;s code is a bit wired: it also interpolate (root4, 0)
+            // which returns a degree 3 polynomial, instead of degree 2
 
-            <span class="comment">// ========================</span>
-            <span class="comment">// l0: [0, 0, 1]</span>
-            <span class="comment">// ========================</span>
-            <span class="comment">// sage: points = [(root1, 0), (root2, 0), (root3, 1), (root4, 0)]</span>
-            <span class="comment">// sage: P.lagrange_polynomial(points)</span>
-            <span class="comment">// 13108968793781547619861935127046491459422638125131909455650914674984645296128*x^3 +</span>
-            <span class="comment">// 39326906381344642859585805381139474378267914375395728366952744024953935888385*x^2 +</span>
-            <span class="comment">// 13108968793781547619861935127046491459422638125131909455650914674984645296128*x +</span>
-            <span class="comment">// 39326906381344642859585805381139474378267914375395728366952744024953935888385</span>
-            <span class="kw">let</span> <span class="ident">l0</span> <span class="op">=</span> <span class="ident">DensePolynomial::from_coefficients_vec</span>(<span class="macro">vec!</span>[
+            // ========================
+            // l0: [0, 0, 1]
+            // ========================
+            // sage: points = [(root1, 0), (root2, 0), (root3, 1), (root4, 0)]
+            // sage: P.lagrange_polynomial(points)
+            // 13108968793781547619861935127046491459422638125131909455650914674984645296128*x^3 +
+            // 39326906381344642859585805381139474378267914375395728366952744024953935888385*x^2 +
+            // 13108968793781547619861935127046491459422638125131909455650914674984645296128*x +
+            // 39326906381344642859585805381139474378267914375395728366952744024953935888385
+            </span><span class="kw">let </span>l0 = DensePolynomial::from_coefficients_vec(<span class="macro">vec!</span>[
                 <span class="macro">field_new!</span>(
-                    <span class="ident">Fr</span>,
-                    <span class="string">&quot;39326906381344642859585805381139474378267914375395728366952744024953935888385&quot;</span>
-                ),
+                    Fr,
+                    <span class="string">&quot;39326906381344642859585805381139474378267914375395728366952744024953935888385&quot;
+                </span>),
                 <span class="macro">field_new!</span>(
-                    <span class="ident">Fr</span>,
-                    <span class="string">&quot;13108968793781547619861935127046491459422638125131909455650914674984645296128&quot;</span>
-                ),
+                    Fr,
+                    <span class="string">&quot;13108968793781547619861935127046491459422638125131909455650914674984645296128&quot;
+                </span>),
                 <span class="macro">field_new!</span>(
-                    <span class="ident">Fr</span>,
-                    <span class="string">&quot;39326906381344642859585805381139474378267914375395728366952744024953935888385&quot;</span>
-                ),
+                    Fr,
+                    <span class="string">&quot;39326906381344642859585805381139474378267914375395728366952744024953935888385&quot;
+                </span>),
                 <span class="macro">field_new!</span>(
-                    <span class="ident">Fr</span>,
-                    <span class="string">&quot;13108968793781547619861935127046491459422638125131909455650914674984645296128&quot;</span>
-                ),
+                    Fr,
+                    <span class="string">&quot;13108968793781547619861935127046491459422638125131909455650914674984645296128&quot;
+                </span>),
             ]);
 
-            <span class="comment">// ========================</span>
-            <span class="comment">// l1: [0, 1, 0]</span>
-            <span class="comment">// ========================</span>
-            <span class="comment">// sage: points = [(root1, 0), (root2, 1), (root3, 0), (root4, 0)]</span>
-            <span class="comment">// sage: P.lagrange_polynomial(points)</span>
-            <span class="comment">// 866286206518413079694067382671935694567563117191340490752*x^3 +</span>
-            <span class="comment">// 13108968793781547619861935127046491459422638125131909455650914674984645296128*x^2 +</span>
-            <span class="comment">// 52435875175126190478581454301667552757996485117855702128036095582747240693761*x +</span>
-            <span class="comment">// 39326906381344642859585805381139474378267914375395728366952744024953935888385</span>
-            <span class="kw">let</span> <span class="ident">l1</span> <span class="op">=</span> <span class="ident">DensePolynomial::from_coefficients_vec</span>(<span class="macro">vec!</span>[
+            <span class="comment">// ========================
+            // l1: [0, 1, 0]
+            // ========================
+            // sage: points = [(root1, 0), (root2, 1), (root3, 0), (root4, 0)]
+            // sage: P.lagrange_polynomial(points)
+            // 866286206518413079694067382671935694567563117191340490752*x^3 +
+            // 13108968793781547619861935127046491459422638125131909455650914674984645296128*x^2 +
+            // 52435875175126190478581454301667552757996485117855702128036095582747240693761*x +
+            // 39326906381344642859585805381139474378267914375395728366952744024953935888385
+            </span><span class="kw">let </span>l1 = DensePolynomial::from_coefficients_vec(<span class="macro">vec!</span>[
                 <span class="macro">field_new!</span>(
-                    <span class="ident">Fr</span>,
-                    <span class="string">&quot;39326906381344642859585805381139474378267914375395728366952744024953935888385&quot;</span>
-                ),
+                    Fr,
+                    <span class="string">&quot;39326906381344642859585805381139474378267914375395728366952744024953935888385&quot;
+                </span>),
                 <span class="macro">field_new!</span>(
-                    <span class="ident">Fr</span>,
-                    <span class="string">&quot;52435875175126190478581454301667552757996485117855702128036095582747240693761&quot;</span>
-                ),
+                    Fr,
+                    <span class="string">&quot;52435875175126190478581454301667552757996485117855702128036095582747240693761&quot;
+                </span>),
                 <span class="macro">field_new!</span>(
-                    <span class="ident">Fr</span>,
-                    <span class="string">&quot;13108968793781547619861935127046491459422638125131909455650914674984645296128&quot;</span>
-                ),
+                    Fr,
+                    <span class="string">&quot;13108968793781547619861935127046491459422638125131909455650914674984645296128&quot;
+                </span>),
                 <span class="macro">field_new!</span>(
-                    <span class="ident">Fr</span>,
-                    <span class="string">&quot;866286206518413079694067382671935694567563117191340490752&quot;</span>
-                ),
+                    Fr,
+                    <span class="string">&quot;866286206518413079694067382671935694567563117191340490752&quot;
+                </span>),
             ]);
 
-            <span class="comment">// ========================</span>
-            <span class="comment">// l2: [1, 3, 5]</span>
-            <span class="comment">// ========================</span>
-            <span class="comment">// sage: points = [(root1, 1), (root2, 3), (root3, 5), (root4, 0)]</span>
-            <span class="comment">// sage: P.lagrange_polynomial(points)</span>
-            <span class="comment">// 2598858619555239239082202148015807083702689351574021472255*x^3 +</span>
-            <span class="comment">// 13108968793781547619861935127046491459422638125131909455650914674984645296129*x^2 +</span>
-            <span class="comment">// 52435875175126190476848881888630726598608350352511830738900969348364559712256*x +</span>
-            <span class="comment">// 39326906381344642859585805381139474378267914375395728366952744024953935888387</span>
-            <span class="kw">let</span> <span class="ident">l2</span> <span class="op">=</span> <span class="ident">DensePolynomial::from_coefficients_vec</span>(<span class="macro">vec!</span>[
+            <span class="comment">// ========================
+            // l2: [1, 3, 5]
+            // ========================
+            // sage: points = [(root1, 1), (root2, 3), (root3, 5), (root4, 0)]
+            // sage: P.lagrange_polynomial(points)
+            // 2598858619555239239082202148015807083702689351574021472255*x^3 +
+            // 13108968793781547619861935127046491459422638125131909455650914674984645296129*x^2 +
+            // 52435875175126190476848881888630726598608350352511830738900969348364559712256*x +
+            // 39326906381344642859585805381139474378267914375395728366952744024953935888387
+            </span><span class="kw">let </span>l2 = DensePolynomial::from_coefficients_vec(<span class="macro">vec!</span>[
                 <span class="macro">field_new!</span>(
-                    <span class="ident">Fr</span>,
-                    <span class="string">&quot;39326906381344642859585805381139474378267914375395728366952744024953935888387&quot;</span>
-                ),
+                    Fr,
+                    <span class="string">&quot;39326906381344642859585805381139474378267914375395728366952744024953935888387&quot;
+                </span>),
                 <span class="macro">field_new!</span>(
-                    <span class="ident">Fr</span>,
-                    <span class="string">&quot;52435875175126190476848881888630726598608350352511830738900969348364559712256&quot;</span>
-                ),
+                    Fr,
+                    <span class="string">&quot;52435875175126190476848881888630726598608350352511830738900969348364559712256&quot;
+                </span>),
                 <span class="macro">field_new!</span>(
-                    <span class="ident">Fr</span>,
-                    <span class="string">&quot;13108968793781547619861935127046491459422638125131909455650914674984645296129&quot;</span>
-                ),
+                    Fr,
+                    <span class="string">&quot;13108968793781547619861935127046491459422638125131909455650914674984645296129&quot;
+                </span>),
                 <span class="macro">field_new!</span>(
-                    <span class="ident">Fr</span>,
-                    <span class="string">&quot;2598858619555239239082202148015807083702689351574021472255&quot;</span>
-                ),
+                    Fr,
+                    <span class="string">&quot;2598858619555239239082202148015807083702689351574021472255&quot;
+                </span>),
             ]);
 
-            <span class="comment">// ========================</span>
-            <span class="comment">// l3: [2, 4, 6]</span>
-            <span class="comment">// ========================</span>
-            <span class="comment">// sage: points = [(root1, 2), (root2, 4), (root3, 6), (root4, 0)]</span>
-            <span class="comment">// sage: P.lagrange_polynomial(points)</span>
-            <span class="comment">// 3465144826073652318776269530687742778270252468765361963007*x^3 +</span>
-            <span class="comment">// x^2 +</span>
-            <span class="comment">// 52435875175126190475982595682112313518914282969839895044333406231173219221504*x +</span>
-            <span class="comment">// 3</span>
-            <span class="kw">let</span> <span class="ident">l3</span> <span class="op">=</span> <span class="ident">DensePolynomial::from_coefficients_vec</span>(<span class="macro">vec!</span>[
-                <span class="ident">Fr::from</span>(<span class="number">3u64</span>),
+            <span class="comment">// ========================
+            // l3: [2, 4, 6]
+            // ========================
+            // sage: points = [(root1, 2), (root2, 4), (root3, 6), (root4, 0)]
+            // sage: P.lagrange_polynomial(points)
+            // 3465144826073652318776269530687742778270252468765361963007*x^3 +
+            // x^2 +
+            // 52435875175126190475982595682112313518914282969839895044333406231173219221504*x +
+            // 3
+            </span><span class="kw">let </span>l3 = DensePolynomial::from_coefficients_vec(<span class="macro">vec!</span>[
+                Fr::from(<span class="number">3u64</span>),
                 <span class="macro">field_new!</span>(
-                    <span class="ident">Fr</span>,
-                    <span class="string">&quot;52435875175126190475982595682112313518914282969839895044333406231173219221504&quot;</span>
-                ),
-                <span class="ident">Fr::one</span>(),
+                    Fr,
+                    <span class="string">&quot;52435875175126190475982595682112313518914282969839895044333406231173219221504&quot;
+                </span>),
+                Fr::one(),
                 <span class="macro">field_new!</span>(
-                    <span class="ident">Fr</span>,
-                    <span class="string">&quot;3465144826073652318776269530687742778270252468765361963007&quot;</span>
-                ),
+                    Fr,
+                    <span class="string">&quot;3465144826073652318776269530687742778270252468765361963007&quot;
+                </span>),
             ]);
 
-            <span class="macro">assert_eq!</span>(<span class="ident">l0</span>, <span class="ident">l</span>[<span class="number">0</span>], <span class="string">&quot;l0 not equal&quot;</span>);
-            <span class="macro">assert_eq!</span>(<span class="ident">l1</span>, <span class="ident">l</span>[<span class="number">1</span>], <span class="string">&quot;l1 not equal&quot;</span>);
-            <span class="macro">assert_eq!</span>(<span class="ident">l2</span>, <span class="ident">l</span>[<span class="number">2</span>], <span class="string">&quot;l2 not equal&quot;</span>);
-            <span class="macro">assert_eq!</span>(<span class="ident">l3</span>, <span class="ident">l</span>[<span class="number">3</span>], <span class="string">&quot;l3 not equal&quot;</span>);
+            <span class="macro">assert_eq!</span>(l0, l[<span class="number">0</span>], <span class="string">&quot;l0 not equal&quot;</span>);
+            <span class="macro">assert_eq!</span>(l1, l[<span class="number">1</span>], <span class="string">&quot;l1 not equal&quot;</span>);
+            <span class="macro">assert_eq!</span>(l2, l[<span class="number">2</span>], <span class="string">&quot;l2 not equal&quot;</span>);
+            <span class="macro">assert_eq!</span>(l3, l[<span class="number">3</span>], <span class="string">&quot;l3 not equal&quot;</span>);
         }
         <span class="prelude-val">Ok</span>(())
     }
 
-    <span class="attribute">#[<span class="ident">test</span>]</span>
-    <span class="kw">fn</span> <span class="ident">test_build_l</span>() -&gt; <span class="prelude-ty">Result</span><span class="op">&lt;</span>(), <span class="ident">ArithErrors</span><span class="op">&gt;</span> {
-        <span class="ident">test_build_l_helper</span>::<span class="op">&lt;</span><span class="ident">Fr</span><span class="op">&gt;</span>()
+    <span class="attribute">#[test]
+    </span><span class="kw">fn </span>test_build_l() -&gt; <span class="prelude-ty">Result</span>&lt;(), ArithErrors&gt; {
+        test_build_l_helper::&lt;Fr&gt;()
     }
 
-    <span class="kw">fn</span> <span class="ident">test_build_l_helper</span><span class="op">&lt;</span><span class="ident">F</span>: <span class="ident">PrimeField</span><span class="op">&gt;</span>() -&gt; <span class="prelude-ty">Result</span><span class="op">&lt;</span>(), <span class="ident">ArithErrors</span><span class="op">&gt;</span> {
-        <span class="comment">// point 1 is [1, 2]</span>
-        <span class="kw">let</span> <span class="ident">point1</span> <span class="op">=</span> <span class="macro">vec!</span>[<span class="ident">Fr::from</span>(<span class="number">1u64</span>), <span class="ident">Fr::from</span>(<span class="number">2u64</span>)];
+    <span class="kw">fn </span>test_build_l_helper&lt;F: PrimeField&gt;() -&gt; <span class="prelude-ty">Result</span>&lt;(), ArithErrors&gt; {
+        <span class="comment">// point 1 is [1, 2]
+        </span><span class="kw">let </span>point1 = <span class="macro">vec!</span>[Fr::from(<span class="number">1u64</span>), Fr::from(<span class="number">2u64</span>)];
 
-        <span class="comment">// point 2 is [3, 4]</span>
-        <span class="kw">let</span> <span class="ident">point2</span> <span class="op">=</span> <span class="macro">vec!</span>[<span class="ident">Fr::from</span>(<span class="number">3u64</span>), <span class="ident">Fr::from</span>(<span class="number">4u64</span>)];
+        <span class="comment">// point 2 is [3, 4]
+        </span><span class="kw">let </span>point2 = <span class="macro">vec!</span>[Fr::from(<span class="number">3u64</span>), Fr::from(<span class="number">4u64</span>)];
 
-        <span class="comment">// point 3 is [5, 6]</span>
-        <span class="kw">let</span> <span class="ident">point3</span> <span class="op">=</span> <span class="macro">vec!</span>[<span class="ident">Fr::from</span>(<span class="number">5u64</span>), <span class="ident">Fr::from</span>(<span class="number">6u64</span>)];
+        <span class="comment">// point 3 is [5, 6]
+        </span><span class="kw">let </span>point3 = <span class="macro">vec!</span>[Fr::from(<span class="number">5u64</span>), Fr::from(<span class="number">6u64</span>)];
 
         {
-            <span class="kw">let</span> <span class="ident">domain</span> <span class="op">=</span> <span class="ident">get_uni_domain</span>::<span class="op">&lt;</span><span class="ident">Fr</span><span class="op">&gt;</span>(<span class="number">2</span>)<span class="question-mark">?</span>;
-            <span class="kw">let</span> <span class="ident">l</span> <span class="op">=</span> <span class="ident">build_l</span>(<span class="kw-2">&amp;</span>[<span class="ident">point1</span>.<span class="ident">clone</span>(), <span class="ident">point2</span>.<span class="ident">clone</span>()], <span class="kw-2">&amp;</span><span class="ident">domain</span>, <span class="bool-val">false</span>)<span class="question-mark">?</span>;
+            <span class="kw">let </span>domain = get_uni_domain::&lt;Fr&gt;(<span class="number">2</span>)<span class="question-mark">?</span>;
+            <span class="kw">let </span>l = build_l(<span class="kw-2">&amp;</span>[point1.clone(), point2.clone()], <span class="kw-2">&amp;</span>domain, <span class="bool-val">false</span>)<span class="question-mark">?</span>;
 
-            <span class="comment">// roots: [1, -1]</span>
-            <span class="comment">// l0 = -x + 2</span>
-            <span class="comment">// l1 = -x + 3</span>
-            <span class="kw">let</span> <span class="ident">l0</span> <span class="op">=</span> <span class="ident">DensePolynomial::from_coefficients_vec</span>(<span class="macro">vec!</span>[<span class="ident">Fr::from</span>(<span class="number">2u64</span>), <span class="op">-</span><span class="ident">Fr::one</span>()]);
-            <span class="kw">let</span> <span class="ident">l1</span> <span class="op">=</span> <span class="ident">DensePolynomial::from_coefficients_vec</span>(<span class="macro">vec!</span>[<span class="ident">Fr::from</span>(<span class="number">3u64</span>), <span class="op">-</span><span class="ident">Fr::one</span>()]);
+            <span class="comment">// roots: [1, -1]
+            // l0 = -x + 2
+            // l1 = -x + 3
+            </span><span class="kw">let </span>l0 = DensePolynomial::from_coefficients_vec(<span class="macro">vec!</span>[Fr::from(<span class="number">2u64</span>), -Fr::one()]);
+            <span class="kw">let </span>l1 = DensePolynomial::from_coefficients_vec(<span class="macro">vec!</span>[Fr::from(<span class="number">3u64</span>), -Fr::one()]);
 
-            <span class="macro">assert_eq!</span>(<span class="ident">l0</span>, <span class="ident">l</span>[<span class="number">0</span>], <span class="string">&quot;l0 not equal&quot;</span>);
-            <span class="macro">assert_eq!</span>(<span class="ident">l1</span>, <span class="ident">l</span>[<span class="number">1</span>], <span class="string">&quot;l1 not equal&quot;</span>);
+            <span class="macro">assert_eq!</span>(l0, l[<span class="number">0</span>], <span class="string">&quot;l0 not equal&quot;</span>);
+            <span class="macro">assert_eq!</span>(l1, l[<span class="number">1</span>], <span class="string">&quot;l1 not equal&quot;</span>);
         }
 
         {
-            <span class="kw">let</span> <span class="ident">domain</span> <span class="op">=</span> <span class="ident">get_uni_domain</span>::<span class="op">&lt;</span><span class="ident">Fr</span><span class="op">&gt;</span>(<span class="number">3</span>)<span class="question-mark">?</span>;
-            <span class="kw">let</span> <span class="ident">l</span> <span class="op">=</span> <span class="ident">build_l</span>(<span class="kw-2">&amp;</span>[<span class="ident">point1</span>, <span class="ident">point2</span>, <span class="ident">point3</span>], <span class="kw-2">&amp;</span><span class="ident">domain</span>, <span class="bool-val">false</span>)<span class="question-mark">?</span>;
+            <span class="kw">let </span>domain = get_uni_domain::&lt;Fr&gt;(<span class="number">3</span>)<span class="question-mark">?</span>;
+            <span class="kw">let </span>l = build_l(<span class="kw-2">&amp;</span>[point1, point2, point3], <span class="kw-2">&amp;</span>domain, <span class="bool-val">false</span>)<span class="question-mark">?</span>;
 
-            <span class="comment">// sage: q = 52435875175126190479447740508185965837690552500527637822603658699938581184513</span>
-            <span class="comment">// sage: P.&lt;x&gt; = PolynomialRing(Zmod(q))</span>
-            <span class="comment">// sage: root1 = 1</span>
-            <span class="comment">// sage: root2 = 0x8D51CCCE760304D0EC030002760300000001000000000000</span>
-            <span class="comment">// sage: root3 = -1</span>
-            <span class="comment">// sage: root4 = -root2</span>
-            <span class="comment">// Arkwork&#39;s code is a bit wired: it also interpolate (root4, 0)</span>
-            <span class="comment">// which returns a degree 3 polynomial, instead of degree 2</span>
+            <span class="comment">// sage: q = 52435875175126190479447740508185965837690552500527637822603658699938581184513
+            // sage: P.&lt;x&gt; = PolynomialRing(Zmod(q))
+            // sage: root1 = 1
+            // sage: root2 = 0x8D51CCCE760304D0EC030002760300000001000000000000
+            // sage: root3 = -1
+            // sage: root4 = -root2
+            // Arkwork&#39;s code is a bit wired: it also interpolate (root4, 0)
+            // which returns a degree 3 polynomial, instead of degree 2
 
-            <span class="comment">// ========================</span>
-            <span class="comment">// l0: [1, 3, 5]</span>
-            <span class="comment">// ========================</span>
-            <span class="comment">// sage: points = [(root1, 1), (root2, 3), (root3, 5), (root4, 0)]</span>
-            <span class="comment">// sage: P.lagrange_polynomial(points)</span>
-            <span class="comment">// 2598858619555239239082202148015807083702689351574021472255*x^3 +</span>
-            <span class="comment">// 13108968793781547619861935127046491459422638125131909455650914674984645296129*x^2 +</span>
-            <span class="comment">// 52435875175126190476848881888630726598608350352511830738900969348364559712256*x +</span>
-            <span class="comment">// 39326906381344642859585805381139474378267914375395728366952744024953935888387</span>
-            <span class="kw">let</span> <span class="ident">l0</span> <span class="op">=</span> <span class="ident">DensePolynomial::from_coefficients_vec</span>(<span class="macro">vec!</span>[
+            // ========================
+            // l0: [1, 3, 5]
+            // ========================
+            // sage: points = [(root1, 1), (root2, 3), (root3, 5), (root4, 0)]
+            // sage: P.lagrange_polynomial(points)
+            // 2598858619555239239082202148015807083702689351574021472255*x^3 +
+            // 13108968793781547619861935127046491459422638125131909455650914674984645296129*x^2 +
+            // 52435875175126190476848881888630726598608350352511830738900969348364559712256*x +
+            // 39326906381344642859585805381139474378267914375395728366952744024953935888387
+            </span><span class="kw">let </span>l0 = DensePolynomial::from_coefficients_vec(<span class="macro">vec!</span>[
                 <span class="macro">field_new!</span>(
-                    <span class="ident">Fr</span>,
-                    <span class="string">&quot;39326906381344642859585805381139474378267914375395728366952744024953935888387&quot;</span>
-                ),
+                    Fr,
+                    <span class="string">&quot;39326906381344642859585805381139474378267914375395728366952744024953935888387&quot;
+                </span>),
                 <span class="macro">field_new!</span>(
-                    <span class="ident">Fr</span>,
-                    <span class="string">&quot;52435875175126190476848881888630726598608350352511830738900969348364559712256&quot;</span>
-                ),
+                    Fr,
+                    <span class="string">&quot;52435875175126190476848881888630726598608350352511830738900969348364559712256&quot;
+                </span>),
                 <span class="macro">field_new!</span>(
-                    <span class="ident">Fr</span>,
-                    <span class="string">&quot;13108968793781547619861935127046491459422638125131909455650914674984645296129&quot;</span>
-                ),
+                    Fr,
+                    <span class="string">&quot;13108968793781547619861935127046491459422638125131909455650914674984645296129&quot;
+                </span>),
                 <span class="macro">field_new!</span>(
-                    <span class="ident">Fr</span>,
-                    <span class="string">&quot;2598858619555239239082202148015807083702689351574021472255&quot;</span>
-                ),
+                    Fr,
+                    <span class="string">&quot;2598858619555239239082202148015807083702689351574021472255&quot;
+                </span>),
             ]);
 
-            <span class="comment">// ========================</span>
-            <span class="comment">// l1: [2, 4, 6]</span>
-            <span class="comment">// ========================</span>
-            <span class="comment">// sage: points = [(root1, 2), (root2, 4), (root3, 6), (root4, 0)]</span>
-            <span class="comment">// sage: P.lagrange_polynomial(points)</span>
-            <span class="comment">// 3465144826073652318776269530687742778270252468765361963007*x^3 +</span>
-            <span class="comment">// x^2 +</span>
-            <span class="comment">// 52435875175126190475982595682112313518914282969839895044333406231173219221504*x +</span>
-            <span class="comment">// 3</span>
-            <span class="kw">let</span> <span class="ident">l1</span> <span class="op">=</span> <span class="ident">DensePolynomial::from_coefficients_vec</span>(<span class="macro">vec!</span>[
-                <span class="ident">Fr::from</span>(<span class="number">3u64</span>),
+            <span class="comment">// ========================
+            // l1: [2, 4, 6]
+            // ========================
+            // sage: points = [(root1, 2), (root2, 4), (root3, 6), (root4, 0)]
+            // sage: P.lagrange_polynomial(points)
+            // 3465144826073652318776269530687742778270252468765361963007*x^3 +
+            // x^2 +
+            // 52435875175126190475982595682112313518914282969839895044333406231173219221504*x +
+            // 3
+            </span><span class="kw">let </span>l1 = DensePolynomial::from_coefficients_vec(<span class="macro">vec!</span>[
+                Fr::from(<span class="number">3u64</span>),
                 <span class="macro">field_new!</span>(
-                    <span class="ident">Fr</span>,
-                    <span class="string">&quot;52435875175126190475982595682112313518914282969839895044333406231173219221504&quot;</span>
-                ),
-                <span class="ident">Fr::one</span>(),
+                    Fr,
+                    <span class="string">&quot;52435875175126190475982595682112313518914282969839895044333406231173219221504&quot;
+                </span>),
+                Fr::one(),
                 <span class="macro">field_new!</span>(
-                    <span class="ident">Fr</span>,
-                    <span class="string">&quot;3465144826073652318776269530687742778270252468765361963007&quot;</span>
-                ),
+                    Fr,
+                    <span class="string">&quot;3465144826073652318776269530687742778270252468765361963007&quot;
+                </span>),
             ]);
 
-            <span class="macro">assert_eq!</span>(<span class="ident">l0</span>, <span class="ident">l</span>[<span class="number">0</span>], <span class="string">&quot;l0 not equal&quot;</span>);
-            <span class="macro">assert_eq!</span>(<span class="ident">l1</span>, <span class="ident">l</span>[<span class="number">1</span>], <span class="string">&quot;l1 not equal&quot;</span>);
+            <span class="macro">assert_eq!</span>(l0, l[<span class="number">0</span>], <span class="string">&quot;l0 not equal&quot;</span>);
+            <span class="macro">assert_eq!</span>(l1, l[<span class="number">1</span>], <span class="string">&quot;l1 not equal&quot;</span>);
         }
         <span class="prelude-val">Ok</span>(())
     }
 }
 </code></pre></div>
-</section></div></main><div id="rustdoc-vars" data-root-path="../../" data-current-crate="arithmetic" data-themes="ayu,dark,light" data-resource-suffix="" data-rustdoc-version="1.64.0 (a55dd71d5 2022-09-19)" ></div></body></html>
+</section></div></main><div id="rustdoc-vars" data-root-path="../../" data-current-crate="arithmetic" data-themes="ayu,dark,light" data-resource-suffix="" data-rustdoc-version="1.65.0 (897e37553 2022-11-02)" ></div></body></html>

@@ -1,4 +1,4 @@
-<!DOCTYPE html><html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1.0"><meta name="generator" content="rustdoc"><meta name="description" content="Source of the Rust file `subroutines/src/poly_iop/prod_check/mod.rs`."><meta name="keywords" content="rust, rustlang, rust-lang"><title>mod.rs - source</title><link rel="preload" as="font" type="font/woff2" crossorigin href="../../../../SourceSerif4-Regular.ttf.woff2"><link rel="preload" as="font" type="font/woff2" crossorigin href="../../../../FiraSans-Regular.woff2"><link rel="preload" as="font" type="font/woff2" crossorigin href="../../../../FiraSans-Medium.woff2"><link rel="preload" as="font" type="font/woff2" crossorigin href="../../../../SourceCodePro-Regular.ttf.woff2"><link rel="preload" as="font" type="font/woff2" crossorigin href="../../../../SourceSerif4-Bold.ttf.woff2"><link rel="preload" as="font" type="font/woff2" crossorigin href="../../../../SourceCodePro-Semibold.ttf.woff2"><link rel="stylesheet" type="text/css" href="../../../../normalize.css"><link rel="stylesheet" type="text/css" href="../../../../rustdoc.css" id="mainThemeStyle"><link rel="stylesheet" type="text/css" href="../../../../ayu.css" disabled><link rel="stylesheet" type="text/css" href="../../../../dark.css" disabled><link rel="stylesheet" type="text/css" href="../../../../light.css" id="themeStyle"><script id="default-settings" ></script><script src="../../../../storage.js"></script><script defer src="../../../../source-script.js"></script><script defer src="../../../../source-files.js"></script><script defer src="../../../../main.js"></script><noscript><link rel="stylesheet" href="../../../../noscript.css"></noscript><link rel="alternate icon" type="image/png" href="../../../../favicon-16x16.png"><link rel="alternate icon" type="image/png" href="../../../../favicon-32x32.png"><link rel="icon" type="image/svg+xml" href="../../../../favicon.svg"></head><body class="rustdoc source"><!--[if lte IE 11]><div class="warning">This old browser is unsupported and will most likely display funky things.</div><![endif]--><nav class="mobile-topbar"><button class="sidebar-menu-toggle">&#9776;</button><a class="sidebar-logo" href="../../../../subroutines/index.html"><div class="logo-container"><img class="rust-logo" src="../../../../rust-logo.svg" alt="logo"></div></a><h2 class="location"></h2></nav><nav class="sidebar"><a class="sidebar-logo" href="../../../../subroutines/index.html"><div class="logo-container"><img class="rust-logo" src="../../../../rust-logo.svg" alt="logo"></div></a></nav><main><div class="width-limiter"><div class="sub-container"><a class="sub-logo-container" href="../../../../subroutines/index.html"><img class="rust-logo" src="../../../../rust-logo.svg" alt="logo"></a><nav class="sub"><form class="search-form"><div class="search-container"><span></span><input class="search-input" name="search" autocomplete="off" spellcheck="false" placeholder="Click or press ‘S’ to search, ‘?’ for more options…" type="search"><div id="help-button" title="help" tabindex="-1"><button type="button">?</button></div><div id="settings-menu" tabindex="-1"><a href="../../../../settings.html" title="settings"><img width="22" height="22" alt="Change settings" src="../../../../wheel.svg"></a></div></div></form></nav></div><section id="main-content" class="content"><div class="example-wrap"><pre class="line-numbers"><span id="1">1</span>
+<!DOCTYPE html><html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1.0"><meta name="generator" content="rustdoc"><meta name="description" content="Source of the Rust file `subroutines/src/poly_iop/prod_check/mod.rs`."><meta name="keywords" content="rust, rustlang, rust-lang"><title>mod.rs - source</title><link rel="preload" as="font" type="font/woff2" crossorigin href="../../../../SourceSerif4-Regular.ttf.woff2"><link rel="preload" as="font" type="font/woff2" crossorigin href="../../../../FiraSans-Regular.woff2"><link rel="preload" as="font" type="font/woff2" crossorigin href="../../../../FiraSans-Medium.woff2"><link rel="preload" as="font" type="font/woff2" crossorigin href="../../../../SourceCodePro-Regular.ttf.woff2"><link rel="preload" as="font" type="font/woff2" crossorigin href="../../../../SourceSerif4-Bold.ttf.woff2"><link rel="preload" as="font" type="font/woff2" crossorigin href="../../../../SourceCodePro-Semibold.ttf.woff2"><link rel="stylesheet" href="../../../../normalize.css"><link rel="stylesheet" href="../../../../rustdoc.css" id="mainThemeStyle"><link rel="stylesheet" href="../../../../ayu.css" disabled><link rel="stylesheet" href="../../../../dark.css" disabled><link rel="stylesheet" href="../../../../light.css" id="themeStyle"><script id="default-settings" ></script><script src="../../../../storage.js"></script><script defer src="../../../../source-script.js"></script><script defer src="../../../../source-files.js"></script><script defer src="../../../../main.js"></script><noscript><link rel="stylesheet" href="../../../../noscript.css"></noscript><link rel="alternate icon" type="image/png" href="../../../../favicon-16x16.png"><link rel="alternate icon" type="image/png" href="../../../../favicon-32x32.png"><link rel="icon" type="image/svg+xml" href="../../../../favicon.svg"></head><body class="rustdoc source"><!--[if lte IE 11]><div class="warning">This old browser is unsupported and will most likely display funky things.</div><![endif]--><nav class="mobile-topbar"><button class="sidebar-menu-toggle">&#9776;</button><a class="sidebar-logo" href="../../../../subroutines/index.html"><div class="logo-container"><img class="rust-logo" src="../../../../rust-logo.svg" alt="logo"></div></a><h2 class="location"></h2></nav><nav class="sidebar"><a class="sidebar-logo" href="../../../../subroutines/index.html"><div class="logo-container"><img class="rust-logo" src="../../../../rust-logo.svg" alt="logo"></div></a></nav><main><div class="width-limiter"><div class="sub-container"><a class="sub-logo-container" href="../../../../subroutines/index.html"><img class="rust-logo" src="../../../../rust-logo.svg" alt="logo"></a><nav class="sub"><form class="search-form"><div class="search-container"><span></span><input class="search-input" name="search" autocomplete="off" spellcheck="false" placeholder="Click or press ‘S’ to search, ‘?’ for more options…" type="search"><div id="help-button" title="help" tabindex="-1"><button type="button">?</button></div><div id="settings-menu" tabindex="-1"><a href="../../../../settings.html" title="settings"><img width="22" height="22" alt="Change settings" src="../../../../wheel.svg"></a></div></div></form></nav></div><section id="main-content" class="content"><div class="example-wrap"><pre class="line-numbers"><span id="1">1</span>
 <span id="2">2</span>
 <span id="3">3</span>
 <span id="4">4</span>
@@ -302,309 +302,309 @@
 <span id="302">302</span>
 <span id="303">303</span>
 <span id="304">304</span>
-</pre><pre class="rust"><code><span class="doccomment">//! Main module for the Product Check protocol</span>
+</pre><pre class="rust"><code><span class="doccomment">//! Main module for the Product Check protocol
 
-<span class="kw">use</span> <span class="kw">crate</span>::{
-    <span class="ident">pcs::PolynomialCommitmentScheme</span>,
-    <span class="ident">poly_iop</span>::{
-        <span class="ident">errors::PolyIOPErrors</span>,
-        <span class="ident">prod_check::util</span>::{<span class="ident">compute_product_poly</span>, <span class="ident">prove_zero_check</span>},
-        <span class="ident">zero_check::ZeroCheck</span>,
-        <span class="ident">PolyIOP</span>,
+</span><span class="kw">use crate</span>::{
+    pcs::PolynomialCommitmentScheme,
+    poly_iop::{
+        errors::PolyIOPErrors,
+        prod_check::util::{compute_product_poly, prove_zero_check},
+        zero_check::ZeroCheck,
+        PolyIOP,
     },
 };
-<span class="kw">use</span> <span class="ident">arithmetic::VPAuxInfo</span>;
-<span class="kw">use</span> <span class="ident">ark_ec::PairingEngine</span>;
-<span class="kw">use</span> <span class="ident">ark_ff</span>::{<span class="ident">One</span>, <span class="ident">PrimeField</span>, <span class="ident">Zero</span>};
-<span class="kw">use</span> <span class="ident">ark_poly::DenseMultilinearExtension</span>;
-<span class="kw">use</span> <span class="ident">ark_std</span>::{<span class="ident">end_timer</span>, <span class="ident">start_timer</span>};
-<span class="kw">use</span> <span class="ident">std::rc::Rc</span>;
-<span class="kw">use</span> <span class="ident">transcript::IOPTranscript</span>;
+<span class="kw">use </span>arithmetic::VPAuxInfo;
+<span class="kw">use </span>ark_ec::PairingEngine;
+<span class="kw">use </span>ark_ff::{One, PrimeField, Zero};
+<span class="kw">use </span>ark_poly::DenseMultilinearExtension;
+<span class="kw">use </span>ark_std::{end_timer, start_timer};
+<span class="kw">use </span>std::rc::Rc;
+<span class="kw">use </span>transcript::IOPTranscript;
 
-<span class="kw">mod</span> <span class="ident">util</span>;
+<span class="kw">mod </span>util;
 
-<span class="doccomment">/// A product-check proves that two n-variate multilinear polynomials `f(x),</span>
-<span class="doccomment">/// g(x)` satisfy:</span>
-<span class="doccomment">/// \prod_{x \in {0,1}^n} f(x) = \prod_{x \in {0,1}^n} g(x)</span>
-<span class="doccomment">///</span>
-<span class="doccomment">/// A ProductCheck is derived from ZeroCheck.</span>
-<span class="doccomment">///</span>
-<span class="doccomment">/// Prover steps:</span>
-<span class="doccomment">/// 1. build `prod(x0, ..., x_n)` from f and g,</span>
-<span class="doccomment">///    such that `prod(0, x1, ..., xn)` equals `f/g` over domain {0,1}^n</span>
-<span class="doccomment">/// 2. push commitments of `prod(x)` to the transcript,</span>
-<span class="doccomment">///    and `generate_challenge` from current transcript (generate alpha)</span>
-<span class="doccomment">/// 3. generate the zerocheck proof for the virtual polynomial</span>
-<span class="doccomment">///    prod(1, x) - prod(x, 0) * prod(x, 1) + alpha * (f(x) - prod(0, x) * g(x))</span>
-<span class="doccomment">///</span>
-<span class="doccomment">/// Verifier steps:</span>
-<span class="doccomment">/// 1. Extract commitments of `prod(x)` from the proof, push</span>
-<span class="doccomment">/// them to the transcript</span>
-<span class="doccomment">/// 2. `generate_challenge` from current transcript (generate alpha)</span>
-<span class="doccomment">/// 3. `verify` to verify the zerocheck proof and generate the subclaim for</span>
-<span class="doccomment">/// polynomial evaluations</span>
-<span class="kw">pub</span> <span class="kw">trait</span> <span class="ident">ProductCheck</span><span class="op">&lt;</span><span class="ident">E</span>, <span class="ident">PCS</span><span class="op">&gt;</span>: <span class="ident">ZeroCheck</span><span class="op">&lt;</span><span class="ident">E::Fr</span><span class="op">&gt;</span>
-<span class="kw">where</span>
-    <span class="ident">E</span>: <span class="ident">PairingEngine</span>,
-    <span class="ident">PCS</span>: <span class="ident">PolynomialCommitmentScheme</span><span class="op">&lt;</span><span class="ident">E</span><span class="op">&gt;</span>,
+<span class="doccomment">/// A product-check proves that two n-variate multilinear polynomials `f(x),
+/// g(x)` satisfy:
+/// \prod_{x \in {0,1}^n} f(x) = \prod_{x \in {0,1}^n} g(x)
+///
+/// A ProductCheck is derived from ZeroCheck.
+///
+/// Prover steps:
+/// 1. build `prod(x0, ..., x_n)` from f and g,
+///    such that `prod(0, x1, ..., xn)` equals `f/g` over domain {0,1}^n
+/// 2. push commitments of `prod(x)` to the transcript,
+///    and `generate_challenge` from current transcript (generate alpha)
+/// 3. generate the zerocheck proof for the virtual polynomial
+///    prod(1, x) - prod(x, 0) * prod(x, 1) + alpha * (f(x) - prod(0, x) * g(x))
+///
+/// Verifier steps:
+/// 1. Extract commitments of `prod(x)` from the proof, push
+/// them to the transcript
+/// 2. `generate_challenge` from current transcript (generate alpha)
+/// 3. `verify` to verify the zerocheck proof and generate the subclaim for
+/// polynomial evaluations
+</span><span class="kw">pub trait </span>ProductCheck&lt;E, PCS&gt;: ZeroCheck&lt;E::Fr&gt;
+<span class="kw">where
+    </span>E: PairingEngine,
+    PCS: PolynomialCommitmentScheme&lt;E&gt;,
 {
-    <span class="kw">type</span> <span class="ident">ProductCheckSubClaim</span>;
-    <span class="kw">type</span> <span class="ident">ProductCheckProof</span>;
+    <span class="kw">type </span>ProductCheckSubClaim;
+    <span class="kw">type </span>ProductCheckProof;
 
-    <span class="doccomment">/// Initialize the system with a transcript</span>
-    <span class="doccomment">///</span>
-    <span class="doccomment">/// This function is optional -- in the case where a ProductCheck is</span>
-    <span class="doccomment">/// an building block for a more complex protocol, the transcript</span>
-    <span class="doccomment">/// may be initialized by this complex protocol, and passed to the</span>
-    <span class="doccomment">/// ProductCheck prover/verifier.</span>
-    <span class="kw">fn</span> <span class="ident">init_transcript</span>() -&gt; <span class="ident"><span class="self">Self</span>::Transcript</span>;
+    <span class="doccomment">/// Initialize the system with a transcript
+    ///
+    /// This function is optional -- in the case where a ProductCheck is
+    /// an building block for a more complex protocol, the transcript
+    /// may be initialized by this complex protocol, and passed to the
+    /// ProductCheck prover/verifier.
+    </span><span class="kw">fn </span>init_transcript() -&gt; <span class="self">Self</span>::Transcript;
 
-    <span class="doccomment">/// Generate a proof for product check, showing that witness multilinear</span>
-    <span class="doccomment">/// polynomials f(x), g(x) satisfy `\prod_{x \in {0,1}^n} f(x) =</span>
-    <span class="doccomment">/// \prod_{x \in {0,1}^n} g(x)`</span>
-    <span class="doccomment">///</span>
-    <span class="doccomment">/// Inputs:</span>
-    <span class="doccomment">/// - fx: the numerator multilinear polynomial</span>
-    <span class="doccomment">/// - gx: the denominator multilinear polynomial</span>
-    <span class="doccomment">/// - transcript: the IOP transcript</span>
-    <span class="doccomment">/// - pk: PCS committing key</span>
-    <span class="doccomment">///</span>
-    <span class="doccomment">/// Outputs</span>
-    <span class="doccomment">/// - the product check proof</span>
-    <span class="doccomment">/// - the product polynomial (used for testing)</span>
-    <span class="doccomment">///</span>
-    <span class="doccomment">/// Cost: O(N)</span>
-    <span class="kw">fn</span> <span class="ident">prove</span>(
-        <span class="ident">pcs_param</span>: <span class="kw-2">&amp;</span><span class="ident">PCS::ProverParam</span>,
-        <span class="ident">fx</span>: <span class="kw-2">&amp;</span><span class="ident"><span class="self">Self</span>::MultilinearExtension</span>,
-        <span class="ident">gx</span>: <span class="kw-2">&amp;</span><span class="ident"><span class="self">Self</span>::MultilinearExtension</span>,
-        <span class="ident">transcript</span>: <span class="kw-2">&amp;mut</span> <span class="ident">IOPTranscript</span><span class="op">&lt;</span><span class="ident">E::Fr</span><span class="op">&gt;</span>,
-    ) -&gt; <span class="prelude-ty">Result</span><span class="op">&lt;</span>(<span class="ident"><span class="self">Self</span>::ProductCheckProof</span>, <span class="ident"><span class="self">Self</span>::MultilinearExtension</span>), <span class="ident">PolyIOPErrors</span><span class="op">&gt;</span>;
+    <span class="doccomment">/// Generate a proof for product check, showing that witness multilinear
+    /// polynomials f(x), g(x) satisfy `\prod_{x \in {0,1}^n} f(x) =
+    /// \prod_{x \in {0,1}^n} g(x)`
+    ///
+    /// Inputs:
+    /// - fx: the numerator multilinear polynomial
+    /// - gx: the denominator multilinear polynomial
+    /// - transcript: the IOP transcript
+    /// - pk: PCS committing key
+    ///
+    /// Outputs
+    /// - the product check proof
+    /// - the product polynomial (used for testing)
+    ///
+    /// Cost: O(N)
+    </span><span class="kw">fn </span>prove(
+        pcs_param: <span class="kw-2">&amp;</span>PCS::ProverParam,
+        fx: <span class="kw-2">&amp;</span><span class="self">Self</span>::MultilinearExtension,
+        gx: <span class="kw-2">&amp;</span><span class="self">Self</span>::MultilinearExtension,
+        transcript: <span class="kw-2">&amp;mut </span>IOPTranscript&lt;E::Fr&gt;,
+    ) -&gt; <span class="prelude-ty">Result</span>&lt;(<span class="self">Self</span>::ProductCheckProof, <span class="self">Self</span>::MultilinearExtension), PolyIOPErrors&gt;;
 
-    <span class="doccomment">/// Verify that for witness multilinear polynomials f(x), g(x)</span>
-    <span class="doccomment">/// it holds that `\prod_{x \in {0,1}^n} f(x) = \prod_{x \in {0,1}^n} g(x)`</span>
-    <span class="kw">fn</span> <span class="ident">verify</span>(
-        <span class="ident">proof</span>: <span class="kw-2">&amp;</span><span class="ident"><span class="self">Self</span>::ProductCheckProof</span>,
-        <span class="ident">aux_info</span>: <span class="kw-2">&amp;</span><span class="ident">VPAuxInfo</span><span class="op">&lt;</span><span class="ident">E::Fr</span><span class="op">&gt;</span>,
-        <span class="ident">transcript</span>: <span class="kw-2">&amp;mut</span> <span class="ident"><span class="self">Self</span>::Transcript</span>,
-    ) -&gt; <span class="prelude-ty">Result</span><span class="op">&lt;</span><span class="ident"><span class="self">Self</span>::ProductCheckSubClaim</span>, <span class="ident">PolyIOPErrors</span><span class="op">&gt;</span>;
+    <span class="doccomment">/// Verify that for witness multilinear polynomials f(x), g(x)
+    /// it holds that `\prod_{x \in {0,1}^n} f(x) = \prod_{x \in {0,1}^n} g(x)`
+    </span><span class="kw">fn </span>verify(
+        proof: <span class="kw-2">&amp;</span><span class="self">Self</span>::ProductCheckProof,
+        aux_info: <span class="kw-2">&amp;</span>VPAuxInfo&lt;E::Fr&gt;,
+        transcript: <span class="kw-2">&amp;mut </span><span class="self">Self</span>::Transcript,
+    ) -&gt; <span class="prelude-ty">Result</span>&lt;<span class="self">Self</span>::ProductCheckSubClaim, PolyIOPErrors&gt;;
 }
 
-<span class="doccomment">/// A product check subclaim consists of</span>
-<span class="doccomment">/// - A zero check IOP subclaim for</span>
-<span class="doccomment">/// `Q(x) = prod(1, x) - prod(x, 0) * prod(x, 1) + alpha * (f(x) - prod(0,</span>
-<span class="doccomment">/// x) * g(x)) = 0`</span>
-<span class="doccomment">/// - The random challenge `alpha`</span>
-<span class="doccomment">/// - A final query for `prod(1, ..., 1, 0) = 1`.</span>
-<span class="comment">// Note that this final query is in fact a constant that</span>
-<span class="comment">// is independent from the proof. So we should avoid</span>
-<span class="comment">// (de)serialize it.</span>
-<span class="attribute">#[<span class="ident">derive</span>(<span class="ident">Clone</span>, <span class="ident">Debug</span>, <span class="ident">Default</span>, <span class="ident">PartialEq</span>)]</span>
-<span class="kw">pub</span> <span class="kw">struct</span> <span class="ident">ProductCheckSubClaim</span><span class="op">&lt;</span><span class="ident">F</span>: <span class="ident">PrimeField</span>, <span class="ident">ZC</span>: <span class="ident">ZeroCheck</span><span class="op">&lt;</span><span class="ident">F</span><span class="op">&gt;</span><span class="op">&gt;</span> {
-    <span class="comment">// the SubClaim from the ZeroCheck</span>
-    <span class="kw">pub</span> <span class="ident">zero_check_sub_claim</span>: <span class="ident">ZC::ZeroCheckSubClaim</span>,
-    <span class="comment">// final query which consists of</span>
-    <span class="comment">// - the vector `(1, ..., 1, 0)` (needs to be reversed because Arkwork&#39;s MLE uses big-endian</span>
-    <span class="comment">//   format for points)</span>
-    <span class="comment">// The expected final query evaluation is 1</span>
-    <span class="kw">pub</span> <span class="ident">final_query</span>: (<span class="ident">Vec</span><span class="op">&lt;</span><span class="ident">F</span><span class="op">&gt;</span>, <span class="ident">F</span>),
-    <span class="kw">pub</span> <span class="ident">alpha</span>: <span class="ident">F</span>,
+<span class="doccomment">/// A product check subclaim consists of
+/// - A zero check IOP subclaim for
+/// `Q(x) = prod(1, x) - prod(x, 0) * prod(x, 1) + alpha * (f(x) - prod(0,
+/// x) * g(x)) = 0`
+/// - The random challenge `alpha`
+/// - A final query for `prod(1, ..., 1, 0) = 1`.
+</span><span class="comment">// Note that this final query is in fact a constant that
+// is independent from the proof. So we should avoid
+// (de)serialize it.
+</span><span class="attribute">#[derive(Clone, Debug, Default, PartialEq)]
+</span><span class="kw">pub struct </span>ProductCheckSubClaim&lt;F: PrimeField, ZC: ZeroCheck&lt;F&gt;&gt; {
+    <span class="comment">// the SubClaim from the ZeroCheck
+    </span><span class="kw">pub </span>zero_check_sub_claim: ZC::ZeroCheckSubClaim,
+    <span class="comment">// final query which consists of
+    // - the vector `(1, ..., 1, 0)` (needs to be reversed because Arkwork&#39;s MLE uses big-endian
+    //   format for points)
+    // The expected final query evaluation is 1
+    </span><span class="kw">pub </span>final_query: (Vec&lt;F&gt;, F),
+    <span class="kw">pub </span>alpha: F,
 }
 
-<span class="doccomment">/// A product check proof consists of</span>
-<span class="doccomment">/// - a zerocheck proof</span>
-<span class="doccomment">/// - a product polynomial commitment</span>
-<span class="attribute">#[<span class="ident">derive</span>(<span class="ident">Clone</span>, <span class="ident">Debug</span>, <span class="ident">Default</span>, <span class="ident">PartialEq</span>)]</span>
-<span class="kw">pub</span> <span class="kw">struct</span> <span class="ident">ProductCheckProof</span><span class="op">&lt;</span>
-    <span class="ident">E</span>: <span class="ident">PairingEngine</span>,
-    <span class="ident">PCS</span>: <span class="ident">PolynomialCommitmentScheme</span><span class="op">&lt;</span><span class="ident">E</span><span class="op">&gt;</span>,
-    <span class="ident">ZC</span>: <span class="ident">ZeroCheck</span><span class="op">&lt;</span><span class="ident">E::Fr</span><span class="op">&gt;</span>,
-<span class="op">&gt;</span> {
-    <span class="kw">pub</span> <span class="ident">zero_check_proof</span>: <span class="ident">ZC::ZeroCheckProof</span>,
-    <span class="kw">pub</span> <span class="ident">prod_x_comm</span>: <span class="ident">PCS::Commitment</span>,
+<span class="doccomment">/// A product check proof consists of
+/// - a zerocheck proof
+/// - a product polynomial commitment
+</span><span class="attribute">#[derive(Clone, Debug, Default, PartialEq)]
+</span><span class="kw">pub struct </span>ProductCheckProof&lt;
+    E: PairingEngine,
+    PCS: PolynomialCommitmentScheme&lt;E&gt;,
+    ZC: ZeroCheck&lt;E::Fr&gt;,
+&gt; {
+    <span class="kw">pub </span>zero_check_proof: ZC::ZeroCheckProof,
+    <span class="kw">pub </span>prod_x_comm: PCS::Commitment,
 }
 
-<span class="kw">impl</span><span class="op">&lt;</span><span class="ident">E</span>, <span class="ident">PCS</span><span class="op">&gt;</span> <span class="ident">ProductCheck</span><span class="op">&lt;</span><span class="ident">E</span>, <span class="ident">PCS</span><span class="op">&gt;</span> <span class="kw">for</span> <span class="ident">PolyIOP</span><span class="op">&lt;</span><span class="ident">E::Fr</span><span class="op">&gt;</span>
-<span class="kw">where</span>
-    <span class="ident">E</span>: <span class="ident">PairingEngine</span>,
-    <span class="ident">PCS</span>: <span class="ident">PolynomialCommitmentScheme</span><span class="op">&lt;</span><span class="ident">E</span>, <span class="ident">Polynomial</span> <span class="op">=</span> <span class="ident">Rc</span><span class="op">&lt;</span><span class="ident">DenseMultilinearExtension</span><span class="op">&lt;</span><span class="ident">E::Fr</span><span class="op">&gt;</span><span class="op">&gt;</span><span class="op">&gt;</span>,
+<span class="kw">impl</span>&lt;E, PCS&gt; ProductCheck&lt;E, PCS&gt; <span class="kw">for </span>PolyIOP&lt;E::Fr&gt;
+<span class="kw">where
+    </span>E: PairingEngine,
+    PCS: PolynomialCommitmentScheme&lt;E, Polynomial = Rc&lt;DenseMultilinearExtension&lt;E::Fr&gt;&gt;&gt;,
 {
-    <span class="kw">type</span> <span class="ident">ProductCheckSubClaim</span> <span class="op">=</span> <span class="ident">ProductCheckSubClaim</span><span class="op">&lt;</span><span class="ident">E::Fr</span>, <span class="self">Self</span><span class="op">&gt;</span>;
-    <span class="kw">type</span> <span class="ident">ProductCheckProof</span> <span class="op">=</span> <span class="ident">ProductCheckProof</span><span class="op">&lt;</span><span class="ident">E</span>, <span class="ident">PCS</span>, <span class="self">Self</span><span class="op">&gt;</span>;
+    <span class="kw">type </span>ProductCheckSubClaim = ProductCheckSubClaim&lt;E::Fr, <span class="self">Self</span>&gt;;
+    <span class="kw">type </span>ProductCheckProof = ProductCheckProof&lt;E, PCS, <span class="self">Self</span>&gt;;
 
-    <span class="kw">fn</span> <span class="ident">init_transcript</span>() -&gt; <span class="ident"><span class="self">Self</span>::Transcript</span> {
-        <span class="ident">IOPTranscript</span>::<span class="op">&lt;</span><span class="ident">E::Fr</span><span class="op">&gt;</span><span class="ident">::new</span>(<span class="string">b&quot;Initializing ProductCheck transcript&quot;</span>)
+    <span class="kw">fn </span>init_transcript() -&gt; <span class="self">Self</span>::Transcript {
+        IOPTranscript::&lt;E::Fr&gt;::new(<span class="string">b&quot;Initializing ProductCheck transcript&quot;</span>)
     }
 
-    <span class="kw">fn</span> <span class="ident">prove</span>(
-        <span class="ident">pcs_param</span>: <span class="kw-2">&amp;</span><span class="ident">PCS::ProverParam</span>,
-        <span class="ident">fx</span>: <span class="kw-2">&amp;</span><span class="ident"><span class="self">Self</span>::MultilinearExtension</span>,
-        <span class="ident">gx</span>: <span class="kw-2">&amp;</span><span class="ident"><span class="self">Self</span>::MultilinearExtension</span>,
-        <span class="ident">transcript</span>: <span class="kw-2">&amp;mut</span> <span class="ident">IOPTranscript</span><span class="op">&lt;</span><span class="ident">E::Fr</span><span class="op">&gt;</span>,
-    ) -&gt; <span class="prelude-ty">Result</span><span class="op">&lt;</span>(<span class="ident"><span class="self">Self</span>::ProductCheckProof</span>, <span class="ident"><span class="self">Self</span>::MultilinearExtension</span>), <span class="ident">PolyIOPErrors</span><span class="op">&gt;</span> {
-        <span class="kw">let</span> <span class="ident">start</span> <span class="op">=</span> <span class="macro">start_timer!</span>(<span class="op">|</span><span class="op">|</span> <span class="string">&quot;prod_check prove&quot;</span>);
+    <span class="kw">fn </span>prove(
+        pcs_param: <span class="kw-2">&amp;</span>PCS::ProverParam,
+        fx: <span class="kw-2">&amp;</span><span class="self">Self</span>::MultilinearExtension,
+        gx: <span class="kw-2">&amp;</span><span class="self">Self</span>::MultilinearExtension,
+        transcript: <span class="kw-2">&amp;mut </span>IOPTranscript&lt;E::Fr&gt;,
+    ) -&gt; <span class="prelude-ty">Result</span>&lt;(<span class="self">Self</span>::ProductCheckProof, <span class="self">Self</span>::MultilinearExtension), PolyIOPErrors&gt; {
+        <span class="kw">let </span>start = <span class="macro">start_timer!</span>(|| <span class="string">&quot;prod_check prove&quot;</span>);
 
-        <span class="kw">if</span> <span class="ident">fx</span>.<span class="ident">num_vars</span> <span class="op">!</span><span class="op">=</span> <span class="ident">gx</span>.<span class="ident">num_vars</span> {
-            <span class="kw">return</span> <span class="prelude-val">Err</span>(<span class="ident">PolyIOPErrors::InvalidParameters</span>(
-                <span class="string">&quot;fx and gx have different number of variables&quot;</span>.<span class="ident">to_string</span>(),
+        <span class="kw">if </span>fx.num_vars != gx.num_vars {
+            <span class="kw">return </span><span class="prelude-val">Err</span>(PolyIOPErrors::InvalidParameters(
+                <span class="string">&quot;fx and gx have different number of variables&quot;</span>.to_string(),
             ));
         }
 
-        <span class="comment">// compute the product polynomial</span>
-        <span class="kw">let</span> <span class="ident">prod_x</span> <span class="op">=</span> <span class="ident">compute_product_poly</span>(<span class="ident">fx</span>, <span class="ident">gx</span>)<span class="question-mark">?</span>;
+        <span class="comment">// compute the product polynomial
+        </span><span class="kw">let </span>prod_x = compute_product_poly(fx, gx)<span class="question-mark">?</span>;
 
-        <span class="comment">// generate challenge</span>
-        <span class="kw">let</span> <span class="ident">prod_x_comm</span> <span class="op">=</span> <span class="ident">PCS::commit</span>(<span class="ident">pcs_param</span>, <span class="kw-2">&amp;</span><span class="ident">prod_x</span>)<span class="question-mark">?</span>;
-        <span class="ident">transcript</span>.<span class="ident">append_serializable_element</span>(<span class="string">b&quot;prod(x)&quot;</span>, <span class="kw-2">&amp;</span><span class="ident">prod_x_comm</span>)<span class="question-mark">?</span>;
-        <span class="kw">let</span> <span class="ident">alpha</span> <span class="op">=</span> <span class="ident">transcript</span>.<span class="ident">get_and_append_challenge</span>(<span class="string">b&quot;alpha&quot;</span>)<span class="question-mark">?</span>;
+        <span class="comment">// generate challenge
+        </span><span class="kw">let </span>prod_x_comm = PCS::commit(pcs_param, <span class="kw-2">&amp;</span>prod_x)<span class="question-mark">?</span>;
+        transcript.append_serializable_element(<span class="string">b&quot;prod(x)&quot;</span>, <span class="kw-2">&amp;</span>prod_x_comm)<span class="question-mark">?</span>;
+        <span class="kw">let </span>alpha = transcript.get_and_append_challenge(<span class="string">b&quot;alpha&quot;</span>)<span class="question-mark">?</span>;
 
-        <span class="comment">// build the zero-check proof</span>
-        <span class="kw">let</span> (<span class="ident">zero_check_proof</span>, <span class="kw">_</span>) <span class="op">=</span> <span class="ident">prove_zero_check</span>(<span class="ident">fx</span>, <span class="ident">gx</span>, <span class="kw-2">&amp;</span><span class="ident">prod_x</span>, <span class="kw-2">&amp;</span><span class="ident">alpha</span>, <span class="ident">transcript</span>)<span class="question-mark">?</span>;
+        <span class="comment">// build the zero-check proof
+        </span><span class="kw">let </span>(zero_check_proof, <span class="kw">_</span>) = prove_zero_check(fx, gx, <span class="kw-2">&amp;</span>prod_x, <span class="kw-2">&amp;</span>alpha, transcript)<span class="question-mark">?</span>;
 
-        <span class="macro">end_timer!</span>(<span class="ident">start</span>);
+        <span class="macro">end_timer!</span>(start);
 
         <span class="prelude-val">Ok</span>((
-            <span class="ident">ProductCheckProof</span> {
-                <span class="ident">zero_check_proof</span>,
-                <span class="ident">prod_x_comm</span>,
+            ProductCheckProof {
+                zero_check_proof,
+                prod_x_comm,
             },
-            <span class="ident">prod_x</span>,
+            prod_x,
         ))
     }
 
-    <span class="kw">fn</span> <span class="ident">verify</span>(
-        <span class="ident">proof</span>: <span class="kw-2">&amp;</span><span class="ident"><span class="self">Self</span>::ProductCheckProof</span>,
-        <span class="ident">aux_info</span>: <span class="kw-2">&amp;</span><span class="ident">VPAuxInfo</span><span class="op">&lt;</span><span class="ident">E::Fr</span><span class="op">&gt;</span>,
-        <span class="ident">transcript</span>: <span class="kw-2">&amp;mut</span> <span class="ident"><span class="self">Self</span>::Transcript</span>,
-    ) -&gt; <span class="prelude-ty">Result</span><span class="op">&lt;</span><span class="ident"><span class="self">Self</span>::ProductCheckSubClaim</span>, <span class="ident">PolyIOPErrors</span><span class="op">&gt;</span> {
-        <span class="kw">let</span> <span class="ident">start</span> <span class="op">=</span> <span class="macro">start_timer!</span>(<span class="op">|</span><span class="op">|</span> <span class="string">&quot;prod_check verify&quot;</span>);
+    <span class="kw">fn </span>verify(
+        proof: <span class="kw-2">&amp;</span><span class="self">Self</span>::ProductCheckProof,
+        aux_info: <span class="kw-2">&amp;</span>VPAuxInfo&lt;E::Fr&gt;,
+        transcript: <span class="kw-2">&amp;mut </span><span class="self">Self</span>::Transcript,
+    ) -&gt; <span class="prelude-ty">Result</span>&lt;<span class="self">Self</span>::ProductCheckSubClaim, PolyIOPErrors&gt; {
+        <span class="kw">let </span>start = <span class="macro">start_timer!</span>(|| <span class="string">&quot;prod_check verify&quot;</span>);
 
-        <span class="comment">// update transcript and generate challenge</span>
-        <span class="ident">transcript</span>.<span class="ident">append_serializable_element</span>(<span class="string">b&quot;prod(x)&quot;</span>, <span class="kw-2">&amp;</span><span class="ident">proof</span>.<span class="ident">prod_x_comm</span>)<span class="question-mark">?</span>;
-        <span class="kw">let</span> <span class="ident">alpha</span> <span class="op">=</span> <span class="ident">transcript</span>.<span class="ident">get_and_append_challenge</span>(<span class="string">b&quot;alpha&quot;</span>)<span class="question-mark">?</span>;
+        <span class="comment">// update transcript and generate challenge
+        </span>transcript.append_serializable_element(<span class="string">b&quot;prod(x)&quot;</span>, <span class="kw-2">&amp;</span>proof.prod_x_comm)<span class="question-mark">?</span>;
+        <span class="kw">let </span>alpha = transcript.get_and_append_challenge(<span class="string">b&quot;alpha&quot;</span>)<span class="question-mark">?</span>;
 
-        <span class="comment">// invoke the zero check on the iop_proof</span>
-        <span class="comment">// the virtual poly info for Q(x)</span>
-        <span class="kw">let</span> <span class="ident">zero_check_sub_claim</span> <span class="op">=</span>
-            <span class="op">&lt;</span><span class="self">Self</span> <span class="kw">as</span> <span class="ident">ZeroCheck</span><span class="op">&lt;</span><span class="ident">E::Fr</span><span class="op">&gt;</span><span class="op">&gt;</span><span class="ident">::verify</span>(<span class="kw-2">&amp;</span><span class="ident">proof</span>.<span class="ident">zero_check_proof</span>, <span class="ident">aux_info</span>, <span class="ident">transcript</span>)<span class="question-mark">?</span>;
+        <span class="comment">// invoke the zero check on the iop_proof
+        // the virtual poly info for Q(x)
+        </span><span class="kw">let </span>zero_check_sub_claim =
+            &lt;<span class="self">Self </span><span class="kw">as </span>ZeroCheck&lt;E::Fr&gt;&gt;::verify(<span class="kw-2">&amp;</span>proof.zero_check_proof, aux_info, transcript)<span class="question-mark">?</span>;
 
-        <span class="comment">// the final query is on prod_x, hence has length `num_vars` + 1</span>
-        <span class="kw">let</span> <span class="kw-2">mut</span> <span class="ident">final_query</span> <span class="op">=</span> <span class="macro">vec!</span>[<span class="ident">E::Fr::one</span>(); <span class="ident">aux_info</span>.<span class="ident">num_variables</span> <span class="op">+</span> <span class="number">1</span>];
-        <span class="comment">// the point has to be reversed because Arkworks uses big-endian.</span>
-        <span class="ident">final_query</span>[<span class="number">0</span>] <span class="op">=</span> <span class="ident">E::Fr::zero</span>();
-        <span class="kw">let</span> <span class="ident">final_eval</span> <span class="op">=</span> <span class="ident">E::Fr::one</span>();
+        <span class="comment">// the final query is on prod_x, hence has length `num_vars` + 1
+        </span><span class="kw">let </span><span class="kw-2">mut </span>final_query = <span class="macro">vec!</span>[E::Fr::one(); aux_info.num_variables + <span class="number">1</span>];
+        <span class="comment">// the point has to be reversed because Arkworks uses big-endian.
+        </span>final_query[<span class="number">0</span>] = E::Fr::zero();
+        <span class="kw">let </span>final_eval = E::Fr::one();
 
-        <span class="macro">end_timer!</span>(<span class="ident">start</span>);
+        <span class="macro">end_timer!</span>(start);
 
-        <span class="prelude-val">Ok</span>(<span class="ident">ProductCheckSubClaim</span> {
-            <span class="ident">zero_check_sub_claim</span>,
-            <span class="ident">final_query</span>: (<span class="ident">final_query</span>, <span class="ident">final_eval</span>),
-            <span class="ident">alpha</span>,
+        <span class="prelude-val">Ok</span>(ProductCheckSubClaim {
+            zero_check_sub_claim,
+            final_query: (final_query, final_eval),
+            alpha,
         })
     }
 }
 
-<span class="attribute">#[<span class="ident">cfg</span>(<span class="ident">test</span>)]</span>
-<span class="kw">mod</span> <span class="ident">test</span> {
-    <span class="kw">use</span> <span class="ident"><span class="kw">super</span>::ProductCheck</span>;
-    <span class="kw">use</span> <span class="kw">crate</span>::{
-        <span class="ident">pcs</span>::{<span class="ident">prelude::MultilinearKzgPCS</span>, <span class="ident">PolynomialCommitmentScheme</span>},
-        <span class="ident">poly_iop</span>::{<span class="ident">errors::PolyIOPErrors</span>, <span class="ident">PolyIOP</span>},
+<span class="attribute">#[cfg(test)]
+</span><span class="kw">mod </span>test {
+    <span class="kw">use </span><span class="kw">super</span>::ProductCheck;
+    <span class="kw">use crate</span>::{
+        pcs::{prelude::MultilinearKzgPCS, PolynomialCommitmentScheme},
+        poly_iop::{errors::PolyIOPErrors, PolyIOP},
     };
-    <span class="kw">use</span> <span class="ident">arithmetic::VPAuxInfo</span>;
-    <span class="kw">use</span> <span class="ident">ark_bls12_381</span>::{<span class="ident">Bls12_381</span>, <span class="ident">Fr</span>};
-    <span class="kw">use</span> <span class="ident">ark_ec::PairingEngine</span>;
-    <span class="kw">use</span> <span class="ident">ark_poly</span>::{<span class="ident">DenseMultilinearExtension</span>, <span class="ident">MultilinearExtension</span>};
-    <span class="kw">use</span> <span class="ident">ark_std::test_rng</span>;
-    <span class="kw">use</span> <span class="ident">std</span>::{<span class="ident">marker::PhantomData</span>, <span class="ident">rc::Rc</span>};
+    <span class="kw">use </span>arithmetic::VPAuxInfo;
+    <span class="kw">use </span>ark_bls12_381::{Bls12_381, Fr};
+    <span class="kw">use </span>ark_ec::PairingEngine;
+    <span class="kw">use </span>ark_poly::{DenseMultilinearExtension, MultilinearExtension};
+    <span class="kw">use </span>ark_std::test_rng;
+    <span class="kw">use </span>std::{marker::PhantomData, rc::Rc};
 
-    <span class="comment">// f and g are guaranteed to have the same product</span>
-    <span class="kw">fn</span> <span class="ident">test_product_check_helper</span><span class="op">&lt;</span><span class="ident">E</span>, <span class="ident">PCS</span><span class="op">&gt;</span>(
-        <span class="ident">f</span>: <span class="kw-2">&amp;</span><span class="ident">DenseMultilinearExtension</span><span class="op">&lt;</span><span class="ident">E::Fr</span><span class="op">&gt;</span>,
-        <span class="ident">g</span>: <span class="kw-2">&amp;</span><span class="ident">DenseMultilinearExtension</span><span class="op">&lt;</span><span class="ident">E::Fr</span><span class="op">&gt;</span>,
-        <span class="ident">pcs_param</span>: <span class="kw-2">&amp;</span><span class="ident">PCS::ProverParam</span>,
-    ) -&gt; <span class="prelude-ty">Result</span><span class="op">&lt;</span>(), <span class="ident">PolyIOPErrors</span><span class="op">&gt;</span>
-    <span class="kw">where</span>
-        <span class="ident">E</span>: <span class="ident">PairingEngine</span>,
-        <span class="ident">PCS</span>: <span class="ident">PolynomialCommitmentScheme</span><span class="op">&lt;</span><span class="ident">E</span>, <span class="ident">Polynomial</span> <span class="op">=</span> <span class="ident">Rc</span><span class="op">&lt;</span><span class="ident">DenseMultilinearExtension</span><span class="op">&lt;</span><span class="ident">E::Fr</span><span class="op">&gt;</span><span class="op">&gt;</span><span class="op">&gt;</span>,
+    <span class="comment">// f and g are guaranteed to have the same product
+    </span><span class="kw">fn </span>test_product_check_helper&lt;E, PCS&gt;(
+        f: <span class="kw-2">&amp;</span>DenseMultilinearExtension&lt;E::Fr&gt;,
+        g: <span class="kw-2">&amp;</span>DenseMultilinearExtension&lt;E::Fr&gt;,
+        pcs_param: <span class="kw-2">&amp;</span>PCS::ProverParam,
+    ) -&gt; <span class="prelude-ty">Result</span>&lt;(), PolyIOPErrors&gt;
+    <span class="kw">where
+        </span>E: PairingEngine,
+        PCS: PolynomialCommitmentScheme&lt;E, Polynomial = Rc&lt;DenseMultilinearExtension&lt;E::Fr&gt;&gt;&gt;,
     {
-        <span class="kw">let</span> <span class="kw-2">mut</span> <span class="ident">transcript</span> <span class="op">=</span> <span class="op">&lt;</span><span class="ident">PolyIOP</span><span class="op">&lt;</span><span class="ident">E::Fr</span><span class="op">&gt;</span> <span class="kw">as</span> <span class="ident">ProductCheck</span><span class="op">&lt;</span><span class="ident">E</span>, <span class="ident">PCS</span><span class="op">&gt;</span><span class="op">&gt;</span><span class="ident">::init_transcript</span>();
-        <span class="ident">transcript</span>.<span class="ident">append_message</span>(<span class="string">b&quot;testing&quot;</span>, <span class="string">b&quot;initializing transcript for testing&quot;</span>)<span class="question-mark">?</span>;
+        <span class="kw">let </span><span class="kw-2">mut </span>transcript = &lt;PolyIOP&lt;E::Fr&gt; <span class="kw">as </span>ProductCheck&lt;E, PCS&gt;&gt;::init_transcript();
+        transcript.append_message(<span class="string">b&quot;testing&quot;</span>, <span class="string">b&quot;initializing transcript for testing&quot;</span>)<span class="question-mark">?</span>;
 
-        <span class="kw">let</span> (<span class="ident">proof</span>, <span class="ident">prod_x</span>) <span class="op">=</span> <span class="op">&lt;</span><span class="ident">PolyIOP</span><span class="op">&lt;</span><span class="ident">E::Fr</span><span class="op">&gt;</span> <span class="kw">as</span> <span class="ident">ProductCheck</span><span class="op">&lt;</span><span class="ident">E</span>, <span class="ident">PCS</span><span class="op">&gt;</span><span class="op">&gt;</span><span class="ident">::prove</span>(
-            <span class="ident">pcs_param</span>,
-            <span class="kw-2">&amp;</span><span class="ident">Rc::new</span>(<span class="ident">f</span>.<span class="ident">clone</span>()),
-            <span class="kw-2">&amp;</span><span class="ident">Rc::new</span>(<span class="ident">g</span>.<span class="ident">clone</span>()),
-            <span class="kw-2">&amp;mut</span> <span class="ident">transcript</span>,
+        <span class="kw">let </span>(proof, prod_x) = &lt;PolyIOP&lt;E::Fr&gt; <span class="kw">as </span>ProductCheck&lt;E, PCS&gt;&gt;::prove(
+            pcs_param,
+            <span class="kw-2">&amp;</span>Rc::new(f.clone()),
+            <span class="kw-2">&amp;</span>Rc::new(g.clone()),
+            <span class="kw-2">&amp;mut </span>transcript,
         )<span class="question-mark">?</span>;
 
-        <span class="kw">let</span> <span class="kw-2">mut</span> <span class="ident">transcript</span> <span class="op">=</span> <span class="op">&lt;</span><span class="ident">PolyIOP</span><span class="op">&lt;</span><span class="ident">E::Fr</span><span class="op">&gt;</span> <span class="kw">as</span> <span class="ident">ProductCheck</span><span class="op">&lt;</span><span class="ident">E</span>, <span class="ident">PCS</span><span class="op">&gt;</span><span class="op">&gt;</span><span class="ident">::init_transcript</span>();
-        <span class="ident">transcript</span>.<span class="ident">append_message</span>(<span class="string">b&quot;testing&quot;</span>, <span class="string">b&quot;initializing transcript for testing&quot;</span>)<span class="question-mark">?</span>;
+        <span class="kw">let </span><span class="kw-2">mut </span>transcript = &lt;PolyIOP&lt;E::Fr&gt; <span class="kw">as </span>ProductCheck&lt;E, PCS&gt;&gt;::init_transcript();
+        transcript.append_message(<span class="string">b&quot;testing&quot;</span>, <span class="string">b&quot;initializing transcript for testing&quot;</span>)<span class="question-mark">?</span>;
 
-        <span class="kw">let</span> <span class="ident">aux_info</span> <span class="op">=</span> <span class="ident">VPAuxInfo</span> {
-            <span class="ident">max_degree</span>: <span class="number">2</span>,
-            <span class="ident">num_variables</span>: <span class="ident">f</span>.<span class="ident">num_vars</span>,
-            <span class="ident">phantom</span>: <span class="ident">PhantomData::default</span>(),
+        <span class="kw">let </span>aux_info = VPAuxInfo {
+            max_degree: <span class="number">2</span>,
+            num_variables: f.num_vars,
+            phantom: PhantomData::default(),
         };
-        <span class="kw">let</span> <span class="ident">prod_subclaim</span> <span class="op">=</span>
-            <span class="op">&lt;</span><span class="ident">PolyIOP</span><span class="op">&lt;</span><span class="ident">E::Fr</span><span class="op">&gt;</span> <span class="kw">as</span> <span class="ident">ProductCheck</span><span class="op">&lt;</span><span class="ident">E</span>, <span class="ident">PCS</span><span class="op">&gt;</span><span class="op">&gt;</span><span class="ident">::verify</span>(<span class="kw-2">&amp;</span><span class="ident">proof</span>, <span class="kw-2">&amp;</span><span class="ident">aux_info</span>, <span class="kw-2">&amp;mut</span> <span class="ident">transcript</span>)<span class="question-mark">?</span>;
+        <span class="kw">let </span>prod_subclaim =
+            &lt;PolyIOP&lt;E::Fr&gt; <span class="kw">as </span>ProductCheck&lt;E, PCS&gt;&gt;::verify(<span class="kw-2">&amp;</span>proof, <span class="kw-2">&amp;</span>aux_info, <span class="kw-2">&amp;mut </span>transcript)<span class="question-mark">?</span>;
         <span class="macro">assert_eq!</span>(
-            <span class="ident">prod_x</span>.<span class="ident">evaluate</span>(<span class="kw-2">&amp;</span><span class="ident">prod_subclaim</span>.<span class="ident">final_query</span>.<span class="number">0</span>).<span class="ident">unwrap</span>(),
-            <span class="ident">prod_subclaim</span>.<span class="ident">final_query</span>.<span class="number">1</span>,
-            <span class="string">&quot;different product&quot;</span>
-        );
+            prod_x.evaluate(<span class="kw-2">&amp;</span>prod_subclaim.final_query.<span class="number">0</span>).unwrap(),
+            prod_subclaim.final_query.<span class="number">1</span>,
+            <span class="string">&quot;different product&quot;
+        </span>);
 
-        <span class="comment">// bad path</span>
-        <span class="kw">let</span> <span class="kw-2">mut</span> <span class="ident">transcript</span> <span class="op">=</span> <span class="op">&lt;</span><span class="ident">PolyIOP</span><span class="op">&lt;</span><span class="ident">E::Fr</span><span class="op">&gt;</span> <span class="kw">as</span> <span class="ident">ProductCheck</span><span class="op">&lt;</span><span class="ident">E</span>, <span class="ident">PCS</span><span class="op">&gt;</span><span class="op">&gt;</span><span class="ident">::init_transcript</span>();
-        <span class="ident">transcript</span>.<span class="ident">append_message</span>(<span class="string">b&quot;testing&quot;</span>, <span class="string">b&quot;initializing transcript for testing&quot;</span>)<span class="question-mark">?</span>;
+        <span class="comment">// bad path
+        </span><span class="kw">let </span><span class="kw-2">mut </span>transcript = &lt;PolyIOP&lt;E::Fr&gt; <span class="kw">as </span>ProductCheck&lt;E, PCS&gt;&gt;::init_transcript();
+        transcript.append_message(<span class="string">b&quot;testing&quot;</span>, <span class="string">b&quot;initializing transcript for testing&quot;</span>)<span class="question-mark">?</span>;
 
-        <span class="kw">let</span> <span class="ident">h</span> <span class="op">=</span> <span class="ident">f</span> <span class="op">+</span> <span class="ident">g</span>;
-        <span class="kw">let</span> (<span class="ident">bad_proof</span>, <span class="ident">prod_x_bad</span>) <span class="op">=</span> <span class="op">&lt;</span><span class="ident">PolyIOP</span><span class="op">&lt;</span><span class="ident">E::Fr</span><span class="op">&gt;</span> <span class="kw">as</span> <span class="ident">ProductCheck</span><span class="op">&lt;</span><span class="ident">E</span>, <span class="ident">PCS</span><span class="op">&gt;</span><span class="op">&gt;</span><span class="ident">::prove</span>(
-            <span class="ident">pcs_param</span>,
-            <span class="kw-2">&amp;</span><span class="ident">Rc::new</span>(<span class="ident">f</span>.<span class="ident">clone</span>()),
-            <span class="kw-2">&amp;</span><span class="ident">Rc::new</span>(<span class="ident">h</span>),
-            <span class="kw-2">&amp;mut</span> <span class="ident">transcript</span>,
+        <span class="kw">let </span>h = f + g;
+        <span class="kw">let </span>(bad_proof, prod_x_bad) = &lt;PolyIOP&lt;E::Fr&gt; <span class="kw">as </span>ProductCheck&lt;E, PCS&gt;&gt;::prove(
+            pcs_param,
+            <span class="kw-2">&amp;</span>Rc::new(f.clone()),
+            <span class="kw-2">&amp;</span>Rc::new(h),
+            <span class="kw-2">&amp;mut </span>transcript,
         )<span class="question-mark">?</span>;
 
-        <span class="kw">let</span> <span class="kw-2">mut</span> <span class="ident">transcript</span> <span class="op">=</span> <span class="op">&lt;</span><span class="ident">PolyIOP</span><span class="op">&lt;</span><span class="ident">E::Fr</span><span class="op">&gt;</span> <span class="kw">as</span> <span class="ident">ProductCheck</span><span class="op">&lt;</span><span class="ident">E</span>, <span class="ident">PCS</span><span class="op">&gt;</span><span class="op">&gt;</span><span class="ident">::init_transcript</span>();
-        <span class="ident">transcript</span>.<span class="ident">append_message</span>(<span class="string">b&quot;testing&quot;</span>, <span class="string">b&quot;initializing transcript for testing&quot;</span>)<span class="question-mark">?</span>;
-        <span class="kw">let</span> <span class="ident">bad_subclaim</span> <span class="op">=</span> <span class="op">&lt;</span><span class="ident">PolyIOP</span><span class="op">&lt;</span><span class="ident">E::Fr</span><span class="op">&gt;</span> <span class="kw">as</span> <span class="ident">ProductCheck</span><span class="op">&lt;</span><span class="ident">E</span>, <span class="ident">PCS</span><span class="op">&gt;</span><span class="op">&gt;</span><span class="ident">::verify</span>(
-            <span class="kw-2">&amp;</span><span class="ident">bad_proof</span>,
-            <span class="kw-2">&amp;</span><span class="ident">aux_info</span>,
-            <span class="kw-2">&amp;mut</span> <span class="ident">transcript</span>,
+        <span class="kw">let </span><span class="kw-2">mut </span>transcript = &lt;PolyIOP&lt;E::Fr&gt; <span class="kw">as </span>ProductCheck&lt;E, PCS&gt;&gt;::init_transcript();
+        transcript.append_message(<span class="string">b&quot;testing&quot;</span>, <span class="string">b&quot;initializing transcript for testing&quot;</span>)<span class="question-mark">?</span>;
+        <span class="kw">let </span>bad_subclaim = &lt;PolyIOP&lt;E::Fr&gt; <span class="kw">as </span>ProductCheck&lt;E, PCS&gt;&gt;::verify(
+            <span class="kw-2">&amp;</span>bad_proof,
+            <span class="kw-2">&amp;</span>aux_info,
+            <span class="kw-2">&amp;mut </span>transcript,
         )<span class="question-mark">?</span>;
         <span class="macro">assert_ne!</span>(
-            <span class="ident">prod_x_bad</span>.<span class="ident">evaluate</span>(<span class="kw-2">&amp;</span><span class="ident">bad_subclaim</span>.<span class="ident">final_query</span>.<span class="number">0</span>).<span class="ident">unwrap</span>(),
-            <span class="ident">bad_subclaim</span>.<span class="ident">final_query</span>.<span class="number">1</span>,
-            <span class="string">&quot;can&#39;t detect wrong proof&quot;</span>
-        );
+            prod_x_bad.evaluate(<span class="kw-2">&amp;</span>bad_subclaim.final_query.<span class="number">0</span>).unwrap(),
+            bad_subclaim.final_query.<span class="number">1</span>,
+            <span class="string">&quot;can&#39;t detect wrong proof&quot;
+        </span>);
 
         <span class="prelude-val">Ok</span>(())
     }
 
-    <span class="kw">fn</span> <span class="ident">test_product_check</span>(<span class="ident">nv</span>: <span class="ident">usize</span>) -&gt; <span class="prelude-ty">Result</span><span class="op">&lt;</span>(), <span class="ident">PolyIOPErrors</span><span class="op">&gt;</span> {
-        <span class="kw">let</span> <span class="kw-2">mut</span> <span class="ident">rng</span> <span class="op">=</span> <span class="ident">test_rng</span>();
+    <span class="kw">fn </span>test_product_check(nv: usize) -&gt; <span class="prelude-ty">Result</span>&lt;(), PolyIOPErrors&gt; {
+        <span class="kw">let </span><span class="kw-2">mut </span>rng = test_rng();
 
-        <span class="kw">let</span> <span class="ident">f</span>: <span class="ident">DenseMultilinearExtension</span><span class="op">&lt;</span><span class="ident">Fr</span><span class="op">&gt;</span> <span class="op">=</span> <span class="ident">DenseMultilinearExtension::rand</span>(<span class="ident">nv</span>, <span class="kw-2">&amp;mut</span> <span class="ident">rng</span>);
-        <span class="kw">let</span> <span class="kw-2">mut</span> <span class="ident">g</span> <span class="op">=</span> <span class="ident">f</span>.<span class="ident">clone</span>();
-        <span class="ident">g</span>.<span class="ident">evaluations</span>.<span class="ident">reverse</span>();
+        <span class="kw">let </span>f: DenseMultilinearExtension&lt;Fr&gt; = DenseMultilinearExtension::rand(nv, <span class="kw-2">&amp;mut </span>rng);
+        <span class="kw">let </span><span class="kw-2">mut </span>g = f.clone();
+        g.evaluations.reverse();
 
-        <span class="kw">let</span> <span class="ident">srs</span> <span class="op">=</span> <span class="ident">MultilinearKzgPCS</span>::<span class="op">&lt;</span><span class="ident">Bls12_381</span><span class="op">&gt;</span><span class="ident">::gen_srs_for_testing</span>(<span class="kw-2">&amp;mut</span> <span class="ident">rng</span>, <span class="ident">nv</span> <span class="op">+</span> <span class="number">1</span>)<span class="question-mark">?</span>;
-        <span class="kw">let</span> (<span class="ident">pcs_param</span>, <span class="kw">_</span>) <span class="op">=</span> <span class="ident">MultilinearKzgPCS</span>::<span class="op">&lt;</span><span class="ident">Bls12_381</span><span class="op">&gt;</span><span class="ident">::trim</span>(<span class="kw-2">&amp;</span><span class="ident">srs</span>, <span class="prelude-val">None</span>, <span class="prelude-val">Some</span>(<span class="ident">nv</span> <span class="op">+</span> <span class="number">1</span>))<span class="question-mark">?</span>;
+        <span class="kw">let </span>srs = MultilinearKzgPCS::&lt;Bls12_381&gt;::gen_srs_for_testing(<span class="kw-2">&amp;mut </span>rng, nv + <span class="number">1</span>)<span class="question-mark">?</span>;
+        <span class="kw">let </span>(pcs_param, <span class="kw">_</span>) = MultilinearKzgPCS::&lt;Bls12_381&gt;::trim(<span class="kw-2">&amp;</span>srs, <span class="prelude-val">None</span>, <span class="prelude-val">Some</span>(nv + <span class="number">1</span>))<span class="question-mark">?</span>;
 
-        <span class="ident">test_product_check_helper</span>::<span class="op">&lt;</span><span class="ident">Bls12_381</span>, <span class="ident">MultilinearKzgPCS</span><span class="op">&lt;</span><span class="ident">Bls12_381</span><span class="op">&gt;</span><span class="op">&gt;</span>(<span class="kw-2">&amp;</span><span class="ident">f</span>, <span class="kw-2">&amp;</span><span class="ident">g</span>, <span class="kw-2">&amp;</span><span class="ident">pcs_param</span>)<span class="question-mark">?</span>;
+        test_product_check_helper::&lt;Bls12_381, MultilinearKzgPCS&lt;Bls12_381&gt;&gt;(<span class="kw-2">&amp;</span>f, <span class="kw-2">&amp;</span>g, <span class="kw-2">&amp;</span>pcs_param)<span class="question-mark">?</span>;
 
         <span class="prelude-val">Ok</span>(())
     }
 
-    <span class="attribute">#[<span class="ident">test</span>]</span>
-    <span class="kw">fn</span> <span class="ident">test_trivial_polynomial</span>() -&gt; <span class="prelude-ty">Result</span><span class="op">&lt;</span>(), <span class="ident">PolyIOPErrors</span><span class="op">&gt;</span> {
-        <span class="ident">test_product_check</span>(<span class="number">1</span>)
+    <span class="attribute">#[test]
+    </span><span class="kw">fn </span>test_trivial_polynomial() -&gt; <span class="prelude-ty">Result</span>&lt;(), PolyIOPErrors&gt; {
+        test_product_check(<span class="number">1</span>)
     }
-    <span class="attribute">#[<span class="ident">test</span>]</span>
-    <span class="kw">fn</span> <span class="ident">test_normal_polynomial</span>() -&gt; <span class="prelude-ty">Result</span><span class="op">&lt;</span>(), <span class="ident">PolyIOPErrors</span><span class="op">&gt;</span> {
-        <span class="ident">test_product_check</span>(<span class="number">10</span>)
+    <span class="attribute">#[test]
+    </span><span class="kw">fn </span>test_normal_polynomial() -&gt; <span class="prelude-ty">Result</span>&lt;(), PolyIOPErrors&gt; {
+        test_product_check(<span class="number">10</span>)
     }
 }
 </code></pre></div>
-</section></div></main><div id="rustdoc-vars" data-root-path="../../../../" data-current-crate="subroutines" data-themes="ayu,dark,light" data-resource-suffix="" data-rustdoc-version="1.64.0 (a55dd71d5 2022-09-19)" ></div></body></html>
+</section></div></main><div id="rustdoc-vars" data-root-path="../../../../" data-current-crate="subroutines" data-themes="ayu,dark,light" data-resource-suffix="" data-rustdoc-version="1.65.0 (897e37553 2022-11-02)" ></div></body></html>

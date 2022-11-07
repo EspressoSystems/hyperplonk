@@ -1,4 +1,4 @@
-<!DOCTYPE html><html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1.0"><meta name="generator" content="rustdoc"><meta name="description" content="Source of the Rust file `hyperplonk/src/witness.rs`."><meta name="keywords" content="rust, rustlang, rust-lang"><title>witness.rs - source</title><link rel="preload" as="font" type="font/woff2" crossorigin href="../../SourceSerif4-Regular.ttf.woff2"><link rel="preload" as="font" type="font/woff2" crossorigin href="../../FiraSans-Regular.woff2"><link rel="preload" as="font" type="font/woff2" crossorigin href="../../FiraSans-Medium.woff2"><link rel="preload" as="font" type="font/woff2" crossorigin href="../../SourceCodePro-Regular.ttf.woff2"><link rel="preload" as="font" type="font/woff2" crossorigin href="../../SourceSerif4-Bold.ttf.woff2"><link rel="preload" as="font" type="font/woff2" crossorigin href="../../SourceCodePro-Semibold.ttf.woff2"><link rel="stylesheet" type="text/css" href="../../normalize.css"><link rel="stylesheet" type="text/css" href="../../rustdoc.css" id="mainThemeStyle"><link rel="stylesheet" type="text/css" href="../../ayu.css" disabled><link rel="stylesheet" type="text/css" href="../../dark.css" disabled><link rel="stylesheet" type="text/css" href="../../light.css" id="themeStyle"><script id="default-settings" ></script><script src="../../storage.js"></script><script defer src="../../source-script.js"></script><script defer src="../../source-files.js"></script><script defer src="../../main.js"></script><noscript><link rel="stylesheet" href="../../noscript.css"></noscript><link rel="alternate icon" type="image/png" href="../../favicon-16x16.png"><link rel="alternate icon" type="image/png" href="../../favicon-32x32.png"><link rel="icon" type="image/svg+xml" href="../../favicon.svg"></head><body class="rustdoc source"><!--[if lte IE 11]><div class="warning">This old browser is unsupported and will most likely display funky things.</div><![endif]--><nav class="mobile-topbar"><button class="sidebar-menu-toggle">&#9776;</button><a class="sidebar-logo" href="../../hyperplonk/index.html"><div class="logo-container"><img class="rust-logo" src="../../rust-logo.svg" alt="logo"></div></a><h2 class="location"></h2></nav><nav class="sidebar"><a class="sidebar-logo" href="../../hyperplonk/index.html"><div class="logo-container"><img class="rust-logo" src="../../rust-logo.svg" alt="logo"></div></a></nav><main><div class="width-limiter"><div class="sub-container"><a class="sub-logo-container" href="../../hyperplonk/index.html"><img class="rust-logo" src="../../rust-logo.svg" alt="logo"></a><nav class="sub"><form class="search-form"><div class="search-container"><span></span><input class="search-input" name="search" autocomplete="off" spellcheck="false" placeholder="Click or press ‘S’ to search, ‘?’ for more options…" type="search"><div id="help-button" title="help" tabindex="-1"><button type="button">?</button></div><div id="settings-menu" tabindex="-1"><a href="../../settings.html" title="settings"><img width="22" height="22" alt="Change settings" src="../../wheel.svg"></a></div></div></form></nav></div><section id="main-content" class="content"><div class="example-wrap"><pre class="line-numbers"><span id="1">1</span>
+<!DOCTYPE html><html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1.0"><meta name="generator" content="rustdoc"><meta name="description" content="Source of the Rust file `hyperplonk/src/witness.rs`."><meta name="keywords" content="rust, rustlang, rust-lang"><title>witness.rs - source</title><link rel="preload" as="font" type="font/woff2" crossorigin href="../../SourceSerif4-Regular.ttf.woff2"><link rel="preload" as="font" type="font/woff2" crossorigin href="../../FiraSans-Regular.woff2"><link rel="preload" as="font" type="font/woff2" crossorigin href="../../FiraSans-Medium.woff2"><link rel="preload" as="font" type="font/woff2" crossorigin href="../../SourceCodePro-Regular.ttf.woff2"><link rel="preload" as="font" type="font/woff2" crossorigin href="../../SourceSerif4-Bold.ttf.woff2"><link rel="preload" as="font" type="font/woff2" crossorigin href="../../SourceCodePro-Semibold.ttf.woff2"><link rel="stylesheet" href="../../normalize.css"><link rel="stylesheet" href="../../rustdoc.css" id="mainThemeStyle"><link rel="stylesheet" href="../../ayu.css" disabled><link rel="stylesheet" href="../../dark.css" disabled><link rel="stylesheet" href="../../light.css" id="themeStyle"><script id="default-settings" ></script><script src="../../storage.js"></script><script defer src="../../source-script.js"></script><script defer src="../../source-files.js"></script><script defer src="../../main.js"></script><noscript><link rel="stylesheet" href="../../noscript.css"></noscript><link rel="alternate icon" type="image/png" href="../../favicon-16x16.png"><link rel="alternate icon" type="image/png" href="../../favicon-32x32.png"><link rel="icon" type="image/svg+xml" href="../../favicon.svg"></head><body class="rustdoc source"><!--[if lte IE 11]><div class="warning">This old browser is unsupported and will most likely display funky things.</div><![endif]--><nav class="mobile-topbar"><button class="sidebar-menu-toggle">&#9776;</button><a class="sidebar-logo" href="../../hyperplonk/index.html"><div class="logo-container"><img class="rust-logo" src="../../rust-logo.svg" alt="logo"></div></a><h2 class="location"></h2></nav><nav class="sidebar"><a class="sidebar-logo" href="../../hyperplonk/index.html"><div class="logo-container"><img class="rust-logo" src="../../rust-logo.svg" alt="logo"></div></a></nav><main><div class="width-limiter"><div class="sub-container"><a class="sub-logo-container" href="../../hyperplonk/index.html"><img class="rust-logo" src="../../rust-logo.svg" alt="logo"></a><nav class="sub"><form class="search-form"><div class="search-container"><span></span><input class="search-input" name="search" autocomplete="off" spellcheck="false" placeholder="Click or press ‘S’ to search, ‘?’ for more options…" type="search"><div id="help-button" title="help" tabindex="-1"><button type="button">?</button></div><div id="settings-menu" tabindex="-1"><a href="../../settings.html" title="settings"><img width="22" height="22" alt="Change settings" src="../../wheel.svg"></a></div></div></form></nav></div><section id="main-content" class="content"><div class="example-wrap"><pre class="line-numbers"><span id="1">1</span>
 <span id="2">2</span>
 <span id="3">3</span>
 <span id="4">4</span>
@@ -75,82 +75,82 @@
 <span id="75">75</span>
 <span id="76">76</span>
 <span id="77">77</span>
-</pre><pre class="rust"><code><span class="kw">use</span> <span class="kw">crate</span>::{<span class="ident">build_mle</span>, <span class="ident">errors::HyperPlonkErrors</span>};
-<span class="kw">use</span> <span class="ident">ark_ff::PrimeField</span>;
-<span class="kw">use</span> <span class="ident">ark_poly::DenseMultilinearExtension</span>;
-<span class="kw">use</span> <span class="ident">ark_std::log2</span>;
-<span class="kw">use</span> <span class="ident">std::rc::Rc</span>;
+</pre><pre class="rust"><code><span class="kw">use crate</span>::{build_mle, errors::HyperPlonkErrors};
+<span class="kw">use </span>ark_ff::PrimeField;
+<span class="kw">use </span>ark_poly::DenseMultilinearExtension;
+<span class="kw">use </span>ark_std::log2;
+<span class="kw">use </span>std::rc::Rc;
 
-<span class="doccomment">/// A row of witnesses of width `#wires`</span>
-<span class="attribute">#[<span class="ident">derive</span>(<span class="ident">Debug</span>, <span class="ident">Clone</span>)]</span>
-<span class="kw">pub</span> <span class="kw">struct</span> <span class="ident">WitnessRow</span><span class="op">&lt;</span><span class="ident">F</span>: <span class="ident">PrimeField</span><span class="op">&gt;</span>(<span class="kw">pub</span>(<span class="kw">crate</span>) <span class="ident">Vec</span><span class="op">&lt;</span><span class="ident">F</span><span class="op">&gt;</span>);
+<span class="doccomment">/// A row of witnesses of width `#wires`
+</span><span class="attribute">#[derive(Debug, Clone)]
+</span><span class="kw">pub struct </span>WitnessRow&lt;F: PrimeField&gt;(<span class="kw">pub</span>(<span class="kw">crate</span>) Vec&lt;F&gt;);
 
-<span class="doccomment">/// A column of witnesses of length `#constraints`</span>
-<span class="attribute">#[<span class="ident">derive</span>(<span class="ident">Debug</span>, <span class="ident">Clone</span>, <span class="ident">Default</span>)]</span>
-<span class="kw">pub</span> <span class="kw">struct</span> <span class="ident">WitnessColumn</span><span class="op">&lt;</span><span class="ident">F</span>: <span class="ident">PrimeField</span><span class="op">&gt;</span>(<span class="kw">pub</span>(<span class="kw">crate</span>) <span class="ident">Vec</span><span class="op">&lt;</span><span class="ident">F</span><span class="op">&gt;</span>);
+<span class="doccomment">/// A column of witnesses of length `#constraints`
+</span><span class="attribute">#[derive(Debug, Clone, Default)]
+</span><span class="kw">pub struct </span>WitnessColumn&lt;F: PrimeField&gt;(<span class="kw">pub</span>(<span class="kw">crate</span>) Vec&lt;F&gt;);
 
-<span class="kw">impl</span><span class="op">&lt;</span><span class="ident">F</span>: <span class="ident">PrimeField</span><span class="op">&gt;</span> <span class="ident">WitnessColumn</span><span class="op">&lt;</span><span class="ident">F</span><span class="op">&gt;</span> {
-    <span class="doccomment">/// the number of variables of the multilinear polynomial that presents a</span>
-    <span class="doccomment">/// column.</span>
-    <span class="kw">pub</span> <span class="kw">fn</span> <span class="ident">get_nv</span>(<span class="kw-2">&amp;</span><span class="self">self</span>) -&gt; <span class="ident">usize</span> {
-        <span class="ident">log2</span>(<span class="self">self</span>.<span class="number">0</span>.<span class="ident">len</span>()) <span class="kw">as</span> <span class="ident">usize</span>
+<span class="kw">impl</span>&lt;F: PrimeField&gt; WitnessColumn&lt;F&gt; {
+    <span class="doccomment">/// the number of variables of the multilinear polynomial that presents a
+    /// column.
+    </span><span class="kw">pub fn </span>get_nv(<span class="kw-2">&amp;</span><span class="self">self</span>) -&gt; usize {
+        log2(<span class="self">self</span>.<span class="number">0</span>.len()) <span class="kw">as </span>usize
     }
 
-    <span class="doccomment">/// Append a new element to the witness column</span>
-    <span class="kw">pub</span> <span class="kw">fn</span> <span class="ident">append</span>(<span class="kw-2">&amp;mut</span> <span class="self">self</span>, <span class="ident">new_element</span>: <span class="ident">F</span>) {
-        <span class="self">self</span>.<span class="number">0</span>.<span class="ident">push</span>(<span class="ident">new_element</span>)
+    <span class="doccomment">/// Append a new element to the witness column
+    </span><span class="kw">pub fn </span>append(<span class="kw-2">&amp;mut </span><span class="self">self</span>, new_element: F) {
+        <span class="self">self</span>.<span class="number">0</span>.push(new_element)
     }
 
-    <span class="doccomment">/// Build witness columns from rows</span>
-    <span class="kw">pub</span> <span class="kw">fn</span> <span class="ident">from_witness_rows</span>(
-        <span class="ident">witness_rows</span>: <span class="kw-2">&amp;</span>[<span class="ident">WitnessRow</span><span class="op">&lt;</span><span class="ident">F</span><span class="op">&gt;</span>],
-    ) -&gt; <span class="prelude-ty">Result</span><span class="op">&lt;</span><span class="ident">Vec</span><span class="op">&lt;</span><span class="self">Self</span><span class="op">&gt;</span>, <span class="ident">HyperPlonkErrors</span><span class="op">&gt;</span> {
-        <span class="kw">if</span> <span class="ident">witness_rows</span>.<span class="ident">is_empty</span>() {
-            <span class="kw">return</span> <span class="prelude-val">Err</span>(<span class="ident">HyperPlonkErrors::InvalidParameters</span>(
-                <span class="string">&quot;empty witness rows&quot;</span>.<span class="ident">to_string</span>(),
+    <span class="doccomment">/// Build witness columns from rows
+    </span><span class="kw">pub fn </span>from_witness_rows(
+        witness_rows: <span class="kw-2">&amp;</span>[WitnessRow&lt;F&gt;],
+    ) -&gt; <span class="prelude-ty">Result</span>&lt;Vec&lt;<span class="self">Self</span>&gt;, HyperPlonkErrors&gt; {
+        <span class="kw">if </span>witness_rows.is_empty() {
+            <span class="kw">return </span><span class="prelude-val">Err</span>(HyperPlonkErrors::InvalidParameters(
+                <span class="string">&quot;empty witness rows&quot;</span>.to_string(),
             ));
         }
 
-        <span class="kw">let</span> <span class="kw-2">mut</span> <span class="ident">res</span> <span class="op">=</span> <span class="ident">Vec::with_capacity</span>(<span class="ident">witness_rows</span>.<span class="ident">len</span>());
-        <span class="kw">let</span> <span class="ident">num_columns</span> <span class="op">=</span> <span class="ident">witness_rows</span>[<span class="number">0</span>].<span class="number">0</span>.<span class="ident">len</span>();
+        <span class="kw">let </span><span class="kw-2">mut </span>res = Vec::with_capacity(witness_rows.len());
+        <span class="kw">let </span>num_columns = witness_rows[<span class="number">0</span>].<span class="number">0</span>.len();
 
-        <span class="kw">for</span> <span class="ident">i</span> <span class="kw">in</span> <span class="number">0</span>..<span class="ident">num_columns</span> {
-            <span class="kw">let</span> <span class="kw-2">mut</span> <span class="ident">cur_column</span> <span class="op">=</span> <span class="ident">Vec::new</span>();
-            <span class="kw">for</span> <span class="ident">row</span> <span class="kw">in</span> <span class="ident">witness_rows</span>.<span class="ident">iter</span>() {
-                <span class="ident">cur_column</span>.<span class="ident">push</span>(<span class="ident">row</span>.<span class="number">0</span>[<span class="ident">i</span>])
+        <span class="kw">for </span>i <span class="kw">in </span><span class="number">0</span>..num_columns {
+            <span class="kw">let </span><span class="kw-2">mut </span>cur_column = Vec::new();
+            <span class="kw">for </span>row <span class="kw">in </span>witness_rows.iter() {
+                cur_column.push(row.<span class="number">0</span>[i])
             }
-            <span class="ident">res</span>.<span class="ident">push</span>(<span class="self">Self</span>(<span class="ident">cur_column</span>))
+            res.push(<span class="self">Self</span>(cur_column))
         }
 
-        <span class="prelude-val">Ok</span>(<span class="ident">res</span>)
+        <span class="prelude-val">Ok</span>(res)
     }
 
-    <span class="kw">pub</span> <span class="kw">fn</span> <span class="ident">coeff_ref</span>(<span class="kw-2">&amp;</span><span class="self">self</span>) -&gt; <span class="kw-2">&amp;</span>[<span class="ident">F</span>] {
-        <span class="self">self</span>.<span class="number">0</span>.<span class="ident">as_ref</span>()
-    }
-}
-
-<span class="kw">impl</span><span class="op">&lt;</span><span class="ident">F</span>: <span class="ident">PrimeField</span><span class="op">&gt;</span> <span class="ident">From</span><span class="op">&lt;</span><span class="kw-2">&amp;</span><span class="ident">WitnessColumn</span><span class="op">&lt;</span><span class="ident">F</span><span class="op">&gt;</span><span class="op">&gt;</span> <span class="kw">for</span> <span class="ident">DenseMultilinearExtension</span><span class="op">&lt;</span><span class="ident">F</span><span class="op">&gt;</span> {
-    <span class="kw">fn</span> <span class="ident">from</span>(<span class="ident">witness</span>: <span class="kw-2">&amp;</span><span class="ident">WitnessColumn</span><span class="op">&lt;</span><span class="ident">F</span><span class="op">&gt;</span>) -&gt; <span class="self">Self</span> {
-        <span class="kw">let</span> <span class="ident">nv</span> <span class="op">=</span> <span class="ident">witness</span>.<span class="ident">get_nv</span>();
-        <span class="ident"><span class="self">Self</span>::from_evaluations_slice</span>(<span class="ident">nv</span>, <span class="ident">witness</span>.<span class="number">0</span>.<span class="ident">as_ref</span>())
+    <span class="kw">pub fn </span>coeff_ref(<span class="kw-2">&amp;</span><span class="self">self</span>) -&gt; <span class="kw-2">&amp;</span>[F] {
+        <span class="self">self</span>.<span class="number">0</span>.as_ref()
     }
 }
 
-<span class="kw">impl</span><span class="op">&lt;</span><span class="ident">F</span>: <span class="ident">PrimeField</span><span class="op">&gt;</span> <span class="ident">WitnessRow</span><span class="op">&lt;</span><span class="ident">F</span><span class="op">&gt;</span> {
-    <span class="doccomment">/// Build MLE from matrix of witnesses.</span>
-    <span class="doccomment">///</span>
-    <span class="doccomment">/// Given a matrix := [row1, row2, ...] where</span>
-    <span class="doccomment">/// row1:= (a1, a2, ...)</span>
-    <span class="doccomment">/// row2:= (b1, b2, ...)</span>
-    <span class="doccomment">/// row3:= (c1, c2, ...)</span>
-    <span class="doccomment">///</span>
-    <span class="doccomment">/// output mle(a1,b1,c1, ...), mle(a2,b2,c2, ...), ...</span>
-    <span class="kw">pub</span> <span class="kw">fn</span> <span class="ident">build_mles</span>(
-        <span class="ident">matrix</span>: <span class="kw-2">&amp;</span>[<span class="self">Self</span>],
-    ) -&gt; <span class="prelude-ty">Result</span><span class="op">&lt;</span><span class="ident">Vec</span><span class="op">&lt;</span><span class="ident">Rc</span><span class="op">&lt;</span><span class="ident">DenseMultilinearExtension</span><span class="op">&lt;</span><span class="ident">F</span><span class="op">&gt;</span><span class="op">&gt;</span><span class="op">&gt;</span>, <span class="ident">HyperPlonkErrors</span><span class="op">&gt;</span> {
-        <span class="macro">build_mle!</span>(<span class="ident">matrix</span>)
+<span class="kw">impl</span>&lt;F: PrimeField&gt; From&lt;<span class="kw-2">&amp;</span>WitnessColumn&lt;F&gt;&gt; <span class="kw">for </span>DenseMultilinearExtension&lt;F&gt; {
+    <span class="kw">fn </span>from(witness: <span class="kw-2">&amp;</span>WitnessColumn&lt;F&gt;) -&gt; <span class="self">Self </span>{
+        <span class="kw">let </span>nv = witness.get_nv();
+        <span class="self">Self</span>::from_evaluations_slice(nv, witness.<span class="number">0</span>.as_ref())
+    }
+}
+
+<span class="kw">impl</span>&lt;F: PrimeField&gt; WitnessRow&lt;F&gt; {
+    <span class="doccomment">/// Build MLE from matrix of witnesses.
+    ///
+    /// Given a matrix := [row1, row2, ...] where
+    /// row1:= (a1, a2, ...)
+    /// row2:= (b1, b2, ...)
+    /// row3:= (c1, c2, ...)
+    ///
+    /// output mle(a1,b1,c1, ...), mle(a2,b2,c2, ...), ...
+    </span><span class="kw">pub fn </span>build_mles(
+        matrix: <span class="kw-2">&amp;</span>[<span class="self">Self</span>],
+    ) -&gt; <span class="prelude-ty">Result</span>&lt;Vec&lt;Rc&lt;DenseMultilinearExtension&lt;F&gt;&gt;&gt;, HyperPlonkErrors&gt; {
+        <span class="macro">build_mle!</span>(matrix)
     }
 }
 </code></pre></div>
-</section></div></main><div id="rustdoc-vars" data-root-path="../../" data-current-crate="hyperplonk" data-themes="ayu,dark,light" data-resource-suffix="" data-rustdoc-version="1.64.0 (a55dd71d5 2022-09-19)" ></div></body></html>
+</section></div></main><div id="rustdoc-vars" data-root-path="../../" data-current-crate="hyperplonk" data-themes="ayu,dark,light" data-resource-suffix="" data-rustdoc-version="1.65.0 (897e37553 2022-11-02)" ></div></body></html>

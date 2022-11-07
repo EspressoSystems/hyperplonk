@@ -1,4 +1,4 @@
-<!DOCTYPE html><html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1.0"><meta name="generator" content="rustdoc"><meta name="description" content="Source of the Rust file `subroutines/src/poly_iop/prod_check/util.rs`."><meta name="keywords" content="rust, rustlang, rust-lang"><title>util.rs - source</title><link rel="preload" as="font" type="font/woff2" crossorigin href="../../../../SourceSerif4-Regular.ttf.woff2"><link rel="preload" as="font" type="font/woff2" crossorigin href="../../../../FiraSans-Regular.woff2"><link rel="preload" as="font" type="font/woff2" crossorigin href="../../../../FiraSans-Medium.woff2"><link rel="preload" as="font" type="font/woff2" crossorigin href="../../../../SourceCodePro-Regular.ttf.woff2"><link rel="preload" as="font" type="font/woff2" crossorigin href="../../../../SourceSerif4-Bold.ttf.woff2"><link rel="preload" as="font" type="font/woff2" crossorigin href="../../../../SourceCodePro-Semibold.ttf.woff2"><link rel="stylesheet" type="text/css" href="../../../../normalize.css"><link rel="stylesheet" type="text/css" href="../../../../rustdoc.css" id="mainThemeStyle"><link rel="stylesheet" type="text/css" href="../../../../ayu.css" disabled><link rel="stylesheet" type="text/css" href="../../../../dark.css" disabled><link rel="stylesheet" type="text/css" href="../../../../light.css" id="themeStyle"><script id="default-settings" ></script><script src="../../../../storage.js"></script><script defer src="../../../../source-script.js"></script><script defer src="../../../../source-files.js"></script><script defer src="../../../../main.js"></script><noscript><link rel="stylesheet" href="../../../../noscript.css"></noscript><link rel="alternate icon" type="image/png" href="../../../../favicon-16x16.png"><link rel="alternate icon" type="image/png" href="../../../../favicon-32x32.png"><link rel="icon" type="image/svg+xml" href="../../../../favicon.svg"></head><body class="rustdoc source"><!--[if lte IE 11]><div class="warning">This old browser is unsupported and will most likely display funky things.</div><![endif]--><nav class="mobile-topbar"><button class="sidebar-menu-toggle">&#9776;</button><a class="sidebar-logo" href="../../../../subroutines/index.html"><div class="logo-container"><img class="rust-logo" src="../../../../rust-logo.svg" alt="logo"></div></a><h2 class="location"></h2></nav><nav class="sidebar"><a class="sidebar-logo" href="../../../../subroutines/index.html"><div class="logo-container"><img class="rust-logo" src="../../../../rust-logo.svg" alt="logo"></div></a></nav><main><div class="width-limiter"><div class="sub-container"><a class="sub-logo-container" href="../../../../subroutines/index.html"><img class="rust-logo" src="../../../../rust-logo.svg" alt="logo"></a><nav class="sub"><form class="search-form"><div class="search-container"><span></span><input class="search-input" name="search" autocomplete="off" spellcheck="false" placeholder="Click or press ‘S’ to search, ‘?’ for more options…" type="search"><div id="help-button" title="help" tabindex="-1"><button type="button">?</button></div><div id="settings-menu" tabindex="-1"><a href="../../../../settings.html" title="settings"><img width="22" height="22" alt="Change settings" src="../../../../wheel.svg"></a></div></div></form></nav></div><section id="main-content" class="content"><div class="example-wrap"><pre class="line-numbers"><span id="1">1</span>
+<!DOCTYPE html><html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1.0"><meta name="generator" content="rustdoc"><meta name="description" content="Source of the Rust file `subroutines/src/poly_iop/prod_check/util.rs`."><meta name="keywords" content="rust, rustlang, rust-lang"><title>util.rs - source</title><link rel="preload" as="font" type="font/woff2" crossorigin href="../../../../SourceSerif4-Regular.ttf.woff2"><link rel="preload" as="font" type="font/woff2" crossorigin href="../../../../FiraSans-Regular.woff2"><link rel="preload" as="font" type="font/woff2" crossorigin href="../../../../FiraSans-Medium.woff2"><link rel="preload" as="font" type="font/woff2" crossorigin href="../../../../SourceCodePro-Regular.ttf.woff2"><link rel="preload" as="font" type="font/woff2" crossorigin href="../../../../SourceSerif4-Bold.ttf.woff2"><link rel="preload" as="font" type="font/woff2" crossorigin href="../../../../SourceCodePro-Semibold.ttf.woff2"><link rel="stylesheet" href="../../../../normalize.css"><link rel="stylesheet" href="../../../../rustdoc.css" id="mainThemeStyle"><link rel="stylesheet" href="../../../../ayu.css" disabled><link rel="stylesheet" href="../../../../dark.css" disabled><link rel="stylesheet" href="../../../../light.css" id="themeStyle"><script id="default-settings" ></script><script src="../../../../storage.js"></script><script defer src="../../../../source-script.js"></script><script defer src="../../../../source-files.js"></script><script defer src="../../../../main.js"></script><noscript><link rel="stylesheet" href="../../../../noscript.css"></noscript><link rel="alternate icon" type="image/png" href="../../../../favicon-16x16.png"><link rel="alternate icon" type="image/png" href="../../../../favicon-32x32.png"><link rel="icon" type="image/svg+xml" href="../../../../favicon.svg"></head><body class="rustdoc source"><!--[if lte IE 11]><div class="warning">This old browser is unsupported and will most likely display funky things.</div><![endif]--><nav class="mobile-topbar"><button class="sidebar-menu-toggle">&#9776;</button><a class="sidebar-logo" href="../../../../subroutines/index.html"><div class="logo-container"><img class="rust-logo" src="../../../../rust-logo.svg" alt="logo"></div></a><h2 class="location"></h2></nav><nav class="sidebar"><a class="sidebar-logo" href="../../../../subroutines/index.html"><div class="logo-container"><img class="rust-logo" src="../../../../rust-logo.svg" alt="logo"></div></a></nav><main><div class="width-limiter"><div class="sub-container"><a class="sub-logo-container" href="../../../../subroutines/index.html"><img class="rust-logo" src="../../../../rust-logo.svg" alt="logo"></a><nav class="sub"><form class="search-form"><div class="search-container"><span></span><input class="search-input" name="search" autocomplete="off" spellcheck="false" placeholder="Click or press ‘S’ to search, ‘?’ for more options…" type="search"><div id="help-button" title="help" tabindex="-1"><button type="button">?</button></div><div id="settings-menu" tabindex="-1"><a href="../../../../settings.html" title="settings"><img width="22" height="22" alt="Change settings" src="../../../../wheel.svg"></a></div></div></form></nav></div><section id="main-content" class="content"><div class="example-wrap"><pre class="line-numbers"><span id="1">1</span>
 <span id="2">2</span>
 <span id="3">3</span>
 <span id="4">4</span>
@@ -200,207 +200,207 @@
 <span id="200">200</span>
 <span id="201">201</span>
 <span id="202">202</span>
-</pre><pre class="rust"><code><span class="doccomment">//! This module implements useful functions for the product check protocol.</span>
+</pre><pre class="rust"><code><span class="doccomment">//! This module implements useful functions for the product check protocol.
 
-<span class="kw">use</span> <span class="ident"><span class="kw">crate</span>::poly_iop</span>::{<span class="ident">errors::PolyIOPErrors</span>, <span class="ident">structs::IOPProof</span>, <span class="ident">zero_check::ZeroCheck</span>, <span class="ident">PolyIOP</span>};
-<span class="kw">use</span> <span class="ident">arithmetic</span>::{<span class="ident">get_index</span>, <span class="ident">VirtualPolynomial</span>};
-<span class="kw">use</span> <span class="ident">ark_ff::PrimeField</span>;
-<span class="kw">use</span> <span class="ident">ark_poly::DenseMultilinearExtension</span>;
-<span class="kw">use</span> <span class="ident">ark_std</span>::{<span class="ident">end_timer</span>, <span class="ident">start_timer</span>};
-<span class="kw">use</span> <span class="ident">rayon::prelude</span>::{<span class="ident">IntoParallelRefIterator</span>, <span class="ident">ParallelIterator</span>};
-<span class="kw">use</span> <span class="ident">std::rc::Rc</span>;
-<span class="kw">use</span> <span class="ident">transcript::IOPTranscript</span>;
+</span><span class="kw">use </span><span class="kw">crate</span>::poly_iop::{errors::PolyIOPErrors, structs::IOPProof, zero_check::ZeroCheck, PolyIOP};
+<span class="kw">use </span>arithmetic::{get_index, VirtualPolynomial};
+<span class="kw">use </span>ark_ff::PrimeField;
+<span class="kw">use </span>ark_poly::DenseMultilinearExtension;
+<span class="kw">use </span>ark_std::{end_timer, start_timer};
+<span class="kw">use </span>rayon::prelude::{IntoParallelRefIterator, ParallelIterator};
+<span class="kw">use </span>std::rc::Rc;
+<span class="kw">use </span>transcript::IOPTranscript;
 
-<span class="doccomment">/// Compute the product polynomial `prod(x)` where</span>
-<span class="doccomment">///</span>
-<span class="doccomment">///  - `prod(0,x) := prod(0, x1, …, xn)` is the MLE over the</span>
-<span class="doccomment">/// evaluations of `f(x)/g(x)` on the boolean hypercube {0,1}^n</span>
-<span class="doccomment">///</span>
-<span class="doccomment">/// - `prod(1,x)` is a MLE over the evaluations of `prod(x, 0) * prod(x, 1)`</span>
-<span class="doccomment">/// on the boolean hypercube {0,1}^n</span>
-<span class="doccomment">///</span>
-<span class="doccomment">/// The caller needs to check num_vars matches in f and g</span>
-<span class="doccomment">/// Cost: linear in N.</span>
-<span class="kw">pub</span>(<span class="kw">super</span>) <span class="kw">fn</span> <span class="ident">compute_product_poly</span><span class="op">&lt;</span><span class="ident">F</span>: <span class="ident">PrimeField</span><span class="op">&gt;</span>(
-    <span class="ident">fx</span>: <span class="kw-2">&amp;</span><span class="ident">Rc</span><span class="op">&lt;</span><span class="ident">DenseMultilinearExtension</span><span class="op">&lt;</span><span class="ident">F</span><span class="op">&gt;</span><span class="op">&gt;</span>,
-    <span class="ident">gx</span>: <span class="kw-2">&amp;</span><span class="ident">Rc</span><span class="op">&lt;</span><span class="ident">DenseMultilinearExtension</span><span class="op">&lt;</span><span class="ident">F</span><span class="op">&gt;</span><span class="op">&gt;</span>,
-) -&gt; <span class="prelude-ty">Result</span><span class="op">&lt;</span><span class="ident">Rc</span><span class="op">&lt;</span><span class="ident">DenseMultilinearExtension</span><span class="op">&lt;</span><span class="ident">F</span><span class="op">&gt;</span><span class="op">&gt;</span>, <span class="ident">PolyIOPErrors</span><span class="op">&gt;</span> {
-    <span class="kw">let</span> <span class="ident">start</span> <span class="op">=</span> <span class="macro">start_timer!</span>(<span class="op">|</span><span class="op">|</span> <span class="string">&quot;compute evaluations of prod polynomial&quot;</span>);
-    <span class="kw">let</span> <span class="ident">num_vars</span> <span class="op">=</span> <span class="ident">fx</span>.<span class="ident">num_vars</span>;
+<span class="doccomment">/// Compute the product polynomial `prod(x)` where
+///
+///  - `prod(0,x) := prod(0, x1, …, xn)` is the MLE over the
+/// evaluations of `f(x)/g(x)` on the boolean hypercube {0,1}^n
+///
+/// - `prod(1,x)` is a MLE over the evaluations of `prod(x, 0) * prod(x, 1)`
+/// on the boolean hypercube {0,1}^n
+///
+/// The caller needs to check num_vars matches in f and g
+/// Cost: linear in N.
+</span><span class="kw">pub</span>(<span class="kw">super</span>) <span class="kw">fn </span>compute_product_poly&lt;F: PrimeField&gt;(
+    fx: <span class="kw-2">&amp;</span>Rc&lt;DenseMultilinearExtension&lt;F&gt;&gt;,
+    gx: <span class="kw-2">&amp;</span>Rc&lt;DenseMultilinearExtension&lt;F&gt;&gt;,
+) -&gt; <span class="prelude-ty">Result</span>&lt;Rc&lt;DenseMultilinearExtension&lt;F&gt;&gt;, PolyIOPErrors&gt; {
+    <span class="kw">let </span>start = <span class="macro">start_timer!</span>(|| <span class="string">&quot;compute evaluations of prod polynomial&quot;</span>);
+    <span class="kw">let </span>num_vars = fx.num_vars;
 
-    <span class="comment">// ===================================</span>
-    <span class="comment">// prod(0, x)</span>
-    <span class="comment">// ===================================</span>
-    <span class="kw">let</span> <span class="ident">prod_0x_eval</span> <span class="op">=</span> <span class="ident">compute_prod_0</span>(<span class="ident">fx</span>, <span class="ident">gx</span>)<span class="question-mark">?</span>;
+    <span class="comment">// ===================================
+    // prod(0, x)
+    // ===================================
+    </span><span class="kw">let </span>prod_0x_eval = compute_prod_0(fx, gx)<span class="question-mark">?</span>;
 
-    <span class="comment">// ===================================</span>
-    <span class="comment">// prod(1, x)</span>
-    <span class="comment">// ===================================</span>
-    <span class="comment">//</span>
-    <span class="comment">// `prod(1, x)` can be computed via recursing the following formula for 2^n-1</span>
-    <span class="comment">// times</span>
-    <span class="comment">//</span>
-    <span class="comment">// `prod(1, x_1, ..., x_n) :=</span>
-    <span class="comment">//      prod(x_1, x_2, ..., x_n, 0) * prod(x_1, x_2, ..., x_n, 1)`</span>
-    <span class="comment">//</span>
-    <span class="comment">// At any given step, the right hand side of the equation</span>
-    <span class="comment">// is available via either eval_0x or the current view of eval_1x</span>
-    <span class="kw">let</span> <span class="kw-2">mut</span> <span class="ident">prod_1x_eval</span> <span class="op">=</span> <span class="macro">vec!</span>[];
-    <span class="kw">for</span> <span class="ident">x</span> <span class="kw">in</span> <span class="number">0</span>..(<span class="number">1</span> <span class="op">&lt;</span><span class="op">&lt;</span> <span class="ident">num_vars</span>) <span class="op">-</span> <span class="number">1</span> {
-        <span class="comment">// sign will decide if the evaluation should be looked up from eval_0x or</span>
-        <span class="comment">// eval_1x; x_zero_index is the index for the evaluation (x_2, ..., x_n,</span>
-        <span class="comment">// 0); x_one_index is the index for the evaluation (x_2, ..., x_n, 1);</span>
-        <span class="kw">let</span> (<span class="ident">x_zero_index</span>, <span class="ident">x_one_index</span>, <span class="ident">sign</span>) <span class="op">=</span> <span class="ident">get_index</span>(<span class="ident">x</span>, <span class="ident">num_vars</span>);
-        <span class="kw">if</span> <span class="op">!</span><span class="ident">sign</span> {
-            <span class="ident">prod_1x_eval</span>.<span class="ident">push</span>(<span class="ident">prod_0x_eval</span>[<span class="ident">x_zero_index</span>] <span class="op">*</span> <span class="ident">prod_0x_eval</span>[<span class="ident">x_one_index</span>]);
-        } <span class="kw">else</span> {
-            <span class="comment">// sanity check: if we are trying to look up from the eval_1x table,</span>
-            <span class="comment">// then the target index must already exist</span>
-            <span class="kw">if</span> <span class="ident">x_zero_index</span> <span class="op">&gt;</span><span class="op">=</span> <span class="ident">prod_1x_eval</span>.<span class="ident">len</span>() <span class="op">|</span><span class="op">|</span> <span class="ident">x_one_index</span> <span class="op">&gt;</span><span class="op">=</span> <span class="ident">prod_1x_eval</span>.<span class="ident">len</span>() {
-                <span class="kw">return</span> <span class="prelude-val">Err</span>(<span class="ident">PolyIOPErrors::ShouldNotArrive</span>);
+    <span class="comment">// ===================================
+    // prod(1, x)
+    // ===================================
+    //
+    // `prod(1, x)` can be computed via recursing the following formula for 2^n-1
+    // times
+    //
+    // `prod(1, x_1, ..., x_n) :=
+    //      prod(x_1, x_2, ..., x_n, 0) * prod(x_1, x_2, ..., x_n, 1)`
+    //
+    // At any given step, the right hand side of the equation
+    // is available via either eval_0x or the current view of eval_1x
+    </span><span class="kw">let </span><span class="kw-2">mut </span>prod_1x_eval = <span class="macro">vec!</span>[];
+    <span class="kw">for </span>x <span class="kw">in </span><span class="number">0</span>..(<span class="number">1 </span>&lt;&lt; num_vars) - <span class="number">1 </span>{
+        <span class="comment">// sign will decide if the evaluation should be looked up from eval_0x or
+        // eval_1x; x_zero_index is the index for the evaluation (x_2, ..., x_n,
+        // 0); x_one_index is the index for the evaluation (x_2, ..., x_n, 1);
+        </span><span class="kw">let </span>(x_zero_index, x_one_index, sign) = get_index(x, num_vars);
+        <span class="kw">if </span>!sign {
+            prod_1x_eval.push(prod_0x_eval[x_zero_index] * prod_0x_eval[x_one_index]);
+        } <span class="kw">else </span>{
+            <span class="comment">// sanity check: if we are trying to look up from the eval_1x table,
+            // then the target index must already exist
+            </span><span class="kw">if </span>x_zero_index &gt;= prod_1x_eval.len() || x_one_index &gt;= prod_1x_eval.len() {
+                <span class="kw">return </span><span class="prelude-val">Err</span>(PolyIOPErrors::ShouldNotArrive);
             }
-            <span class="ident">prod_1x_eval</span>.<span class="ident">push</span>(<span class="ident">prod_1x_eval</span>[<span class="ident">x_zero_index</span>] <span class="op">*</span> <span class="ident">prod_1x_eval</span>[<span class="ident">x_one_index</span>]);
+            prod_1x_eval.push(prod_1x_eval[x_zero_index] * prod_1x_eval[x_one_index]);
         }
     }
 
-    <span class="comment">// prod(1, 1, ..., 1) := 0</span>
-    <span class="ident">prod_1x_eval</span>.<span class="ident">push</span>(<span class="ident">F::zero</span>());
+    <span class="comment">// prod(1, 1, ..., 1) := 0
+    </span>prod_1x_eval.push(F::zero());
 
-    <span class="comment">// ===================================</span>
-    <span class="comment">// prod(x)</span>
-    <span class="comment">// ===================================</span>
-    <span class="comment">// prod(x)&#39;s evaluation is indeed `e := [eval_0x[..], eval_1x[..]].concat()`</span>
-    <span class="kw">let</span> <span class="ident">eval</span> <span class="op">=</span> [<span class="ident">prod_0x_eval</span>.<span class="ident">as_slice</span>(), <span class="ident">prod_1x_eval</span>.<span class="ident">as_slice</span>()].<span class="ident">concat</span>();
+    <span class="comment">// ===================================
+    // prod(x)
+    // ===================================
+    // prod(x)&#39;s evaluation is indeed `e := [eval_0x[..], eval_1x[..]].concat()`
+    </span><span class="kw">let </span>eval = [prod_0x_eval.as_slice(), prod_1x_eval.as_slice()].concat();
 
-    <span class="kw">let</span> <span class="ident">prod_x</span> <span class="op">=</span> <span class="ident">Rc::new</span>(<span class="ident">DenseMultilinearExtension::from_evaluations_vec</span>(
-        <span class="ident">num_vars</span> <span class="op">+</span> <span class="number">1</span>,
-        <span class="ident">eval</span>,
+    <span class="kw">let </span>prod_x = Rc::new(DenseMultilinearExtension::from_evaluations_vec(
+        num_vars + <span class="number">1</span>,
+        eval,
     ));
 
-    <span class="macro">end_timer!</span>(<span class="ident">start</span>);
-    <span class="prelude-val">Ok</span>(<span class="ident">prod_x</span>)
+    <span class="macro">end_timer!</span>(start);
+    <span class="prelude-val">Ok</span>(prod_x)
 }
 
-<span class="doccomment">/// generate the zerocheck proof for the virtual polynomial</span>
-<span class="doccomment">///    prod(1, x) - prod(x, 0) * prod(x, 1) + alpha * (f(x) - prod(0, x) * g(x))</span>
-<span class="doccomment">///</span>
-<span class="doccomment">/// Returns proof and Q(x) for testing purpose.</span>
-<span class="doccomment">///</span>
-<span class="doccomment">/// Cost: O(N)</span>
-<span class="kw">pub</span>(<span class="kw">super</span>) <span class="kw">fn</span> <span class="ident">prove_zero_check</span><span class="op">&lt;</span><span class="ident">F</span>: <span class="ident">PrimeField</span><span class="op">&gt;</span>(
-    <span class="ident">fx</span>: <span class="kw-2">&amp;</span><span class="ident">Rc</span><span class="op">&lt;</span><span class="ident">DenseMultilinearExtension</span><span class="op">&lt;</span><span class="ident">F</span><span class="op">&gt;</span><span class="op">&gt;</span>,
-    <span class="ident">gx</span>: <span class="kw-2">&amp;</span><span class="ident">Rc</span><span class="op">&lt;</span><span class="ident">DenseMultilinearExtension</span><span class="op">&lt;</span><span class="ident">F</span><span class="op">&gt;</span><span class="op">&gt;</span>,
-    <span class="ident">prod_x</span>: <span class="kw-2">&amp;</span><span class="ident">Rc</span><span class="op">&lt;</span><span class="ident">DenseMultilinearExtension</span><span class="op">&lt;</span><span class="ident">F</span><span class="op">&gt;</span><span class="op">&gt;</span>,
-    <span class="ident">alpha</span>: <span class="kw-2">&amp;</span><span class="ident">F</span>,
-    <span class="ident">transcript</span>: <span class="kw-2">&amp;mut</span> <span class="ident">IOPTranscript</span><span class="op">&lt;</span><span class="ident">F</span><span class="op">&gt;</span>,
-) -&gt; <span class="prelude-ty">Result</span><span class="op">&lt;</span>(<span class="ident">IOPProof</span><span class="op">&lt;</span><span class="ident">F</span><span class="op">&gt;</span>, <span class="ident">VirtualPolynomial</span><span class="op">&lt;</span><span class="ident">F</span><span class="op">&gt;</span>), <span class="ident">PolyIOPErrors</span><span class="op">&gt;</span> {
-    <span class="kw">let</span> <span class="ident">start</span> <span class="op">=</span> <span class="macro">start_timer!</span>(<span class="op">|</span><span class="op">|</span> <span class="string">&quot;zerocheck in product check&quot;</span>);
+<span class="doccomment">/// generate the zerocheck proof for the virtual polynomial
+///    prod(1, x) - prod(x, 0) * prod(x, 1) + alpha * (f(x) - prod(0, x) * g(x))
+///
+/// Returns proof and Q(x) for testing purpose.
+///
+/// Cost: O(N)
+</span><span class="kw">pub</span>(<span class="kw">super</span>) <span class="kw">fn </span>prove_zero_check&lt;F: PrimeField&gt;(
+    fx: <span class="kw-2">&amp;</span>Rc&lt;DenseMultilinearExtension&lt;F&gt;&gt;,
+    gx: <span class="kw-2">&amp;</span>Rc&lt;DenseMultilinearExtension&lt;F&gt;&gt;,
+    prod_x: <span class="kw-2">&amp;</span>Rc&lt;DenseMultilinearExtension&lt;F&gt;&gt;,
+    alpha: <span class="kw-2">&amp;</span>F,
+    transcript: <span class="kw-2">&amp;mut </span>IOPTranscript&lt;F&gt;,
+) -&gt; <span class="prelude-ty">Result</span>&lt;(IOPProof&lt;F&gt;, VirtualPolynomial&lt;F&gt;), PolyIOPErrors&gt; {
+    <span class="kw">let </span>start = <span class="macro">start_timer!</span>(|| <span class="string">&quot;zerocheck in product check&quot;</span>);
 
-    <span class="kw">let</span> <span class="ident">prod_partial_evals</span> <span class="op">=</span> <span class="ident">build_prod_partial_eval</span>(<span class="ident">prod_x</span>)<span class="question-mark">?</span>;
-    <span class="kw">let</span> <span class="ident">prod_0x</span> <span class="op">=</span> <span class="ident">prod_partial_evals</span>[<span class="number">0</span>].<span class="ident">clone</span>();
-    <span class="kw">let</span> <span class="ident">prod_1x</span> <span class="op">=</span> <span class="ident">prod_partial_evals</span>[<span class="number">1</span>].<span class="ident">clone</span>();
-    <span class="kw">let</span> <span class="ident">prod_x0</span> <span class="op">=</span> <span class="ident">prod_partial_evals</span>[<span class="number">2</span>].<span class="ident">clone</span>();
-    <span class="kw">let</span> <span class="ident">prod_x1</span> <span class="op">=</span> <span class="ident">prod_partial_evals</span>[<span class="number">3</span>].<span class="ident">clone</span>();
+    <span class="kw">let </span>prod_partial_evals = build_prod_partial_eval(prod_x)<span class="question-mark">?</span>;
+    <span class="kw">let </span>prod_0x = prod_partial_evals[<span class="number">0</span>].clone();
+    <span class="kw">let </span>prod_1x = prod_partial_evals[<span class="number">1</span>].clone();
+    <span class="kw">let </span>prod_x0 = prod_partial_evals[<span class="number">2</span>].clone();
+    <span class="kw">let </span>prod_x1 = prod_partial_evals[<span class="number">3</span>].clone();
 
-    <span class="comment">// compute g(x) * prod(0, x) * alpha</span>
-    <span class="kw">let</span> <span class="kw-2">mut</span> <span class="ident">q_x</span> <span class="op">=</span> <span class="ident">VirtualPolynomial::new_from_mle</span>(<span class="ident">gx</span>, <span class="ident">F::one</span>());
-    <span class="ident">q_x</span>.<span class="ident">mul_by_mle</span>(<span class="ident">prod_0x</span>, <span class="kw-2">*</span><span class="ident">alpha</span>)<span class="question-mark">?</span>;
+    <span class="comment">// compute g(x) * prod(0, x) * alpha
+    </span><span class="kw">let </span><span class="kw-2">mut </span>q_x = VirtualPolynomial::new_from_mle(gx, F::one());
+    q_x.mul_by_mle(prod_0x, <span class="kw-2">*</span>alpha)<span class="question-mark">?</span>;
 
-    <span class="comment">//   g(x) * prod(0, x) * alpha</span>
-    <span class="comment">// - f(x) * alpha</span>
-    <span class="ident">q_x</span>.<span class="ident">add_mle_list</span>([<span class="ident">fx</span>.<span class="ident">clone</span>()], <span class="op">-</span><span class="kw-2">*</span><span class="ident">alpha</span>)<span class="question-mark">?</span>;
+    <span class="comment">//   g(x) * prod(0, x) * alpha
+    // - f(x) * alpha
+    </span>q_x.add_mle_list([fx.clone()], -<span class="kw-2">*</span>alpha)<span class="question-mark">?</span>;
 
-    <span class="comment">// Q(x) := prod(1,x) - prod(x, 0) * prod(x, 1)</span>
-    <span class="comment">//       + alpha * (</span>
-    <span class="comment">//             g(x) * prod(0, x)</span>
-    <span class="comment">//           - f(x))</span>
-    <span class="ident">q_x</span>.<span class="ident">add_mle_list</span>([<span class="ident">prod_x0</span>, <span class="ident">prod_x1</span>], <span class="op">-</span><span class="ident">F::one</span>())<span class="question-mark">?</span>;
-    <span class="ident">q_x</span>.<span class="ident">add_mle_list</span>([<span class="ident">prod_1x</span>], <span class="ident">F::one</span>())<span class="question-mark">?</span>;
+    <span class="comment">// Q(x) := prod(1,x) - prod(x, 0) * prod(x, 1)
+    //       + alpha * (
+    //             g(x) * prod(0, x)
+    //           - f(x))
+    </span>q_x.add_mle_list([prod_x0, prod_x1], -F::one())<span class="question-mark">?</span>;
+    q_x.add_mle_list([prod_1x], F::one())<span class="question-mark">?</span>;
 
-    <span class="kw">let</span> <span class="ident">iop_proof</span> <span class="op">=</span> <span class="op">&lt;</span><span class="ident">PolyIOP</span><span class="op">&lt;</span><span class="ident">F</span><span class="op">&gt;</span> <span class="kw">as</span> <span class="ident">ZeroCheck</span><span class="op">&lt;</span><span class="ident">F</span><span class="op">&gt;</span><span class="op">&gt;</span><span class="ident">::prove</span>(<span class="kw-2">&amp;</span><span class="ident">q_x</span>, <span class="ident">transcript</span>)<span class="question-mark">?</span>;
+    <span class="kw">let </span>iop_proof = &lt;PolyIOP&lt;F&gt; <span class="kw">as </span>ZeroCheck&lt;F&gt;&gt;::prove(<span class="kw-2">&amp;</span>q_x, transcript)<span class="question-mark">?</span>;
 
-    <span class="macro">end_timer!</span>(<span class="ident">start</span>);
-    <span class="prelude-val">Ok</span>((<span class="ident">iop_proof</span>, <span class="ident">q_x</span>))
+    <span class="macro">end_timer!</span>(start);
+    <span class="prelude-val">Ok</span>((iop_proof, q_x))
 }
 
-<span class="doccomment">/// Helper function of the IOP.</span>
-<span class="doccomment">///</span>
-<span class="doccomment">/// Input:</span>
-<span class="doccomment">/// - prod(x)</span>
-<span class="doccomment">///</span>
-<span class="doccomment">/// Output: the following 4 polynomials</span>
-<span class="doccomment">/// - prod(0, x)</span>
-<span class="doccomment">/// - prod(1, x)</span>
-<span class="doccomment">/// - prod(x, 0)</span>
-<span class="doccomment">/// - prod(x, 1)</span>
-<span class="kw">fn</span> <span class="ident">build_prod_partial_eval</span><span class="op">&lt;</span><span class="ident">F</span>: <span class="ident">PrimeField</span><span class="op">&gt;</span>(
-    <span class="ident">prod_x</span>: <span class="kw-2">&amp;</span><span class="ident">Rc</span><span class="op">&lt;</span><span class="ident">DenseMultilinearExtension</span><span class="op">&lt;</span><span class="ident">F</span><span class="op">&gt;</span><span class="op">&gt;</span>,
-) -&gt; <span class="prelude-ty">Result</span><span class="op">&lt;</span>[<span class="ident">Rc</span><span class="op">&lt;</span><span class="ident">DenseMultilinearExtension</span><span class="op">&lt;</span><span class="ident">F</span><span class="op">&gt;</span><span class="op">&gt;</span>; <span class="number">4</span>], <span class="ident">PolyIOPErrors</span><span class="op">&gt;</span> {
-    <span class="kw">let</span> <span class="ident">start</span> <span class="op">=</span> <span class="macro">start_timer!</span>(<span class="op">|</span><span class="op">|</span> <span class="string">&quot;build partial prod polynomial&quot;</span>);
+<span class="doccomment">/// Helper function of the IOP.
+///
+/// Input:
+/// - prod(x)
+///
+/// Output: the following 4 polynomials
+/// - prod(0, x)
+/// - prod(1, x)
+/// - prod(x, 0)
+/// - prod(x, 1)
+</span><span class="kw">fn </span>build_prod_partial_eval&lt;F: PrimeField&gt;(
+    prod_x: <span class="kw-2">&amp;</span>Rc&lt;DenseMultilinearExtension&lt;F&gt;&gt;,
+) -&gt; <span class="prelude-ty">Result</span>&lt;[Rc&lt;DenseMultilinearExtension&lt;F&gt;&gt;; <span class="number">4</span>], PolyIOPErrors&gt; {
+    <span class="kw">let </span>start = <span class="macro">start_timer!</span>(|| <span class="string">&quot;build partial prod polynomial&quot;</span>);
 
-    <span class="kw">let</span> <span class="ident">prod_x_eval</span> <span class="op">=</span> <span class="kw-2">&amp;</span><span class="ident">prod_x</span>.<span class="ident">evaluations</span>;
-    <span class="kw">let</span> <span class="ident">num_vars</span> <span class="op">=</span> <span class="ident">prod_x</span>.<span class="ident">num_vars</span> <span class="op">-</span> <span class="number">1</span>;
+    <span class="kw">let </span>prod_x_eval = <span class="kw-2">&amp;</span>prod_x.evaluations;
+    <span class="kw">let </span>num_vars = prod_x.num_vars - <span class="number">1</span>;
 
-    <span class="comment">// prod(0, x)</span>
-    <span class="kw">let</span> <span class="ident">prod_0_x</span> <span class="op">=</span> <span class="ident">Rc::new</span>(<span class="ident">DenseMultilinearExtension::from_evaluations_slice</span>(
-        <span class="ident">num_vars</span>,
-        <span class="kw-2">&amp;</span><span class="ident">prod_x_eval</span>[<span class="number">0</span>..<span class="number">1</span> <span class="op">&lt;</span><span class="op">&lt;</span> <span class="ident">num_vars</span>],
+    <span class="comment">// prod(0, x)
+    </span><span class="kw">let </span>prod_0_x = Rc::new(DenseMultilinearExtension::from_evaluations_slice(
+        num_vars,
+        <span class="kw-2">&amp;</span>prod_x_eval[<span class="number">0</span>..<span class="number">1 </span>&lt;&lt; num_vars],
     ));
-    <span class="comment">// prod(1, x)</span>
-    <span class="kw">let</span> <span class="ident">prod_1_x</span> <span class="op">=</span> <span class="ident">Rc::new</span>(<span class="ident">DenseMultilinearExtension::from_evaluations_slice</span>(
-        <span class="ident">num_vars</span>,
-        <span class="kw-2">&amp;</span><span class="ident">prod_x_eval</span>[<span class="number">1</span> <span class="op">&lt;</span><span class="op">&lt;</span> <span class="ident">num_vars</span>..<span class="number">1</span> <span class="op">&lt;</span><span class="op">&lt;</span> (<span class="ident">num_vars</span> <span class="op">+</span> <span class="number">1</span>)],
+    <span class="comment">// prod(1, x)
+    </span><span class="kw">let </span>prod_1_x = Rc::new(DenseMultilinearExtension::from_evaluations_slice(
+        num_vars,
+        <span class="kw-2">&amp;</span>prod_x_eval[<span class="number">1 </span>&lt;&lt; num_vars..<span class="number">1 </span>&lt;&lt; (num_vars + <span class="number">1</span>)],
     ));
 
-    <span class="comment">// ===================================</span>
-    <span class="comment">// prod(x, 0) and prod(x, 1)</span>
-    <span class="comment">// ===================================</span>
-    <span class="comment">//</span>
-    <span class="comment">// now we compute eval_x0 and eval_x1</span>
-    <span class="comment">// eval_0x will be the odd coefficients of eval</span>
-    <span class="comment">// and eval_1x will be the even coefficients of eval</span>
-    <span class="kw">let</span> <span class="kw-2">mut</span> <span class="ident">eval_x0</span> <span class="op">=</span> <span class="macro">vec!</span>[];
-    <span class="kw">let</span> <span class="kw-2">mut</span> <span class="ident">eval_x1</span> <span class="op">=</span> <span class="macro">vec!</span>[];
-    <span class="kw">for</span> (<span class="ident">x</span>, <span class="kw-2">&amp;</span><span class="ident">prod_x</span>) <span class="kw">in</span> <span class="ident">prod_x_eval</span>.<span class="ident">iter</span>().<span class="ident">enumerate</span>() {
-        <span class="kw">if</span> <span class="ident">x</span> <span class="op">&amp;</span> <span class="number">1</span> <span class="op">==</span> <span class="number">0</span> {
-            <span class="ident">eval_x0</span>.<span class="ident">push</span>(<span class="ident">prod_x</span>);
-        } <span class="kw">else</span> {
-            <span class="ident">eval_x1</span>.<span class="ident">push</span>(<span class="ident">prod_x</span>);
+    <span class="comment">// ===================================
+    // prod(x, 0) and prod(x, 1)
+    // ===================================
+    //
+    // now we compute eval_x0 and eval_x1
+    // eval_0x will be the odd coefficients of eval
+    // and eval_1x will be the even coefficients of eval
+    </span><span class="kw">let </span><span class="kw-2">mut </span>eval_x0 = <span class="macro">vec!</span>[];
+    <span class="kw">let </span><span class="kw-2">mut </span>eval_x1 = <span class="macro">vec!</span>[];
+    <span class="kw">for </span>(x, <span class="kw-2">&amp;</span>prod_x) <span class="kw">in </span>prod_x_eval.iter().enumerate() {
+        <span class="kw">if </span>x &amp; <span class="number">1 </span>== <span class="number">0 </span>{
+            eval_x0.push(prod_x);
+        } <span class="kw">else </span>{
+            eval_x1.push(prod_x);
         }
     }
-    <span class="kw">let</span> <span class="ident">prod_x_0</span> <span class="op">=</span> <span class="ident">Rc::new</span>(<span class="ident">DenseMultilinearExtension::from_evaluations_vec</span>(
-        <span class="ident">num_vars</span>, <span class="ident">eval_x0</span>,
+    <span class="kw">let </span>prod_x_0 = Rc::new(DenseMultilinearExtension::from_evaluations_vec(
+        num_vars, eval_x0,
     ));
-    <span class="kw">let</span> <span class="ident">prod_x_1</span> <span class="op">=</span> <span class="ident">Rc::new</span>(<span class="ident">DenseMultilinearExtension::from_evaluations_vec</span>(
-        <span class="ident">num_vars</span>, <span class="ident">eval_x1</span>,
+    <span class="kw">let </span>prod_x_1 = Rc::new(DenseMultilinearExtension::from_evaluations_vec(
+        num_vars, eval_x1,
     ));
 
-    <span class="macro">end_timer!</span>(<span class="ident">start</span>);
+    <span class="macro">end_timer!</span>(start);
 
-    <span class="prelude-val">Ok</span>([<span class="ident">prod_0_x</span>, <span class="ident">prod_1_x</span>, <span class="ident">prod_x_0</span>, <span class="ident">prod_x_1</span>])
+    <span class="prelude-val">Ok</span>([prod_0_x, prod_1_x, prod_x_0, prod_x_1])
 }
 
-<span class="doccomment">/// Returns the evaluations of</span>
-<span class="doccomment">/// - `prod(0,x) := prod(0, x1, …, xn)` which is the MLE over the</span>
-<span class="doccomment">/// evaluations of f(x)/g(x) on the boolean hypercube {0,1}^n:</span>
-<span class="doccomment">///</span>
-<span class="doccomment">/// The caller needs to check num_vars matches in f/g</span>
-<span class="doccomment">/// Cost: linear in N.</span>
-<span class="kw">fn</span> <span class="ident">compute_prod_0</span><span class="op">&lt;</span><span class="ident">F</span>: <span class="ident">PrimeField</span><span class="op">&gt;</span>(
-    <span class="ident">fx</span>: <span class="kw-2">&amp;</span><span class="ident">DenseMultilinearExtension</span><span class="op">&lt;</span><span class="ident">F</span><span class="op">&gt;</span>,
-    <span class="ident">gx</span>: <span class="kw-2">&amp;</span><span class="ident">DenseMultilinearExtension</span><span class="op">&lt;</span><span class="ident">F</span><span class="op">&gt;</span>,
-) -&gt; <span class="prelude-ty">Result</span><span class="op">&lt;</span><span class="ident">Vec</span><span class="op">&lt;</span><span class="ident">F</span><span class="op">&gt;</span>, <span class="ident">PolyIOPErrors</span><span class="op">&gt;</span> {
-    <span class="kw">let</span> <span class="ident">start</span> <span class="op">=</span> <span class="macro">start_timer!</span>(<span class="op">|</span><span class="op">|</span> <span class="string">&quot;compute prod(0,x)&quot;</span>);
+<span class="doccomment">/// Returns the evaluations of
+/// - `prod(0,x) := prod(0, x1, …, xn)` which is the MLE over the
+/// evaluations of f(x)/g(x) on the boolean hypercube {0,1}^n:
+///
+/// The caller needs to check num_vars matches in f/g
+/// Cost: linear in N.
+</span><span class="kw">fn </span>compute_prod_0&lt;F: PrimeField&gt;(
+    fx: <span class="kw-2">&amp;</span>DenseMultilinearExtension&lt;F&gt;,
+    gx: <span class="kw-2">&amp;</span>DenseMultilinearExtension&lt;F&gt;,
+) -&gt; <span class="prelude-ty">Result</span>&lt;Vec&lt;F&gt;, PolyIOPErrors&gt; {
+    <span class="kw">let </span>start = <span class="macro">start_timer!</span>(|| <span class="string">&quot;compute prod(0,x)&quot;</span>);
 
-    <span class="kw">let</span> <span class="ident">input</span> <span class="op">=</span> <span class="ident">fx</span>
-        .<span class="ident">iter</span>()
-        .<span class="ident">zip</span>(<span class="ident">gx</span>.<span class="ident">iter</span>())
-        .<span class="ident">map</span>(<span class="op">|</span>(<span class="kw-2">&amp;</span><span class="ident">fi</span>, <span class="kw-2">&amp;</span><span class="ident">gi</span>)<span class="op">|</span> (<span class="ident">fi</span>, <span class="ident">gi</span>))
-        .<span class="ident">collect</span>::<span class="op">&lt;</span><span class="ident">Vec</span><span class="op">&lt;</span><span class="kw">_</span><span class="op">&gt;</span><span class="op">&gt;</span>();
-    <span class="kw">let</span> <span class="ident">prod_0x_evals</span> <span class="op">=</span> <span class="ident">input</span>.<span class="ident">par_iter</span>().<span class="ident">map</span>(<span class="op">|</span>(<span class="ident">x</span>, <span class="ident">y</span>)<span class="op">|</span> <span class="kw-2">*</span><span class="ident">x</span> <span class="op">/</span> <span class="kw-2">*</span><span class="ident">y</span>).<span class="ident">collect</span>::<span class="op">&lt;</span><span class="ident">Vec</span><span class="op">&lt;</span><span class="kw">_</span><span class="op">&gt;</span><span class="op">&gt;</span>();
+    <span class="kw">let </span>input = fx
+        .iter()
+        .zip(gx.iter())
+        .map(|(<span class="kw-2">&amp;</span>fi, <span class="kw-2">&amp;</span>gi)| (fi, gi))
+        .collect::&lt;Vec&lt;<span class="kw">_</span>&gt;&gt;();
+    <span class="kw">let </span>prod_0x_evals = input.par_iter().map(|(x, y)| <span class="kw-2">*</span>x / <span class="kw-2">*</span>y).collect::&lt;Vec&lt;<span class="kw">_</span>&gt;&gt;();
 
-    <span class="macro">end_timer!</span>(<span class="ident">start</span>);
-    <span class="prelude-val">Ok</span>(<span class="ident">prod_0x_evals</span>)
+    <span class="macro">end_timer!</span>(start);
+    <span class="prelude-val">Ok</span>(prod_0x_evals)
 }
 </code></pre></div>
-</section></div></main><div id="rustdoc-vars" data-root-path="../../../../" data-current-crate="subroutines" data-themes="ayu,dark,light" data-resource-suffix="" data-rustdoc-version="1.64.0 (a55dd71d5 2022-09-19)" ></div></body></html>
+</section></div></main><div id="rustdoc-vars" data-root-path="../../../../" data-current-crate="subroutines" data-themes="ayu,dark,light" data-resource-suffix="" data-rustdoc-version="1.65.0 (897e37553 2022-11-02)" ></div></body></html>

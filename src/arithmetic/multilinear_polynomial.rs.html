@@ -1,4 +1,4 @@
-<!DOCTYPE html><html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1.0"><meta name="generator" content="rustdoc"><meta name="description" content="Source of the Rust file `arithmetic/src/multilinear_polynomial.rs`."><meta name="keywords" content="rust, rustlang, rust-lang"><title>multilinear_polynomial.rs - source</title><link rel="preload" as="font" type="font/woff2" crossorigin href="../../SourceSerif4-Regular.ttf.woff2"><link rel="preload" as="font" type="font/woff2" crossorigin href="../../FiraSans-Regular.woff2"><link rel="preload" as="font" type="font/woff2" crossorigin href="../../FiraSans-Medium.woff2"><link rel="preload" as="font" type="font/woff2" crossorigin href="../../SourceCodePro-Regular.ttf.woff2"><link rel="preload" as="font" type="font/woff2" crossorigin href="../../SourceSerif4-Bold.ttf.woff2"><link rel="preload" as="font" type="font/woff2" crossorigin href="../../SourceCodePro-Semibold.ttf.woff2"><link rel="stylesheet" type="text/css" href="../../normalize.css"><link rel="stylesheet" type="text/css" href="../../rustdoc.css" id="mainThemeStyle"><link rel="stylesheet" type="text/css" href="../../ayu.css" disabled><link rel="stylesheet" type="text/css" href="../../dark.css" disabled><link rel="stylesheet" type="text/css" href="../../light.css" id="themeStyle"><script id="default-settings" ></script><script src="../../storage.js"></script><script defer src="../../source-script.js"></script><script defer src="../../source-files.js"></script><script defer src="../../main.js"></script><noscript><link rel="stylesheet" href="../../noscript.css"></noscript><link rel="alternate icon" type="image/png" href="../../favicon-16x16.png"><link rel="alternate icon" type="image/png" href="../../favicon-32x32.png"><link rel="icon" type="image/svg+xml" href="../../favicon.svg"></head><body class="rustdoc source"><!--[if lte IE 11]><div class="warning">This old browser is unsupported and will most likely display funky things.</div><![endif]--><nav class="mobile-topbar"><button class="sidebar-menu-toggle">&#9776;</button><a class="sidebar-logo" href="../../arithmetic/index.html"><div class="logo-container"><img class="rust-logo" src="../../rust-logo.svg" alt="logo"></div></a><h2 class="location"></h2></nav><nav class="sidebar"><a class="sidebar-logo" href="../../arithmetic/index.html"><div class="logo-container"><img class="rust-logo" src="../../rust-logo.svg" alt="logo"></div></a></nav><main><div class="width-limiter"><div class="sub-container"><a class="sub-logo-container" href="../../arithmetic/index.html"><img class="rust-logo" src="../../rust-logo.svg" alt="logo"></a><nav class="sub"><form class="search-form"><div class="search-container"><span></span><input class="search-input" name="search" autocomplete="off" spellcheck="false" placeholder="Click or press ‘S’ to search, ‘?’ for more options…" type="search"><div id="help-button" title="help" tabindex="-1"><button type="button">?</button></div><div id="settings-menu" tabindex="-1"><a href="../../settings.html" title="settings"><img width="22" height="22" alt="Change settings" src="../../wheel.svg"></a></div></div></form></nav></div><section id="main-content" class="content"><div class="example-wrap"><pre class="line-numbers"><span id="1">1</span>
+<!DOCTYPE html><html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1.0"><meta name="generator" content="rustdoc"><meta name="description" content="Source of the Rust file `arithmetic/src/multilinear_polynomial.rs`."><meta name="keywords" content="rust, rustlang, rust-lang"><title>multilinear_polynomial.rs - source</title><link rel="preload" as="font" type="font/woff2" crossorigin href="../../SourceSerif4-Regular.ttf.woff2"><link rel="preload" as="font" type="font/woff2" crossorigin href="../../FiraSans-Regular.woff2"><link rel="preload" as="font" type="font/woff2" crossorigin href="../../FiraSans-Medium.woff2"><link rel="preload" as="font" type="font/woff2" crossorigin href="../../SourceCodePro-Regular.ttf.woff2"><link rel="preload" as="font" type="font/woff2" crossorigin href="../../SourceSerif4-Bold.ttf.woff2"><link rel="preload" as="font" type="font/woff2" crossorigin href="../../SourceCodePro-Semibold.ttf.woff2"><link rel="stylesheet" href="../../normalize.css"><link rel="stylesheet" href="../../rustdoc.css" id="mainThemeStyle"><link rel="stylesheet" href="../../ayu.css" disabled><link rel="stylesheet" href="../../dark.css" disabled><link rel="stylesheet" href="../../light.css" id="themeStyle"><script id="default-settings" ></script><script src="../../storage.js"></script><script defer src="../../source-script.js"></script><script defer src="../../source-files.js"></script><script defer src="../../main.js"></script><noscript><link rel="stylesheet" href="../../noscript.css"></noscript><link rel="alternate icon" type="image/png" href="../../favicon-16x16.png"><link rel="alternate icon" type="image/png" href="../../favicon-32x32.png"><link rel="icon" type="image/svg+xml" href="../../favicon.svg"></head><body class="rustdoc source"><!--[if lte IE 11]><div class="warning">This old browser is unsupported and will most likely display funky things.</div><![endif]--><nav class="mobile-topbar"><button class="sidebar-menu-toggle">&#9776;</button><a class="sidebar-logo" href="../../arithmetic/index.html"><div class="logo-container"><img class="rust-logo" src="../../rust-logo.svg" alt="logo"></div></a><h2 class="location"></h2></nav><nav class="sidebar"><a class="sidebar-logo" href="../../arithmetic/index.html"><div class="logo-container"><img class="rust-logo" src="../../rust-logo.svg" alt="logo"></div></a></nav><main><div class="width-limiter"><div class="sub-container"><a class="sub-logo-container" href="../../arithmetic/index.html"><img class="rust-logo" src="../../rust-logo.svg" alt="logo"></a><nav class="sub"><form class="search-form"><div class="search-container"><span></span><input class="search-input" name="search" autocomplete="off" spellcheck="false" placeholder="Click or press ‘S’ to search, ‘?’ for more options…" type="search"><div id="help-button" title="help" tabindex="-1"><button type="button">?</button></div><div id="settings-menu" tabindex="-1"><a href="../../settings.html" title="settings"><img width="22" height="22" alt="Change settings" src="../../wheel.svg"></a></div></div></form></nav></div><section id="main-content" class="content"><div class="example-wrap"><pre class="line-numbers"><span id="1">1</span>
 <span id="2">2</span>
 <span id="3">3</span>
 <span id="4">4</span>
@@ -265,272 +265,272 @@
 <span id="265">265</span>
 <span id="266">266</span>
 <span id="267">267</span>
-</pre><pre class="rust"><code><span class="kw">use</span> <span class="kw">crate</span>::{<span class="ident">util::get_batched_nv</span>, <span class="ident">ArithErrors</span>};
-<span class="kw">use</span> <span class="ident">ark_ff</span>::{<span class="ident">Field</span>, <span class="ident">PrimeField</span>};
-<span class="kw">use</span> <span class="ident">ark_poly::MultilinearExtension</span>;
-<span class="kw">use</span> <span class="ident">ark_std</span>::{<span class="ident">end_timer</span>, <span class="ident">rand::RngCore</span>, <span class="ident">start_timer</span>};
-<span class="attribute">#[<span class="ident">cfg</span>(<span class="ident">feature</span> <span class="op">=</span> <span class="string">&quot;parallel&quot;</span>)]</span>
-<span class="kw">use</span> <span class="ident">rayon::prelude</span>::{<span class="ident">IndexedParallelIterator</span>, <span class="ident">IntoParallelRefMutIterator</span>, <span class="ident">ParallelIterator</span>};
-<span class="kw">use</span> <span class="ident">std::rc::Rc</span>;
+</pre><pre class="rust"><code><span class="kw">use crate</span>::{util::get_batched_nv, ArithErrors};
+<span class="kw">use </span>ark_ff::{Field, PrimeField};
+<span class="kw">use </span>ark_poly::MultilinearExtension;
+<span class="kw">use </span>ark_std::{end_timer, rand::RngCore, start_timer};
+<span class="attribute">#[cfg(feature = <span class="string">&quot;parallel&quot;</span>)]
+</span><span class="kw">use </span>rayon::prelude::{IndexedParallelIterator, IntoParallelRefMutIterator, ParallelIterator};
+<span class="kw">use </span>std::rc::Rc;
 
-<span class="kw">pub</span> <span class="kw">use</span> <span class="ident">ark_poly::DenseMultilinearExtension</span>;
+<span class="kw">pub use </span>ark_poly::DenseMultilinearExtension;
 
-<span class="doccomment">/// Sample a random list of multilinear polynomials.</span>
-<span class="doccomment">/// Returns</span>
-<span class="doccomment">/// - the list of polynomials,</span>
-<span class="doccomment">/// - its sum of polynomial evaluations over the boolean hypercube.</span>
-<span class="kw">pub</span> <span class="kw">fn</span> <span class="ident">random_mle_list</span><span class="op">&lt;</span><span class="ident">F</span>: <span class="ident">PrimeField</span>, <span class="ident">R</span>: <span class="ident">RngCore</span><span class="op">&gt;</span>(
-    <span class="ident">nv</span>: <span class="ident">usize</span>,
-    <span class="ident">degree</span>: <span class="ident">usize</span>,
-    <span class="ident">rng</span>: <span class="kw-2">&amp;mut</span> <span class="ident">R</span>,
-) -&gt; (<span class="ident">Vec</span><span class="op">&lt;</span><span class="ident">Rc</span><span class="op">&lt;</span><span class="ident">DenseMultilinearExtension</span><span class="op">&lt;</span><span class="ident">F</span><span class="op">&gt;</span><span class="op">&gt;</span><span class="op">&gt;</span>, <span class="ident">F</span>) {
-    <span class="kw">let</span> <span class="ident">start</span> <span class="op">=</span> <span class="macro">start_timer!</span>(<span class="op">|</span><span class="op">|</span> <span class="string">&quot;sample random mle list&quot;</span>);
-    <span class="kw">let</span> <span class="kw-2">mut</span> <span class="ident">multiplicands</span> <span class="op">=</span> <span class="ident">Vec::with_capacity</span>(<span class="ident">degree</span>);
-    <span class="kw">for</span> <span class="kw">_</span> <span class="kw">in</span> <span class="number">0</span>..<span class="ident">degree</span> {
-        <span class="ident">multiplicands</span>.<span class="ident">push</span>(<span class="ident">Vec::with_capacity</span>(<span class="number">1</span> <span class="op">&lt;</span><span class="op">&lt;</span> <span class="ident">nv</span>))
+<span class="doccomment">/// Sample a random list of multilinear polynomials.
+/// Returns
+/// - the list of polynomials,
+/// - its sum of polynomial evaluations over the boolean hypercube.
+</span><span class="kw">pub fn </span>random_mle_list&lt;F: PrimeField, R: RngCore&gt;(
+    nv: usize,
+    degree: usize,
+    rng: <span class="kw-2">&amp;mut </span>R,
+) -&gt; (Vec&lt;Rc&lt;DenseMultilinearExtension&lt;F&gt;&gt;&gt;, F) {
+    <span class="kw">let </span>start = <span class="macro">start_timer!</span>(|| <span class="string">&quot;sample random mle list&quot;</span>);
+    <span class="kw">let </span><span class="kw-2">mut </span>multiplicands = Vec::with_capacity(degree);
+    <span class="kw">for _ in </span><span class="number">0</span>..degree {
+        multiplicands.push(Vec::with_capacity(<span class="number">1 </span>&lt;&lt; nv))
     }
-    <span class="kw">let</span> <span class="kw-2">mut</span> <span class="ident">sum</span> <span class="op">=</span> <span class="ident">F::zero</span>();
+    <span class="kw">let </span><span class="kw-2">mut </span>sum = F::zero();
 
-    <span class="kw">for</span> <span class="kw">_</span> <span class="kw">in</span> <span class="number">0</span>..(<span class="number">1</span> <span class="op">&lt;</span><span class="op">&lt;</span> <span class="ident">nv</span>) {
-        <span class="kw">let</span> <span class="kw-2">mut</span> <span class="ident">product</span> <span class="op">=</span> <span class="ident">F::one</span>();
+    <span class="kw">for _ in </span><span class="number">0</span>..(<span class="number">1 </span>&lt;&lt; nv) {
+        <span class="kw">let </span><span class="kw-2">mut </span>product = F::one();
 
-        <span class="kw">for</span> <span class="ident">e</span> <span class="kw">in</span> <span class="ident">multiplicands</span>.<span class="ident">iter_mut</span>() {
-            <span class="kw">let</span> <span class="ident">val</span> <span class="op">=</span> <span class="ident">F::rand</span>(<span class="ident">rng</span>);
-            <span class="ident">e</span>.<span class="ident">push</span>(<span class="ident">val</span>);
-            <span class="ident">product</span> <span class="kw-2">*</span><span class="op">=</span> <span class="ident">val</span>;
+        <span class="kw">for </span>e <span class="kw">in </span>multiplicands.iter_mut() {
+            <span class="kw">let </span>val = F::rand(rng);
+            e.push(val);
+            product <span class="kw-2">*</span>= val;
         }
-        <span class="ident">sum</span> <span class="op">+</span><span class="op">=</span> <span class="ident">product</span>;
+        sum += product;
     }
 
-    <span class="kw">let</span> <span class="ident">list</span> <span class="op">=</span> <span class="ident">multiplicands</span>
-        .<span class="ident">into_iter</span>()
-        .<span class="ident">map</span>(<span class="op">|</span><span class="ident">x</span><span class="op">|</span> <span class="ident">Rc::new</span>(<span class="ident">DenseMultilinearExtension::from_evaluations_vec</span>(<span class="ident">nv</span>, <span class="ident">x</span>)))
-        .<span class="ident">collect</span>();
+    <span class="kw">let </span>list = multiplicands
+        .into_iter()
+        .map(|x| Rc::new(DenseMultilinearExtension::from_evaluations_vec(nv, x)))
+        .collect();
 
-    <span class="macro">end_timer!</span>(<span class="ident">start</span>);
-    (<span class="ident">list</span>, <span class="ident">sum</span>)
+    <span class="macro">end_timer!</span>(start);
+    (list, sum)
 }
 
-<span class="comment">// Build a randomize list of mle-s whose sum is zero.</span>
-<span class="kw">pub</span> <span class="kw">fn</span> <span class="ident">random_zero_mle_list</span><span class="op">&lt;</span><span class="ident">F</span>: <span class="ident">PrimeField</span>, <span class="ident">R</span>: <span class="ident">RngCore</span><span class="op">&gt;</span>(
-    <span class="ident">nv</span>: <span class="ident">usize</span>,
-    <span class="ident">degree</span>: <span class="ident">usize</span>,
-    <span class="ident">rng</span>: <span class="kw-2">&amp;mut</span> <span class="ident">R</span>,
-) -&gt; <span class="ident">Vec</span><span class="op">&lt;</span><span class="ident">Rc</span><span class="op">&lt;</span><span class="ident">DenseMultilinearExtension</span><span class="op">&lt;</span><span class="ident">F</span><span class="op">&gt;</span><span class="op">&gt;</span><span class="op">&gt;</span> {
-    <span class="kw">let</span> <span class="ident">start</span> <span class="op">=</span> <span class="macro">start_timer!</span>(<span class="op">|</span><span class="op">|</span> <span class="string">&quot;sample random zero mle list&quot;</span>);
+<span class="comment">// Build a randomize list of mle-s whose sum is zero.
+</span><span class="kw">pub fn </span>random_zero_mle_list&lt;F: PrimeField, R: RngCore&gt;(
+    nv: usize,
+    degree: usize,
+    rng: <span class="kw-2">&amp;mut </span>R,
+) -&gt; Vec&lt;Rc&lt;DenseMultilinearExtension&lt;F&gt;&gt;&gt; {
+    <span class="kw">let </span>start = <span class="macro">start_timer!</span>(|| <span class="string">&quot;sample random zero mle list&quot;</span>);
 
-    <span class="kw">let</span> <span class="kw-2">mut</span> <span class="ident">multiplicands</span> <span class="op">=</span> <span class="ident">Vec::with_capacity</span>(<span class="ident">degree</span>);
-    <span class="kw">for</span> <span class="kw">_</span> <span class="kw">in</span> <span class="number">0</span>..<span class="ident">degree</span> {
-        <span class="ident">multiplicands</span>.<span class="ident">push</span>(<span class="ident">Vec::with_capacity</span>(<span class="number">1</span> <span class="op">&lt;</span><span class="op">&lt;</span> <span class="ident">nv</span>))
+    <span class="kw">let </span><span class="kw-2">mut </span>multiplicands = Vec::with_capacity(degree);
+    <span class="kw">for _ in </span><span class="number">0</span>..degree {
+        multiplicands.push(Vec::with_capacity(<span class="number">1 </span>&lt;&lt; nv))
     }
-    <span class="kw">for</span> <span class="kw">_</span> <span class="kw">in</span> <span class="number">0</span>..(<span class="number">1</span> <span class="op">&lt;</span><span class="op">&lt;</span> <span class="ident">nv</span>) {
-        <span class="ident">multiplicands</span>[<span class="number">0</span>].<span class="ident">push</span>(<span class="ident">F::zero</span>());
-        <span class="kw">for</span> <span class="ident">e</span> <span class="kw">in</span> <span class="ident">multiplicands</span>.<span class="ident">iter_mut</span>().<span class="ident">skip</span>(<span class="number">1</span>) {
-            <span class="ident">e</span>.<span class="ident">push</span>(<span class="ident">F::rand</span>(<span class="ident">rng</span>));
+    <span class="kw">for _ in </span><span class="number">0</span>..(<span class="number">1 </span>&lt;&lt; nv) {
+        multiplicands[<span class="number">0</span>].push(F::zero());
+        <span class="kw">for </span>e <span class="kw">in </span>multiplicands.iter_mut().skip(<span class="number">1</span>) {
+            e.push(F::rand(rng));
         }
     }
 
-    <span class="kw">let</span> <span class="ident">list</span> <span class="op">=</span> <span class="ident">multiplicands</span>
-        .<span class="ident">into_iter</span>()
-        .<span class="ident">map</span>(<span class="op">|</span><span class="ident">x</span><span class="op">|</span> <span class="ident">Rc::new</span>(<span class="ident">DenseMultilinearExtension::from_evaluations_vec</span>(<span class="ident">nv</span>, <span class="ident">x</span>)))
-        .<span class="ident">collect</span>();
+    <span class="kw">let </span>list = multiplicands
+        .into_iter()
+        .map(|x| Rc::new(DenseMultilinearExtension::from_evaluations_vec(nv, x)))
+        .collect();
 
-    <span class="macro">end_timer!</span>(<span class="ident">start</span>);
-    <span class="ident">list</span>
+    <span class="macro">end_timer!</span>(start);
+    list
 }
 
-<span class="doccomment">/// An MLE that represent an identity permutation: `f(index) \mapto index`</span>
-<span class="kw">pub</span> <span class="kw">fn</span> <span class="ident">identity_permutation_mle</span><span class="op">&lt;</span><span class="ident">F</span>: <span class="ident">PrimeField</span><span class="op">&gt;</span>(
-    <span class="ident">num_vars</span>: <span class="ident">usize</span>,
-) -&gt; <span class="ident">Rc</span><span class="op">&lt;</span><span class="ident">DenseMultilinearExtension</span><span class="op">&lt;</span><span class="ident">F</span><span class="op">&gt;</span><span class="op">&gt;</span> {
-    <span class="kw">let</span> <span class="ident">s_id_vec</span> <span class="op">=</span> (<span class="number">0</span>..<span class="number">1u64</span> <span class="op">&lt;</span><span class="op">&lt;</span> <span class="ident">num_vars</span>).<span class="ident">map</span>(<span class="ident">F::from</span>).<span class="ident">collect</span>();
-    <span class="ident">Rc::new</span>(<span class="ident">DenseMultilinearExtension::from_evaluations_vec</span>(
-        <span class="ident">num_vars</span>, <span class="ident">s_id_vec</span>,
+<span class="doccomment">/// An MLE that represent an identity permutation: `f(index) \mapto index`
+</span><span class="kw">pub fn </span>identity_permutation_mle&lt;F: PrimeField&gt;(
+    num_vars: usize,
+) -&gt; Rc&lt;DenseMultilinearExtension&lt;F&gt;&gt; {
+    <span class="kw">let </span>s_id_vec = (<span class="number">0</span>..<span class="number">1u64 </span>&lt;&lt; num_vars).map(F::from).collect();
+    Rc::new(DenseMultilinearExtension::from_evaluations_vec(
+        num_vars, s_id_vec,
     ))
 }
 
-<span class="doccomment">/// An MLE that represent a random permutation</span>
-<span class="kw">pub</span> <span class="kw">fn</span> <span class="ident">random_permutation_mle</span><span class="op">&lt;</span><span class="ident">F</span>: <span class="ident">PrimeField</span>, <span class="ident">R</span>: <span class="ident">RngCore</span><span class="op">&gt;</span>(
-    <span class="ident">num_vars</span>: <span class="ident">usize</span>,
-    <span class="ident">rng</span>: <span class="kw-2">&amp;mut</span> <span class="ident">R</span>,
-) -&gt; <span class="ident">Rc</span><span class="op">&lt;</span><span class="ident">DenseMultilinearExtension</span><span class="op">&lt;</span><span class="ident">F</span><span class="op">&gt;</span><span class="op">&gt;</span> {
-    <span class="kw">let</span> <span class="ident">len</span> <span class="op">=</span> <span class="number">1u64</span> <span class="op">&lt;</span><span class="op">&lt;</span> <span class="ident">num_vars</span>;
-    <span class="kw">let</span> <span class="kw-2">mut</span> <span class="ident">s_id_vec</span>: <span class="ident">Vec</span><span class="op">&lt;</span><span class="ident">F</span><span class="op">&gt;</span> <span class="op">=</span> (<span class="number">0</span>..<span class="ident">len</span>).<span class="ident">map</span>(<span class="ident">F::from</span>).<span class="ident">collect</span>();
-    <span class="kw">let</span> <span class="kw-2">mut</span> <span class="ident">s_perm_vec</span> <span class="op">=</span> <span class="macro">vec!</span>[];
-    <span class="kw">for</span> <span class="kw">_</span> <span class="kw">in</span> <span class="number">0</span>..<span class="ident">len</span> {
-        <span class="kw">let</span> <span class="ident">index</span> <span class="op">=</span> <span class="ident">rng</span>.<span class="ident">next_u64</span>() <span class="kw">as</span> <span class="ident">usize</span> <span class="op">%</span> <span class="ident">s_id_vec</span>.<span class="ident">len</span>();
-        <span class="ident">s_perm_vec</span>.<span class="ident">push</span>(<span class="ident">s_id_vec</span>.<span class="ident">remove</span>(<span class="ident">index</span>));
+<span class="doccomment">/// An MLE that represent a random permutation
+</span><span class="kw">pub fn </span>random_permutation_mle&lt;F: PrimeField, R: RngCore&gt;(
+    num_vars: usize,
+    rng: <span class="kw-2">&amp;mut </span>R,
+) -&gt; Rc&lt;DenseMultilinearExtension&lt;F&gt;&gt; {
+    <span class="kw">let </span>len = <span class="number">1u64 </span>&lt;&lt; num_vars;
+    <span class="kw">let </span><span class="kw-2">mut </span>s_id_vec: Vec&lt;F&gt; = (<span class="number">0</span>..len).map(F::from).collect();
+    <span class="kw">let </span><span class="kw-2">mut </span>s_perm_vec = <span class="macro">vec!</span>[];
+    <span class="kw">for _ in </span><span class="number">0</span>..len {
+        <span class="kw">let </span>index = rng.next_u64() <span class="kw">as </span>usize % s_id_vec.len();
+        s_perm_vec.push(s_id_vec.remove(index));
     }
-    <span class="ident">Rc::new</span>(<span class="ident">DenseMultilinearExtension::from_evaluations_vec</span>(
-        <span class="ident">num_vars</span>, <span class="ident">s_perm_vec</span>,
+    Rc::new(DenseMultilinearExtension::from_evaluations_vec(
+        num_vars, s_perm_vec,
     ))
 }
 
-<span class="kw">pub</span> <span class="kw">fn</span> <span class="ident">evaluate_opt</span><span class="op">&lt;</span><span class="ident">F</span>: <span class="ident">Field</span><span class="op">&gt;</span>(<span class="ident">poly</span>: <span class="kw-2">&amp;</span><span class="ident">DenseMultilinearExtension</span><span class="op">&lt;</span><span class="ident">F</span><span class="op">&gt;</span>, <span class="ident">point</span>: <span class="kw-2">&amp;</span>[<span class="ident">F</span>]) -&gt; <span class="ident">F</span> {
-    <span class="macro">assert_eq!</span>(<span class="ident">poly</span>.<span class="ident">num_vars</span>, <span class="ident">point</span>.<span class="ident">len</span>());
-    <span class="ident">fix_variables</span>(<span class="ident">poly</span>, <span class="ident">point</span>).<span class="ident">evaluations</span>[<span class="number">0</span>]
+<span class="kw">pub fn </span>evaluate_opt&lt;F: Field&gt;(poly: <span class="kw-2">&amp;</span>DenseMultilinearExtension&lt;F&gt;, point: <span class="kw-2">&amp;</span>[F]) -&gt; F {
+    <span class="macro">assert_eq!</span>(poly.num_vars, point.len());
+    fix_variables(poly, point).evaluations[<span class="number">0</span>]
 }
 
-<span class="kw">pub</span> <span class="kw">fn</span> <span class="ident">fix_variables</span><span class="op">&lt;</span><span class="ident">F</span>: <span class="ident">Field</span><span class="op">&gt;</span>(
-    <span class="ident">poly</span>: <span class="kw-2">&amp;</span><span class="ident">DenseMultilinearExtension</span><span class="op">&lt;</span><span class="ident">F</span><span class="op">&gt;</span>,
-    <span class="ident">partial_point</span>: <span class="kw-2">&amp;</span>[<span class="ident">F</span>],
-) -&gt; <span class="ident">DenseMultilinearExtension</span><span class="op">&lt;</span><span class="ident">F</span><span class="op">&gt;</span> {
+<span class="kw">pub fn </span>fix_variables&lt;F: Field&gt;(
+    poly: <span class="kw-2">&amp;</span>DenseMultilinearExtension&lt;F&gt;,
+    partial_point: <span class="kw-2">&amp;</span>[F],
+) -&gt; DenseMultilinearExtension&lt;F&gt; {
     <span class="macro">assert!</span>(
-        <span class="ident">partial_point</span>.<span class="ident">len</span>() <span class="op">&lt;</span><span class="op">=</span> <span class="ident">poly</span>.<span class="ident">num_vars</span>,
-        <span class="string">&quot;invalid size of partial point&quot;</span>
-    );
-    <span class="kw">let</span> <span class="ident">nv</span> <span class="op">=</span> <span class="ident">poly</span>.<span class="ident">num_vars</span>;
-    <span class="kw">let</span> <span class="kw-2">mut</span> <span class="ident">poly</span> <span class="op">=</span> <span class="ident">poly</span>.<span class="ident">evaluations</span>.<span class="ident">to_vec</span>();
-    <span class="kw">let</span> <span class="ident">dim</span> <span class="op">=</span> <span class="ident">partial_point</span>.<span class="ident">len</span>();
-    <span class="comment">// evaluate single variable of partial point from left to right</span>
-    <span class="kw">for</span> (<span class="ident">i</span>, <span class="ident">point</span>) <span class="kw">in</span> <span class="ident">partial_point</span>.<span class="ident">iter</span>().<span class="ident">enumerate</span>().<span class="ident">take</span>(<span class="ident">dim</span>) {
-        <span class="ident">poly</span> <span class="op">=</span> <span class="ident">fix_one_variable_helper</span>(<span class="kw-2">&amp;</span><span class="ident">poly</span>, <span class="ident">nv</span> <span class="op">-</span> <span class="ident">i</span>, <span class="ident">point</span>);
+        partial_point.len() &lt;= poly.num_vars,
+        <span class="string">&quot;invalid size of partial point&quot;
+    </span>);
+    <span class="kw">let </span>nv = poly.num_vars;
+    <span class="kw">let </span><span class="kw-2">mut </span>poly = poly.evaluations.to_vec();
+    <span class="kw">let </span>dim = partial_point.len();
+    <span class="comment">// evaluate single variable of partial point from left to right
+    </span><span class="kw">for </span>(i, point) <span class="kw">in </span>partial_point.iter().enumerate().take(dim) {
+        poly = fix_one_variable_helper(<span class="kw-2">&amp;</span>poly, nv - i, point);
     }
 
-    <span class="ident">DenseMultilinearExtension</span>::<span class="op">&lt;</span><span class="ident">F</span><span class="op">&gt;</span><span class="ident">::from_evaluations_slice</span>(<span class="ident">nv</span> <span class="op">-</span> <span class="ident">dim</span>, <span class="kw-2">&amp;</span><span class="ident">poly</span>[..(<span class="number">1</span> <span class="op">&lt;</span><span class="op">&lt;</span> (<span class="ident">nv</span> <span class="op">-</span> <span class="ident">dim</span>))])
+    DenseMultilinearExtension::&lt;F&gt;::from_evaluations_slice(nv - dim, <span class="kw-2">&amp;</span>poly[..(<span class="number">1 </span>&lt;&lt; (nv - dim))])
 }
 
-<span class="kw">fn</span> <span class="ident">fix_one_variable_helper</span><span class="op">&lt;</span><span class="ident">F</span>: <span class="ident">Field</span><span class="op">&gt;</span>(<span class="ident">data</span>: <span class="kw-2">&amp;</span>[<span class="ident">F</span>], <span class="ident">nv</span>: <span class="ident">usize</span>, <span class="ident">point</span>: <span class="kw-2">&amp;</span><span class="ident">F</span>) -&gt; <span class="ident">Vec</span><span class="op">&lt;</span><span class="ident">F</span><span class="op">&gt;</span> {
-    <span class="kw">let</span> <span class="kw-2">mut</span> <span class="ident">res</span> <span class="op">=</span> <span class="macro">vec!</span>[<span class="ident">F::zero</span>(); <span class="number">1</span> <span class="op">&lt;</span><span class="op">&lt;</span> (<span class="ident">nv</span> <span class="op">-</span> <span class="number">1</span>)];
+<span class="kw">fn </span>fix_one_variable_helper&lt;F: Field&gt;(data: <span class="kw-2">&amp;</span>[F], nv: usize, point: <span class="kw-2">&amp;</span>F) -&gt; Vec&lt;F&gt; {
+    <span class="kw">let </span><span class="kw-2">mut </span>res = <span class="macro">vec!</span>[F::zero(); <span class="number">1 </span>&lt;&lt; (nv - <span class="number">1</span>)];
 
-    <span class="comment">// evaluate single variable of partial point from left to right</span>
-    <span class="attribute">#[<span class="ident">cfg</span>(<span class="ident">not</span>(<span class="ident">feature</span> <span class="op">=</span> <span class="string">&quot;parallel&quot;</span>))]</span>
-    <span class="kw">for</span> <span class="ident">i</span> <span class="kw">in</span> <span class="number">0</span>..(<span class="number">1</span> <span class="op">&lt;</span><span class="op">&lt;</span> (<span class="ident">nv</span> <span class="op">-</span> <span class="number">1</span>)) {
-        <span class="ident">res</span>[<span class="ident">i</span>] <span class="op">=</span> <span class="ident">data</span>[<span class="ident">i</span>] <span class="op">+</span> (<span class="ident">data</span>[(<span class="ident">i</span> <span class="op">&lt;</span><span class="op">&lt;</span> <span class="number">1</span>) <span class="op">+</span> <span class="number">1</span>] <span class="op">-</span> <span class="ident">data</span>[<span class="ident">i</span> <span class="op">&lt;</span><span class="op">&lt;</span> <span class="number">1</span>]) <span class="op">*</span> <span class="ident">point</span>;
+    <span class="comment">// evaluate single variable of partial point from left to right
+    </span><span class="attribute">#[cfg(not(feature = <span class="string">&quot;parallel&quot;</span>))]
+    </span><span class="kw">for </span>i <span class="kw">in </span><span class="number">0</span>..(<span class="number">1 </span>&lt;&lt; (nv - <span class="number">1</span>)) {
+        res[i] = data[i] + (data[(i &lt;&lt; <span class="number">1</span>) + <span class="number">1</span>] - data[i &lt;&lt; <span class="number">1</span>]) * point;
     }
 
-    <span class="attribute">#[<span class="ident">cfg</span>(<span class="ident">feature</span> <span class="op">=</span> <span class="string">&quot;parallel&quot;</span>)]</span>
-    <span class="kw">if</span> <span class="ident">nv</span> <span class="op">&gt;</span><span class="op">=</span> <span class="number">13</span> {
-        <span class="comment">// on my computer we parallelization doesn&#39;t help till nv &gt;= 13</span>
-        <span class="ident">res</span>.<span class="ident">par_iter_mut</span>().<span class="ident">enumerate</span>().<span class="ident">for_each</span>(<span class="op">|</span>(<span class="ident">i</span>, <span class="ident">x</span>)<span class="op">|</span> {
-            <span class="kw-2">*</span><span class="ident">x</span> <span class="op">=</span> <span class="ident">data</span>[<span class="ident">i</span> <span class="op">&lt;</span><span class="op">&lt;</span> <span class="number">1</span>] <span class="op">+</span> (<span class="ident">data</span>[(<span class="ident">i</span> <span class="op">&lt;</span><span class="op">&lt;</span> <span class="number">1</span>) <span class="op">+</span> <span class="number">1</span>] <span class="op">-</span> <span class="ident">data</span>[<span class="ident">i</span> <span class="op">&lt;</span><span class="op">&lt;</span> <span class="number">1</span>]) <span class="op">*</span> <span class="ident">point</span>;
+    <span class="attribute">#[cfg(feature = <span class="string">&quot;parallel&quot;</span>)]
+    </span><span class="kw">if </span>nv &gt;= <span class="number">13 </span>{
+        <span class="comment">// on my computer we parallelization doesn&#39;t help till nv &gt;= 13
+        </span>res.par_iter_mut().enumerate().for_each(|(i, x)| {
+            <span class="kw-2">*</span>x = data[i &lt;&lt; <span class="number">1</span>] + (data[(i &lt;&lt; <span class="number">1</span>) + <span class="number">1</span>] - data[i &lt;&lt; <span class="number">1</span>]) * point;
         });
-    } <span class="kw">else</span> {
-        <span class="kw">for</span> <span class="ident">i</span> <span class="kw">in</span> <span class="number">0</span>..(<span class="number">1</span> <span class="op">&lt;</span><span class="op">&lt;</span> (<span class="ident">nv</span> <span class="op">-</span> <span class="number">1</span>)) {
-            <span class="ident">res</span>[<span class="ident">i</span>] <span class="op">=</span> <span class="ident">data</span>[<span class="ident">i</span> <span class="op">&lt;</span><span class="op">&lt;</span> <span class="number">1</span>] <span class="op">+</span> (<span class="ident">data</span>[(<span class="ident">i</span> <span class="op">&lt;</span><span class="op">&lt;</span> <span class="number">1</span>) <span class="op">+</span> <span class="number">1</span>] <span class="op">-</span> <span class="ident">data</span>[<span class="ident">i</span> <span class="op">&lt;</span><span class="op">&lt;</span> <span class="number">1</span>]) <span class="op">*</span> <span class="ident">point</span>;
+    } <span class="kw">else </span>{
+        <span class="kw">for </span>i <span class="kw">in </span><span class="number">0</span>..(<span class="number">1 </span>&lt;&lt; (nv - <span class="number">1</span>)) {
+            res[i] = data[i &lt;&lt; <span class="number">1</span>] + (data[(i &lt;&lt; <span class="number">1</span>) + <span class="number">1</span>] - data[i &lt;&lt; <span class="number">1</span>]) * point;
         }
     }
 
-    <span class="ident">res</span>
+    res
 }
 
-<span class="kw">pub</span> <span class="kw">fn</span> <span class="ident">evaluate_no_par</span><span class="op">&lt;</span><span class="ident">F</span>: <span class="ident">Field</span><span class="op">&gt;</span>(<span class="ident">poly</span>: <span class="kw-2">&amp;</span><span class="ident">DenseMultilinearExtension</span><span class="op">&lt;</span><span class="ident">F</span><span class="op">&gt;</span>, <span class="ident">point</span>: <span class="kw-2">&amp;</span>[<span class="ident">F</span>]) -&gt; <span class="ident">F</span> {
-    <span class="macro">assert_eq!</span>(<span class="ident">poly</span>.<span class="ident">num_vars</span>, <span class="ident">point</span>.<span class="ident">len</span>());
-    <span class="ident">fix_variables_no_par</span>(<span class="ident">poly</span>, <span class="ident">point</span>).<span class="ident">evaluations</span>[<span class="number">0</span>]
+<span class="kw">pub fn </span>evaluate_no_par&lt;F: Field&gt;(poly: <span class="kw-2">&amp;</span>DenseMultilinearExtension&lt;F&gt;, point: <span class="kw-2">&amp;</span>[F]) -&gt; F {
+    <span class="macro">assert_eq!</span>(poly.num_vars, point.len());
+    fix_variables_no_par(poly, point).evaluations[<span class="number">0</span>]
 }
 
-<span class="kw">fn</span> <span class="ident">fix_variables_no_par</span><span class="op">&lt;</span><span class="ident">F</span>: <span class="ident">Field</span><span class="op">&gt;</span>(
-    <span class="ident">poly</span>: <span class="kw-2">&amp;</span><span class="ident">DenseMultilinearExtension</span><span class="op">&lt;</span><span class="ident">F</span><span class="op">&gt;</span>,
-    <span class="ident">partial_point</span>: <span class="kw-2">&amp;</span>[<span class="ident">F</span>],
-) -&gt; <span class="ident">DenseMultilinearExtension</span><span class="op">&lt;</span><span class="ident">F</span><span class="op">&gt;</span> {
+<span class="kw">fn </span>fix_variables_no_par&lt;F: Field&gt;(
+    poly: <span class="kw-2">&amp;</span>DenseMultilinearExtension&lt;F&gt;,
+    partial_point: <span class="kw-2">&amp;</span>[F],
+) -&gt; DenseMultilinearExtension&lt;F&gt; {
     <span class="macro">assert!</span>(
-        <span class="ident">partial_point</span>.<span class="ident">len</span>() <span class="op">&lt;</span><span class="op">=</span> <span class="ident">poly</span>.<span class="ident">num_vars</span>,
-        <span class="string">&quot;invalid size of partial point&quot;</span>
-    );
-    <span class="kw">let</span> <span class="ident">nv</span> <span class="op">=</span> <span class="ident">poly</span>.<span class="ident">num_vars</span>;
-    <span class="kw">let</span> <span class="kw-2">mut</span> <span class="ident">poly</span> <span class="op">=</span> <span class="ident">poly</span>.<span class="ident">evaluations</span>.<span class="ident">to_vec</span>();
-    <span class="kw">let</span> <span class="ident">dim</span> <span class="op">=</span> <span class="ident">partial_point</span>.<span class="ident">len</span>();
-    <span class="comment">// evaluate single variable of partial point from left to right</span>
-    <span class="kw">for</span> <span class="ident">i</span> <span class="kw">in</span> <span class="number">1</span>..<span class="ident">dim</span> <span class="op">+</span> <span class="number">1</span> {
-        <span class="kw">let</span> <span class="ident">r</span> <span class="op">=</span> <span class="ident">partial_point</span>[<span class="ident">i</span> <span class="op">-</span> <span class="number">1</span>];
-        <span class="kw">for</span> <span class="ident">b</span> <span class="kw">in</span> <span class="number">0</span>..(<span class="number">1</span> <span class="op">&lt;</span><span class="op">&lt;</span> (<span class="ident">nv</span> <span class="op">-</span> <span class="ident">i</span>)) {
-            <span class="ident">poly</span>[<span class="ident">b</span>] <span class="op">=</span> <span class="ident">poly</span>[<span class="ident">b</span> <span class="op">&lt;</span><span class="op">&lt;</span> <span class="number">1</span>] <span class="op">+</span> (<span class="ident">poly</span>[(<span class="ident">b</span> <span class="op">&lt;</span><span class="op">&lt;</span> <span class="number">1</span>) <span class="op">+</span> <span class="number">1</span>] <span class="op">-</span> <span class="ident">poly</span>[<span class="ident">b</span> <span class="op">&lt;</span><span class="op">&lt;</span> <span class="number">1</span>]) <span class="op">*</span> <span class="ident">r</span>;
+        partial_point.len() &lt;= poly.num_vars,
+        <span class="string">&quot;invalid size of partial point&quot;
+    </span>);
+    <span class="kw">let </span>nv = poly.num_vars;
+    <span class="kw">let </span><span class="kw-2">mut </span>poly = poly.evaluations.to_vec();
+    <span class="kw">let </span>dim = partial_point.len();
+    <span class="comment">// evaluate single variable of partial point from left to right
+    </span><span class="kw">for </span>i <span class="kw">in </span><span class="number">1</span>..dim + <span class="number">1 </span>{
+        <span class="kw">let </span>r = partial_point[i - <span class="number">1</span>];
+        <span class="kw">for </span>b <span class="kw">in </span><span class="number">0</span>..(<span class="number">1 </span>&lt;&lt; (nv - i)) {
+            poly[b] = poly[b &lt;&lt; <span class="number">1</span>] + (poly[(b &lt;&lt; <span class="number">1</span>) + <span class="number">1</span>] - poly[b &lt;&lt; <span class="number">1</span>]) * r;
         }
     }
-    <span class="ident">DenseMultilinearExtension::from_evaluations_slice</span>(<span class="ident">nv</span> <span class="op">-</span> <span class="ident">dim</span>, <span class="kw-2">&amp;</span><span class="ident">poly</span>[..(<span class="number">1</span> <span class="op">&lt;</span><span class="op">&lt;</span> (<span class="ident">nv</span> <span class="op">-</span> <span class="ident">dim</span>))])
+    DenseMultilinearExtension::from_evaluations_slice(nv - dim, <span class="kw-2">&amp;</span>poly[..(<span class="number">1 </span>&lt;&lt; (nv - dim))])
 }
 
-<span class="doccomment">/// merge a set of polynomials. Returns an error if the</span>
-<span class="doccomment">/// polynomials do not share a same number of nvs.</span>
-<span class="kw">pub</span> <span class="kw">fn</span> <span class="ident">merge_polynomials</span><span class="op">&lt;</span><span class="ident">F</span>: <span class="ident">PrimeField</span><span class="op">&gt;</span>(
-    <span class="ident">polynomials</span>: <span class="kw-2">&amp;</span>[<span class="ident">Rc</span><span class="op">&lt;</span><span class="ident">DenseMultilinearExtension</span><span class="op">&lt;</span><span class="ident">F</span><span class="op">&gt;</span><span class="op">&gt;</span>],
-) -&gt; <span class="prelude-ty">Result</span><span class="op">&lt;</span><span class="ident">Rc</span><span class="op">&lt;</span><span class="ident">DenseMultilinearExtension</span><span class="op">&lt;</span><span class="ident">F</span><span class="op">&gt;</span><span class="op">&gt;</span>, <span class="ident">ArithErrors</span><span class="op">&gt;</span> {
-    <span class="kw">let</span> <span class="ident">nv</span> <span class="op">=</span> <span class="ident">polynomials</span>[<span class="number">0</span>].<span class="ident">num_vars</span>();
-    <span class="kw">for</span> <span class="ident">poly</span> <span class="kw">in</span> <span class="ident">polynomials</span>.<span class="ident">iter</span>() {
-        <span class="kw">if</span> <span class="ident">nv</span> <span class="op">!</span><span class="op">=</span> <span class="ident">poly</span>.<span class="ident">num_vars</span>() {
-            <span class="kw">return</span> <span class="prelude-val">Err</span>(<span class="ident">ArithErrors::InvalidParameters</span>(
-                <span class="string">&quot;num_vars do not match for polynomials&quot;</span>.<span class="ident">to_string</span>(),
+<span class="doccomment">/// merge a set of polynomials. Returns an error if the
+/// polynomials do not share a same number of nvs.
+</span><span class="kw">pub fn </span>merge_polynomials&lt;F: PrimeField&gt;(
+    polynomials: <span class="kw-2">&amp;</span>[Rc&lt;DenseMultilinearExtension&lt;F&gt;&gt;],
+) -&gt; <span class="prelude-ty">Result</span>&lt;Rc&lt;DenseMultilinearExtension&lt;F&gt;&gt;, ArithErrors&gt; {
+    <span class="kw">let </span>nv = polynomials[<span class="number">0</span>].num_vars();
+    <span class="kw">for </span>poly <span class="kw">in </span>polynomials.iter() {
+        <span class="kw">if </span>nv != poly.num_vars() {
+            <span class="kw">return </span><span class="prelude-val">Err</span>(ArithErrors::InvalidParameters(
+                <span class="string">&quot;num_vars do not match for polynomials&quot;</span>.to_string(),
             ));
         }
     }
 
-    <span class="kw">let</span> <span class="ident">merged_nv</span> <span class="op">=</span> <span class="ident">get_batched_nv</span>(<span class="ident">nv</span>, <span class="ident">polynomials</span>.<span class="ident">len</span>());
-    <span class="kw">let</span> <span class="kw-2">mut</span> <span class="ident">scalars</span> <span class="op">=</span> <span class="macro">vec!</span>[];
-    <span class="kw">for</span> <span class="ident">poly</span> <span class="kw">in</span> <span class="ident">polynomials</span>.<span class="ident">iter</span>() {
-        <span class="ident">scalars</span>.<span class="ident">extend_from_slice</span>(<span class="ident">poly</span>.<span class="ident">to_evaluations</span>().<span class="ident">as_slice</span>());
+    <span class="kw">let </span>merged_nv = get_batched_nv(nv, polynomials.len());
+    <span class="kw">let </span><span class="kw-2">mut </span>scalars = <span class="macro">vec!</span>[];
+    <span class="kw">for </span>poly <span class="kw">in </span>polynomials.iter() {
+        scalars.extend_from_slice(poly.to_evaluations().as_slice());
     }
-    <span class="ident">scalars</span>.<span class="ident">extend_from_slice</span>(<span class="macro">vec!</span>[<span class="ident">F::zero</span>(); (<span class="number">1</span> <span class="op">&lt;</span><span class="op">&lt;</span> <span class="ident">merged_nv</span>) <span class="op">-</span> <span class="ident">scalars</span>.<span class="ident">len</span>()].<span class="ident">as_ref</span>());
-    <span class="prelude-val">Ok</span>(<span class="ident">Rc::new</span>(<span class="ident">DenseMultilinearExtension::from_evaluations_vec</span>(
-        <span class="ident">merged_nv</span>, <span class="ident">scalars</span>,
+    scalars.extend_from_slice(<span class="macro">vec!</span>[F::zero(); (<span class="number">1 </span>&lt;&lt; merged_nv) - scalars.len()].as_ref());
+    <span class="prelude-val">Ok</span>(Rc::new(DenseMultilinearExtension::from_evaluations_vec(
+        merged_nv, scalars,
     )))
 }
 
-<span class="kw">pub</span> <span class="kw">fn</span> <span class="ident">fix_last_variables_no_par</span><span class="op">&lt;</span><span class="ident">F</span>: <span class="ident">PrimeField</span><span class="op">&gt;</span>(
-    <span class="ident">poly</span>: <span class="kw-2">&amp;</span><span class="ident">DenseMultilinearExtension</span><span class="op">&lt;</span><span class="ident">F</span><span class="op">&gt;</span>,
-    <span class="ident">partial_point</span>: <span class="kw-2">&amp;</span>[<span class="ident">F</span>],
-) -&gt; <span class="ident">DenseMultilinearExtension</span><span class="op">&lt;</span><span class="ident">F</span><span class="op">&gt;</span> {
-    <span class="kw">let</span> <span class="kw-2">mut</span> <span class="ident">res</span> <span class="op">=</span> <span class="ident">fix_last_variable_no_par</span>(<span class="ident">poly</span>, <span class="ident">partial_point</span>.<span class="ident">last</span>().<span class="ident">unwrap</span>());
-    <span class="kw">for</span> <span class="ident">p</span> <span class="kw">in</span> <span class="ident">partial_point</span>.<span class="ident">iter</span>().<span class="ident">rev</span>().<span class="ident">skip</span>(<span class="number">1</span>) {
-        <span class="ident">res</span> <span class="op">=</span> <span class="ident">fix_last_variable_no_par</span>(<span class="kw-2">&amp;</span><span class="ident">res</span>, <span class="ident">p</span>);
+<span class="kw">pub fn </span>fix_last_variables_no_par&lt;F: PrimeField&gt;(
+    poly: <span class="kw-2">&amp;</span>DenseMultilinearExtension&lt;F&gt;,
+    partial_point: <span class="kw-2">&amp;</span>[F],
+) -&gt; DenseMultilinearExtension&lt;F&gt; {
+    <span class="kw">let </span><span class="kw-2">mut </span>res = fix_last_variable_no_par(poly, partial_point.last().unwrap());
+    <span class="kw">for </span>p <span class="kw">in </span>partial_point.iter().rev().skip(<span class="number">1</span>) {
+        res = fix_last_variable_no_par(<span class="kw-2">&amp;</span>res, p);
     }
-    <span class="ident">res</span>
+    res
 }
 
-<span class="kw">fn</span> <span class="ident">fix_last_variable_no_par</span><span class="op">&lt;</span><span class="ident">F</span>: <span class="ident">PrimeField</span><span class="op">&gt;</span>(
-    <span class="ident">poly</span>: <span class="kw-2">&amp;</span><span class="ident">DenseMultilinearExtension</span><span class="op">&lt;</span><span class="ident">F</span><span class="op">&gt;</span>,
-    <span class="ident">partial_point</span>: <span class="kw-2">&amp;</span><span class="ident">F</span>,
-) -&gt; <span class="ident">DenseMultilinearExtension</span><span class="op">&lt;</span><span class="ident">F</span><span class="op">&gt;</span> {
-    <span class="kw">let</span> <span class="ident">nv</span> <span class="op">=</span> <span class="ident">poly</span>.<span class="ident">num_vars</span>();
-    <span class="kw">let</span> <span class="ident">half_len</span> <span class="op">=</span> <span class="number">1</span> <span class="op">&lt;</span><span class="op">&lt;</span> (<span class="ident">nv</span> <span class="op">-</span> <span class="number">1</span>);
-    <span class="kw">let</span> <span class="kw-2">mut</span> <span class="ident">res</span> <span class="op">=</span> <span class="macro">vec!</span>[<span class="ident">F::zero</span>(); <span class="ident">half_len</span>];
-    <span class="kw">for</span> (<span class="ident">i</span>, <span class="ident">e</span>) <span class="kw">in</span> <span class="ident">res</span>.<span class="ident">iter_mut</span>().<span class="ident">enumerate</span>().<span class="ident">take</span>(<span class="ident">half_len</span>) {
-        <span class="kw-2">*</span><span class="ident">e</span> <span class="op">=</span> <span class="ident">poly</span>.<span class="ident">evaluations</span>[<span class="ident">i</span>]
-            <span class="op">+</span> <span class="kw-2">*</span><span class="ident">partial_point</span> <span class="op">*</span> (<span class="ident">poly</span>.<span class="ident">evaluations</span>[<span class="ident">i</span> <span class="op">+</span> <span class="ident">half_len</span>] <span class="op">-</span> <span class="ident">poly</span>.<span class="ident">evaluations</span>[<span class="ident">i</span>]);
+<span class="kw">fn </span>fix_last_variable_no_par&lt;F: PrimeField&gt;(
+    poly: <span class="kw-2">&amp;</span>DenseMultilinearExtension&lt;F&gt;,
+    partial_point: <span class="kw-2">&amp;</span>F,
+) -&gt; DenseMultilinearExtension&lt;F&gt; {
+    <span class="kw">let </span>nv = poly.num_vars();
+    <span class="kw">let </span>half_len = <span class="number">1 </span>&lt;&lt; (nv - <span class="number">1</span>);
+    <span class="kw">let </span><span class="kw-2">mut </span>res = <span class="macro">vec!</span>[F::zero(); half_len];
+    <span class="kw">for </span>(i, e) <span class="kw">in </span>res.iter_mut().enumerate().take(half_len) {
+        <span class="kw-2">*</span>e = poly.evaluations[i]
+            + <span class="kw-2">*</span>partial_point * (poly.evaluations[i + half_len] - poly.evaluations[i]);
     }
-    <span class="ident">DenseMultilinearExtension::from_evaluations_vec</span>(<span class="ident">nv</span> <span class="op">-</span> <span class="number">1</span>, <span class="ident">res</span>)
+    DenseMultilinearExtension::from_evaluations_vec(nv - <span class="number">1</span>, res)
 }
-<span class="kw">pub</span> <span class="kw">fn</span> <span class="ident">fix_last_variables</span><span class="op">&lt;</span><span class="ident">F</span>: <span class="ident">PrimeField</span><span class="op">&gt;</span>(
-    <span class="ident">poly</span>: <span class="kw-2">&amp;</span><span class="ident">DenseMultilinearExtension</span><span class="op">&lt;</span><span class="ident">F</span><span class="op">&gt;</span>,
-    <span class="ident">partial_point</span>: <span class="kw-2">&amp;</span>[<span class="ident">F</span>],
-) -&gt; <span class="ident">DenseMultilinearExtension</span><span class="op">&lt;</span><span class="ident">F</span><span class="op">&gt;</span> {
+<span class="kw">pub fn </span>fix_last_variables&lt;F: PrimeField&gt;(
+    poly: <span class="kw-2">&amp;</span>DenseMultilinearExtension&lt;F&gt;,
+    partial_point: <span class="kw-2">&amp;</span>[F],
+) -&gt; DenseMultilinearExtension&lt;F&gt; {
     <span class="macro">assert!</span>(
-        <span class="ident">partial_point</span>.<span class="ident">len</span>() <span class="op">&lt;</span><span class="op">=</span> <span class="ident">poly</span>.<span class="ident">num_vars</span>,
-        <span class="string">&quot;invalid size of partial point&quot;</span>
-    );
-    <span class="kw">let</span> <span class="ident">nv</span> <span class="op">=</span> <span class="ident">poly</span>.<span class="ident">num_vars</span>;
-    <span class="kw">let</span> <span class="kw-2">mut</span> <span class="ident">poly</span> <span class="op">=</span> <span class="ident">poly</span>.<span class="ident">evaluations</span>.<span class="ident">to_vec</span>();
-    <span class="kw">let</span> <span class="ident">dim</span> <span class="op">=</span> <span class="ident">partial_point</span>.<span class="ident">len</span>();
-    <span class="comment">// evaluate single variable of partial point from left to right</span>
-    <span class="kw">for</span> (<span class="ident">i</span>, <span class="ident">point</span>) <span class="kw">in</span> <span class="ident">partial_point</span>.<span class="ident">iter</span>().<span class="ident">rev</span>().<span class="ident">enumerate</span>().<span class="ident">take</span>(<span class="ident">dim</span>) {
-        <span class="ident">poly</span> <span class="op">=</span> <span class="ident">fix_last_variable_helper</span>(<span class="kw-2">&amp;</span><span class="ident">poly</span>, <span class="ident">nv</span> <span class="op">-</span> <span class="ident">i</span>, <span class="ident">point</span>);
+        partial_point.len() &lt;= poly.num_vars,
+        <span class="string">&quot;invalid size of partial point&quot;
+    </span>);
+    <span class="kw">let </span>nv = poly.num_vars;
+    <span class="kw">let </span><span class="kw-2">mut </span>poly = poly.evaluations.to_vec();
+    <span class="kw">let </span>dim = partial_point.len();
+    <span class="comment">// evaluate single variable of partial point from left to right
+    </span><span class="kw">for </span>(i, point) <span class="kw">in </span>partial_point.iter().rev().enumerate().take(dim) {
+        poly = fix_last_variable_helper(<span class="kw-2">&amp;</span>poly, nv - i, point);
     }
 
-    <span class="ident">DenseMultilinearExtension</span>::<span class="op">&lt;</span><span class="ident">F</span><span class="op">&gt;</span><span class="ident">::from_evaluations_slice</span>(<span class="ident">nv</span> <span class="op">-</span> <span class="ident">dim</span>, <span class="kw-2">&amp;</span><span class="ident">poly</span>[..(<span class="number">1</span> <span class="op">&lt;</span><span class="op">&lt;</span> (<span class="ident">nv</span> <span class="op">-</span> <span class="ident">dim</span>))])
+    DenseMultilinearExtension::&lt;F&gt;::from_evaluations_slice(nv - dim, <span class="kw-2">&amp;</span>poly[..(<span class="number">1 </span>&lt;&lt; (nv - dim))])
 }
 
-<span class="kw">fn</span> <span class="ident">fix_last_variable_helper</span><span class="op">&lt;</span><span class="ident">F</span>: <span class="ident">Field</span><span class="op">&gt;</span>(<span class="ident">data</span>: <span class="kw-2">&amp;</span>[<span class="ident">F</span>], <span class="ident">nv</span>: <span class="ident">usize</span>, <span class="ident">point</span>: <span class="kw-2">&amp;</span><span class="ident">F</span>) -&gt; <span class="ident">Vec</span><span class="op">&lt;</span><span class="ident">F</span><span class="op">&gt;</span> {
-    <span class="kw">let</span> <span class="ident">half_len</span> <span class="op">=</span> <span class="number">1</span> <span class="op">&lt;</span><span class="op">&lt;</span> (<span class="ident">nv</span> <span class="op">-</span> <span class="number">1</span>);
-    <span class="kw">let</span> <span class="kw-2">mut</span> <span class="ident">res</span> <span class="op">=</span> <span class="macro">vec!</span>[<span class="ident">F::zero</span>(); <span class="ident">half_len</span>];
+<span class="kw">fn </span>fix_last_variable_helper&lt;F: Field&gt;(data: <span class="kw-2">&amp;</span>[F], nv: usize, point: <span class="kw-2">&amp;</span>F) -&gt; Vec&lt;F&gt; {
+    <span class="kw">let </span>half_len = <span class="number">1 </span>&lt;&lt; (nv - <span class="number">1</span>);
+    <span class="kw">let </span><span class="kw-2">mut </span>res = <span class="macro">vec!</span>[F::zero(); half_len];
 
-    <span class="comment">// evaluate single variable of partial point from left to right</span>
-    <span class="attribute">#[<span class="ident">cfg</span>(<span class="ident">not</span>(<span class="ident">feature</span> <span class="op">=</span> <span class="string">&quot;parallel&quot;</span>))]</span>
-    <span class="kw">for</span> <span class="ident">b</span> <span class="kw">in</span> <span class="number">0</span>..<span class="ident">half_len</span> {
-        <span class="ident">res</span>[<span class="ident">b</span>] <span class="op">=</span> <span class="ident">data</span>[<span class="ident">b</span>] <span class="op">+</span> (<span class="ident">data</span>[<span class="ident">b</span> <span class="op">+</span> <span class="ident">half_len</span>] <span class="op">-</span> <span class="ident">data</span>[<span class="ident">b</span>]) <span class="op">*</span> <span class="ident">point</span>;
+    <span class="comment">// evaluate single variable of partial point from left to right
+    </span><span class="attribute">#[cfg(not(feature = <span class="string">&quot;parallel&quot;</span>))]
+    </span><span class="kw">for </span>b <span class="kw">in </span><span class="number">0</span>..half_len {
+        res[b] = data[b] + (data[b + half_len] - data[b]) * point;
     }
 
-    <span class="attribute">#[<span class="ident">cfg</span>(<span class="ident">feature</span> <span class="op">=</span> <span class="string">&quot;parallel&quot;</span>)]</span>
-    <span class="kw">if</span> <span class="ident">nv</span> <span class="op">&gt;</span><span class="op">=</span> <span class="number">13</span> {
-        <span class="comment">// on my computer we parallelization doesn&#39;t help till nv &gt;= 13</span>
-        <span class="ident">res</span>.<span class="ident">par_iter_mut</span>().<span class="ident">enumerate</span>().<span class="ident">for_each</span>(<span class="op">|</span>(<span class="ident">i</span>, <span class="ident">x</span>)<span class="op">|</span> {
-            <span class="kw-2">*</span><span class="ident">x</span> <span class="op">=</span> <span class="ident">data</span>[<span class="ident">i</span>] <span class="op">+</span> (<span class="ident">data</span>[<span class="ident">i</span> <span class="op">+</span> <span class="ident">half_len</span>] <span class="op">-</span> <span class="ident">data</span>[<span class="ident">i</span>]) <span class="op">*</span> <span class="ident">point</span>;
+    <span class="attribute">#[cfg(feature = <span class="string">&quot;parallel&quot;</span>)]
+    </span><span class="kw">if </span>nv &gt;= <span class="number">13 </span>{
+        <span class="comment">// on my computer we parallelization doesn&#39;t help till nv &gt;= 13
+        </span>res.par_iter_mut().enumerate().for_each(|(i, x)| {
+            <span class="kw-2">*</span>x = data[i] + (data[i + half_len] - data[i]) * point;
         });
-    } <span class="kw">else</span> {
-        <span class="kw">for</span> <span class="ident">b</span> <span class="kw">in</span> <span class="number">0</span>..(<span class="number">1</span> <span class="op">&lt;</span><span class="op">&lt;</span> (<span class="ident">nv</span> <span class="op">-</span> <span class="number">1</span>)) {
-            <span class="ident">res</span>[<span class="ident">b</span>] <span class="op">=</span> <span class="ident">data</span>[<span class="ident">b</span>] <span class="op">+</span> (<span class="ident">data</span>[<span class="ident">b</span> <span class="op">+</span> <span class="ident">half_len</span>] <span class="op">-</span> <span class="ident">data</span>[<span class="ident">b</span>]) <span class="op">*</span> <span class="ident">point</span>;
+    } <span class="kw">else </span>{
+        <span class="kw">for </span>b <span class="kw">in </span><span class="number">0</span>..(<span class="number">1 </span>&lt;&lt; (nv - <span class="number">1</span>)) {
+            res[b] = data[b] + (data[b + half_len] - data[b]) * point;
         }
     }
 
-    <span class="ident">res</span>
+    res
 }
 </code></pre></div>
-</section></div></main><div id="rustdoc-vars" data-root-path="../../" data-current-crate="arithmetic" data-themes="ayu,dark,light" data-resource-suffix="" data-rustdoc-version="1.64.0 (a55dd71d5 2022-09-19)" ></div></body></html>
+</section></div></main><div id="rustdoc-vars" data-root-path="../../" data-current-crate="arithmetic" data-themes="ayu,dark,light" data-resource-suffix="" data-rustdoc-version="1.65.0 (897e37553 2022-11-02)" ></div></body></html>
