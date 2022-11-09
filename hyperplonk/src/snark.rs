@@ -244,9 +244,9 @@ where
 
         let (perm_check_proof, prod_x) = <Self as PermutationCheck<E, PCS>>::prove(
             &pk.pcs_param,
-            &w_merged,
-            &w_merged,
-            &pk.permutation_oracle,
+            &[w_merged.clone()],
+            &[w_merged.clone()],
+            &[pk.permutation_oracle.clone()],
             &mut transcript,
         )?;
         let perm_check_point = &perm_check_proof.zero_check_proof.point;
