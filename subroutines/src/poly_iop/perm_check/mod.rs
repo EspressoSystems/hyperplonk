@@ -121,8 +121,12 @@ where
         let (numerator, denominator) = computer_num_and_denom(&beta, &gamma, fx, gx, s_perm)?;
 
         // invoke product check on numerator and denominator
-        let (proof, prod_poly) =
-            <Self as ProductCheck<E, PCS>>::prove(pcs_param, &numerator, &denominator, transcript)?;
+        let (proof, prod_poly, _frac_poly) = <Self as ProductCheck<E, PCS>>::prove(
+            pcs_param,
+            &[numerator],
+            &[denominator],
+            transcript,
+        )?;
 
         end_timer!(start);
         Ok((proof, prod_poly))
