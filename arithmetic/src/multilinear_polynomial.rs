@@ -72,35 +72,6 @@ pub fn random_zero_mle_list<F: PrimeField, R: RngCore>(
     list
 }
 
-/// An MLE that represent an identity permutation: `f(index) \mapto index`
-/// TODO(binyi): remove
-pub fn identity_permutation_mle<F: PrimeField>(
-    num_vars: usize,
-) -> Rc<DenseMultilinearExtension<F>> {
-    let s_id_vec = (0..1u64 << num_vars).map(F::from).collect();
-    Rc::new(DenseMultilinearExtension::from_evaluations_vec(
-        num_vars, s_id_vec,
-    ))
-}
-
-/// An MLE that represent a random permutation
-/// TODO(binyi): remove
-pub fn random_permutation_mle<F: PrimeField, R: RngCore>(
-    num_vars: usize,
-    rng: &mut R,
-) -> Rc<DenseMultilinearExtension<F>> {
-    let len = 1u64 << num_vars;
-    let mut s_id_vec: Vec<F> = (0..len).map(F::from).collect();
-    let mut s_perm_vec = vec![];
-    for _ in 0..len {
-        let index = rng.next_u64() as usize % s_id_vec.len();
-        s_perm_vec.push(s_id_vec.remove(index));
-    }
-    Rc::new(DenseMultilinearExtension::from_evaluations_vec(
-        num_vars, s_perm_vec,
-    ))
-}
-
 /// A list of MLEs that represents an identity permutation
 pub fn identity_permutation_mles<F: PrimeField>(
     num_vars: usize,

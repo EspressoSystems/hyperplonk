@@ -5,7 +5,7 @@ use crate::{
     witness::WitnessColumn,
     HyperPlonkSNARK,
 };
-use arithmetic::{evaluate_opt, identity_permutation_mle, merge_polynomials, VPAuxInfo};
+use arithmetic::{evaluate_opt, identity_permutation_mles, merge_polynomials, VPAuxInfo};
 use ark_ec::PairingEngine;
 use ark_poly::DenseMultilinearExtension;
 use ark_std::{end_timer, log2, start_timer, One, Zero};
@@ -526,8 +526,8 @@ where
 
         // we evaluate MLE directly instead of using s_id/s_perm PCS verify
         // Verification takes n pairings while evaluate takes 2^n field ops.
-        let s_id = identity_permutation_mle::<E::Fr>(perm_check_point.len());
-        let s_id_eval = evaluate_opt(&s_id, perm_check_point);
+        let s_ids = identity_permutation_mles::<E::Fr>(perm_check_point.len(), 1);
+        let s_id_eval = evaluate_opt(&s_ids[0], perm_check_point);
         let s_perm_eval = evaluate_opt(&vk.permutation_oracle, perm_check_point);
 
         let q_x_rec = prod_evals[1] - prod_evals[2] * prod_evals[3]
@@ -629,7 +629,7 @@ mod tests {
         custom_gate::CustomizedGates, selectors::SelectorColumn, structs::HyperPlonkParams,
         witness::WitnessColumn,
     };
-    use arithmetic::random_permutation_mle;
+    use arithmetic::random_permutation_mles;
     use ark_bls12_381::Bls12_381;
     use ark_std::test_rng;
     use subroutines::pcs::prelude::MultilinearKzgPCS;
@@ -672,7 +672,9 @@ mod tests {
             num_pub_input,
             gate_func,
         };
-        let permutation = identity_permutation_mle(merged_nv).evaluations.clone();
+        let permutation = identity_permutation_mles(merged_nv, 1)[0]
+            .evaluations
+            .clone();
         let q1 = SelectorColumn(vec![E::Fr::one(), E::Fr::one(), E::Fr::one(), E::Fr::one()]);
         let index = HyperPlonkIndex {
             params,
@@ -714,7 +716,7 @@ mod tests {
         )?;
 
         // bad path 1: wrong permutation
-        let rand_perm: Vec<E::Fr> = random_permutation_mle(merged_nv, &mut rng)
+        let rand_perm: Vec<E::Fr> = random_permutation_mles(merged_nv, 1, &mut rng)[0]
             .evaluations
             .clone();
         let mut bad_index = index.clone();
