@@ -1,6 +1,6 @@
 //! Main module for the Permutation Check protocol
 
-use self::util::computer_num_and_denom;
+use self::util::computer_nums_and_denoms;
 use crate::{
     pcs::PolynomialCommitmentScheme,
     poly_iop::{errors::PolyIOPErrors, prelude::ProductCheck, PolyIOP},
@@ -29,17 +29,17 @@ where
 
 pub mod util;
 
-/// A PermutationCheck w.r.t. `(f, g, perm)`
-/// proves that g is a permutation of f under
-/// permutation `perm`
+/// A PermutationCheck w.r.t. `(fs, gs, perms)`
+/// proves that (g1, ..., gk) is a permutation of (f1, ..., fk) under
+/// permutation `(p1, ..., pk)`
 /// It is derived from ProductCheck.
 ///
 /// A Permutation Check IOP takes the following steps:
 ///
 /// Inputs:
-/// - f(x)
-/// - g(x)
-/// - permutation s_perm(x)
+/// - fs = (f1, ..., fk)
+/// - gs = (g1, ..., gk)
+/// - permutation oracles = (p1, ..., pk)
 pub trait PermutationCheck<E, PCS>: ProductCheck<E, PCS>
 where
     E: PairingEngine,
@@ -57,25 +57,25 @@ where
     fn init_transcript() -> Self::Transcript;
 
     /// Inputs:
-    /// - f(x)
-    /// - g(x)
-    /// - permutation s_perm(x)
+    /// - fs = (f1, ..., fk)
+    /// - gs = (g1, ..., gk)
+    /// - permutation oracles = (p1, ..., pk)
     /// Outputs:
-    /// - a permutation check proof proving that g is a permutation of f under
-    ///   s_perm
-    /// - the product polynomial build during product check
+    /// - a permutation check proof proving that gs is a permutation of fs under
+    ///   permutation
+    /// - the product polynomial build during product check (for testing)
     ///
     /// Cost: O(N)
     fn prove(
         pcs_param: &PCS::ProverParam,
-        fx: &Self::MultilinearExtension,
-        gx: &Self::MultilinearExtension,
-        s_perm: &Self::MultilinearExtension,
+        fxs: &[Self::MultilinearExtension],
+        gxs: &[Self::MultilinearExtension],
+        perms: &[Self::MultilinearExtension],
         transcript: &mut IOPTranscript<E::Fr>,
     ) -> Result<(Self::PermutationProof, Self::MultilinearExtension), PolyIOPErrors>;
 
-    /// Verify that an MLE g(x) is a permutation of
-    /// MLE f(x) over a permutation given by s_perm.
+    /// Verify that (g1, ..., gk) is a permutation of
+    /// (f1, ..., fk) over the permutation oracles (perm1, ..., permk)
     fn verify(
         proof: &Self::PermutationProof,
         aux_info: &Self::VPAuxInfo,
@@ -97,34 +97,44 @@ where
 
     fn prove(
         pcs_param: &PCS::ProverParam,
-        fx: &Self::MultilinearExtension,
-        gx: &Self::MultilinearExtension,
-        s_perm: &Self::MultilinearExtension,
+        fxs: &[Self::MultilinearExtension],
+        gxs: &[Self::MultilinearExtension],
+        perms: &[Self::MultilinearExtension],
         transcript: &mut IOPTranscript<E::Fr>,
     ) -> Result<(Self::PermutationProof, Self::MultilinearExtension), PolyIOPErrors> {
         let start = start_timer!(|| "Permutation check prove");
-        if fx.num_vars != gx.num_vars {
-            return Err(PolyIOPErrors::InvalidParameters(
-                "fx and gx have different number of variables".to_string(),
-            ));
+        if fxs.is_empty() {
+            return Err(PolyIOPErrors::InvalidParameters("fxs is empty".to_string()));
+        }
+        if (fxs.len() != gxs.len()) || (fxs.len() != perms.len()) {
+            return Err(PolyIOPErrors::InvalidProof(format!(
+                "fxs.len() = {}, gxs.len() = {}, perms.len() = {}",
+                fxs.len(),
+                gxs.len(),
+                perms.len(),
+            )));
         }
 
-        if fx.num_vars != s_perm.num_vars {
-            return Err(PolyIOPErrors::InvalidParameters(
-                "fx and s_perm have different number of variables".to_string(),
-            ));
+        let num_vars = fxs[0].num_vars;
+        for ((fx, gx), perm) in fxs.iter().zip(gxs.iter()).zip(perms.iter()) {
+            if (fx.num_vars != num_vars) || (gx.num_vars != num_vars) || (perm.num_vars != num_vars)
+            {
+                return Err(PolyIOPErrors::InvalidParameters(
+                    "number of variables unmatched".to_string(),
+                ));
+            }
         }
 
         // generate challenge `beta` and `gamma` from current transcript
         let beta = transcript.get_and_append_challenge(b"beta")?;
         let gamma = transcript.get_and_append_challenge(b"gamma")?;
-        let (numerator, denominator) = computer_num_and_denom(&beta, &gamma, fx, gx, s_perm)?;
+        let (numerators, denominators) = computer_nums_and_denoms(&beta, &gamma, fxs, gxs, perms)?;
 
         // invoke product check on numerator and denominator
-        let (proof, prod_poly, _frac_poly) = <Self as ProductCheck<E, PCS>>::prove(
+        let (proof, prod_poly, _) = <Self as ProductCheck<E, PCS>>::prove(
             pcs_param,
-            &[numerator],
-            &[denominator],
+            &numerators,
+            &denominators,
             transcript,
         )?;
 
@@ -132,8 +142,6 @@ where
         Ok((proof, prod_poly))
     }
 
-    /// Verify that an MLE g(x) is a permutation of an
-    /// MLE f(x) over a permutation given by s_perm.
     fn verify(
         proof: &Self::PermutationProof,
         aux_info: &Self::VPAuxInfo,
@@ -163,7 +171,7 @@ mod test {
         pcs::{prelude::MultilinearKzgPCS, PolynomialCommitmentScheme},
         poly_iop::{errors::PolyIOPErrors, PolyIOP},
     };
-    use arithmetic::{evaluate_opt, identity_permutation_mle, random_permutation_mle, VPAuxInfo};
+    use arithmetic::{evaluate_opt, identity_permutation_mles, random_permutation_mles, VPAuxInfo};
     use ark_bls12_381::Bls12_381;
     use ark_ec::PairingEngine;
     use ark_poly::{DenseMultilinearExtension, MultilinearExtension};
@@ -174,17 +182,18 @@ mod test {
 
     fn test_permutation_check_helper<E, PCS>(
         pcs_param: &PCS::ProverParam,
-        fx: &Rc<DenseMultilinearExtension<E::Fr>>,
-        gx: &Rc<DenseMultilinearExtension<E::Fr>>,
-        s_perm: &Rc<DenseMultilinearExtension<E::Fr>>,
+        fxs: &[Rc<DenseMultilinearExtension<E::Fr>>],
+        gxs: &[Rc<DenseMultilinearExtension<E::Fr>>],
+        perms: &[Rc<DenseMultilinearExtension<E::Fr>>],
     ) -> Result<(), PolyIOPErrors>
     where
         E: PairingEngine,
         PCS: PolynomialCommitmentScheme<E, Polynomial = Rc<DenseMultilinearExtension<E::Fr>>>,
     {
-        let nv = fx.num_vars;
+        let nv = fxs[0].num_vars;
+        // what's AuxInfo used for?
         let poly_info = VPAuxInfo {
-            max_degree: 2,
+            max_degree: fxs.len() + 1,
             num_variables: nv,
             phantom: PhantomData::default(),
         };
@@ -194,9 +203,9 @@ mod test {
         transcript.append_message(b"testing", b"initializing transcript for testing")?;
         let (proof, prod_x) = <PolyIOP<E::Fr> as PermutationCheck<E, PCS>>::prove(
             pcs_param,
-            fx,
-            gx,
-            s_perm,
+            fxs,
+            gxs,
+            perms,
             &mut transcript,
         )?;
 
@@ -224,40 +233,66 @@ mod test {
     fn test_permutation_check(nv: usize) -> Result<(), PolyIOPErrors> {
         let mut rng = test_rng();
 
-        let srs = MultilinearKzgPCS::<Bls12_381>::gen_srs_for_testing(&mut rng, nv + 1)?;
-        let (pcs_param, _) = MultilinearKzgPCS::<Bls12_381>::trim(&srs, None, Some(nv + 1))?;
+        let srs = MultilinearKzgPCS::<Bls12_381>::gen_srs_for_testing(&mut rng, nv)?;
+        let (pcs_param, _) = MultilinearKzgPCS::<Bls12_381>::trim(&srs, None, Some(nv))?;
+        let id_perms = identity_permutation_mles(nv, 2);
 
         {
-            // good path: w is a permutation of w itself under the identify map
-            let w = Rc::new(DenseMultilinearExtension::rand(nv, &mut rng));
-            // s_perm is the identity map
-            let s_perm = identity_permutation_mle(nv);
-            test_permutation_check_helper::<Bls12_381, KZG>(&pcs_param, &w, &w, &s_perm)?;
+            // good path: (w1, w2) is a permutation of (w1, w2) itself under the identify
+            // map
+            let ws = vec![
+                Rc::new(DenseMultilinearExtension::rand(nv, &mut rng)),
+                Rc::new(DenseMultilinearExtension::rand(nv, &mut rng)),
+            ];
+            // perms is the identity map
+            test_permutation_check_helper::<Bls12_381, KZG>(&pcs_param, &ws, &ws, &id_perms)?;
+        }
+
+        {
+            // good path: f = (w1, w2) is a permutation of g = (w2, w1) itself under a map
+            let mut fs = vec![
+                Rc::new(DenseMultilinearExtension::rand(nv, &mut rng)),
+                Rc::new(DenseMultilinearExtension::rand(nv, &mut rng)),
+            ];
+            let gs = fs.clone();
+            fs.reverse();
+            // perms is the reverse identity map
+            let mut perms = id_perms.clone();
+            perms.reverse();
+            test_permutation_check_helper::<Bls12_381, KZG>(&pcs_param, &fs, &gs, &perms)?;
         }
 
         {
             // bad path 1: w is a not permutation of w itself under a random map
-            let w = Rc::new(DenseMultilinearExtension::rand(nv, &mut rng));
-            // s_perm is a random map
-            let s_perm = random_permutation_mle(nv, &mut rng);
+            let ws = vec![
+                Rc::new(DenseMultilinearExtension::rand(nv, &mut rng)),
+                Rc::new(DenseMultilinearExtension::rand(nv, &mut rng)),
+            ];
+            // perms is a random map
+            let perms = random_permutation_mles(nv, 2, &mut rng);
 
             assert!(
-                test_permutation_check_helper::<Bls12_381, KZG>(&pcs_param, &w, &w, &s_perm)
+                test_permutation_check_helper::<Bls12_381, KZG>(&pcs_param, &ws, &ws, &perms)
                     .is_err()
             );
         }
 
         {
             // bad path 2: f is a not permutation of g under a identity map
-            let f = Rc::new(DenseMultilinearExtension::rand(nv, &mut rng));
-            let g = Rc::new(DenseMultilinearExtension::rand(nv, &mut rng));
+            let fs = vec![
+                Rc::new(DenseMultilinearExtension::rand(nv, &mut rng)),
+                Rc::new(DenseMultilinearExtension::rand(nv, &mut rng)),
+            ];
+            let gs = vec![
+                Rc::new(DenseMultilinearExtension::rand(nv, &mut rng)),
+                Rc::new(DenseMultilinearExtension::rand(nv, &mut rng)),
+            ];
             // s_perm is the identity map
-            let s_perm = identity_permutation_mle(nv);
 
-            assert!(
-                test_permutation_check_helper::<Bls12_381, KZG>(&pcs_param, &f, &g, &s_perm)
-                    .is_err()
-            );
+            assert!(test_permutation_check_helper::<Bls12_381, KZG>(
+                &pcs_param, &fs, &gs, &id_perms
+            )
+            .is_err());
         }
 
         Ok(())

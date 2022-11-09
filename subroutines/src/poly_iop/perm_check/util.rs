@@ -1,61 +1,69 @@
 //! This module implements useful functions for the permutation check protocol.
 
 use crate::poly_iop::errors::PolyIOPErrors;
-use arithmetic::identity_permutation_mle;
+use arithmetic::identity_permutation_mles;
 use ark_ff::PrimeField;
 use ark_poly::DenseMultilinearExtension;
 use ark_std::{end_timer, start_timer};
 use std::rc::Rc;
 
-/// Returns the evaluations of two MLEs:
-/// - numerator
-/// - denominator
+/// Returns the evaluations of two list of MLEs:
+/// - numerators = (a1, ..., ak)
+/// - denominators = (b1, ..., bk)
 ///
 ///  where
 ///  - beta and gamma are challenges
-///  - f(x), g(x), s_id(x), s_perm(x) are mle-s
+///  - (f1, ..., fk), (g1, ..., gk),
+///  - (s_id1, ..., s_idk), (perm1, ..., permk) are mle-s
 ///
-/// - numerator is the MLE for `f(x) + \beta s_id(x) + \gamma`
-/// - denominator is the MLE for `g(x) + \beta s_perm(x) + \gamma`
+/// - ai(x) is the MLE for `fi(x) + \beta s_id_i(x) + \gamma`
+/// - bi(x) is the MLE for `gi(x) + \beta perm_i(x) + \gamma`
+///
+/// The caller is responsible for sanity-check
 #[allow(clippy::type_complexity)]
-pub(super) fn computer_num_and_denom<F: PrimeField>(
+pub(super) fn computer_nums_and_denoms<F: PrimeField>(
     beta: &F,
     gamma: &F,
-    fx: &DenseMultilinearExtension<F>,
-    gx: &DenseMultilinearExtension<F>,
-    s_perm: &DenseMultilinearExtension<F>,
+    fxs: &[Rc<DenseMultilinearExtension<F>>],
+    gxs: &[Rc<DenseMultilinearExtension<F>>],
+    perms: &[Rc<DenseMultilinearExtension<F>>],
 ) -> Result<
     (
-        Rc<DenseMultilinearExtension<F>>,
-        Rc<DenseMultilinearExtension<F>>,
+        Vec<Rc<DenseMultilinearExtension<F>>>,
+        Vec<Rc<DenseMultilinearExtension<F>>>,
     ),
     PolyIOPErrors,
 > {
-    let start = start_timer!(|| "compute numerator and denominator");
+    let start = start_timer!(|| "compute numerators and denominators");
 
-    let num_vars = fx.num_vars;
-    let mut numerator_evals = vec![];
-    let mut denominator_evals = vec![];
-    let s_id = identity_permutation_mle::<F>(num_vars);
+    let num_vars = fxs[0].num_vars;
+    let mut numerators = vec![];
+    let mut denominators = vec![];
+    let s_ids = identity_permutation_mles::<F>(num_vars, fxs.len());
+    for l in 0..fxs.len() {
+        let mut numerator_evals = vec![];
+        let mut denominator_evals = vec![];
 
-    for (&fi, (&gi, (&s_id_i, &s_perm_i))) in
-        fx.iter().zip(gx.iter().zip(s_id.iter().zip(s_perm.iter())))
-    {
-        let numerator = fi + *beta * s_id_i + gamma;
-        let denominator = gi + *beta * s_perm_i + gamma;
+        for (&f_ev, (&g_ev, (&s_id_ev, &perm_ev))) in fxs[l]
+            .iter()
+            .zip(gxs[l].iter().zip(s_ids[l].iter().zip(perms[l].iter())))
+        {
+            let numerator = f_ev + *beta * s_id_ev + gamma;
+            let denominator = g_ev + *beta * perm_ev + gamma;
 
-        numerator_evals.push(numerator);
-        denominator_evals.push(denominator);
+            numerator_evals.push(numerator);
+            denominator_evals.push(denominator);
+        }
+        numerators.push(Rc::new(DenseMultilinearExtension::from_evaluations_vec(
+            num_vars,
+            numerator_evals,
+        )));
+        denominators.push(Rc::new(DenseMultilinearExtension::from_evaluations_vec(
+            num_vars,
+            denominator_evals,
+        )));
     }
-    let numerator = Rc::new(DenseMultilinearExtension::from_evaluations_vec(
-        num_vars,
-        numerator_evals,
-    ));
-    let denominator = Rc::new(DenseMultilinearExtension::from_evaluations_vec(
-        num_vars,
-        denominator_evals,
-    ));
 
     end_timer!(start);
-    Ok((numerator, denominator))
+    Ok((numerators, denominators))
 }
