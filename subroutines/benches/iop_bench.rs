@@ -1,4 +1,4 @@
-use arithmetic::{identity_permutation_mle, VPAuxInfo, VirtualPolynomial};
+use arithmetic::{identity_permutation_mles, VPAuxInfo, VirtualPolynomial};
 use ark_bls12_381::{Bls12_381, Fr};
 use ark_poly::{DenseMultilinearExtension, MultilinearExtension};
 use ark_std::test_rng;
@@ -144,10 +144,10 @@ fn bench_permutation_check() -> Result<(), PolyIOPErrors> {
             10
         };
 
-        let w = Rc::new(DenseMultilinearExtension::rand(nv, &mut rng));
+        let ws = vec![Rc::new(DenseMultilinearExtension::rand(nv, &mut rng))];
 
-        // s_perm is the identity map
-        let s_perm = identity_permutation_mle(nv);
+        // identity map
+        let perms = identity_permutation_mles(nv, 1);
 
         let proof = {
             let start = Instant::now();
@@ -157,9 +157,9 @@ fn bench_permutation_check() -> Result<(), PolyIOPErrors> {
 
             let (proof, _q_x) = <PolyIOP<Fr> as PermutationCheck<Bls12_381, KZG>>::prove(
                 &pcs_param,
-                &w,
-                &w,
-                &s_perm,
+                &ws,
+                &ws,
+                &perms,
                 &mut transcript,
             )?;
 
@@ -218,20 +218,21 @@ fn bench_prod_check() -> Result<(), PolyIOPErrors> {
         let f: DenseMultilinearExtension<Fr> = DenseMultilinearExtension::rand(nv, &mut rng);
         let mut g = f.clone();
         g.evaluations.reverse();
-        let f = Rc::new(f);
-        let g = Rc::new(g);
+        let fs = vec![Rc::new(f)];
+        let gs = vec![Rc::new(g)];
 
         let proof = {
             let start = Instant::now();
             let mut transcript = <PolyIOP<Fr> as ProductCheck<Bls12_381, KZG>>::init_transcript();
             transcript.append_message(b"testing", b"initializing transcript for testing")?;
 
-            let (proof, _prod_x) = <PolyIOP<Fr> as ProductCheck<Bls12_381, KZG>>::prove(
-                &pcs_param,
-                &f,
-                &g,
-                &mut transcript,
-            )?;
+            let (proof, _prod_x, _frac_poly) =
+                <PolyIOP<Fr> as ProductCheck<Bls12_381, KZG>>::prove(
+                    &pcs_param,
+                    &fs,
+                    &gs,
+                    &mut transcript,
+                )?;
 
             println!(
                 "product check proving time for {} variables: {} ns",
