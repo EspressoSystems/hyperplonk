@@ -8,7 +8,7 @@ use crate::{
 use arithmetic::{evaluate_opt, identity_permutation_mles, VPAuxInfo};
 use ark_ec::PairingEngine;
 use ark_poly::DenseMultilinearExtension;
-use ark_std::{end_timer, log2, println, start_timer, One, Zero};
+use ark_std::{end_timer, log2, start_timer, One, Zero};
 use std::{marker::PhantomData, rc::Rc};
 use subroutines::{
     pcs::prelude::{Commitment, PolynomialCommitmentScheme},
@@ -591,7 +591,6 @@ where
         assert_eq!(comms.len(), proof.batch_openings.f_i_eval_at_point_i.len());
 
         // check proof
-        println!("last step!!!");
         let res = PCS::batch_verify(
             &vk.pcs_param,
             &comms,
