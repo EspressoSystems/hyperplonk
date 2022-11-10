@@ -59,66 +59,82 @@
 <span id="59">59</span>
 <span id="60">60</span>
 <span id="61">61</span>
+<span id="62">62</span>
+<span id="63">63</span>
+<span id="64">64</span>
+<span id="65">65</span>
+<span id="66">66</span>
+<span id="67">67</span>
+<span id="68">68</span>
+<span id="69">69</span>
 </pre><pre class="rust"><code><span class="doccomment">//! This module implements useful functions for the permutation check protocol.
 
 </span><span class="kw">use </span><span class="kw">crate</span>::poly_iop::errors::PolyIOPErrors;
-<span class="kw">use </span>arithmetic::identity_permutation_mle;
+<span class="kw">use </span>arithmetic::identity_permutation_mles;
 <span class="kw">use </span>ark_ff::PrimeField;
 <span class="kw">use </span>ark_poly::DenseMultilinearExtension;
 <span class="kw">use </span>ark_std::{end_timer, start_timer};
 <span class="kw">use </span>std::rc::Rc;
 
-<span class="doccomment">/// Returns the evaluations of two MLEs:
-/// - numerator
-/// - denominator
+<span class="doccomment">/// Returns the evaluations of two list of MLEs:
+/// - numerators = (a1, ..., ak)
+/// - denominators = (b1, ..., bk)
 ///
 ///  where
 ///  - beta and gamma are challenges
-///  - f(x), g(x), s_id(x), s_perm(x) are mle-s
+///  - (f1, ..., fk), (g1, ..., gk),
+///  - (s_id1, ..., s_idk), (perm1, ..., permk) are mle-s
 ///
-/// - numerator is the MLE for `f(x) + \beta s_id(x) + \gamma`
-/// - denominator is the MLE for `g(x) + \beta s_perm(x) + \gamma`
+/// - ai(x) is the MLE for `fi(x) + \beta s_id_i(x) + \gamma`
+/// - bi(x) is the MLE for `gi(x) + \beta perm_i(x) + \gamma`
+///
+/// The caller is responsible for sanity-check
 </span><span class="attribute">#[allow(clippy::type_complexity)]
-</span><span class="kw">pub</span>(<span class="kw">super</span>) <span class="kw">fn </span>computer_num_and_denom&lt;F: PrimeField&gt;(
+</span><span class="kw">pub</span>(<span class="kw">super</span>) <span class="kw">fn </span>computer_nums_and_denoms&lt;F: PrimeField&gt;(
     beta: <span class="kw-2">&amp;</span>F,
     gamma: <span class="kw-2">&amp;</span>F,
-    fx: <span class="kw-2">&amp;</span>DenseMultilinearExtension&lt;F&gt;,
-    gx: <span class="kw-2">&amp;</span>DenseMultilinearExtension&lt;F&gt;,
-    s_perm: <span class="kw-2">&amp;</span>DenseMultilinearExtension&lt;F&gt;,
+    fxs: <span class="kw-2">&amp;</span>[Rc&lt;DenseMultilinearExtension&lt;F&gt;&gt;],
+    gxs: <span class="kw-2">&amp;</span>[Rc&lt;DenseMultilinearExtension&lt;F&gt;&gt;],
+    perms: <span class="kw-2">&amp;</span>[Rc&lt;DenseMultilinearExtension&lt;F&gt;&gt;],
 ) -&gt; <span class="prelude-ty">Result</span>&lt;
     (
-        Rc&lt;DenseMultilinearExtension&lt;F&gt;&gt;,
-        Rc&lt;DenseMultilinearExtension&lt;F&gt;&gt;,
+        Vec&lt;Rc&lt;DenseMultilinearExtension&lt;F&gt;&gt;&gt;,
+        Vec&lt;Rc&lt;DenseMultilinearExtension&lt;F&gt;&gt;&gt;,
     ),
     PolyIOPErrors,
 &gt; {
-    <span class="kw">let </span>start = <span class="macro">start_timer!</span>(|| <span class="string">&quot;compute numerator and denominator&quot;</span>);
+    <span class="kw">let </span>start = <span class="macro">start_timer!</span>(|| <span class="string">&quot;compute numerators and denominators&quot;</span>);
 
-    <span class="kw">let </span>num_vars = fx.num_vars;
-    <span class="kw">let </span><span class="kw-2">mut </span>numerator_evals = <span class="macro">vec!</span>[];
-    <span class="kw">let </span><span class="kw-2">mut </span>denominator_evals = <span class="macro">vec!</span>[];
-    <span class="kw">let </span>s_id = identity_permutation_mle::&lt;F&gt;(num_vars);
+    <span class="kw">let </span>num_vars = fxs[<span class="number">0</span>].num_vars;
+    <span class="kw">let </span><span class="kw-2">mut </span>numerators = <span class="macro">vec!</span>[];
+    <span class="kw">let </span><span class="kw-2">mut </span>denominators = <span class="macro">vec!</span>[];
+    <span class="kw">let </span>s_ids = identity_permutation_mles::&lt;F&gt;(num_vars, fxs.len());
+    <span class="kw">for </span>l <span class="kw">in </span><span class="number">0</span>..fxs.len() {
+        <span class="kw">let </span><span class="kw-2">mut </span>numerator_evals = <span class="macro">vec!</span>[];
+        <span class="kw">let </span><span class="kw-2">mut </span>denominator_evals = <span class="macro">vec!</span>[];
 
-    <span class="kw">for </span>(<span class="kw-2">&amp;</span>fi, (<span class="kw-2">&amp;</span>gi, (<span class="kw-2">&amp;</span>s_id_i, <span class="kw-2">&amp;</span>s_perm_i))) <span class="kw">in
-        </span>fx.iter().zip(gx.iter().zip(s_id.iter().zip(s_perm.iter())))
-    {
-        <span class="kw">let </span>numerator = fi + <span class="kw-2">*</span>beta * s_id_i + gamma;
-        <span class="kw">let </span>denominator = gi + <span class="kw-2">*</span>beta * s_perm_i + gamma;
+        <span class="kw">for </span>(<span class="kw-2">&amp;</span>f_ev, (<span class="kw-2">&amp;</span>g_ev, (<span class="kw-2">&amp;</span>s_id_ev, <span class="kw-2">&amp;</span>perm_ev))) <span class="kw">in </span>fxs[l]
+            .iter()
+            .zip(gxs[l].iter().zip(s_ids[l].iter().zip(perms[l].iter())))
+        {
+            <span class="kw">let </span>numerator = f_ev + <span class="kw-2">*</span>beta * s_id_ev + gamma;
+            <span class="kw">let </span>denominator = g_ev + <span class="kw-2">*</span>beta * perm_ev + gamma;
 
-        numerator_evals.push(numerator);
-        denominator_evals.push(denominator);
+            numerator_evals.push(numerator);
+            denominator_evals.push(denominator);
+        }
+        numerators.push(Rc::new(DenseMultilinearExtension::from_evaluations_vec(
+            num_vars,
+            numerator_evals,
+        )));
+        denominators.push(Rc::new(DenseMultilinearExtension::from_evaluations_vec(
+            num_vars,
+            denominator_evals,
+        )));
     }
-    <span class="kw">let </span>numerator = Rc::new(DenseMultilinearExtension::from_evaluations_vec(
-        num_vars,
-        numerator_evals,
-    ));
-    <span class="kw">let </span>denominator = Rc::new(DenseMultilinearExtension::from_evaluations_vec(
-        num_vars,
-        denominator_evals,
-    ));
 
     <span class="macro">end_timer!</span>(start);
-    <span class="prelude-val">Ok</span>((numerator, denominator))
+    <span class="prelude-val">Ok</span>((numerators, denominators))
 }
 </code></pre></div>
 </section></div></main><div id="rustdoc-vars" data-root-path="../../../../" data-current-crate="subroutines" data-themes="ayu,dark,light" data-resource-suffix="" data-rustdoc-version="1.65.0 (897e37553 2022-11-02)" ></div></body></html>

@@ -265,6 +265,33 @@
 <span id="265">265</span>
 <span id="266">266</span>
 <span id="267">267</span>
+<span id="268">268</span>
+<span id="269">269</span>
+<span id="270">270</span>
+<span id="271">271</span>
+<span id="272">272</span>
+<span id="273">273</span>
+<span id="274">274</span>
+<span id="275">275</span>
+<span id="276">276</span>
+<span id="277">277</span>
+<span id="278">278</span>
+<span id="279">279</span>
+<span id="280">280</span>
+<span id="281">281</span>
+<span id="282">282</span>
+<span id="283">283</span>
+<span id="284">284</span>
+<span id="285">285</span>
+<span id="286">286</span>
+<span id="287">287</span>
+<span id="288">288</span>
+<span id="289">289</span>
+<span id="290">290</span>
+<span id="291">291</span>
+<span id="292">292</span>
+<span id="293">293</span>
+<span id="294">294</span>
 </pre><pre class="rust"><code><span class="kw">use crate</span>::{util::get_batched_nv, ArithErrors};
 <span class="kw">use </span>ark_ff::{Field, PrimeField};
 <span class="kw">use </span>ark_poly::MultilinearExtension;
@@ -339,31 +366,58 @@
     list
 }
 
-<span class="doccomment">/// An MLE that represent an identity permutation: `f(index) \mapto index`
-</span><span class="kw">pub fn </span>identity_permutation_mle&lt;F: PrimeField&gt;(
-    num_vars: usize,
-) -&gt; Rc&lt;DenseMultilinearExtension&lt;F&gt;&gt; {
-    <span class="kw">let </span>s_id_vec = (<span class="number">0</span>..<span class="number">1u64 </span>&lt;&lt; num_vars).map(F::from).collect();
-    Rc::new(DenseMultilinearExtension::from_evaluations_vec(
-        num_vars, s_id_vec,
-    ))
+<span class="kw">pub fn </span>identity_permutation&lt;F: PrimeField&gt;(num_vars: usize, num_chunks: usize) -&gt; Vec&lt;F&gt; {
+    <span class="kw">let </span>len = (num_chunks <span class="kw">as </span>u64) * (<span class="number">1u64 </span>&lt;&lt; num_vars);
+    (<span class="number">0</span>..len).map(F::from).collect()
 }
 
-<span class="doccomment">/// An MLE that represent a random permutation
-</span><span class="kw">pub fn </span>random_permutation_mle&lt;F: PrimeField, R: RngCore&gt;(
+<span class="doccomment">/// A list of MLEs that represents an identity permutation
+</span><span class="kw">pub fn </span>identity_permutation_mles&lt;F: PrimeField&gt;(
     num_vars: usize,
+    num_chunks: usize,
+) -&gt; Vec&lt;Rc&lt;DenseMultilinearExtension&lt;F&gt;&gt;&gt; {
+    <span class="kw">let </span><span class="kw-2">mut </span>res = <span class="macro">vec!</span>[];
+    <span class="kw">for </span>i <span class="kw">in </span><span class="number">0</span>..num_chunks {
+        <span class="kw">let </span>shift = (i * (<span class="number">1 </span>&lt;&lt; num_vars)) <span class="kw">as </span>u64;
+        <span class="kw">let </span>s_id_vec = (shift..shift + (<span class="number">1u64 </span>&lt;&lt; num_vars)).map(F::from).collect();
+        res.push(Rc::new(DenseMultilinearExtension::from_evaluations_vec(
+            num_vars, s_id_vec,
+        )));
+    }
+    res
+}
+
+<span class="kw">pub fn </span>random_permutation&lt;F: PrimeField, R: RngCore&gt;(
+    num_vars: usize,
+    num_chunks: usize,
     rng: <span class="kw-2">&amp;mut </span>R,
-) -&gt; Rc&lt;DenseMultilinearExtension&lt;F&gt;&gt; {
-    <span class="kw">let </span>len = <span class="number">1u64 </span>&lt;&lt; num_vars;
+) -&gt; Vec&lt;F&gt; {
+    <span class="kw">let </span>len = (num_chunks <span class="kw">as </span>u64) * (<span class="number">1u64 </span>&lt;&lt; num_vars);
     <span class="kw">let </span><span class="kw-2">mut </span>s_id_vec: Vec&lt;F&gt; = (<span class="number">0</span>..len).map(F::from).collect();
     <span class="kw">let </span><span class="kw-2">mut </span>s_perm_vec = <span class="macro">vec!</span>[];
     <span class="kw">for _ in </span><span class="number">0</span>..len {
         <span class="kw">let </span>index = rng.next_u64() <span class="kw">as </span>usize % s_id_vec.len();
         s_perm_vec.push(s_id_vec.remove(index));
     }
-    Rc::new(DenseMultilinearExtension::from_evaluations_vec(
-        num_vars, s_perm_vec,
-    ))
+    s_perm_vec
+}
+
+<span class="doccomment">/// A list of MLEs that represent a random permutation
+</span><span class="kw">pub fn </span>random_permutation_mles&lt;F: PrimeField, R: RngCore&gt;(
+    num_vars: usize,
+    num_chunks: usize,
+    rng: <span class="kw-2">&amp;mut </span>R,
+) -&gt; Vec&lt;Rc&lt;DenseMultilinearExtension&lt;F&gt;&gt;&gt; {
+    <span class="kw">let </span>s_perm_vec = random_permutation(num_vars, num_chunks, rng);
+    <span class="kw">let </span><span class="kw-2">mut </span>res = <span class="macro">vec!</span>[];
+    <span class="kw">let </span>n = <span class="number">1 </span>&lt;&lt; num_vars;
+    <span class="kw">for </span>i <span class="kw">in </span><span class="number">0</span>..num_chunks {
+        res.push(Rc::new(DenseMultilinearExtension::from_evaluations_vec(
+            num_vars,
+            s_perm_vec[i * n..i * n + n].to_vec(),
+        )));
+    }
+    res
 }
 
 <span class="kw">pub fn </span>evaluate_opt&lt;F: Field&gt;(poly: <span class="kw-2">&amp;</span>DenseMultilinearExtension&lt;F&gt;, point: <span class="kw-2">&amp;</span>[F]) -&gt; F {

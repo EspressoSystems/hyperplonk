@@ -274,9 +274,64 @@
 <span id="274">274</span>
 <span id="275">275</span>
 <span id="276">276</span>
+<span id="277">277</span>
+<span id="278">278</span>
+<span id="279">279</span>
+<span id="280">280</span>
+<span id="281">281</span>
+<span id="282">282</span>
+<span id="283">283</span>
+<span id="284">284</span>
+<span id="285">285</span>
+<span id="286">286</span>
+<span id="287">287</span>
+<span id="288">288</span>
+<span id="289">289</span>
+<span id="290">290</span>
+<span id="291">291</span>
+<span id="292">292</span>
+<span id="293">293</span>
+<span id="294">294</span>
+<span id="295">295</span>
+<span id="296">296</span>
+<span id="297">297</span>
+<span id="298">298</span>
+<span id="299">299</span>
+<span id="300">300</span>
+<span id="301">301</span>
+<span id="302">302</span>
+<span id="303">303</span>
+<span id="304">304</span>
+<span id="305">305</span>
+<span id="306">306</span>
+<span id="307">307</span>
+<span id="308">308</span>
+<span id="309">309</span>
+<span id="310">310</span>
+<span id="311">311</span>
+<span id="312">312</span>
+<span id="313">313</span>
+<span id="314">314</span>
+<span id="315">315</span>
+<span id="316">316</span>
+<span id="317">317</span>
+<span id="318">318</span>
+<span id="319">319</span>
+<span id="320">320</span>
+<span id="321">321</span>
+<span id="322">322</span>
+<span id="323">323</span>
+<span id="324">324</span>
+<span id="325">325</span>
+<span id="326">326</span>
+<span id="327">327</span>
+<span id="328">328</span>
+<span id="329">329</span>
+<span id="330">330</span>
+<span id="331">331</span>
 </pre><pre class="rust"><code><span class="doccomment">//! Main module for the Permutation Check protocol
 
-</span><span class="kw">use </span><span class="self">self</span>::util::computer_num_and_denom;
+</span><span class="kw">use </span><span class="self">self</span>::util::computer_nums_and_denoms;
 <span class="kw">use crate</span>::{
     pcs::PolynomialCommitmentScheme,
     poly_iop::{errors::PolyIOPErrors, prelude::ProductCheck, PolyIOP},
@@ -305,17 +360,17 @@
 
 <span class="kw">pub mod </span>util;
 
-<span class="doccomment">/// A PermutationCheck w.r.t. `(f, g, perm)`
-/// proves that g is a permutation of f under
-/// permutation `perm`
+<span class="doccomment">/// A PermutationCheck w.r.t. `(fs, gs, perms)`
+/// proves that (g1, ..., gk) is a permutation of (f1, ..., fk) under
+/// permutation `(p1, ..., pk)`
 /// It is derived from ProductCheck.
 ///
 /// A Permutation Check IOP takes the following steps:
 ///
 /// Inputs:
-/// - f(x)
-/// - g(x)
-/// - permutation s_perm(x)
+/// - fs = (f1, ..., fk)
+/// - gs = (g1, ..., gk)
+/// - permutation oracles = (p1, ..., pk)
 </span><span class="kw">pub trait </span>PermutationCheck&lt;E, PCS&gt;: ProductCheck&lt;E, PCS&gt;
 <span class="kw">where
     </span>E: PairingEngine,
@@ -333,25 +388,34 @@
     </span><span class="kw">fn </span>init_transcript() -&gt; <span class="self">Self</span>::Transcript;
 
     <span class="doccomment">/// Inputs:
-    /// - f(x)
-    /// - g(x)
-    /// - permutation s_perm(x)
+    /// - fs = (f1, ..., fk)
+    /// - gs = (g1, ..., gk)
+    /// - permutation oracles = (p1, ..., pk)
     /// Outputs:
-    /// - a permutation check proof proving that g is a permutation of f under
-    ///   s_perm
-    /// - the product polynomial build during product check
+    /// - a permutation check proof proving that gs is a permutation of fs under
+    ///   permutation
+    /// - the product polynomial built during product check
+    /// - the fractional polynomial built during product check
     ///
     /// Cost: O(N)
+    </span><span class="attribute">#[allow(clippy::type_complexity)]
     </span><span class="kw">fn </span>prove(
         pcs_param: <span class="kw-2">&amp;</span>PCS::ProverParam,
-        fx: <span class="kw-2">&amp;</span><span class="self">Self</span>::MultilinearExtension,
-        gx: <span class="kw-2">&amp;</span><span class="self">Self</span>::MultilinearExtension,
-        s_perm: <span class="kw-2">&amp;</span><span class="self">Self</span>::MultilinearExtension,
+        fxs: <span class="kw-2">&amp;</span>[<span class="self">Self</span>::MultilinearExtension],
+        gxs: <span class="kw-2">&amp;</span>[<span class="self">Self</span>::MultilinearExtension],
+        perms: <span class="kw-2">&amp;</span>[<span class="self">Self</span>::MultilinearExtension],
         transcript: <span class="kw-2">&amp;mut </span>IOPTranscript&lt;E::Fr&gt;,
-    ) -&gt; <span class="prelude-ty">Result</span>&lt;(<span class="self">Self</span>::PermutationProof, <span class="self">Self</span>::MultilinearExtension), PolyIOPErrors&gt;;
+    ) -&gt; <span class="prelude-ty">Result</span>&lt;
+        (
+            <span class="self">Self</span>::PermutationProof,
+            <span class="self">Self</span>::MultilinearExtension,
+            <span class="self">Self</span>::MultilinearExtension,
+        ),
+        PolyIOPErrors,
+    &gt;;
 
-    <span class="doccomment">/// Verify that an MLE g(x) is a permutation of
-    /// MLE f(x) over a permutation given by s_perm.
+    <span class="doccomment">/// Verify that (g1, ..., gk) is a permutation of
+    /// (f1, ..., fk) over the permutation oracles (perm1, ..., permk)
     </span><span class="kw">fn </span>verify(
         proof: <span class="kw-2">&amp;</span><span class="self">Self</span>::PermutationProof,
         aux_info: <span class="kw-2">&amp;</span><span class="self">Self</span>::VPAuxInfo,
@@ -373,40 +437,59 @@
 
     <span class="kw">fn </span>prove(
         pcs_param: <span class="kw-2">&amp;</span>PCS::ProverParam,
-        fx: <span class="kw-2">&amp;</span><span class="self">Self</span>::MultilinearExtension,
-        gx: <span class="kw-2">&amp;</span><span class="self">Self</span>::MultilinearExtension,
-        s_perm: <span class="kw-2">&amp;</span><span class="self">Self</span>::MultilinearExtension,
+        fxs: <span class="kw-2">&amp;</span>[<span class="self">Self</span>::MultilinearExtension],
+        gxs: <span class="kw-2">&amp;</span>[<span class="self">Self</span>::MultilinearExtension],
+        perms: <span class="kw-2">&amp;</span>[<span class="self">Self</span>::MultilinearExtension],
         transcript: <span class="kw-2">&amp;mut </span>IOPTranscript&lt;E::Fr&gt;,
-    ) -&gt; <span class="prelude-ty">Result</span>&lt;(<span class="self">Self</span>::PermutationProof, <span class="self">Self</span>::MultilinearExtension), PolyIOPErrors&gt; {
+    ) -&gt; <span class="prelude-ty">Result</span>&lt;
+        (
+            <span class="self">Self</span>::PermutationProof,
+            <span class="self">Self</span>::MultilinearExtension,
+            <span class="self">Self</span>::MultilinearExtension,
+        ),
+        PolyIOPErrors,
+    &gt; {
         <span class="kw">let </span>start = <span class="macro">start_timer!</span>(|| <span class="string">&quot;Permutation check prove&quot;</span>);
-        <span class="kw">if </span>fx.num_vars != gx.num_vars {
-            <span class="kw">return </span><span class="prelude-val">Err</span>(PolyIOPErrors::InvalidParameters(
-                <span class="string">&quot;fx and gx have different number of variables&quot;</span>.to_string(),
-            ));
+        <span class="kw">if </span>fxs.is_empty() {
+            <span class="kw">return </span><span class="prelude-val">Err</span>(PolyIOPErrors::InvalidParameters(<span class="string">&quot;fxs is empty&quot;</span>.to_string()));
+        }
+        <span class="kw">if </span>(fxs.len() != gxs.len()) || (fxs.len() != perms.len()) {
+            <span class="kw">return </span><span class="prelude-val">Err</span>(PolyIOPErrors::InvalidProof(<span class="macro">format!</span>(
+                <span class="string">&quot;fxs.len() = {}, gxs.len() = {}, perms.len() = {}&quot;</span>,
+                fxs.len(),
+                gxs.len(),
+                perms.len(),
+            )));
         }
 
-        <span class="kw">if </span>fx.num_vars != s_perm.num_vars {
-            <span class="kw">return </span><span class="prelude-val">Err</span>(PolyIOPErrors::InvalidParameters(
-                <span class="string">&quot;fx and s_perm have different number of variables&quot;</span>.to_string(),
-            ));
+        <span class="kw">let </span>num_vars = fxs[<span class="number">0</span>].num_vars;
+        <span class="kw">for </span>((fx, gx), perm) <span class="kw">in </span>fxs.iter().zip(gxs.iter()).zip(perms.iter()) {
+            <span class="kw">if </span>(fx.num_vars != num_vars) || (gx.num_vars != num_vars) || (perm.num_vars != num_vars)
+            {
+                <span class="kw">return </span><span class="prelude-val">Err</span>(PolyIOPErrors::InvalidParameters(
+                    <span class="string">&quot;number of variables unmatched&quot;</span>.to_string(),
+                ));
+            }
         }
 
         <span class="comment">// generate challenge `beta` and `gamma` from current transcript
         </span><span class="kw">let </span>beta = transcript.get_and_append_challenge(<span class="string">b&quot;beta&quot;</span>)<span class="question-mark">?</span>;
         <span class="kw">let </span>gamma = transcript.get_and_append_challenge(<span class="string">b&quot;gamma&quot;</span>)<span class="question-mark">?</span>;
-        <span class="kw">let </span>(numerator, denominator) = computer_num_and_denom(<span class="kw-2">&amp;</span>beta, <span class="kw-2">&amp;</span>gamma, fx, gx, s_perm)<span class="question-mark">?</span>;
+        <span class="kw">let </span>(numerators, denominators) = computer_nums_and_denoms(<span class="kw-2">&amp;</span>beta, <span class="kw-2">&amp;</span>gamma, fxs, gxs, perms)<span class="question-mark">?</span>;
 
         <span class="comment">// invoke product check on numerator and denominator
-        </span><span class="kw">let </span>(proof, prod_poly) =
-            &lt;<span class="self">Self </span><span class="kw">as </span>ProductCheck&lt;E, PCS&gt;&gt;::prove(pcs_param, <span class="kw-2">&amp;</span>numerator, <span class="kw-2">&amp;</span>denominator, transcript)<span class="question-mark">?</span>;
+        </span><span class="kw">let </span>(proof, prod_poly, frac_poly) = &lt;<span class="self">Self </span><span class="kw">as </span>ProductCheck&lt;E, PCS&gt;&gt;::prove(
+            pcs_param,
+            <span class="kw-2">&amp;</span>numerators,
+            <span class="kw-2">&amp;</span>denominators,
+            transcript,
+        )<span class="question-mark">?</span>;
 
         <span class="macro">end_timer!</span>(start);
-        <span class="prelude-val">Ok</span>((proof, prod_poly))
+        <span class="prelude-val">Ok</span>((proof, prod_poly, frac_poly))
     }
 
-    <span class="doccomment">/// Verify that an MLE g(x) is a permutation of an
-    /// MLE f(x) over a permutation given by s_perm.
-    </span><span class="kw">fn </span>verify(
+    <span class="kw">fn </span>verify(
         proof: <span class="kw-2">&amp;</span><span class="self">Self</span>::PermutationProof,
         aux_info: <span class="kw-2">&amp;</span><span class="self">Self</span>::VPAuxInfo,
         transcript: <span class="kw-2">&amp;mut </span><span class="self">Self</span>::Transcript,
@@ -435,7 +518,7 @@
         pcs::{prelude::MultilinearKzgPCS, PolynomialCommitmentScheme},
         poly_iop::{errors::PolyIOPErrors, PolyIOP},
     };
-    <span class="kw">use </span>arithmetic::{evaluate_opt, identity_permutation_mle, random_permutation_mle, VPAuxInfo};
+    <span class="kw">use </span>arithmetic::{evaluate_opt, identity_permutation_mles, random_permutation_mles, VPAuxInfo};
     <span class="kw">use </span>ark_bls12_381::Bls12_381;
     <span class="kw">use </span>ark_ec::PairingEngine;
     <span class="kw">use </span>ark_poly::{DenseMultilinearExtension, MultilinearExtension};
@@ -446,17 +529,18 @@
 
     <span class="kw">fn </span>test_permutation_check_helper&lt;E, PCS&gt;(
         pcs_param: <span class="kw-2">&amp;</span>PCS::ProverParam,
-        fx: <span class="kw-2">&amp;</span>Rc&lt;DenseMultilinearExtension&lt;E::Fr&gt;&gt;,
-        gx: <span class="kw-2">&amp;</span>Rc&lt;DenseMultilinearExtension&lt;E::Fr&gt;&gt;,
-        s_perm: <span class="kw-2">&amp;</span>Rc&lt;DenseMultilinearExtension&lt;E::Fr&gt;&gt;,
+        fxs: <span class="kw-2">&amp;</span>[Rc&lt;DenseMultilinearExtension&lt;E::Fr&gt;&gt;],
+        gxs: <span class="kw-2">&amp;</span>[Rc&lt;DenseMultilinearExtension&lt;E::Fr&gt;&gt;],
+        perms: <span class="kw-2">&amp;</span>[Rc&lt;DenseMultilinearExtension&lt;E::Fr&gt;&gt;],
     ) -&gt; <span class="prelude-ty">Result</span>&lt;(), PolyIOPErrors&gt;
     <span class="kw">where
         </span>E: PairingEngine,
         PCS: PolynomialCommitmentScheme&lt;E, Polynomial = Rc&lt;DenseMultilinearExtension&lt;E::Fr&gt;&gt;&gt;,
     {
-        <span class="kw">let </span>nv = fx.num_vars;
-        <span class="kw">let </span>poly_info = VPAuxInfo {
-            max_degree: <span class="number">2</span>,
+        <span class="kw">let </span>nv = fxs[<span class="number">0</span>].num_vars;
+        <span class="comment">// what&#39;s AuxInfo used for?
+        </span><span class="kw">let </span>poly_info = VPAuxInfo {
+            max_degree: fxs.len() + <span class="number">1</span>,
             num_variables: nv,
             phantom: PhantomData::default(),
         };
@@ -464,11 +548,11 @@
         <span class="comment">// prover
         </span><span class="kw">let </span><span class="kw-2">mut </span>transcript = &lt;PolyIOP&lt;E::Fr&gt; <span class="kw">as </span>PermutationCheck&lt;E, PCS&gt;&gt;::init_transcript();
         transcript.append_message(<span class="string">b&quot;testing&quot;</span>, <span class="string">b&quot;initializing transcript for testing&quot;</span>)<span class="question-mark">?</span>;
-        <span class="kw">let </span>(proof, prod_x) = &lt;PolyIOP&lt;E::Fr&gt; <span class="kw">as </span>PermutationCheck&lt;E, PCS&gt;&gt;::prove(
+        <span class="kw">let </span>(proof, prod_x, _frac_poly) = &lt;PolyIOP&lt;E::Fr&gt; <span class="kw">as </span>PermutationCheck&lt;E, PCS&gt;&gt;::prove(
             pcs_param,
-            fx,
-            gx,
-            s_perm,
+            fxs,
+            gxs,
+            perms,
             <span class="kw-2">&amp;mut </span>transcript,
         )<span class="question-mark">?</span>;
 
@@ -496,40 +580,66 @@
     <span class="kw">fn </span>test_permutation_check(nv: usize) -&gt; <span class="prelude-ty">Result</span>&lt;(), PolyIOPErrors&gt; {
         <span class="kw">let </span><span class="kw-2">mut </span>rng = test_rng();
 
-        <span class="kw">let </span>srs = MultilinearKzgPCS::&lt;Bls12_381&gt;::gen_srs_for_testing(<span class="kw-2">&amp;mut </span>rng, nv + <span class="number">1</span>)<span class="question-mark">?</span>;
-        <span class="kw">let </span>(pcs_param, <span class="kw">_</span>) = MultilinearKzgPCS::&lt;Bls12_381&gt;::trim(<span class="kw-2">&amp;</span>srs, <span class="prelude-val">None</span>, <span class="prelude-val">Some</span>(nv + <span class="number">1</span>))<span class="question-mark">?</span>;
+        <span class="kw">let </span>srs = MultilinearKzgPCS::&lt;Bls12_381&gt;::gen_srs_for_testing(<span class="kw-2">&amp;mut </span>rng, nv)<span class="question-mark">?</span>;
+        <span class="kw">let </span>(pcs_param, <span class="kw">_</span>) = MultilinearKzgPCS::&lt;Bls12_381&gt;::trim(<span class="kw-2">&amp;</span>srs, <span class="prelude-val">None</span>, <span class="prelude-val">Some</span>(nv))<span class="question-mark">?</span>;
+        <span class="kw">let </span>id_perms = identity_permutation_mles(nv, <span class="number">2</span>);
 
         {
-            <span class="comment">// good path: w is a permutation of w itself under the identify map
-            </span><span class="kw">let </span>w = Rc::new(DenseMultilinearExtension::rand(nv, <span class="kw-2">&amp;mut </span>rng));
-            <span class="comment">// s_perm is the identity map
-            </span><span class="kw">let </span>s_perm = identity_permutation_mle(nv);
-            test_permutation_check_helper::&lt;Bls12_381, KZG&gt;(<span class="kw-2">&amp;</span>pcs_param, <span class="kw-2">&amp;</span>w, <span class="kw-2">&amp;</span>w, <span class="kw-2">&amp;</span>s_perm)<span class="question-mark">?</span>;
+            <span class="comment">// good path: (w1, w2) is a permutation of (w1, w2) itself under the identify
+            // map
+            </span><span class="kw">let </span>ws = <span class="macro">vec!</span>[
+                Rc::new(DenseMultilinearExtension::rand(nv, <span class="kw-2">&amp;mut </span>rng)),
+                Rc::new(DenseMultilinearExtension::rand(nv, <span class="kw-2">&amp;mut </span>rng)),
+            ];
+            <span class="comment">// perms is the identity map
+            </span>test_permutation_check_helper::&lt;Bls12_381, KZG&gt;(<span class="kw-2">&amp;</span>pcs_param, <span class="kw-2">&amp;</span>ws, <span class="kw-2">&amp;</span>ws, <span class="kw-2">&amp;</span>id_perms)<span class="question-mark">?</span>;
+        }
+
+        {
+            <span class="comment">// good path: f = (w1, w2) is a permutation of g = (w2, w1) itself under a map
+            </span><span class="kw">let </span><span class="kw-2">mut </span>fs = <span class="macro">vec!</span>[
+                Rc::new(DenseMultilinearExtension::rand(nv, <span class="kw-2">&amp;mut </span>rng)),
+                Rc::new(DenseMultilinearExtension::rand(nv, <span class="kw-2">&amp;mut </span>rng)),
+            ];
+            <span class="kw">let </span>gs = fs.clone();
+            fs.reverse();
+            <span class="comment">// perms is the reverse identity map
+            </span><span class="kw">let </span><span class="kw-2">mut </span>perms = id_perms.clone();
+            perms.reverse();
+            test_permutation_check_helper::&lt;Bls12_381, KZG&gt;(<span class="kw-2">&amp;</span>pcs_param, <span class="kw-2">&amp;</span>fs, <span class="kw-2">&amp;</span>gs, <span class="kw-2">&amp;</span>perms)<span class="question-mark">?</span>;
         }
 
         {
             <span class="comment">// bad path 1: w is a not permutation of w itself under a random map
-            </span><span class="kw">let </span>w = Rc::new(DenseMultilinearExtension::rand(nv, <span class="kw-2">&amp;mut </span>rng));
-            <span class="comment">// s_perm is a random map
-            </span><span class="kw">let </span>s_perm = random_permutation_mle(nv, <span class="kw-2">&amp;mut </span>rng);
+            </span><span class="kw">let </span>ws = <span class="macro">vec!</span>[
+                Rc::new(DenseMultilinearExtension::rand(nv, <span class="kw-2">&amp;mut </span>rng)),
+                Rc::new(DenseMultilinearExtension::rand(nv, <span class="kw-2">&amp;mut </span>rng)),
+            ];
+            <span class="comment">// perms is a random map
+            </span><span class="kw">let </span>perms = random_permutation_mles(nv, <span class="number">2</span>, <span class="kw-2">&amp;mut </span>rng);
 
             <span class="macro">assert!</span>(
-                test_permutation_check_helper::&lt;Bls12_381, KZG&gt;(<span class="kw-2">&amp;</span>pcs_param, <span class="kw-2">&amp;</span>w, <span class="kw-2">&amp;</span>w, <span class="kw-2">&amp;</span>s_perm)
+                test_permutation_check_helper::&lt;Bls12_381, KZG&gt;(<span class="kw-2">&amp;</span>pcs_param, <span class="kw-2">&amp;</span>ws, <span class="kw-2">&amp;</span>ws, <span class="kw-2">&amp;</span>perms)
                     .is_err()
             );
         }
 
         {
             <span class="comment">// bad path 2: f is a not permutation of g under a identity map
-            </span><span class="kw">let </span>f = Rc::new(DenseMultilinearExtension::rand(nv, <span class="kw-2">&amp;mut </span>rng));
-            <span class="kw">let </span>g = Rc::new(DenseMultilinearExtension::rand(nv, <span class="kw-2">&amp;mut </span>rng));
+            </span><span class="kw">let </span>fs = <span class="macro">vec!</span>[
+                Rc::new(DenseMultilinearExtension::rand(nv, <span class="kw-2">&amp;mut </span>rng)),
+                Rc::new(DenseMultilinearExtension::rand(nv, <span class="kw-2">&amp;mut </span>rng)),
+            ];
+            <span class="kw">let </span>gs = <span class="macro">vec!</span>[
+                Rc::new(DenseMultilinearExtension::rand(nv, <span class="kw-2">&amp;mut </span>rng)),
+                Rc::new(DenseMultilinearExtension::rand(nv, <span class="kw-2">&amp;mut </span>rng)),
+            ];
             <span class="comment">// s_perm is the identity map
-            </span><span class="kw">let </span>s_perm = identity_permutation_mle(nv);
 
-            <span class="macro">assert!</span>(
-                test_permutation_check_helper::&lt;Bls12_381, KZG&gt;(<span class="kw-2">&amp;</span>pcs_param, <span class="kw-2">&amp;</span>f, <span class="kw-2">&amp;</span>g, <span class="kw-2">&amp;</span>s_perm)
-                    .is_err()
-            );
+            </span><span class="macro">assert!</span>(test_permutation_check_helper::&lt;Bls12_381, KZG&gt;(
+                <span class="kw-2">&amp;</span>pcs_param, <span class="kw-2">&amp;</span>fs, <span class="kw-2">&amp;</span>gs, <span class="kw-2">&amp;</span>id_perms
+            )
+            .is_err());
         }
 
         <span class="prelude-val">Ok</span>(())

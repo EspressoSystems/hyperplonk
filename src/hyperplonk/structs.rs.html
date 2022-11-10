@@ -136,6 +136,8 @@
 <span id="136">136</span>
 <span id="137">137</span>
 <span id="138">138</span>
+<span id="139">139</span>
+<span id="140">140</span>
 </pre><pre class="rust"><code><span class="doccomment">//! Main module for the HyperPlonk PolyIOP.
 
 </span><span class="kw">use crate</span>::{custom_gate::CustomizedGates, selectors::SelectorColumn};
@@ -150,7 +152,7 @@
 };
 
 <span class="doccomment">/// The proof for the HyperPlonk PolyIOP, consists of the following:
-///   - a batch commitment to all the witness MLEs
+///   - the commitments to all witness MLEs
 ///   - a batch opening to all the MLEs at certain index
 ///   - the zero-check proof for checking custom gate-satisfiability
 ///   - the permutation-check proof for checking the copy constraints
@@ -162,12 +164,8 @@
     PCS: PolynomialCommitmentScheme&lt;E&gt;,
 {
     <span class="comment">// PCS commit for witnesses
-    </span><span class="kw">pub </span>witness_merged_commit: PCS::Commitment,
-    <span class="kw">pub </span>witness_commits: Vec&lt;PCS::Commitment&gt;,
-    <span class="kw">pub </span>batch_prod_x_openings: PCS::BatchProof,
-    <span class="kw">pub </span>batch_witness_and_selector_openings: PCS::BatchProof,
-    <span class="kw">pub </span>perm_check_opening: PCS::Proof,
-    <span class="kw">pub </span>perm_check_eval: PCS::Evaluation,
+    </span><span class="kw">pub </span>witness_commits: Vec&lt;PCS::Commitment&gt;,
+    <span class="kw">pub </span>batch_openings: PCS::BatchProof,
     <span class="comment">// =======================================================================
     // IOP proofs
     // =======================================================================
@@ -241,18 +239,24 @@
 <span class="doccomment">/// The HyperPlonk proving key, consists of the following:
 ///   - the hyperplonk instance parameters
 ///   - the preprocessed polynomials output by the indexer
-///   - the commitment to the selectors
+///   - the commitment to the selectors and permutations
 ///   - the parameters for polynomial commitment
 </span><span class="attribute">#[derive(Clone, Debug, Default, PartialEq)]
 </span><span class="kw">pub struct </span>HyperPlonkProvingKey&lt;E: PairingEngine, PCS: PolynomialCommitmentScheme&lt;E&gt;&gt; {
     <span class="doccomment">/// Hyperplonk instance parameters
     </span><span class="kw">pub </span>params: HyperPlonkParams,
     <span class="doccomment">/// The preprocessed permutation polynomials
-    </span><span class="kw">pub </span>permutation_oracle: Rc&lt;DenseMultilinearExtension&lt;E::Fr&gt;&gt;,
+    </span><span class="kw">pub </span>permutation_oracles: Vec&lt;Rc&lt;DenseMultilinearExtension&lt;E::Fr&gt;&gt;&gt;,
+    <span class="doccomment">/// The preprocessed identity polynomials
+    </span><span class="kw">pub </span>id_oracles: Vec&lt;Rc&lt;DenseMultilinearExtension&lt;E::Fr&gt;&gt;&gt;,
     <span class="doccomment">/// The preprocessed selector polynomials
     </span><span class="kw">pub </span>selector_oracles: Vec&lt;Rc&lt;DenseMultilinearExtension&lt;E::Fr&gt;&gt;&gt;,
-    <span class="doccomment">/// A commitment to the preprocessed selector polynomials
+    <span class="doccomment">/// Commitments to the preprocessed selector polynomials
     </span><span class="kw">pub </span>selector_commitments: Vec&lt;PCS::Commitment&gt;,
+    <span class="doccomment">/// Commitments to the preprocessed permutation polynomials
+    </span><span class="kw">pub </span>permutation_commitments: Vec&lt;PCS::Commitment&gt;,
+    <span class="doccomment">/// Commitments to the preprocessed identity polynomials
+    </span><span class="kw">pub </span>id_commitments: Vec&lt;PCS::Commitment&gt;,
     <span class="doccomment">/// The parameters for PCS commitment
     </span><span class="kw">pub </span>pcs_param: PCS::ProverParam,
 }
@@ -265,14 +269,14 @@
 </span><span class="kw">pub struct </span>HyperPlonkVerifyingKey&lt;E: PairingEngine, PCS: PolynomialCommitmentScheme&lt;E&gt;&gt; {
     <span class="doccomment">/// Hyperplonk instance parameters
     </span><span class="kw">pub </span>params: HyperPlonkParams,
-    <span class="doccomment">/// The preprocessed permutation polynomials
-    </span><span class="kw">pub </span>permutation_oracle: Rc&lt;DenseMultilinearExtension&lt;E::Fr&gt;&gt;,
     <span class="doccomment">/// The parameters for PCS commitment
     </span><span class="kw">pub </span>pcs_param: PCS::VerifierParam,
     <span class="doccomment">/// A commitment to the preprocessed selector polynomials
     </span><span class="kw">pub </span>selector_commitments: Vec&lt;PCS::Commitment&gt;,
-    <span class="doccomment">/// Permutation oracle&#39;s commitment
-    </span><span class="kw">pub </span>perm_com: PCS::Commitment,
+    <span class="doccomment">/// Permutation oracles&#39; commitments
+    </span><span class="kw">pub </span>perm_commitments: Vec&lt;PCS::Commitment&gt;,
+    <span class="doccomment">/// Commitments to the preprocessed identity polynomials
+    </span><span class="kw">pub </span>id_commitments: Vec&lt;PCS::Commitment&gt;,
 }
 </code></pre></div>
 </section></div></main><div id="rustdoc-vars" data-root-path="../../" data-current-crate="hyperplonk" data-themes="ayu,dark,light" data-resource-suffix="" data-rustdoc-version="1.65.0 (897e37553 2022-11-02)" ></div></body></html>

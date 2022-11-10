@@ -302,13 +302,92 @@
 <span id="302">302</span>
 <span id="303">303</span>
 <span id="304">304</span>
+<span id="305">305</span>
+<span id="306">306</span>
+<span id="307">307</span>
+<span id="308">308</span>
+<span id="309">309</span>
+<span id="310">310</span>
+<span id="311">311</span>
+<span id="312">312</span>
+<span id="313">313</span>
+<span id="314">314</span>
+<span id="315">315</span>
+<span id="316">316</span>
+<span id="317">317</span>
+<span id="318">318</span>
+<span id="319">319</span>
+<span id="320">320</span>
+<span id="321">321</span>
+<span id="322">322</span>
+<span id="323">323</span>
+<span id="324">324</span>
+<span id="325">325</span>
+<span id="326">326</span>
+<span id="327">327</span>
+<span id="328">328</span>
+<span id="329">329</span>
+<span id="330">330</span>
+<span id="331">331</span>
+<span id="332">332</span>
+<span id="333">333</span>
+<span id="334">334</span>
+<span id="335">335</span>
+<span id="336">336</span>
+<span id="337">337</span>
+<span id="338">338</span>
+<span id="339">339</span>
+<span id="340">340</span>
+<span id="341">341</span>
+<span id="342">342</span>
+<span id="343">343</span>
+<span id="344">344</span>
+<span id="345">345</span>
+<span id="346">346</span>
+<span id="347">347</span>
+<span id="348">348</span>
+<span id="349">349</span>
+<span id="350">350</span>
+<span id="351">351</span>
+<span id="352">352</span>
+<span id="353">353</span>
+<span id="354">354</span>
+<span id="355">355</span>
+<span id="356">356</span>
+<span id="357">357</span>
+<span id="358">358</span>
+<span id="359">359</span>
+<span id="360">360</span>
+<span id="361">361</span>
+<span id="362">362</span>
+<span id="363">363</span>
+<span id="364">364</span>
+<span id="365">365</span>
+<span id="366">366</span>
+<span id="367">367</span>
+<span id="368">368</span>
+<span id="369">369</span>
+<span id="370">370</span>
+<span id="371">371</span>
+<span id="372">372</span>
+<span id="373">373</span>
+<span id="374">374</span>
+<span id="375">375</span>
+<span id="376">376</span>
+<span id="377">377</span>
+<span id="378">378</span>
+<span id="379">379</span>
+<span id="380">380</span>
+<span id="381">381</span>
+<span id="382">382</span>
+<span id="383">383</span>
 </pre><pre class="rust"><code><span class="doccomment">//! Main module for the Product Check protocol
 
 </span><span class="kw">use crate</span>::{
     pcs::PolynomialCommitmentScheme,
     poly_iop::{
         errors::PolyIOPErrors,
-        prod_check::util::{compute_product_poly, prove_zero_check},
+        prod_check::util::{compute_frac_poly, compute_product_poly, prove_zero_check},
         zero_check::ZeroCheck,
         PolyIOP,
     },
@@ -323,22 +402,29 @@
 
 <span class="kw">mod </span>util;
 
-<span class="doccomment">/// A product-check proves that two n-variate multilinear polynomials `f(x),
-/// g(x)` satisfy:
-/// \prod_{x \in {0,1}^n} f(x) = \prod_{x \in {0,1}^n} g(x)
+<span class="doccomment">/// A product-check proves that two lists of n-variate multilinear polynomials
+/// `(f1, f2, ..., fk)` and `(g1, ..., gk)` satisfy:
+/// \prod_{x \in {0,1}^n} f1(x) * ... * fk(x) = \prod_{x \in {0,1}^n} g1(x) *
+/// ... * gk(x)
 ///
 /// A ProductCheck is derived from ZeroCheck.
 ///
 /// Prover steps:
-/// 1. build `prod(x0, ..., x_n)` from f and g,
-///    such that `prod(0, x1, ..., xn)` equals `f/g` over domain {0,1}^n
-/// 2. push commitments of `prod(x)` to the transcript,
-///    and `generate_challenge` from current transcript (generate alpha)
-/// 3. generate the zerocheck proof for the virtual polynomial
-///    prod(1, x) - prod(x, 0) * prod(x, 1) + alpha * (f(x) - prod(0, x) * g(x))
+/// 1. build MLE `frac(x)` s.t. `frac(x) = f1(x) * ... * fk(x) / (g1(x) * ... *
+/// gk(x))` for all x \in {0,1}^n 2. build `prod(x)` from `frac(x)`, where
+/// `prod(x)` equals to `v(1,x)` in the paper 2. push commitments of `frac(x)`
+/// and `prod(x)` to the transcript,    and `generate_challenge` from current
+/// transcript (generate alpha) 3. generate the zerocheck proof for the virtual
+/// polynomial Q(x):       prod(x) - p1(x) * p2(x)
+///     + alpha * frac(x) * g1(x) * ... * gk(x)
+///     - alpha * f1(x) * ... * fk(x)
+/// where p1(x) = (1-x1) * frac(x2, ..., xn, 0)
+///             + x1 * prod(x2, ..., xn, 0),
+/// and p2(x) = (1-x1) * frac(x2, ..., xn, 1)
+///           + x1 * prod(x2, ..., xn, 1)
 ///
 /// Verifier steps:
-/// 1. Extract commitments of `prod(x)` from the proof, push
+/// 1. Extract commitments of `frac(x)` and `prod(x)` from the proof, push
 /// them to the transcript
 /// 2. `generate_challenge` from current transcript (generate alpha)
 /// 3. `verify` to verify the zerocheck proof and generate the subclaim for
@@ -359,30 +445,42 @@
     /// ProductCheck prover/verifier.
     </span><span class="kw">fn </span>init_transcript() -&gt; <span class="self">Self</span>::Transcript;
 
-    <span class="doccomment">/// Generate a proof for product check, showing that witness multilinear
-    /// polynomials f(x), g(x) satisfy `\prod_{x \in {0,1}^n} f(x) =
-    /// \prod_{x \in {0,1}^n} g(x)`
+    <span class="doccomment">/// Proves that two lists of n-variate multilinear polynomials `(f1, f2,
+    /// ..., fk)` and `(g1, ..., gk)` satisfy:
+    ///   \prod_{x \in {0,1}^n} f1(x) * ... * fk(x)
+    /// = \prod_{x \in {0,1}^n} g1(x) * ... * gk(x)
     ///
     /// Inputs:
-    /// - fx: the numerator multilinear polynomial
-    /// - gx: the denominator multilinear polynomial
+    /// - fxs: the list of numerator multilinear polynomial
+    /// - gxs: the list of denominator multilinear polynomial
     /// - transcript: the IOP transcript
     /// - pk: PCS committing key
     ///
     /// Outputs
     /// - the product check proof
     /// - the product polynomial (used for testing)
+    /// - the fractional polynomial (used for testing)
     ///
     /// Cost: O(N)
+    </span><span class="attribute">#[allow(clippy::type_complexity)]
     </span><span class="kw">fn </span>prove(
         pcs_param: <span class="kw-2">&amp;</span>PCS::ProverParam,
-        fx: <span class="kw-2">&amp;</span><span class="self">Self</span>::MultilinearExtension,
-        gx: <span class="kw-2">&amp;</span><span class="self">Self</span>::MultilinearExtension,
+        fxs: <span class="kw-2">&amp;</span>[<span class="self">Self</span>::MultilinearExtension],
+        gxs: <span class="kw-2">&amp;</span>[<span class="self">Self</span>::MultilinearExtension],
         transcript: <span class="kw-2">&amp;mut </span>IOPTranscript&lt;E::Fr&gt;,
-    ) -&gt; <span class="prelude-ty">Result</span>&lt;(<span class="self">Self</span>::ProductCheckProof, <span class="self">Self</span>::MultilinearExtension), PolyIOPErrors&gt;;
+    ) -&gt; <span class="prelude-ty">Result</span>&lt;
+        (
+            <span class="self">Self</span>::ProductCheckProof,
+            <span class="self">Self</span>::MultilinearExtension,
+            <span class="self">Self</span>::MultilinearExtension,
+        ),
+        PolyIOPErrors,
+    &gt;;
 
-    <span class="doccomment">/// Verify that for witness multilinear polynomials f(x), g(x)
-    /// it holds that `\prod_{x \in {0,1}^n} f(x) = \prod_{x \in {0,1}^n} g(x)`
+    <span class="doccomment">/// Verify that for witness multilinear polynomials (f1, ..., fk, g1, ...,
+    /// gk) it holds that
+    ///      `\prod_{x \in {0,1}^n} f1(x) * ... * fk(x)
+    ///     = \prod_{x \in {0,1}^n} g1(x) * ... * gk(x)`
     </span><span class="kw">fn </span>verify(
         proof: <span class="kw-2">&amp;</span><span class="self">Self</span>::ProductCheckProof,
         aux_info: <span class="kw-2">&amp;</span>VPAuxInfo&lt;E::Fr&gt;,
@@ -391,9 +489,7 @@
 }
 
 <span class="doccomment">/// A product check subclaim consists of
-/// - A zero check IOP subclaim for
-/// `Q(x) = prod(1, x) - prod(x, 0) * prod(x, 1) + alpha * (f(x) - prod(0,
-/// x) * g(x)) = 0`
+/// - A zero check IOP subclaim for the virtual polynomial
 /// - The random challenge `alpha`
 /// - A final query for `prod(1, ..., 1, 0) = 1`.
 </span><span class="comment">// Note that this final query is in fact a constant that
@@ -414,6 +510,7 @@
 <span class="doccomment">/// A product check proof consists of
 /// - a zerocheck proof
 /// - a product polynomial commitment
+/// - a polynomial commitment for the fractional polynomial
 </span><span class="attribute">#[derive(Clone, Debug, Default, PartialEq)]
 </span><span class="kw">pub struct </span>ProductCheckProof&lt;
     E: PairingEngine,
@@ -422,6 +519,7 @@
 &gt; {
     <span class="kw">pub </span>zero_check_proof: ZC::ZeroCheckProof,
     <span class="kw">pub </span>prod_x_comm: PCS::Commitment,
+    <span class="kw">pub </span>frac_comm: PCS::Commitment,
 }
 
 <span class="kw">impl</span>&lt;E, PCS&gt; ProductCheck&lt;E, PCS&gt; <span class="kw">for </span>PolyIOP&lt;E::Fr&gt;
@@ -438,28 +536,51 @@
 
     <span class="kw">fn </span>prove(
         pcs_param: <span class="kw-2">&amp;</span>PCS::ProverParam,
-        fx: <span class="kw-2">&amp;</span><span class="self">Self</span>::MultilinearExtension,
-        gx: <span class="kw-2">&amp;</span><span class="self">Self</span>::MultilinearExtension,
+        fxs: <span class="kw-2">&amp;</span>[<span class="self">Self</span>::MultilinearExtension],
+        gxs: <span class="kw-2">&amp;</span>[<span class="self">Self</span>::MultilinearExtension],
         transcript: <span class="kw-2">&amp;mut </span>IOPTranscript&lt;E::Fr&gt;,
-    ) -&gt; <span class="prelude-ty">Result</span>&lt;(<span class="self">Self</span>::ProductCheckProof, <span class="self">Self</span>::MultilinearExtension), PolyIOPErrors&gt; {
+    ) -&gt; <span class="prelude-ty">Result</span>&lt;
+        (
+            <span class="self">Self</span>::ProductCheckProof,
+            <span class="self">Self</span>::MultilinearExtension,
+            <span class="self">Self</span>::MultilinearExtension,
+        ),
+        PolyIOPErrors,
+    &gt; {
         <span class="kw">let </span>start = <span class="macro">start_timer!</span>(|| <span class="string">&quot;prod_check prove&quot;</span>);
 
-        <span class="kw">if </span>fx.num_vars != gx.num_vars {
+        <span class="kw">if </span>fxs.is_empty() {
+            <span class="kw">return </span><span class="prelude-val">Err</span>(PolyIOPErrors::InvalidParameters(<span class="string">&quot;fxs is empty&quot;</span>.to_string()));
+        }
+        <span class="kw">if </span>fxs.len() != gxs.len() {
             <span class="kw">return </span><span class="prelude-val">Err</span>(PolyIOPErrors::InvalidParameters(
-                <span class="string">&quot;fx and gx have different number of variables&quot;</span>.to_string(),
+                <span class="string">&quot;fxs and gxs have different number of polynomials&quot;</span>.to_string(),
             ));
         }
+        <span class="kw">for </span>poly <span class="kw">in </span>fxs.iter().chain(gxs.iter()) {
+            <span class="kw">if </span>poly.num_vars != fxs[<span class="number">0</span>].num_vars {
+                <span class="kw">return </span><span class="prelude-val">Err</span>(PolyIOPErrors::InvalidParameters(
+                    <span class="string">&quot;fx and gx have different number of variables&quot;</span>.to_string(),
+                ));
+            }
+        }
 
+        <span class="comment">// compute the fractional polynomial frac_p s.t.
+        // frac_p(x) = f1(x) * ... * fk(x) / (g1(x) * ... * gk(x))
+        </span><span class="kw">let </span>frac_poly = compute_frac_poly(fxs, gxs)<span class="question-mark">?</span>;
         <span class="comment">// compute the product polynomial
-        </span><span class="kw">let </span>prod_x = compute_product_poly(fx, gx)<span class="question-mark">?</span>;
+        </span><span class="kw">let </span>prod_x = compute_product_poly(<span class="kw-2">&amp;</span>frac_poly)<span class="question-mark">?</span>;
 
         <span class="comment">// generate challenge
-        </span><span class="kw">let </span>prod_x_comm = PCS::commit(pcs_param, <span class="kw-2">&amp;</span>prod_x)<span class="question-mark">?</span>;
+        </span><span class="kw">let </span>frac_comm = PCS::commit(pcs_param, <span class="kw-2">&amp;</span>frac_poly)<span class="question-mark">?</span>;
+        <span class="kw">let </span>prod_x_comm = PCS::commit(pcs_param, <span class="kw-2">&amp;</span>prod_x)<span class="question-mark">?</span>;
+        transcript.append_serializable_element(<span class="string">b&quot;frac(x)&quot;</span>, <span class="kw-2">&amp;</span>frac_comm)<span class="question-mark">?</span>;
         transcript.append_serializable_element(<span class="string">b&quot;prod(x)&quot;</span>, <span class="kw-2">&amp;</span>prod_x_comm)<span class="question-mark">?</span>;
         <span class="kw">let </span>alpha = transcript.get_and_append_challenge(<span class="string">b&quot;alpha&quot;</span>)<span class="question-mark">?</span>;
 
         <span class="comment">// build the zero-check proof
-        </span><span class="kw">let </span>(zero_check_proof, <span class="kw">_</span>) = prove_zero_check(fx, gx, <span class="kw-2">&amp;</span>prod_x, <span class="kw-2">&amp;</span>alpha, transcript)<span class="question-mark">?</span>;
+        </span><span class="kw">let </span>(zero_check_proof, <span class="kw">_</span>) =
+            prove_zero_check(fxs, gxs, <span class="kw-2">&amp;</span>frac_poly, <span class="kw-2">&amp;</span>prod_x, <span class="kw-2">&amp;</span>alpha, transcript)<span class="question-mark">?</span>;
 
         <span class="macro">end_timer!</span>(start);
 
@@ -467,8 +588,10 @@
             ProductCheckProof {
                 zero_check_proof,
                 prod_x_comm,
+                frac_comm,
             },
             prod_x,
+            frac_poly,
         ))
     }
 
@@ -480,7 +603,8 @@
         <span class="kw">let </span>start = <span class="macro">start_timer!</span>(|| <span class="string">&quot;prod_check verify&quot;</span>);
 
         <span class="comment">// update transcript and generate challenge
-        </span>transcript.append_serializable_element(<span class="string">b&quot;prod(x)&quot;</span>, <span class="kw-2">&amp;</span>proof.prod_x_comm)<span class="question-mark">?</span>;
+        </span>transcript.append_serializable_element(<span class="string">b&quot;frac(x)&quot;</span>, <span class="kw-2">&amp;</span>proof.frac_comm)<span class="question-mark">?</span>;
+        transcript.append_serializable_element(<span class="string">b&quot;prod(x)&quot;</span>, <span class="kw-2">&amp;</span>proof.prod_x_comm)<span class="question-mark">?</span>;
         <span class="kw">let </span>alpha = transcript.get_and_append_challenge(<span class="string">b&quot;alpha&quot;</span>)<span class="question-mark">?</span>;
 
         <span class="comment">// invoke the zero check on the iop_proof
@@ -488,8 +612,8 @@
         </span><span class="kw">let </span>zero_check_sub_claim =
             &lt;<span class="self">Self </span><span class="kw">as </span>ZeroCheck&lt;E::Fr&gt;&gt;::verify(<span class="kw-2">&amp;</span>proof.zero_check_proof, aux_info, transcript)<span class="question-mark">?</span>;
 
-        <span class="comment">// the final query is on prod_x, hence has length `num_vars` + 1
-        </span><span class="kw">let </span><span class="kw-2">mut </span>final_query = <span class="macro">vec!</span>[E::Fr::one(); aux_info.num_variables + <span class="number">1</span>];
+        <span class="comment">// the final query is on prod_x
+        </span><span class="kw">let </span><span class="kw-2">mut </span>final_query = <span class="macro">vec!</span>[E::Fr::one(); aux_info.num_variables];
         <span class="comment">// the point has to be reversed because Arkworks uses big-endian.
         </span>final_query[<span class="number">0</span>] = E::Fr::zero();
         <span class="kw">let </span>final_eval = E::Fr::one();
@@ -518,10 +642,35 @@
     <span class="kw">use </span>ark_std::test_rng;
     <span class="kw">use </span>std::{marker::PhantomData, rc::Rc};
 
-    <span class="comment">// f and g are guaranteed to have the same product
+    <span class="kw">fn </span>check_frac_poly&lt;E&gt;(
+        frac_poly: <span class="kw-2">&amp;</span>Rc&lt;DenseMultilinearExtension&lt;E::Fr&gt;&gt;,
+        fs: <span class="kw-2">&amp;</span>[Rc&lt;DenseMultilinearExtension&lt;E::Fr&gt;&gt;],
+        gs: <span class="kw-2">&amp;</span>[Rc&lt;DenseMultilinearExtension&lt;E::Fr&gt;&gt;],
+    ) <span class="kw">where
+        </span>E: PairingEngine,
+    {
+        <span class="kw">let </span><span class="kw-2">mut </span>flag = <span class="bool-val">true</span>;
+        <span class="kw">let </span>num_vars = frac_poly.num_vars;
+        <span class="kw">for </span>i <span class="kw">in </span><span class="number">0</span>..<span class="number">1 </span>&lt;&lt; num_vars {
+            <span class="kw">let </span>nom = fs
+                .iter()
+                .fold(E::Fr::from(<span class="number">1u8</span>), |acc, f| acc * f.evaluations[i]);
+            <span class="kw">let </span>denom = gs
+                .iter()
+                .fold(E::Fr::from(<span class="number">1u8</span>), |acc, g| acc * g.evaluations[i]);
+            <span class="kw">if </span>denom * frac_poly.evaluations[i] != nom {
+                flag = <span class="bool-val">false</span>;
+                <span class="kw">break</span>;
+            }
+        }
+        <span class="macro">assert_eq!</span>(flag, <span class="bool-val">true</span>);
+    }
+    <span class="comment">// fs and gs are guaranteed to have the same product
+    // fs and hs doesn&#39;t have the same product
     </span><span class="kw">fn </span>test_product_check_helper&lt;E, PCS&gt;(
-        f: <span class="kw-2">&amp;</span>DenseMultilinearExtension&lt;E::Fr&gt;,
-        g: <span class="kw-2">&amp;</span>DenseMultilinearExtension&lt;E::Fr&gt;,
+        fs: <span class="kw-2">&amp;</span>[Rc&lt;DenseMultilinearExtension&lt;E::Fr&gt;&gt;],
+        gs: <span class="kw-2">&amp;</span>[Rc&lt;DenseMultilinearExtension&lt;E::Fr&gt;&gt;],
+        hs: <span class="kw-2">&amp;</span>[Rc&lt;DenseMultilinearExtension&lt;E::Fr&gt;&gt;],
         pcs_param: <span class="kw-2">&amp;</span>PCS::ProverParam,
     ) -&gt; <span class="prelude-ty">Result</span>&lt;(), PolyIOPErrors&gt;
     <span class="kw">where
@@ -531,19 +680,16 @@
         <span class="kw">let </span><span class="kw-2">mut </span>transcript = &lt;PolyIOP&lt;E::Fr&gt; <span class="kw">as </span>ProductCheck&lt;E, PCS&gt;&gt;::init_transcript();
         transcript.append_message(<span class="string">b&quot;testing&quot;</span>, <span class="string">b&quot;initializing transcript for testing&quot;</span>)<span class="question-mark">?</span>;
 
-        <span class="kw">let </span>(proof, prod_x) = &lt;PolyIOP&lt;E::Fr&gt; <span class="kw">as </span>ProductCheck&lt;E, PCS&gt;&gt;::prove(
-            pcs_param,
-            <span class="kw-2">&amp;</span>Rc::new(f.clone()),
-            <span class="kw-2">&amp;</span>Rc::new(g.clone()),
-            <span class="kw-2">&amp;mut </span>transcript,
-        )<span class="question-mark">?</span>;
+        <span class="kw">let </span>(proof, prod_x, frac_poly) =
+            &lt;PolyIOP&lt;E::Fr&gt; <span class="kw">as </span>ProductCheck&lt;E, PCS&gt;&gt;::prove(pcs_param, fs, gs, <span class="kw-2">&amp;mut </span>transcript)<span class="question-mark">?</span>;
 
         <span class="kw">let </span><span class="kw-2">mut </span>transcript = &lt;PolyIOP&lt;E::Fr&gt; <span class="kw">as </span>ProductCheck&lt;E, PCS&gt;&gt;::init_transcript();
         transcript.append_message(<span class="string">b&quot;testing&quot;</span>, <span class="string">b&quot;initializing transcript for testing&quot;</span>)<span class="question-mark">?</span>;
 
-        <span class="kw">let </span>aux_info = VPAuxInfo {
-            max_degree: <span class="number">2</span>,
-            num_variables: f.num_vars,
+        <span class="comment">// what&#39;s aux_info for?
+        </span><span class="kw">let </span>aux_info = VPAuxInfo {
+            max_degree: fs.len() + <span class="number">1</span>,
+            num_variables: fs[<span class="number">0</span>].num_vars,
             phantom: PhantomData::default(),
         };
         <span class="kw">let </span>prod_subclaim =
@@ -553,18 +699,14 @@
             prod_subclaim.final_query.<span class="number">1</span>,
             <span class="string">&quot;different product&quot;
         </span>);
+        check_frac_poly::&lt;E&gt;(<span class="kw-2">&amp;</span>frac_poly, fs, gs);
 
         <span class="comment">// bad path
         </span><span class="kw">let </span><span class="kw-2">mut </span>transcript = &lt;PolyIOP&lt;E::Fr&gt; <span class="kw">as </span>ProductCheck&lt;E, PCS&gt;&gt;::init_transcript();
         transcript.append_message(<span class="string">b&quot;testing&quot;</span>, <span class="string">b&quot;initializing transcript for testing&quot;</span>)<span class="question-mark">?</span>;
 
-        <span class="kw">let </span>h = f + g;
-        <span class="kw">let </span>(bad_proof, prod_x_bad) = &lt;PolyIOP&lt;E::Fr&gt; <span class="kw">as </span>ProductCheck&lt;E, PCS&gt;&gt;::prove(
-            pcs_param,
-            <span class="kw-2">&amp;</span>Rc::new(f.clone()),
-            <span class="kw-2">&amp;</span>Rc::new(h),
-            <span class="kw-2">&amp;mut </span>transcript,
-        )<span class="question-mark">?</span>;
+        <span class="kw">let </span>(bad_proof, prod_x_bad, frac_poly) =
+            &lt;PolyIOP&lt;E::Fr&gt; <span class="kw">as </span>ProductCheck&lt;E, PCS&gt;&gt;::prove(pcs_param, fs, hs, <span class="kw-2">&amp;mut </span>transcript)<span class="question-mark">?</span>;
 
         <span class="kw">let </span><span class="kw-2">mut </span>transcript = &lt;PolyIOP&lt;E::Fr&gt; <span class="kw">as </span>ProductCheck&lt;E, PCS&gt;&gt;::init_transcript();
         transcript.append_message(<span class="string">b&quot;testing&quot;</span>, <span class="string">b&quot;initializing transcript for testing&quot;</span>)<span class="question-mark">?</span>;
@@ -578,6 +720,8 @@
             bad_subclaim.final_query.<span class="number">1</span>,
             <span class="string">&quot;can&#39;t detect wrong proof&quot;
         </span>);
+        <span class="comment">// the frac_poly should still be computed correctly
+        </span>check_frac_poly::&lt;E&gt;(<span class="kw-2">&amp;</span>frac_poly, fs, hs);
 
         <span class="prelude-val">Ok</span>(())
     }
@@ -585,14 +729,28 @@
     <span class="kw">fn </span>test_product_check(nv: usize) -&gt; <span class="prelude-ty">Result</span>&lt;(), PolyIOPErrors&gt; {
         <span class="kw">let </span><span class="kw-2">mut </span>rng = test_rng();
 
-        <span class="kw">let </span>f: DenseMultilinearExtension&lt;Fr&gt; = DenseMultilinearExtension::rand(nv, <span class="kw-2">&amp;mut </span>rng);
-        <span class="kw">let </span><span class="kw-2">mut </span>g = f.clone();
-        g.evaluations.reverse();
+        <span class="kw">let </span>f1: DenseMultilinearExtension&lt;Fr&gt; = DenseMultilinearExtension::rand(nv, <span class="kw-2">&amp;mut </span>rng);
+        <span class="kw">let </span><span class="kw-2">mut </span>g1 = f1.clone();
+        g1.evaluations.reverse();
+        <span class="kw">let </span>f2: DenseMultilinearExtension&lt;Fr&gt; = DenseMultilinearExtension::rand(nv, <span class="kw-2">&amp;mut </span>rng);
+        <span class="kw">let </span><span class="kw-2">mut </span>g2 = f2.clone();
+        g2.evaluations.reverse();
+        <span class="kw">let </span>fs = <span class="macro">vec!</span>[Rc::new(f1), Rc::new(f2)];
+        <span class="kw">let </span>gs = <span class="macro">vec!</span>[Rc::new(g2), Rc::new(g1)];
+        <span class="kw">let </span><span class="kw-2">mut </span>hs = <span class="macro">vec!</span>[];
+        <span class="kw">for _ in </span><span class="number">0</span>..fs.len() {
+            hs.push(Rc::new(DenseMultilinearExtension::rand(
+                fs[<span class="number">0</span>].num_vars,
+                <span class="kw-2">&amp;mut </span>rng,
+            )));
+        }
 
-        <span class="kw">let </span>srs = MultilinearKzgPCS::&lt;Bls12_381&gt;::gen_srs_for_testing(<span class="kw-2">&amp;mut </span>rng, nv + <span class="number">1</span>)<span class="question-mark">?</span>;
-        <span class="kw">let </span>(pcs_param, <span class="kw">_</span>) = MultilinearKzgPCS::&lt;Bls12_381&gt;::trim(<span class="kw-2">&amp;</span>srs, <span class="prelude-val">None</span>, <span class="prelude-val">Some</span>(nv + <span class="number">1</span>))<span class="question-mark">?</span>;
+        <span class="kw">let </span>srs = MultilinearKzgPCS::&lt;Bls12_381&gt;::gen_srs_for_testing(<span class="kw-2">&amp;mut </span>rng, nv)<span class="question-mark">?</span>;
+        <span class="kw">let </span>(pcs_param, <span class="kw">_</span>) = MultilinearKzgPCS::&lt;Bls12_381&gt;::trim(<span class="kw-2">&amp;</span>srs, <span class="prelude-val">None</span>, <span class="prelude-val">Some</span>(nv))<span class="question-mark">?</span>;
 
-        test_product_check_helper::&lt;Bls12_381, MultilinearKzgPCS&lt;Bls12_381&gt;&gt;(<span class="kw-2">&amp;</span>f, <span class="kw-2">&amp;</span>g, <span class="kw-2">&amp;</span>pcs_param)<span class="question-mark">?</span>;
+        test_product_check_helper::&lt;Bls12_381, MultilinearKzgPCS&lt;Bls12_381&gt;&gt;(
+            <span class="kw-2">&amp;</span>fs, <span class="kw-2">&amp;</span>gs, <span class="kw-2">&amp;</span>hs, <span class="kw-2">&amp;</span>pcs_param,
+        )<span class="question-mark">?</span>;
 
         <span class="prelude-val">Ok</span>(())
     }
