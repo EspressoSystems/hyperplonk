@@ -1,6 +1,5 @@
-use arithmetic::identity_permutation_mles;
+use arithmetic::identity_permutation;
 use ark_ff::PrimeField;
-use ark_poly::MultilinearExtension;
 use ark_std::{log2, test_rng};
 
 use crate::{
@@ -93,7 +92,7 @@ impl<F: PrimeField> MockCircuit<F> {
             gate_func: gate.clone(),
         };
 
-        let permutation = identity_permutation_mles(merged_nv as usize, 1)[0].to_evaluations();
+        let permutation = identity_permutation(merged_nv as usize, 1);
         let index = HyperPlonkIndex {
             params,
             permutation,

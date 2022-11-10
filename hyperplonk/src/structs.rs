@@ -12,7 +12,7 @@ use subroutines::{
 };
 
 /// The proof for the HyperPlonk PolyIOP, consists of the following:
-///   - a batch commitment to all the witness MLEs
+///   - the commitments to all witness MLEs
 ///   - a batch opening to all the MLEs at certain index
 ///   - the zero-check proof for checking custom gate-satisfiability
 ///   - the permutation-check proof for checking the copy constraints
@@ -24,12 +24,8 @@ where
     PCS: PolynomialCommitmentScheme<E>,
 {
     // PCS commit for witnesses
-    pub witness_merged_commit: PCS::Commitment,
     pub witness_commits: Vec<PCS::Commitment>,
-    pub batch_prod_x_openings: PCS::BatchProof,
-    pub batch_witness_and_selector_openings: PCS::BatchProof,
-    pub perm_check_opening: PCS::Proof,
-    pub perm_check_eval: PCS::Evaluation,
+    pub batch_openings: PCS::BatchProof,
     // =======================================================================
     // IOP proofs
     // =======================================================================
@@ -103,18 +99,24 @@ impl<F: PrimeField> HyperPlonkIndex<F> {
 /// The HyperPlonk proving key, consists of the following:
 ///   - the hyperplonk instance parameters
 ///   - the preprocessed polynomials output by the indexer
-///   - the commitment to the selectors
+///   - the commitment to the selectors and permutations
 ///   - the parameters for polynomial commitment
 #[derive(Clone, Debug, Default, PartialEq)]
 pub struct HyperPlonkProvingKey<E: PairingEngine, PCS: PolynomialCommitmentScheme<E>> {
     /// Hyperplonk instance parameters
     pub params: HyperPlonkParams,
     /// The preprocessed permutation polynomials
-    pub permutation_oracle: Rc<DenseMultilinearExtension<E::Fr>>,
+    pub permutation_oracles: Vec<Rc<DenseMultilinearExtension<E::Fr>>>,
+    /// The preprocessed identity polynomials
+    pub id_oracles: Vec<Rc<DenseMultilinearExtension<E::Fr>>>,
     /// The preprocessed selector polynomials
     pub selector_oracles: Vec<Rc<DenseMultilinearExtension<E::Fr>>>,
-    /// A commitment to the preprocessed selector polynomials
+    /// Commitments to the preprocessed selector polynomials
     pub selector_commitments: Vec<PCS::Commitment>,
+    /// Commitments to the preprocessed permutation polynomials
+    pub permutation_commitments: Vec<PCS::Commitment>,
+    /// Commitments to the preprocessed identity polynomials
+    pub id_commitments: Vec<PCS::Commitment>,
     /// The parameters for PCS commitment
     pub pcs_param: PCS::ProverParam,
 }
@@ -127,12 +129,12 @@ pub struct HyperPlonkProvingKey<E: PairingEngine, PCS: PolynomialCommitmentSchem
 pub struct HyperPlonkVerifyingKey<E: PairingEngine, PCS: PolynomialCommitmentScheme<E>> {
     /// Hyperplonk instance parameters
     pub params: HyperPlonkParams,
-    /// The preprocessed permutation polynomials
-    pub permutation_oracle: Rc<DenseMultilinearExtension<E::Fr>>,
     /// The parameters for PCS commitment
     pub pcs_param: PCS::VerifierParam,
     /// A commitment to the preprocessed selector polynomials
     pub selector_commitments: Vec<PCS::Commitment>,
-    /// Permutation oracle's commitment
-    pub perm_com: PCS::Commitment,
+    /// Permutation oracles' commitments
+    pub perm_commitments: Vec<PCS::Commitment>,
+    /// Commitments to the preprocessed identity polynomials
+    pub id_commitments: Vec<PCS::Commitment>,
 }

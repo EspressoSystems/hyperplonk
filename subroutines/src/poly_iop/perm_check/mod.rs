@@ -63,16 +63,25 @@ where
     /// Outputs:
     /// - a permutation check proof proving that gs is a permutation of fs under
     ///   permutation
-    /// - the product polynomial build during product check (for testing)
+    /// - the product polynomial built during product check
+    /// - the fractional polynomial built during product check
     ///
     /// Cost: O(N)
+    #[allow(clippy::type_complexity)]
     fn prove(
         pcs_param: &PCS::ProverParam,
         fxs: &[Self::MultilinearExtension],
         gxs: &[Self::MultilinearExtension],
         perms: &[Self::MultilinearExtension],
         transcript: &mut IOPTranscript<E::Fr>,
-    ) -> Result<(Self::PermutationProof, Self::MultilinearExtension), PolyIOPErrors>;
+    ) -> Result<
+        (
+            Self::PermutationProof,
+            Self::MultilinearExtension,
+            Self::MultilinearExtension,
+        ),
+        PolyIOPErrors,
+    >;
 
     /// Verify that (g1, ..., gk) is a permutation of
     /// (f1, ..., fk) over the permutation oracles (perm1, ..., permk)
@@ -101,7 +110,14 @@ where
         gxs: &[Self::MultilinearExtension],
         perms: &[Self::MultilinearExtension],
         transcript: &mut IOPTranscript<E::Fr>,
-    ) -> Result<(Self::PermutationProof, Self::MultilinearExtension), PolyIOPErrors> {
+    ) -> Result<
+        (
+            Self::PermutationProof,
+            Self::MultilinearExtension,
+            Self::MultilinearExtension,
+        ),
+        PolyIOPErrors,
+    > {
         let start = start_timer!(|| "Permutation check prove");
         if fxs.is_empty() {
             return Err(PolyIOPErrors::InvalidParameters("fxs is empty".to_string()));
@@ -131,7 +147,7 @@ where
         let (numerators, denominators) = computer_nums_and_denoms(&beta, &gamma, fxs, gxs, perms)?;
 
         // invoke product check on numerator and denominator
-        let (proof, prod_poly, _) = <Self as ProductCheck<E, PCS>>::prove(
+        let (proof, prod_poly, frac_poly) = <Self as ProductCheck<E, PCS>>::prove(
             pcs_param,
             &numerators,
             &denominators,
@@ -139,7 +155,7 @@ where
         )?;
 
         end_timer!(start);
-        Ok((proof, prod_poly))
+        Ok((proof, prod_poly, frac_poly))
     }
 
     fn verify(
@@ -201,7 +217,7 @@ mod test {
         // prover
         let mut transcript = <PolyIOP<E::Fr> as PermutationCheck<E, PCS>>::init_transcript();
         transcript.append_message(b"testing", b"initializing transcript for testing")?;
-        let (proof, prod_x) = <PolyIOP<E::Fr> as PermutationCheck<E, PCS>>::prove(
+        let (proof, prod_x, _frac_poly) = <PolyIOP<E::Fr> as PermutationCheck<E, PCS>>::prove(
             pcs_param,
             fxs,
             gxs,
