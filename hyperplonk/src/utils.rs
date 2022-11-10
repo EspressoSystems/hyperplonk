@@ -240,6 +240,45 @@ pub(crate) fn eval_f<F: PrimeField>(
     Ok(res)
 }
 
+// check perm check subclaim:
+// proof.witness_perm_check_eval ?= perm_check_sub_claim.expected_eval
+// Q(x) := prod(x) - p1(x) * p2(x)
+//     + alpha * frac(x) * g1(x) * ... * gk(x)
+//     - alpha * f1(x) * ... * fk(x)
+//
+// where p1(x) = (1-x1) * frac(x2, ..., xn, 0)
+//             + x1 * prod(x2, ..., xn, 0),
+// and p2(x) = (1-x1) * frac(x2, ..., xn, 1)
+//           + x1 * prod(x2, ..., xn, 1)
+// and gi(x) = (wi(x) + beta * perms_i(x) + gamma)
+// and fi(x) = (wi(x) + beta * s_id_i(x) + gamma)
+#[allow(clippy::too_many_arguments)]
+pub(crate) fn eval_perm_gate<F: PrimeField>(
+    prod_evals: &[F],
+    frac_evals: &[F],
+    witness_perm_evals: &[F],
+    id_evals: &[F],
+    perm_evals: &[F],
+    alpha: F,
+    beta: F,
+    gamma: F,
+    x1: F,
+) -> Result<F, HyperPlonkErrors> {
+    let p1_eval = frac_evals[1] + x1 * (prod_evals[1] - frac_evals[1]);
+    let p2_eval = frac_evals[2] + x1 * (prod_evals[2] - frac_evals[2]);
+    let mut f_prod_eval = F::one();
+    for (&w_eval, &id_eval) in witness_perm_evals.iter().zip(id_evals.iter()) {
+        f_prod_eval *= w_eval + beta * id_eval + gamma;
+    }
+    let mut g_prod_eval = F::one();
+    for (&w_eval, &p_eval) in witness_perm_evals.iter().zip(perm_evals.iter()) {
+        g_prod_eval *= w_eval + beta * p_eval + gamma;
+    }
+    let res =
+        prod_evals[0] - p1_eval * p2_eval + alpha * (frac_evals[0] * g_prod_eval - f_prod_eval);
+    Ok(res)
+}
+
 #[cfg(test)]
 mod test {
     use super::*;

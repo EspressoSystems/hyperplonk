@@ -149,27 +149,27 @@ fn bench_permutation_check() -> Result<(), PolyIOPErrors> {
         // identity map
         let perms = identity_permutation_mles(nv, 1);
 
-        let proof = {
-            let start = Instant::now();
-            let mut transcript =
-                <PolyIOP<Fr> as PermutationCheck<Bls12_381, KZG>>::init_transcript();
-            transcript.append_message(b"testing", b"initializing transcript for testing")?;
+        let proof =
+            {
+                let start = Instant::now();
+                let mut transcript =
+                    <PolyIOP<Fr> as PermutationCheck<Bls12_381, KZG>>::init_transcript();
+                transcript.append_message(b"testing", b"initializing transcript for testing")?;
 
-            let (proof, _q_x) = <PolyIOP<Fr> as PermutationCheck<Bls12_381, KZG>>::prove(
-                &pcs_param,
-                &ws,
-                &ws,
-                &perms,
-                &mut transcript,
-            )?;
+                let (proof, _q_x, _frac_poly) = <PolyIOP<Fr> as PermutationCheck<
+                    Bls12_381,
+                    KZG,
+                >>::prove(
+                    &pcs_param, &ws, &ws, &perms, &mut transcript
+                )?;
 
-            println!(
-                "permutation check proving time for {} variables: {} ns",
-                nv,
-                start.elapsed().as_nanos() / repetition as u128
-            );
-            proof
-        };
+                println!(
+                    "permutation check proving time for {} variables: {} ns",
+                    nv,
+                    start.elapsed().as_nanos() / repetition as u128
+                );
+                proof
+            };
 
         {
             let poly_info = VPAuxInfo {

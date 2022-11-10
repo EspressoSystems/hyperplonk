@@ -72,6 +72,11 @@ pub fn random_zero_mle_list<F: PrimeField, R: RngCore>(
     list
 }
 
+pub fn identity_permutation<F: PrimeField>(num_vars: usize, num_chunks: usize) -> Vec<F> {
+    let len = (num_chunks as u64) * (1u64 << num_vars);
+    (0..len).map(F::from).collect()
+}
+
 /// A list of MLEs that represents an identity permutation
 pub fn identity_permutation_mles<F: PrimeField>(
     num_vars: usize,
@@ -88,12 +93,11 @@ pub fn identity_permutation_mles<F: PrimeField>(
     res
 }
 
-/// A list of MLEs that represent a random permutation
-pub fn random_permutation_mles<F: PrimeField, R: RngCore>(
+pub fn random_permutation<F: PrimeField, R: RngCore>(
     num_vars: usize,
     num_chunks: usize,
     rng: &mut R,
-) -> Vec<Rc<DenseMultilinearExtension<F>>> {
+) -> Vec<F> {
     let len = (num_chunks as u64) * (1u64 << num_vars);
     let mut s_id_vec: Vec<F> = (0..len).map(F::from).collect();
     let mut s_perm_vec = vec![];
@@ -101,6 +105,16 @@ pub fn random_permutation_mles<F: PrimeField, R: RngCore>(
         let index = rng.next_u64() as usize % s_id_vec.len();
         s_perm_vec.push(s_id_vec.remove(index));
     }
+    s_perm_vec
+}
+
+/// A list of MLEs that represent a random permutation
+pub fn random_permutation_mles<F: PrimeField, R: RngCore>(
+    num_vars: usize,
+    num_chunks: usize,
+    rng: &mut R,
+) -> Vec<Rc<DenseMultilinearExtension<F>>> {
+    let s_perm_vec = random_permutation(num_vars, num_chunks, rng);
     let mut res = vec![];
     let n = 1 << num_vars;
     for i in 0..num_chunks {
