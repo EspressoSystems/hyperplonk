@@ -113,7 +113,7 @@ impl<E: PairingEngine> PolynomialCommitmentScheme<E> for MultilinearKzgPCS<E> {
         poly: &Self::Polynomial,
     ) -> Result<Self::Commitment, PCSError> {
         let prover_param = prover_param.borrow();
-        let commit_timer = start_timer!(|| "commit");
+        let commit_timer = start_timer!(|| format!("commit {} variable poly", poly.num_vars));
         if prover_param.num_vars < poly.num_vars {
             return Err(PCSError::InvalidParameters(format!(
                 "MlE length ({}) exceeds param limit ({})",
@@ -126,12 +126,14 @@ impl<E: PairingEngine> PolynomialCommitmentScheme<E> for MultilinearKzgPCS<E> {
             .into_iter()
             .map(|x| x.into_repr())
             .collect();
+
+        let msm_timer = start_timer!(|| format!("MSM of size {}", scalars.len()));
         let commitment = VariableBaseMSM::multi_scalar_mul(
             &prover_param.powers_of_g[ignored].evals,
             scalars.as_slice(),
         )
         .into_affine();
-
+        end_timer!(msm_timer);
         end_timer!(commit_timer);
         Ok(Commitment(commitment))
     }

@@ -44,6 +44,7 @@ where
         index: &Self::Index,
         pcs_srs: &PCS::SRS,
     ) -> Result<(Self::ProvingKey, Self::VerifyingKey), HyperPlonkErrors> {
+        let pre_process_timer = start_timer!(|| "Pre Process");
         let num_vars = index.num_variables();
         let supported_ml_degree = num_vars;
 
@@ -84,7 +85,7 @@ where
             .map(|poly| PCS::commit(&pcs_prover_param, poly))
             .collect::<Result<Vec<_>, _>>()?;
 
-        Ok((
+        let res = (
             Self::ProvingKey {
                 params: index.params.clone(),
                 id_oracles,
@@ -102,7 +103,10 @@ where
                 perm_commitments: perm_comms,
                 id_commitments: id_comms,
             },
-        ))
+        );
+
+        end_timer!(pre_process_timer);
+        Ok(res)
     }
 
     /// Generate HyperPlonk SNARK proof.
