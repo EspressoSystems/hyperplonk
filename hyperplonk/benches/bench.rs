@@ -29,7 +29,7 @@ fn main() -> Result<(), HyperPlonkErrors> {
     let pcs_srs = MultilinearKzgPCS::<Bls12_381>::gen_srs_for_testing(&mut rng, SUPPORTED_SIZE)?;
     ThreadPoolBuilder::new()
         .num_threads(thread)
-        .build_global()
+        .build()
         .unwrap();
     bench_vanilla_plonk(&pcs_srs, thread)?;
     for degree in MIN_CUSTOM_DEGREE..MAX_CUSTOM_DEGREE {
