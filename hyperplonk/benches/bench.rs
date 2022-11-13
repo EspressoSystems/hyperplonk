@@ -16,20 +16,21 @@ use subroutines::{
     poly_iop::PolyIOP,
 };
 
-const SUPPORTED_SIZE: usize = 20;
+const SUPPORTED_SIZE: usize = 15;
 const MIN_NUM_VARS: usize = 8;
 const MAX_NUM_VARS: usize = 15;
 const MIN_CUSTOM_DEGREE: usize = 1;
 const MAX_CUSTOM_DEGREE: usize = 32;
+const MAX_NUM_THREADS: usize = 24;
 
 fn main() -> Result<(), HyperPlonkErrors> {
     let args: Vec<String> = env::args().collect();
-    let thread = args[1].parse().unwrap_or(24);
+    let thread = args[1].parse().unwrap_or(MAX_NUM_THREADS);
     let mut rng = test_rng();
     let pcs_srs = MultilinearKzgPCS::<Bls12_381>::gen_srs_for_testing(&mut rng, SUPPORTED_SIZE)?;
     ThreadPoolBuilder::new()
         .num_threads(thread)
-        .build_global()
+        .build()
         .unwrap();
     bench_vanilla_plonk(&pcs_srs, thread)?;
     for degree in MIN_CUSTOM_DEGREE..MAX_CUSTOM_DEGREE {
