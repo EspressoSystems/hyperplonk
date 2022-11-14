@@ -1,7 +1,7 @@
-use std::{env, fs::File, time::Instant};
+use std::{env, fs::File, io, time::Instant};
 
 use ark_bls12_381::{Bls12_381, Fr};
-use ark_serialize::Write;
+use ark_serialize::{CanonicalDeserialize, CanonicalSerialize, Write};
 use ark_std::test_rng;
 use hyperplonk::{
     prelude::{CustomizedGates, HyperPlonkErrors, MockCircuit},
@@ -28,7 +28,19 @@ fn main() -> Result<(), HyperPlonkErrors> {
     let args: Vec<String> = env::args().collect();
     let thread = args[1].parse().unwrap_or(0);
     let mut rng = test_rng();
-    let pcs_srs = MultilinearKzgPCS::<Bls12_381>::gen_srs_for_testing(&mut rng, SUPPORTED_SIZE)?;
+
+    let pcs_srs = {
+        match read_srs() {
+            Ok(p) => p,
+            Err(_e) => {
+                let srs =
+                    MultilinearKzgPCS::<Bls12_381>::gen_srs_for_testing(&mut rng, SUPPORTED_SIZE)?;
+                write_srs(&srs);
+                srs
+            },
+        }
+    };
+
     if thread == 0 {
         let thread = 64;
         bench_jellyfish_plonk(&pcs_srs, thread)?;
@@ -45,6 +57,16 @@ fn main() -> Result<(), HyperPlonkErrors> {
         bench_jellyfish_plonk(&pcs_srs, thread)?;
     }
     Ok(())
+}
+
+fn read_srs() -> Result<MultilinearUniversalParams<Bls12_381>, io::Error> {
+    let mut f = File::open("srs.params")?;
+    Ok(MultilinearUniversalParams::<Bls12_381>::deserialize_uncompressed(&mut f).unwrap())
+}
+
+fn write_srs(pcs_srs: &MultilinearUniversalParams<Bls12_381>) {
+    let mut f = File::create("srs.params").unwrap();
+    pcs_srs.serialize_uncompressed(&mut f).unwrap();
 }
 
 fn bench_jellyfish_plonk(
@@ -105,16 +127,16 @@ fn bench_mock_circuit_zkp_helper(
     };
 
     //==========================================================
-    let start = Instant::now();
-    for _ in 0..repetition {
-        let circuit = MockCircuit::<Fr>::new(1 << nv, gate);
-        assert!(circuit.is_satisfied());
-    }
-    println!(
-        "mock circuit gen for {} variables: {} ns",
-        nv,
-        start.elapsed().as_nanos() / repetition as u128
-    );
+    // let start = Instant::now();
+    // for _ in 0..repetition {
+    //     let circuit = MockCircuit::<Fr>::new(1 << nv, gate);
+    //     assert!(circuit.is_satisfied());
+    // }
+    // println!(
+    //     "mock circuit gen for {} variables: {} us",
+    //     nv,
+    //     start.elapsed().as_micros() / repetition as u128
+    // );
 
     let circuit = MockCircuit::<Fr>::new(1 << nv, gate);
     assert!(circuit.is_satisfied());
@@ -140,13 +162,15 @@ fn bench_mock_circuit_zkp_helper(
     //==========================================================
     // generate a proof
     let start = Instant::now();
+    let mut proofs = vec![];
     for _ in 0..repetition {
-        let _proof =
+        let proof =
             <PolyIOP<Fr> as HyperPlonkSNARK<Bls12_381, MultilinearKzgPCS<Bls12_381>>>::prove(
                 &pk,
                 &circuit.witnesses[0].coeff_ref(),
                 &circuit.witnesses,
             )?;
+        proofs.push(proof)
     }
     let t = start.elapsed().as_micros() / repetition as u128;
     println!(
@@ -156,11 +180,6 @@ fn bench_mock_circuit_zkp_helper(
     );
     file.write_all(format!("{} {}\n", nv, t).as_ref()).unwrap();
 
-    let proof = <PolyIOP<Fr> as HyperPlonkSNARK<Bls12_381, MultilinearKzgPCS<Bls12_381>>>::prove(
-        &pk,
-        &circuit.witnesses[0].coeff_ref(),
-        &circuit.witnesses,
-    )?;
     //==========================================================
     // verify a proof
     let start = Instant::now();
@@ -169,7 +188,7 @@ fn bench_mock_circuit_zkp_helper(
             <PolyIOP<Fr> as HyperPlonkSNARK<Bls12_381, MultilinearKzgPCS<Bls12_381>>>::verify(
                 &vk,
                 &circuit.witnesses[0].coeff_ref(),
-                &proof,
+                &proofs[0],
             )?;
         assert!(verify);
     }
