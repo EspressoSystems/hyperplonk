@@ -16,9 +16,9 @@ use subroutines::{
     poly_iop::PolyIOP,
 };
 
-const SUPPORTED_SIZE: usize = 20;
+const SUPPORTED_SIZE: usize = 25;
 const MIN_NUM_VARS: usize = 8;
-const MAX_NUM_VARS: usize = 15;
+const MAX_NUM_VARS: usize = 22;
 const MIN_CUSTOM_DEGREE: usize = 1;
 const MAX_CUSTOM_DEGREE: usize = 32;
 
@@ -31,9 +31,24 @@ fn main() -> Result<(), HyperPlonkErrors> {
         .num_threads(thread)
         .build()
         .unwrap();
+    bench_jellyfish_plonk(&pcs_srs, thread)?;
     bench_vanilla_plonk(&pcs_srs, thread)?;
     for degree in MIN_CUSTOM_DEGREE..MAX_CUSTOM_DEGREE {
         bench_high_degree_plonk(&pcs_srs, degree, thread)?;
+    }
+
+    Ok(())
+}
+
+fn bench_jellyfish_plonk(
+    pcs_srs: &MultilinearUniversalParams<Bls12_381>,
+    thread: usize,
+) -> Result<(), HyperPlonkErrors> {
+    let filename = format!("jellyfish threads {}.txt", thread);
+    let mut file = File::create(filename).unwrap();
+    for nv in MIN_NUM_VARS..MAX_NUM_VARS {
+        let vanilla_gate = CustomizedGates::jellyfish_turbo_plonk_gate();
+        bench_mock_circuit_zkp_helper(&mut file, nv, &vanilla_gate, &pcs_srs)?;
     }
 
     Ok(())
