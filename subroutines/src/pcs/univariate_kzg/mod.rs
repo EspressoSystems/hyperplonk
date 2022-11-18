@@ -109,7 +109,7 @@ impl<E: PairingEngine> PolynomialCommitmentScheme<E> for UnivariateKzgPCS<E> {
 
         let (num_leading_zeros, plain_coeffs) = skip_leading_zeros_and_convert_to_bigints(poly);
 
-        let msm_time = start_timer!(|| "MSM to compute commitment to plaintext poly");
+        let msm_time = start_timer!(|| "addme msm MSM to compute commitment to plaintext poly");
         let commitment = VariableBaseMSM::multi_scalar_mul(
             &prover_param.powers_of_g[num_leading_zeros..],
             &plain_coeffs,
@@ -138,13 +138,13 @@ impl<E: PairingEngine> PolynomialCommitmentScheme<E> for UnivariateKzgPCS<E> {
 
         let (num_leading_zeros, witness_coeffs) =
             skip_leading_zeros_and_convert_to_bigints(&witness_polynomial);
-
+        let timer = start_timer!(|| "addme msm");
         let proof = VariableBaseMSM::multi_scalar_mul(
             &prover_param.borrow().powers_of_g[num_leading_zeros..],
             &witness_coeffs,
         )
         .into_affine();
-
+        end_timer!(timer);
         let eval = polynomial.evaluate(point);
 
         end_timer!(open_time);

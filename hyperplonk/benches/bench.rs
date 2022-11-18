@@ -41,27 +41,22 @@ fn main() -> Result<(), HyperPlonkErrors> {
         }
     };
 
-    if thread == 0 {
-        let thread = 64;
-        bench_jellyfish_plonk(&pcs_srs, thread)?;
-        bench_vanilla_plonk(&pcs_srs, thread)?;
-        for degree in MIN_CUSTOM_DEGREE..MAX_CUSTOM_DEGREE {
-            bench_high_degree_plonk(&pcs_srs, degree, thread)?;
-        }
-    } else {
-        ThreadPoolBuilder::new()
-            .num_threads(thread)
-            .build()
-            .unwrap();
+    ThreadPoolBuilder::new()
+        .num_threads(thread)
+        .build()
+        .unwrap();
 
-        bench_jellyfish_plonk(&pcs_srs, thread)?;
+    bench_jellyfish_plonk(&pcs_srs, thread)?;
+    bench_vanilla_plonk(&pcs_srs, thread)?;
+    for degree in MIN_CUSTOM_DEGREE..MAX_CUSTOM_DEGREE {
+        bench_high_degree_plonk(&pcs_srs, degree, thread)?;
     }
     Ok(())
 }
 
 fn read_srs() -> Result<MultilinearUniversalParams<Bls12_381>, io::Error> {
     let mut f = File::open("srs.params")?;
-    Ok(MultilinearUniversalParams::<Bls12_381>::deserialize_uncompressed(&mut f).unwrap())
+    Ok(MultilinearUniversalParams::<Bls12_381>::deserialize_unchecked(&mut f).unwrap())
 }
 
 fn write_srs(pcs_srs: &MultilinearUniversalParams<Bls12_381>) {
