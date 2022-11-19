@@ -7,7 +7,7 @@ use crate::{
 };
 use arithmetic::{evaluate_opt, identity_permutation_mles, VPAuxInfo};
 use ark_ec::PairingEngine;
-use ark_poly::DenseMultilinearExtension;
+use ark_poly::{DenseMultilinearExtension};
 use ark_std::{end_timer, log2, start_timer, One, Zero};
 use std::{marker::PhantomData, rc::Rc};
 use subroutines::{
@@ -324,7 +324,8 @@ where
         // - 4.4. public input consistency checks
         //   - pi_poly(r_pi) where r_pi is sampled from transcript
         let r_pi = transcript.get_and_append_challenge_vectors(b"r_pi", ell)?;
-        pcs_acc.insert_poly_and_points(&witness_polys[0], &witness_commits[0], &r_pi);
+        let r_pi_padded = [r_pi,vec![E::Fr::zero(); num_vars - ell]].concat();
+        pcs_acc.insert_poly_and_points(&witness_polys[0], &witness_commits[0], &r_pi_padded);
         end_timer!(step);
 
         // =======================================================================
@@ -574,18 +575,19 @@ where
         //   - pi_poly(r_pi) where r_pi is sampled from transcript
         let r_pi = transcript.get_and_append_challenge_vectors(b"r_pi", ell)?;
 
-
         // check public evaluation
         let pi_poly = DenseMultilinearExtension::from_evaluations_slice(ell as usize, pub_input);
-        let expect_pi_eval = evaluate_opt(&pi_poly, &r_pi);
+        let expect_pi_eval = evaluate_opt(&pi_poly, &r_pi[..]);
         if expect_pi_eval != *pi_eval {
             return Err(HyperPlonkErrors::InvalidProver(format!(
                 "Public input eval mismatch: got {}, expect {}",
                 pi_eval, expect_pi_eval,
             )));
         }
+        let r_pi_padded = [ r_pi,vec![E::Fr::zero(); num_vars - ell]].concat();
+
         comms.push(proof.witness_commits[0]);
-        points.push(r_pi);
+        points.push(r_pi_padded);
         assert_eq!(comms.len(), proof.batch_openings.f_i_eval_at_point_i.len());
 
         end_timer!(step);
