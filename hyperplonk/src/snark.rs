@@ -324,7 +324,10 @@ where
         // - 4.4. public input consistency checks
         //   - pi_poly(r_pi) where r_pi is sampled from transcript
         let r_pi = transcript.get_and_append_challenge_vectors(b"r_pi", ell)?;
+        //padded with zeros
         let r_pi_padded = [r_pi,vec![E::Fr::zero(); num_vars - ell]].concat();
+        //Evaluate witness_poly[0] at r_pi||0s which is equal to public_input evaluated at r_pi.
+        //Assumes that public_input is a power of 2
         pcs_acc.insert_poly_and_points(&witness_polys[0], &witness_commits[0], &r_pi_padded);
         end_timer!(step);
 
@@ -618,6 +621,7 @@ mod tests {
     use ark_bls12_381::Bls12_381;
     use ark_std::test_rng;
     use subroutines::pcs::prelude::MultilinearKzgPCS;
+
 
     #[test]
     fn test_hyperplonk_e2e() -> Result<(), HyperPlonkErrors> {
