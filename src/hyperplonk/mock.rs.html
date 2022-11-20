@@ -251,6 +251,12 @@
 <span id="251">251</span>
 <span id="252">252</span>
 <span id="253">253</span>
+<span id="254">254</span>
+<span id="255">255</span>
+<span id="256">256</span>
+<span id="257">257</span>
+<span id="258">258</span>
+<span id="259">259</span>
 </pre><pre class="rust"><code><span class="kw">use </span>arithmetic::identity_permutation;
 <span class="kw">use </span>ark_ff::PrimeField;
 <span class="kw">use </span>ark_std::{log2, test_rng};
@@ -263,6 +269,7 @@
 };
 
 <span class="kw">pub struct </span>MockCircuit&lt;F: PrimeField&gt; {
+    <span class="kw">pub </span>public_inputs: Vec&lt;F&gt;,
     <span class="kw">pub </span>witnesses: Vec&lt;WitnessColumn&lt;F&gt;&gt;,
     <span class="kw">pub </span>index: HyperPlonkIndex&lt;F&gt;,
 }
@@ -338,10 +345,12 @@
                 witnesses[i].append(cur_witness[i]);
             }
         }
+        <span class="kw">let </span>pub_input_len = ark_std::cmp::min(<span class="number">4</span>, num_constraints);
+        <span class="kw">let </span>public_inputs = witnesses[<span class="number">0</span>].<span class="number">0</span>[<span class="number">0</span>..pub_input_len].to_vec();
 
         <span class="kw">let </span>params = HyperPlonkParams {
             num_constraints,
-            num_pub_input: num_constraints,
+            num_pub_input: public_inputs.len(),
             gate_func: gate.clone(),
         };
 
@@ -352,7 +361,11 @@
             selectors,
         };
 
-        <span class="self">Self </span>{ witnesses, index }
+        <span class="self">Self </span>{
+            public_inputs,
+            witnesses,
+            index,
+        }
     }
 
     <span class="kw">pub fn </span>is_satisfied(<span class="kw-2">&amp;</span><span class="self">self</span>) -&gt; bool {
@@ -430,7 +443,6 @@
         <span class="macro">assert!</span>(circuit.is_satisfied());
 
         <span class="kw">let </span>index = circuit.index;
-
         <span class="comment">// generate pk and vks
         </span><span class="kw">let </span>(pk, vk) =
             &lt;PolyIOP&lt;Fr&gt; <span class="kw">as </span>HyperPlonkSNARK&lt;Bls12_381, MultilinearKzgPCS&lt;Bls12_381&gt;&gt;&gt;::preprocess(
@@ -440,14 +452,14 @@
         </span><span class="kw">let </span>proof =
             &lt;PolyIOP&lt;Fr&gt; <span class="kw">as </span>HyperPlonkSNARK&lt;Bls12_381, MultilinearKzgPCS&lt;Bls12_381&gt;&gt;&gt;::prove(
                 <span class="kw-2">&amp;</span>pk,
-                <span class="kw-2">&amp;</span>circuit.witnesses[<span class="number">0</span>].<span class="number">0</span>,
+                <span class="kw-2">&amp;</span>circuit.public_inputs,
                 <span class="kw-2">&amp;</span>circuit.witnesses,
             )<span class="question-mark">?</span>;
 
         <span class="kw">let </span>verify =
             &lt;PolyIOP&lt;Fr&gt; <span class="kw">as </span>HyperPlonkSNARK&lt;Bls12_381, MultilinearKzgPCS&lt;Bls12_381&gt;&gt;&gt;::verify(
                 <span class="kw-2">&amp;</span>vk,
-                <span class="kw-2">&amp;</span>circuit.witnesses[<span class="number">0</span>].<span class="number">0</span>,
+                <span class="kw-2">&amp;</span>circuit.public_inputs,
                 <span class="kw-2">&amp;</span>proof,
             )<span class="question-mark">?</span>;
         <span class="macro">assert!</span>(verify);

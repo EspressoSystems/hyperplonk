@@ -199,18 +199,13 @@
 <span id="199">199</span>
 <span id="200">200</span>
 <span id="201">201</span>
-<span id="202">202</span>
-<span id="203">203</span>
-<span id="204">204</span>
-<span id="205">205</span>
 </pre><pre class="rust"><code><span class="doccomment">//! Main module for the ZeroCheck protocol.
 
 </span><span class="kw">use </span>std::fmt::Debug;
 
 <span class="kw">use </span><span class="kw">crate</span>::poly_iop::{errors::PolyIOPErrors, sum_check::SumCheck, PolyIOP};
-<span class="kw">use </span>arithmetic::build_eq_x_r;
+<span class="kw">use </span>arithmetic::eq_eval;
 <span class="kw">use </span>ark_ff::PrimeField;
-<span class="kw">use </span>ark_poly::MultilinearExtension;
 <span class="kw">use </span>ark_std::{end_timer, start_timer};
 <span class="kw">use </span>transcript::IOPTranscript;
 
@@ -308,11 +303,8 @@
 
         <span class="comment">// expected_eval = sumcheck.expect_eval/eq(v, r)
         // where v = sum_check_sub_claim.point
-        </span><span class="kw">let </span>eq_x_r = build_eq_x_r(<span class="kw-2">&amp;</span>r)<span class="question-mark">?</span>;
-        <span class="kw">let </span>expected_evaluation = sum_subclaim.expected_evaluation
-            / eq_x_r.evaluate(<span class="kw-2">&amp;</span>sum_subclaim.point).ok_or_else(|| {
-                PolyIOPErrors::InvalidParameters(<span class="string">&quot;evaluation dimension does not match&quot;</span>.to_string())
-            })<span class="question-mark">?</span>;
+        </span><span class="kw">let </span>eq_x_r_eval = eq_eval(<span class="kw-2">&amp;</span>sum_subclaim.point, <span class="kw-2">&amp;</span>r)<span class="question-mark">?</span>;
+        <span class="kw">let </span>expected_evaluation = sum_subclaim.expected_evaluation / eq_x_r_eval;
 
         <span class="macro">end_timer!</span>(start);
         <span class="prelude-val">Ok</span>(ZeroCheckSubClaim {

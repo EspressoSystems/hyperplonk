@@ -726,6 +726,11 @@
 <span id="726">726</span>
 <span id="727">727</span>
 <span id="728">728</span>
+<span id="729">729</span>
+<span id="730">730</span>
+<span id="731">731</span>
+<span id="732">732</span>
+<span id="733">733</span>
 </pre><pre class="rust"><code><span class="kw">use crate</span>::{
     errors::HyperPlonkErrors,
     structs::{HyperPlonkIndex, HyperPlonkProof, HyperPlonkProvingKey, HyperPlonkVerifyingKey},
@@ -1052,8 +1057,11 @@
         <span class="comment">// - 4.4. public input consistency checks
         //   - pi_poly(r_pi) where r_pi is sampled from transcript
         </span><span class="kw">let </span>r_pi = transcript.get_and_append_challenge_vectors(<span class="string">b&quot;r_pi&quot;</span>, ell)<span class="question-mark">?</span>;
-        <span class="kw">let </span>tmp_point = [<span class="macro">vec!</span>[E::Fr::zero(); num_vars - ell], r_pi].concat();
-        pcs_acc.insert_poly_and_points(<span class="kw-2">&amp;</span>witness_polys[<span class="number">0</span>], <span class="kw-2">&amp;</span>witness_commits[<span class="number">0</span>], <span class="kw-2">&amp;</span>tmp_point);
+        <span class="comment">// padded with zeros
+        </span><span class="kw">let </span>r_pi_padded = [r_pi, <span class="macro">vec!</span>[E::Fr::zero(); num_vars - ell]].concat();
+        <span class="comment">// Evaluate witness_poly[0] at r_pi||0s which is equal to public_input evaluated
+        // at r_pi. Assumes that public_input is a power of 2
+        </span>pcs_acc.insert_poly_and_points(<span class="kw-2">&amp;</span>witness_polys[<span class="number">0</span>], <span class="kw-2">&amp;</span>witness_commits[<span class="number">0</span>], <span class="kw-2">&amp;</span>r_pi_padded);
         <span class="macro">end_timer!</span>(step);
 
         <span class="comment">// =======================================================================
@@ -1243,7 +1251,7 @@
         <span class="comment">// =======================================================================
         // 3. Verify the opening against the commitment
         // =======================================================================
-        </span><span class="kw">let </span>step = <span class="macro">start_timer!</span>(|| <span class="string">&quot;verify commitments&quot;</span>);
+        </span><span class="kw">let </span>step = <span class="macro">start_timer!</span>(|| <span class="string">&quot;assemble commitments&quot;</span>);
 
         <span class="comment">// generate evaluation points and commitments
         </span><span class="kw">let </span><span class="kw-2">mut </span>comms = <span class="macro">vec!</span>[];
@@ -1263,7 +1271,6 @@
         points.push(perm_check_point_0.clone());
         points.push(perm_check_point_1.clone());
         points.push(prod_final_query_point);
-
         <span class="comment">// frac(x)&#39;s points
         </span>comms.push(proof.perm_check_proof.frac_comm);
         comms.push(proof.perm_check_proof.frac_comm);
@@ -1303,21 +1310,24 @@
         <span class="comment">// - 4.4. public input consistency checks
         //   - pi_poly(r_pi) where r_pi is sampled from transcript
         </span><span class="kw">let </span>r_pi = transcript.get_and_append_challenge_vectors(<span class="string">b&quot;r_pi&quot;</span>, ell)<span class="question-mark">?</span>;
-        <span class="kw">let </span>tmp_point = [<span class="macro">vec!</span>[E::Fr::zero(); num_vars - ell], r_pi].concat();
+
         <span class="comment">// check public evaluation
         </span><span class="kw">let </span>pi_poly = DenseMultilinearExtension::from_evaluations_slice(ell <span class="kw">as </span>usize, pub_input);
-        <span class="kw">let </span>expect_pi_eval = evaluate_opt(<span class="kw-2">&amp;</span>pi_poly, <span class="kw-2">&amp;</span>tmp_point[..]);
+        <span class="kw">let </span>expect_pi_eval = evaluate_opt(<span class="kw-2">&amp;</span>pi_poly, <span class="kw-2">&amp;</span>r_pi[..]);
         <span class="kw">if </span>expect_pi_eval != <span class="kw-2">*</span>pi_eval {
             <span class="kw">return </span><span class="prelude-val">Err</span>(HyperPlonkErrors::InvalidProver(<span class="macro">format!</span>(
                 <span class="string">&quot;Public input eval mismatch: got {}, expect {}&quot;</span>,
                 pi_eval, expect_pi_eval,
             )));
         }
-        comms.push(proof.witness_commits[<span class="number">0</span>]);
-        points.push(tmp_point);
+        <span class="kw">let </span>r_pi_padded = [r_pi, <span class="macro">vec!</span>[E::Fr::zero(); num_vars - ell]].concat();
 
+        comms.push(proof.witness_commits[<span class="number">0</span>]);
+        points.push(r_pi_padded);
         <span class="macro">assert_eq!</span>(comms.len(), proof.batch_openings.f_i_eval_at_point_i.len());
 
+        <span class="macro">end_timer!</span>(step);
+        <span class="kw">let </span>step = <span class="macro">start_timer!</span>(|| <span class="string">&quot;PCS batch verify&quot;</span>);
         <span class="comment">// check proof
         </span><span class="kw">let </span>res = PCS::batch_verify(
             <span class="kw-2">&amp;</span>vk.pcs_param,
