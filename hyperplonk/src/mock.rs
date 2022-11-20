@@ -86,7 +86,7 @@ impl<F: PrimeField> MockCircuit<F> {
                 witnesses[i].append(cur_witness[i]);
             }
         }
-        let public_inputs=witnesses[0].0[0..4].to_vec();
+        let public_inputs = witnesses[0].0[0..4].to_vec();
 
         let params = HyperPlonkParams {
             num_constraints,
@@ -101,7 +101,11 @@ impl<F: PrimeField> MockCircuit<F> {
             selectors,
         };
 
-        Self { public_inputs,witnesses, index }
+        Self {
+            public_inputs,
+            witnesses,
+            index,
+        }
     }
 
     pub fn is_satisfied(&self) -> bool {

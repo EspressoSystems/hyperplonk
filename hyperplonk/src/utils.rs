@@ -137,7 +137,7 @@ pub(crate) fn prover_sanity_check<F: PrimeField>(
             params.num_pub_input
         )));
     }
-    if !pub_input.len().is_power_of_two(){
+    if !pub_input.len().is_power_of_two() {
         return Err(HyperPlonkErrors::InvalidProver(format!(
             "Public input length is not power of two: got {}",
             pub_input.len(),

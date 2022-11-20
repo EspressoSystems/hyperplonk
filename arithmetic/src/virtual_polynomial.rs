@@ -325,7 +325,6 @@ impl<F: PrimeField> VirtualPolynomial<F> {
     }
 }
 
-
 /// Evaluate eq polynomial.
 pub fn eq_eval<F: PrimeField>(x: &[F], y: &[F]) -> Result<F, ArithErrors> {
     if x.len() != y.len() {

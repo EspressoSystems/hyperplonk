@@ -7,7 +7,7 @@ use crate::{
 };
 use arithmetic::{evaluate_opt, identity_permutation_mles, VPAuxInfo};
 use ark_ec::PairingEngine;
-use ark_poly::{DenseMultilinearExtension};
+use ark_poly::DenseMultilinearExtension;
 use ark_std::{end_timer, log2, start_timer, One, Zero};
 use std::{marker::PhantomData, rc::Rc};
 use subroutines::{
@@ -324,10 +324,10 @@ where
         // - 4.4. public input consistency checks
         //   - pi_poly(r_pi) where r_pi is sampled from transcript
         let r_pi = transcript.get_and_append_challenge_vectors(b"r_pi", ell)?;
-        //padded with zeros
-        let r_pi_padded = [r_pi,vec![E::Fr::zero(); num_vars - ell]].concat();
-        //Evaluate witness_poly[0] at r_pi||0s which is equal to public_input evaluated at r_pi.
-        //Assumes that public_input is a power of 2
+        // padded with zeros
+        let r_pi_padded = [r_pi, vec![E::Fr::zero(); num_vars - ell]].concat();
+        // Evaluate witness_poly[0] at r_pi||0s which is equal to public_input evaluated
+        // at r_pi. Assumes that public_input is a power of 2
         pcs_acc.insert_poly_and_points(&witness_polys[0], &witness_commits[0], &r_pi_padded);
         end_timer!(step);
 
@@ -587,14 +587,14 @@ where
                 pi_eval, expect_pi_eval,
             )));
         }
-        let r_pi_padded = [ r_pi,vec![E::Fr::zero(); num_vars - ell]].concat();
+        let r_pi_padded = [r_pi, vec![E::Fr::zero(); num_vars - ell]].concat();
 
         comms.push(proof.witness_commits[0]);
         points.push(r_pi_padded);
         assert_eq!(comms.len(), proof.batch_openings.f_i_eval_at_point_i.len());
 
         end_timer!(step);
-        let step=start_timer!(||"PCS batch verify");
+        let step = start_timer!(|| "PCS batch verify");
         // check proof
         let res = PCS::batch_verify(
             &vk.pcs_param,
@@ -621,7 +621,6 @@ mod tests {
     use ark_bls12_381::Bls12_381;
     use ark_std::test_rng;
     use subroutines::pcs::prelude::MultilinearKzgPCS;
-
 
     #[test]
     fn test_hyperplonk_e2e() -> Result<(), HyperPlonkErrors> {
