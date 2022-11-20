@@ -10,6 +10,7 @@ use crate::{
 };
 
 pub struct MockCircuit<F: PrimeField> {
+    pub public_inputs: Vec<F>,
     pub witnesses: Vec<WitnessColumn<F>>,
     pub index: HyperPlonkIndex<F>,
 }
@@ -85,10 +86,12 @@ impl<F: PrimeField> MockCircuit<F> {
                 witnesses[i].append(cur_witness[i]);
             }
         }
+        let pub_input_len = ark_std::cmp::min(4, num_constraints);
+        let public_inputs = witnesses[0].0[0..pub_input_len].to_vec();
 
         let params = HyperPlonkParams {
             num_constraints,
-            num_pub_input: num_constraints,
+            num_pub_input: public_inputs.len(),
             gate_func: gate.clone(),
         };
 
@@ -99,7 +102,11 @@ impl<F: PrimeField> MockCircuit<F> {
             selectors,
         };
 
-        Self { witnesses, index }
+        Self {
+            public_inputs,
+            witnesses,
+            index,
+        }
     }
 
     pub fn is_satisfied(&self) -> bool {
@@ -177,7 +184,6 @@ mod test {
         assert!(circuit.is_satisfied());
 
         let index = circuit.index;
-
         // generate pk and vks
         let (pk, vk) =
             <PolyIOP<Fr> as HyperPlonkSNARK<Bls12_381, MultilinearKzgPCS<Bls12_381>>>::preprocess(
@@ -187,14 +193,14 @@ mod test {
         let proof =
             <PolyIOP<Fr> as HyperPlonkSNARK<Bls12_381, MultilinearKzgPCS<Bls12_381>>>::prove(
                 &pk,
-                &circuit.witnesses[0].0,
+                &circuit.public_inputs,
                 &circuit.witnesses,
             )?;
 
         let verify =
             <PolyIOP<Fr> as HyperPlonkSNARK<Bls12_381, MultilinearKzgPCS<Bls12_381>>>::verify(
                 &vk,
-                &circuit.witnesses[0].0,
+                &circuit.public_inputs,
                 &proof,
             )?;
         assert!(verify);

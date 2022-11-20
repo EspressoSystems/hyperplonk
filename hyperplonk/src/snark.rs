@@ -324,8 +324,11 @@ where
         // - 4.4. public input consistency checks
         //   - pi_poly(r_pi) where r_pi is sampled from transcript
         let r_pi = transcript.get_and_append_challenge_vectors(b"r_pi", ell)?;
-        let tmp_point = [vec![E::Fr::zero(); num_vars - ell], r_pi].concat();
-        pcs_acc.insert_poly_and_points(&witness_polys[0], &witness_commits[0], &tmp_point);
+        // padded with zeros
+        let r_pi_padded = [r_pi, vec![E::Fr::zero(); num_vars - ell]].concat();
+        // Evaluate witness_poly[0] at r_pi||0s which is equal to public_input evaluated
+        // at r_pi. Assumes that public_input is a power of 2
+        pcs_acc.insert_poly_and_points(&witness_polys[0], &witness_commits[0], &r_pi_padded);
         end_timer!(step);
 
         // =======================================================================
@@ -515,7 +518,7 @@ where
         // =======================================================================
         // 3. Verify the opening against the commitment
         // =======================================================================
-        let step = start_timer!(|| "verify commitments");
+        let step = start_timer!(|| "assemble commitments");
 
         // generate evaluation points and commitments
         let mut comms = vec![];
@@ -535,7 +538,6 @@ where
         points.push(perm_check_point_0.clone());
         points.push(perm_check_point_1.clone());
         points.push(prod_final_query_point);
-
         // frac(x)'s points
         comms.push(proof.perm_check_proof.frac_comm);
         comms.push(proof.perm_check_proof.frac_comm);
@@ -575,21 +577,24 @@ where
         // - 4.4. public input consistency checks
         //   - pi_poly(r_pi) where r_pi is sampled from transcript
         let r_pi = transcript.get_and_append_challenge_vectors(b"r_pi", ell)?;
-        let tmp_point = [vec![E::Fr::zero(); num_vars - ell], r_pi].concat();
+
         // check public evaluation
         let pi_poly = DenseMultilinearExtension::from_evaluations_slice(ell as usize, pub_input);
-        let expect_pi_eval = evaluate_opt(&pi_poly, &tmp_point[..]);
+        let expect_pi_eval = evaluate_opt(&pi_poly, &r_pi[..]);
         if expect_pi_eval != *pi_eval {
             return Err(HyperPlonkErrors::InvalidProver(format!(
                 "Public input eval mismatch: got {}, expect {}",
                 pi_eval, expect_pi_eval,
             )));
         }
-        comms.push(proof.witness_commits[0]);
-        points.push(tmp_point);
+        let r_pi_padded = [r_pi, vec![E::Fr::zero(); num_vars - ell]].concat();
 
+        comms.push(proof.witness_commits[0]);
+        points.push(r_pi_padded);
         assert_eq!(comms.len(), proof.batch_openings.f_i_eval_at_point_i.len());
 
+        end_timer!(step);
+        let step = start_timer!(|| "PCS batch verify");
         // check proof
         let res = PCS::batch_verify(
             &vk.pcs_param,
