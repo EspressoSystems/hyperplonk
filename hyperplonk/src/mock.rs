@@ -86,7 +86,8 @@ impl<F: PrimeField> MockCircuit<F> {
                 witnesses[i].append(cur_witness[i]);
             }
         }
-        let public_inputs = witnesses[0].0[0..4].to_vec();
+        let pub_input_len = ark_std::cmp::min(4, num_constraints);
+        let public_inputs = witnesses[0].0[0..pub_input_len].to_vec();
 
         let params = HyperPlonkParams {
             num_constraints,
@@ -150,7 +151,7 @@ mod test {
 
     const SUPPORTED_SIZE: usize = 20;
     const MIN_NUM_VARS: usize = 8;
-    const MAX_NUM_VARS: usize = 19;
+    const MAX_NUM_VARS: usize = 15;
     const CUSTOM_DEGREE: [usize; 6] = [1, 2, 4, 8, 16, 32];
 
     #[test]
