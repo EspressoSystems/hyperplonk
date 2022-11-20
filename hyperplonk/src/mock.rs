@@ -134,6 +134,7 @@ mod test {
     use super::*;
     use crate::{errors::HyperPlonkErrors, HyperPlonkSNARK};
     use ark_bls12_381::{Bls12_381, Fr};
+    use ark_bw6_761::{Fr as BwFr, BW6_761};
     use subroutines::{
         pcs::{
             prelude::{MultilinearKzgPCS, MultilinearUniversalParams},
@@ -234,6 +235,50 @@ mod test {
 
         let vanilla_gate = CustomizedGates::vanilla_plonk_gate();
         test_mock_circuit_zkp_helper(nv, &vanilla_gate, &pcs_srs)?;
+
+        Ok(())
+    }
+
+    fn test_mock_circuit_zkp_helper_bw_curve(
+        nv: usize,
+        gate: &CustomizedGates,
+        pcs_srs: &MultilinearUniversalParams<BW6_761>,
+    ) -> Result<(), HyperPlonkErrors> {
+        let circuit = MockCircuit::<BwFr>::new(1 << nv, gate);
+        assert!(circuit.is_satisfied());
+
+        let index = circuit.index;
+
+        // generate pk and vks
+        let (pk, vk) =
+            <PolyIOP<BwFr> as HyperPlonkSNARK<BW6_761, MultilinearKzgPCS<BW6_761>>>::preprocess(
+                &index, &pcs_srs,
+            )?;
+        // generate a proof and verify
+        let proof = <PolyIOP<BwFr> as HyperPlonkSNARK<BW6_761, MultilinearKzgPCS<BW6_761>>>::prove(
+            &pk,
+            &circuit.witnesses[0].0[..],
+            &circuit.witnesses[..],
+        )?;
+
+        // let verify =
+        //     <PolyIOP<BwFr> as HyperPlonkSNARK<BW6_761,
+        // MultilinearKzgPCS<BW6_761>>>::verify(         &vk,
+        //         &circuit.witnesses[0].0[..],
+        //         &proof,
+        //     )?;
+        // assert!(verify);
+        Ok(())
+    }
+
+    #[test]
+    fn test_mock_circuit_e2e_bw_curve() -> Result<(), HyperPlonkErrors> {
+        let mut rng = test_rng();
+        let pcs_srs = MultilinearKzgPCS::<BW6_761>::gen_srs_for_testing(&mut rng, SUPPORTED_SIZE)?;
+
+        let turboplonk_gate = CustomizedGates::jellyfish_turbo_plonk_gate();
+        test_mock_circuit_zkp_helper_bw_curve(17, &turboplonk_gate, &pcs_srs)?;
+        test_mock_circuit_zkp_helper(20, &turboplonk_gate, &pcs_srs)?;
 
         Ok(())
     }
