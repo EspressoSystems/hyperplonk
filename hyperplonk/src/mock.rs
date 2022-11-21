@@ -278,7 +278,7 @@ mod test {
 
         let turboplonk_gate = CustomizedGates::jellyfish_turbo_plonk_gate();
         test_mock_circuit_zkp_helper_bw_curve(17, &turboplonk_gate, &pcs_srs)?;
-        test_mock_circuit_zkp_helper(20, &turboplonk_gate, &pcs_srs)?;
+        test_mock_circuit_zkp_helper_bw_curve(20, &turboplonk_gate, &pcs_srs)?;
 
         Ok(())
     }
