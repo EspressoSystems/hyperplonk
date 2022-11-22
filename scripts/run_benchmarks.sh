@@ -1,7 +1,6 @@
 #!/bin/bash
-
+cd ..
 cd hyperplonk
-
 # Run the benchmark binary
 cargo bench 64 --no-default-features --features=bench
 cargo bench 32 --no-default-features --features=bench
