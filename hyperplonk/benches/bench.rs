@@ -21,11 +21,11 @@ const MIN_NUM_VARS: usize = 8;
 const MAX_NUM_VARS: usize = 15;
 const MIN_CUSTOM_DEGREE: usize = 1;
 const MAX_CUSTOM_DEGREE: usize = 32;
-const MAX_NUM_THREADS: usize = 24;
+const DEFAULT_NUM_THREADS: usize = 24;
 
 fn main() -> Result<(), HyperPlonkErrors> {
     let args: Vec<String> = env::args().collect();
-    let thread = args[1].parse().unwrap_or(MAX_NUM_THREADS);
+    let thread = args[1].parse().unwrap_or(DEFAULT_NUM_THREADS);
     let mut rng = test_rng();
     let pcs_srs = MultilinearKzgPCS::<Bls12_381>::gen_srs_for_testing(&mut rng, SUPPORTED_SIZE)?;
     ThreadPoolBuilder::new()
@@ -33,10 +33,11 @@ fn main() -> Result<(), HyperPlonkErrors> {
         .build()
         .unwrap();
     bench_vanilla_plonk(&pcs_srs, thread)?;
-    for degree in MIN_CUSTOM_DEGREE..MAX_CUSTOM_DEGREE {
-        bench_high_degree_plonk(&pcs_srs, degree, thread)?;
+    if thread == DEFAULT_NUM_THREADS {
+        for degree in MIN_CUSTOM_DEGREE..MAX_CUSTOM_DEGREE {
+            bench_high_degree_plonk(&pcs_srs, degree, thread)?;
+        }
     }
-
     Ok(())
 }
 
@@ -123,7 +124,7 @@ fn bench_mock_circuit_zkp_helper(
         let _proof =
             <PolyIOP<Fr> as HyperPlonkSNARK<Bls12_381, MultilinearKzgPCS<Bls12_381>>>::prove(
                 &pk,
-                &circuit.witnesses[0].coeff_ref(),
+                &circuit.public_inputs,
                 &circuit.witnesses,
             )?;
     }
@@ -133,7 +134,7 @@ fn bench_mock_circuit_zkp_helper(
 
     let proof = <PolyIOP<Fr> as HyperPlonkSNARK<Bls12_381, MultilinearKzgPCS<Bls12_381>>>::prove(
         &pk,
-        &circuit.witnesses[0].coeff_ref(),
+        &circuit.public_inputs,
         &circuit.witnesses,
     )?;
     //==========================================================
@@ -143,7 +144,7 @@ fn bench_mock_circuit_zkp_helper(
         let verify =
             <PolyIOP<Fr> as HyperPlonkSNARK<Bls12_381, MultilinearKzgPCS<Bls12_381>>>::verify(
                 &vk,
-                &circuit.witnesses[0].coeff_ref(),
+                &circuit.public_inputs,
                 &proof,
             )?;
         assert!(verify);
