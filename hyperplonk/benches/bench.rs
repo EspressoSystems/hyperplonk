@@ -66,7 +66,7 @@ fn bench_vanilla_plonk(
 ) -> Result<(), HyperPlonkErrors> {
     let filename = format!("vanilla threads {}.txt", thread);
     let mut file = File::create(filename).unwrap();
-    for nv in MIN_NUM_VARS..MAX_NUM_VARS + 1 {
+    for nv in MIN_NUM_VARS..=MAX_NUM_VARS {
         let vanilla_gate = CustomizedGates::vanilla_plonk_gate();
         bench_mock_circuit_zkp_helper(&mut file, nv, &vanilla_gate, &pcs_srs)?;
     }
@@ -80,7 +80,7 @@ fn bench_jellyfish_plonk(
 ) -> Result<(), HyperPlonkErrors> {
     let filename = format!("jellyfish threads {}.txt", thread);
     let mut file = File::create(filename).unwrap();
-    for nv in MIN_NUM_VARS..=MAX_NUM_VARS + 1 {
+    for nv in MIN_NUM_VARS..=MAX_NUM_VARS {
         let jf_gate = CustomizedGates::jellyfish_turbo_plonk_gate();
         bench_mock_circuit_zkp_helper(&mut file, nv, &jf_gate, &pcs_srs)?;
     }
