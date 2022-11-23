@@ -20,6 +20,7 @@ const MIN_NUM_VARS: usize = 8;
 const MAX_NUM_VARS: usize = 15;
 const MIN_CUSTOM_DEGREE: usize = 1;
 const MAX_CUSTOM_DEGREE: usize = 32;
+const HIGH_DEGREE_TEST_NV: usize = 15;
 
 fn main() -> Result<(), HyperPlonkErrors> {
     let thread = rayon::current_num_threads();
@@ -37,10 +38,14 @@ fn main() -> Result<(), HyperPlonkErrors> {
         }
     };
     bench_jellyfish_plonk(&pcs_srs, thread)?;
+    println!();
     bench_vanilla_plonk(&pcs_srs, thread)?;
+    println!();
     for degree in MIN_CUSTOM_DEGREE..MAX_CUSTOM_DEGREE {
         bench_high_degree_plonk(&pcs_srs, degree, thread)?;
+        println!();
     }
+    println!();
 
     Ok(())
 }
@@ -90,10 +95,9 @@ fn bench_high_degree_plonk(
 ) -> Result<(), HyperPlonkErrors> {
     let filename = format!("high degree {} thread {}.txt", degree, thread);
     let mut file = File::create(filename).unwrap();
-    for nv in MIN_NUM_VARS..MAX_NUM_VARS {
-        let vanilla_gate = CustomizedGates::mock_gate(2, degree);
-        bench_mock_circuit_zkp_helper(&mut file, nv, &vanilla_gate, &pcs_srs)?;
-    }
+    println!("custom gate of degree {}", degree);
+    let vanilla_gate = CustomizedGates::mock_gate(2, degree);
+    bench_mock_circuit_zkp_helper(&mut file, HIGH_DEGREE_TEST_NV, &vanilla_gate, &pcs_srs)?;
 
     Ok(())
 }
