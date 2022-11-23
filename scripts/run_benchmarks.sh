@@ -2,10 +2,10 @@
 cd ..
 cd hyperplonk
 # Run the benchmark binary
-cargo bench 64 --no-default-features --features=bench
-cargo bench 32 --no-default-features --features=bench
-cargo bench 16 --no-default-features --features=bench
-cargo bench 8 --no-default-features --features=bench
-cargo bench 4 --no-default-features --features=bench
-cargo bench 2 --no-default-features --features=bench
-cargo bench 1 --no-default-features --features=bench
+RAYON_NUM_THREADS=64 cargo bench --no-default-features --features=bench
+RAYON_NUM_THREADS=32 cargo bench --no-default-features --features=bench
+RAYON_NUM_THREADS=16 cargo bench --no-default-features --features=bench
+RAYON_NUM_THREADS=8 cargo bench --no-default-features --features=bench
+RAYON_NUM_THREADS=4 cargo bench --no-default-features --features=bench
+RAYON_NUM_THREADS=2 cargo bench --no-default-features --features=bench
+RAYON_NUM_THREADS=1 cargo bench --no-default-features --features=bench
