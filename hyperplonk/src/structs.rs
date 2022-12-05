@@ -1,6 +1,6 @@
 //! Main module for the HyperPlonk PolyIOP.
 
-use crate::{custom_gate::CustomizedGates, selectors::SelectorColumn};
+use crate::{custom_gate::CustomizedGates, prelude::HyperPlonkErrors, selectors::SelectorColumn};
 use ark_ec::PairingEngine;
 use ark_ff::PrimeField;
 use ark_poly::DenseMultilinearExtension;
@@ -66,6 +66,26 @@ impl HyperPlonkParams {
     pub fn num_witness_columns(&self) -> usize {
         self.gate_func.num_witness_columns()
     }
+
+    /// evaluate the identical polynomial
+    pub fn eval_id_oracle<F: PrimeField>(&self, point: &[F]) -> Result<F, HyperPlonkErrors> {
+        let len = self.num_variables() + (log2(self.num_witness_columns()) as usize);
+        if point.len() != len {
+            return Err(HyperPlonkErrors::InvalidParameters(format!(
+                "ID oracle point length = {}, expected {}",
+                point.len(),
+                len,
+            )));
+        }
+
+        let mut res = F::zero();
+        let mut base = F::one();
+        for &v in point.iter() {
+            res += base * v;
+            base += base;
+        }
+        Ok(res)
+    }
 }
 
 /// The HyperPlonk index, consists of the following:
@@ -107,16 +127,12 @@ pub struct HyperPlonkProvingKey<E: PairingEngine, PCS: PolynomialCommitmentSchem
     pub params: HyperPlonkParams,
     /// The preprocessed permutation polynomials
     pub permutation_oracles: Vec<Rc<DenseMultilinearExtension<E::Fr>>>,
-    /// The preprocessed identity polynomials
-    pub id_oracles: Vec<Rc<DenseMultilinearExtension<E::Fr>>>,
     /// The preprocessed selector polynomials
     pub selector_oracles: Vec<Rc<DenseMultilinearExtension<E::Fr>>>,
     /// Commitments to the preprocessed selector polynomials
     pub selector_commitments: Vec<PCS::Commitment>,
     /// Commitments to the preprocessed permutation polynomials
     pub permutation_commitments: Vec<PCS::Commitment>,
-    /// Commitments to the preprocessed identity polynomials
-    pub id_commitments: Vec<PCS::Commitment>,
     /// The parameters for PCS commitment
     pub pcs_param: PCS::ProverParam,
 }
@@ -135,6 +151,4 @@ pub struct HyperPlonkVerifyingKey<E: PairingEngine, PCS: PolynomialCommitmentSch
     pub selector_commitments: Vec<PCS::Commitment>,
     /// Permutation oracles' commitments
     pub perm_commitments: Vec<PCS::Commitment>,
-    /// Commitments to the preprocessed identity polynomials
-    pub id_commitments: Vec<PCS::Commitment>,
 }
