@@ -14,7 +14,8 @@ use crate::{
     IOPProof,
 };
 use arithmetic::{build_eq_x_r_vec, DenseMultilinearExtension, VPAuxInfo, VirtualPolynomial};
-use ark_ec::{AffineCurve, PairingEngine, ProjectiveCurve};
+use ark_ec::{msm::VariableBaseMSM, PairingEngine, ProjectiveCurve};
+use ark_ff::PrimeField;
 use ark_std::{end_timer, log2, start_timer, One, Zero};
 use std::{marker::PhantomData, rc::Rc};
 use transcript::IOPTranscript;
@@ -189,15 +190,19 @@ where
     let a2 = &proof.sum_check_proof.point[..num_var];
 
     // build g' commitment
+    let step = start_timer!(|| "build homomorphic commitment");
     let eq_t_list = build_eq_x_r_vec(t.as_ref())?;
 
-    let mut g_prime_commit = E::G1Affine::zero().into_projective();
+    let mut scalars = vec![];
+    let mut bases = vec![];
 
     for (i, point) in points.iter().enumerate() {
         let eq_i_a2 = eq_eval(a2, point)?;
-        let tmp = eq_i_a2 * eq_t_list[i];
-        g_prime_commit += &f_i_commitments[i].0.mul(tmp);
+        scalars.push((eq_i_a2 * eq_t_list[i]).into_repr());
+        bases.push(f_i_commitments[i].0);
     }
+    let g_prime_commit = VariableBaseMSM::multi_scalar_mul(&bases, &scalars);
+    end_timer!(step);
 
     // ensure \sum_i eq(t, <i>) * f_i_evals matches the sum via SumCheck
     let mut sum = E::Fr::zero();

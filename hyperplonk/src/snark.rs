@@ -563,6 +563,7 @@ where
         let r_pi = transcript.get_and_append_challenge_vectors(b"r_pi", ell)?;
 
         // check public evaluation
+        let pi_step = start_timer!(|| "check public evaluation");
         let pi_poly = DenseMultilinearExtension::from_evaluations_slice(ell as usize, pub_input);
         let expect_pi_eval = evaluate_opt(&pi_poly, &r_pi[..]);
         if expect_pi_eval != *pi_eval {
@@ -576,6 +577,7 @@ where
         comms.push(proof.witness_commits[0]);
         points.push(r_pi_padded);
         assert_eq!(comms.len(), proof.batch_openings.f_i_eval_at_point_i.len());
+        end_timer!(pi_step);
 
         end_timer!(step);
         let step = start_timer!(|| "PCS batch verify");
