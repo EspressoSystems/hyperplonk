@@ -138,9 +138,23 @@
 <span id="138">138</span>
 <span id="139">139</span>
 <span id="140">140</span>
+<span id="141">141</span>
+<span id="142">142</span>
+<span id="143">143</span>
+<span id="144">144</span>
+<span id="145">145</span>
+<span id="146">146</span>
+<span id="147">147</span>
+<span id="148">148</span>
+<span id="149">149</span>
+<span id="150">150</span>
+<span id="151">151</span>
+<span id="152">152</span>
+<span id="153">153</span>
+<span id="154">154</span>
 </pre><pre class="rust"><code><span class="doccomment">//! Main module for the HyperPlonk PolyIOP.
 
-</span><span class="kw">use crate</span>::{custom_gate::CustomizedGates, selectors::SelectorColumn};
+</span><span class="kw">use crate</span>::{custom_gate::CustomizedGates, prelude::HyperPlonkErrors, selectors::SelectorColumn};
 <span class="kw">use </span>ark_ec::PairingEngine;
 <span class="kw">use </span>ark_ff::PrimeField;
 <span class="kw">use </span>ark_poly::DenseMultilinearExtension;
@@ -206,6 +220,26 @@
     </span><span class="kw">pub fn </span>num_witness_columns(<span class="kw-2">&amp;</span><span class="self">self</span>) -&gt; usize {
         <span class="self">self</span>.gate_func.num_witness_columns()
     }
+
+    <span class="doccomment">/// evaluate the identical polynomial
+    </span><span class="kw">pub fn </span>eval_id_oracle&lt;F: PrimeField&gt;(<span class="kw-2">&amp;</span><span class="self">self</span>, point: <span class="kw-2">&amp;</span>[F]) -&gt; <span class="prelude-ty">Result</span>&lt;F, HyperPlonkErrors&gt; {
+        <span class="kw">let </span>len = <span class="self">self</span>.num_variables() + (log2(<span class="self">self</span>.num_witness_columns()) <span class="kw">as </span>usize);
+        <span class="kw">if </span>point.len() != len {
+            <span class="kw">return </span><span class="prelude-val">Err</span>(HyperPlonkErrors::InvalidParameters(<span class="macro">format!</span>(
+                <span class="string">&quot;ID oracle point length = {}, expected {}&quot;</span>,
+                point.len(),
+                len,
+            )));
+        }
+
+        <span class="kw">let </span><span class="kw-2">mut </span>res = F::zero();
+        <span class="kw">let </span><span class="kw-2">mut </span>base = F::one();
+        <span class="kw">for </span><span class="kw-2">&amp;</span>v <span class="kw">in </span>point.iter() {
+            res += base * v;
+            base += base;
+        }
+        <span class="prelude-val">Ok</span>(res)
+    }
 }
 
 <span class="doccomment">/// The HyperPlonk index, consists of the following:
@@ -247,16 +281,12 @@
     </span><span class="kw">pub </span>params: HyperPlonkParams,
     <span class="doccomment">/// The preprocessed permutation polynomials
     </span><span class="kw">pub </span>permutation_oracles: Vec&lt;Rc&lt;DenseMultilinearExtension&lt;E::Fr&gt;&gt;&gt;,
-    <span class="doccomment">/// The preprocessed identity polynomials
-    </span><span class="kw">pub </span>id_oracles: Vec&lt;Rc&lt;DenseMultilinearExtension&lt;E::Fr&gt;&gt;&gt;,
     <span class="doccomment">/// The preprocessed selector polynomials
     </span><span class="kw">pub </span>selector_oracles: Vec&lt;Rc&lt;DenseMultilinearExtension&lt;E::Fr&gt;&gt;&gt;,
     <span class="doccomment">/// Commitments to the preprocessed selector polynomials
     </span><span class="kw">pub </span>selector_commitments: Vec&lt;PCS::Commitment&gt;,
     <span class="doccomment">/// Commitments to the preprocessed permutation polynomials
     </span><span class="kw">pub </span>permutation_commitments: Vec&lt;PCS::Commitment&gt;,
-    <span class="doccomment">/// Commitments to the preprocessed identity polynomials
-    </span><span class="kw">pub </span>id_commitments: Vec&lt;PCS::Commitment&gt;,
     <span class="doccomment">/// The parameters for PCS commitment
     </span><span class="kw">pub </span>pcs_param: PCS::ProverParam,
 }
@@ -275,8 +305,6 @@
     </span><span class="kw">pub </span>selector_commitments: Vec&lt;PCS::Commitment&gt;,
     <span class="doccomment">/// Permutation oracles&#39; commitments
     </span><span class="kw">pub </span>perm_commitments: Vec&lt;PCS::Commitment&gt;,
-    <span class="doccomment">/// Commitments to the preprocessed identity polynomials
-    </span><span class="kw">pub </span>id_commitments: Vec&lt;PCS::Commitment&gt;,
 }
 </code></pre></div>
 </section></div></main><div id="rustdoc-vars" data-root-path="../../" data-current-crate="hyperplonk" data-themes="ayu,dark,light" data-resource-suffix="" data-rustdoc-version="1.65.0 (897e37553 2022-11-02)" ></div></body></html>

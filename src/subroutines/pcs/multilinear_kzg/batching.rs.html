@@ -327,6 +327,11 @@
 <span id="327">327</span>
 <span id="328">328</span>
 <span id="329">329</span>
+<span id="330">330</span>
+<span id="331">331</span>
+<span id="332">332</span>
+<span id="333">333</span>
+<span id="334">334</span>
 </pre><pre class="rust"><code><span class="doccomment">//! Sumcheck based batch opening and verify commitment.
 </span><span class="comment">// TODO: refactoring this code to somewhere else
 // currently IOP depends on PCS because perm check requires commitment.
@@ -343,7 +348,8 @@
     IOPProof,
 };
 <span class="kw">use </span>arithmetic::{build_eq_x_r_vec, DenseMultilinearExtension, VPAuxInfo, VirtualPolynomial};
-<span class="kw">use </span>ark_ec::{AffineCurve, PairingEngine, ProjectiveCurve};
+<span class="kw">use </span>ark_ec::{msm::VariableBaseMSM, PairingEngine, ProjectiveCurve};
+<span class="kw">use </span>ark_ff::PrimeField;
 <span class="kw">use </span>ark_std::{end_timer, log2, start_timer, One, Zero};
 <span class="kw">use </span>std::{marker::PhantomData, rc::Rc};
 <span class="kw">use </span>transcript::IOPTranscript;
@@ -518,15 +524,19 @@
     </span><span class="kw">let </span>a2 = <span class="kw-2">&amp;</span>proof.sum_check_proof.point[..num_var];
 
     <span class="comment">// build g&#39; commitment
-    </span><span class="kw">let </span>eq_t_list = build_eq_x_r_vec(t.as_ref())<span class="question-mark">?</span>;
+    </span><span class="kw">let </span>step = <span class="macro">start_timer!</span>(|| <span class="string">&quot;build homomorphic commitment&quot;</span>);
+    <span class="kw">let </span>eq_t_list = build_eq_x_r_vec(t.as_ref())<span class="question-mark">?</span>;
 
-    <span class="kw">let </span><span class="kw-2">mut </span>g_prime_commit = E::G1Affine::zero().into_projective();
+    <span class="kw">let </span><span class="kw-2">mut </span>scalars = <span class="macro">vec!</span>[];
+    <span class="kw">let </span><span class="kw-2">mut </span>bases = <span class="macro">vec!</span>[];
 
     <span class="kw">for </span>(i, point) <span class="kw">in </span>points.iter().enumerate() {
         <span class="kw">let </span>eq_i_a2 = eq_eval(a2, point)<span class="question-mark">?</span>;
-        <span class="kw">let </span>tmp = eq_i_a2 * eq_t_list[i];
-        g_prime_commit += <span class="kw-2">&amp;</span>f_i_commitments[i].<span class="number">0</span>.mul(tmp);
+        scalars.push((eq_i_a2 * eq_t_list[i]).into_repr());
+        bases.push(f_i_commitments[i].<span class="number">0</span>);
     }
+    <span class="kw">let </span>g_prime_commit = VariableBaseMSM::multi_scalar_mul(<span class="kw-2">&amp;</span>bases, <span class="kw-2">&amp;</span>scalars);
+    <span class="macro">end_timer!</span>(step);
 
     <span class="comment">// ensure \sum_i eq(t, &lt;i&gt;) * f_i_evals matches the sum via SumCheck
     </span><span class="kw">let </span><span class="kw-2">mut </span>sum = E::Fr::zero();
