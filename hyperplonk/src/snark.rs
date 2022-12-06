@@ -5,7 +5,7 @@ use crate::{
     witness::WitnessColumn,
     HyperPlonkSNARK,
 };
-use arithmetic::{evaluate_opt, identity_permutation_mles, VPAuxInfo};
+use arithmetic::{evaluate_opt, gen_eval_point, VPAuxInfo};
 use ark_ec::PairingEngine;
 use ark_poly::DenseMultilinearExtension;
 use ark_std::{end_timer, log2, start_timer, One, Zero};
@@ -51,13 +51,6 @@ where
         let (pcs_prover_param, pcs_verifier_param) =
             PCS::trim(pcs_srs, None, Some(supported_ml_degree))?;
 
-        // build identity oracles
-        let id_oracles = identity_permutation_mles(num_vars, index.num_witness_columns());
-        let mut id_comms = vec![];
-        for id_oracle in id_oracles.iter() {
-            id_comms.push(PCS::commit(&pcs_prover_param, id_oracle)?);
-        }
-
         // build permutation oracles
         let mut permutation_oracles = vec![];
         let mut perm_comms = vec![];
@@ -87,12 +80,10 @@ where
         Ok((
             Self::ProvingKey {
                 params: index.params.clone(),
-                id_oracles,
                 permutation_oracles,
                 selector_oracles,
                 selector_commitments: selector_commitments.clone(),
                 permutation_commitments: perm_comms.clone(),
-                id_commitments: id_comms.clone(),
                 pcs_param: pcs_prover_param,
             },
             Self::VerifyingKey {
@@ -100,7 +91,6 @@ where
                 pcs_param: pcs_verifier_param,
                 selector_commitments,
                 perm_commitments: perm_comms,
-                id_commitments: id_comms,
             },
         ))
     }
@@ -290,11 +280,6 @@ where
             &perm_check_point_1,
         );
 
-        // s_id(x)'s points
-        for (s_id, s_com) in pk.id_oracles.iter().zip(pk.id_commitments.iter()) {
-            pcs_acc.insert_poly_and_points(s_id, s_com, perm_check_point);
-        }
-
         // perms(x)'s points
         for (perm, pcom) in pk
             .permutation_oracles
@@ -414,15 +399,13 @@ where
         // Extract evaluations from openings
         let prod_evals = &proof.batch_openings.f_i_eval_at_point_i[0..4];
         let frac_evals = &proof.batch_openings.f_i_eval_at_point_i[4..7];
-        let id_evals = &proof.batch_openings.f_i_eval_at_point_i[7..7 + num_witnesses];
-        let perm_evals =
-            &proof.batch_openings.f_i_eval_at_point_i[7 + num_witnesses..7 + 2 * num_witnesses];
+        let perm_evals = &proof.batch_openings.f_i_eval_at_point_i[7..7 + num_witnesses];
         let witness_perm_evals =
-            &proof.batch_openings.f_i_eval_at_point_i[7 + 2 * num_witnesses..7 + 3 * num_witnesses];
+            &proof.batch_openings.f_i_eval_at_point_i[7 + num_witnesses..7 + 2 * num_witnesses];
         let witness_gate_evals =
-            &proof.batch_openings.f_i_eval_at_point_i[7 + 3 * num_witnesses..7 + 4 * num_witnesses];
+            &proof.batch_openings.f_i_eval_at_point_i[7 + 2 * num_witnesses..7 + 3 * num_witnesses];
         let selector_evals = &proof.batch_openings.f_i_eval_at_point_i
-            [7 + 4 * num_witnesses..7 + 4 * num_witnesses + num_selectors];
+            [7 + 3 * num_witnesses..7 + 3 * num_witnesses + num_selectors];
         let pi_eval = proof.batch_openings.f_i_eval_at_point_i.last().unwrap();
 
         // =======================================================================
@@ -491,12 +474,18 @@ where
         let alpha = perm_check_sub_claim.product_check_sub_claim.alpha;
         let (beta, gamma) = perm_check_sub_claim.challenges;
 
+        let mut id_evals = vec![];
+        for i in 0..num_witnesses {
+            let ith_point = gen_eval_point(i, log2(num_witnesses) as usize, &perm_check_point[..]);
+            id_evals.push(vk.params.eval_id_oracle(&ith_point[..])?);
+        }
+
         // check evaluation subclaim
         let perm_gate_eval = eval_perm_gate(
             prod_evals,
             frac_evals,
             witness_perm_evals,
-            id_evals,
+            &id_evals[..],
             perm_evals,
             alpha,
             beta,
@@ -546,12 +535,6 @@ where
         points.push(perm_check_point_0);
         points.push(perm_check_point_1);
 
-        // s_id's points
-        for &id_com in vk.id_commitments.iter() {
-            comms.push(id_com);
-            points.push(perm_check_point.clone());
-        }
-
         // perms' points
         for &pcom in vk.perm_commitments.iter() {
             comms.push(pcom);
@@ -559,6 +542,7 @@ where
         }
 
         // witnesses' points
+        // TODO: merge points
         for &wcom in proof.witness_commits.iter() {
             comms.push(wcom);
             points.push(perm_check_point.clone());
@@ -579,6 +563,7 @@ where
         let r_pi = transcript.get_and_append_challenge_vectors(b"r_pi", ell)?;
 
         // check public evaluation
+        let pi_step = start_timer!(|| "check public evaluation");
         let pi_poly = DenseMultilinearExtension::from_evaluations_slice(ell as usize, pub_input);
         let expect_pi_eval = evaluate_opt(&pi_poly, &r_pi[..]);
         if expect_pi_eval != *pi_eval {
@@ -592,6 +577,7 @@ where
         comms.push(proof.witness_commits[0]);
         points.push(r_pi_padded);
         assert_eq!(comms.len(), proof.batch_openings.f_i_eval_at_point_i.len());
+        end_timer!(pi_step);
 
         end_timer!(step);
         let step = start_timer!(|| "PCS batch verify");
