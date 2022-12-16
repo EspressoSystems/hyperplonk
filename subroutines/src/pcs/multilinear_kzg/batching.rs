@@ -17,6 +17,7 @@ use arithmetic::{build_eq_x_r_vec, DenseMultilinearExtension, VPAuxInfo, Virtual
 use ark_ec::{msm::VariableBaseMSM, PairingEngine, ProjectiveCurve};
 use ark_ff::PrimeField;
 use ark_std::{end_timer, log2, start_timer, One, Zero};
+use rayon::prelude::{IntoParallelRefIterator, ParallelIterator};
 use std::{marker::PhantomData, sync::Arc};
 use transcript::IOPTranscript;
 
@@ -87,13 +88,15 @@ where
     end_timer!(timer);
 
     let timer = start_timer!(|| format!("compute tilde eq for {} points", points.len()));
-    let mut tilde_eqs = vec![];
-    for point in points.iter() {
-        let eq_b_zi = build_eq_x_r_vec(point)?;
-        tilde_eqs.push(Arc::new(DenseMultilinearExtension::from_evaluations_vec(
-            num_var, eq_b_zi,
-        )));
-    }
+    let tilde_eqs: Vec<Arc<DenseMultilinearExtension<<E as PairingEngine>::Fr>>> = points
+        .par_iter()
+        .map(|point| {
+            let eq_b_zi = build_eq_x_r_vec(point).unwrap();
+            Arc::new(DenseMultilinearExtension::from_evaluations_vec(
+                num_var, eq_b_zi,
+            ))
+        })
+        .collect();
     end_timer!(timer);
 
     // built the virtual polynomial for SumCheck

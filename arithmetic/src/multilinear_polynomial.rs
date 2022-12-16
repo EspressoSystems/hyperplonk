@@ -160,16 +160,9 @@ fn fix_one_variable_helper<F: Field>(data: &[F], nv: usize, point: &F) -> Vec<F>
     }
 
     #[cfg(feature = "parallel")]
-    if nv >= 13 {
-        // on my computer we parallelization doesn't help till nv >= 13
-        res.par_iter_mut().enumerate().for_each(|(i, x)| {
-            *x = data[i << 1] + (data[(i << 1) + 1] - data[i << 1]) * point;
-        });
-    } else {
-        for i in 0..(1 << (nv - 1)) {
-            res[i] = data[i << 1] + (data[(i << 1) + 1] - data[i << 1]) * point;
-        }
-    }
+    res.par_iter_mut().enumerate().for_each(|(i, x)| {
+        *x = data[i << 1] + (data[(i << 1) + 1] - data[i << 1]) * point;
+    });
 
     res
 }
@@ -279,16 +272,9 @@ fn fix_last_variable_helper<F: Field>(data: &[F], nv: usize, point: &F) -> Vec<F
     }
 
     #[cfg(feature = "parallel")]
-    if nv >= 13 {
-        // on my computer we parallelization doesn't help till nv >= 13
-        res.par_iter_mut().enumerate().for_each(|(i, x)| {
-            *x = data[i] + (data[i + half_len] - data[i]) * point;
-        });
-    } else {
-        for b in 0..(1 << (nv - 1)) {
-            res[b] = data[b] + (data[b + half_len] - data[b]) * point;
-        }
-    }
+    res.par_iter_mut().enumerate().for_each(|(i, x)| {
+        *x = data[i] + (data[i + half_len] - data[i]) * point;
+    });
 
     res
 }
