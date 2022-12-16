@@ -37,15 +37,15 @@ fn main() -> Result<(), HyperPlonkErrors> {
             },
         }
     };
-    bench_jellyfish_plonk(&pcs_srs, thread)?;
-    println!();
+    // bench_jellyfish_plonk(&pcs_srs, thread)?;
+    // println!();
     bench_vanilla_plonk(&pcs_srs, thread)?;
     println!();
-    for degree in MIN_CUSTOM_DEGREE..=MAX_CUSTOM_DEGREE {
-        bench_high_degree_plonk(&pcs_srs, degree, thread)?;
-        println!();
-    }
-    println!();
+    // for degree in MIN_CUSTOM_DEGREE..=MAX_CUSTOM_DEGREE {
+    //     bench_high_degree_plonk(&pcs_srs, degree, thread)?;
+    //     println!();
+    // }
+    // println!();
 
     Ok(())
 }
