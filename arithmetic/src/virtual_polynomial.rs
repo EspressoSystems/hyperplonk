@@ -364,8 +364,6 @@ pub fn build_eq_x_r<F: PrimeField>(
 /// over r, which is
 ///      eq(x,y) = \prod_i=1^num_var (x_i * r_i + (1-x_i)*(1-r_i))
 pub fn build_eq_x_r_vec<F: PrimeField>(r: &[F]) -> Result<Vec<F>, ArithErrors> {
-    let start = start_timer!(|| format!("build eq_x_r of size {}", r.len()));
-
     // we build eq(x,r) from its evaluations
     // we want to evaluate eq(x,r) over x \in {0, 1}^num_vars
     // for example, with num_vars = 4, x is a binary vector of 4, then
@@ -380,7 +378,6 @@ pub fn build_eq_x_r_vec<F: PrimeField>(r: &[F]) -> Result<Vec<F>, ArithErrors> {
     let mut eval = Vec::new();
     build_eq_x_r_helper(r, &mut eval)?;
 
-    end_timer!(start);
     Ok(eval)
 }
 
@@ -512,8 +509,6 @@ mod test {
     // over r, which is
     //      eq(x,y) = \prod_i=1^num_var (x_i * r_i + (1-x_i)*(1-r_i))
     fn build_eq_x_r_for_test<F: PrimeField>(r: &[F]) -> Arc<DenseMultilinearExtension<F>> {
-        let start = start_timer!(|| "zero check naive build eq_x_r");
-
         // we build eq(x,r) from its evaluations
         // we want to evaluate eq(x,r) over x \in {0, 1}^num_vars
         // for example, with num_vars = 4, x is a binary vector of 4, then
@@ -546,7 +541,6 @@ mod test {
         let mle = DenseMultilinearExtension::from_evaluations_vec(num_var, eval);
 
         let res = Arc::new(mle);
-        end_timer!(start);
         res
     }
 }
