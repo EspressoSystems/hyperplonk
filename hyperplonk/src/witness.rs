@@ -2,7 +2,7 @@ use crate::{build_mle, errors::HyperPlonkErrors};
 use ark_ff::PrimeField;
 use ark_poly::DenseMultilinearExtension;
 use ark_std::log2;
-use std::rc::Rc;
+use std::sync::Arc;
 
 /// A row of witnesses of width `#wires`
 #[derive(Debug, Clone)]
@@ -71,7 +71,7 @@ impl<F: PrimeField> WitnessRow<F> {
     /// output mle(a1,b1,c1, ...), mle(a2,b2,c2, ...), ...
     pub fn build_mles(
         matrix: &[Self],
-    ) -> Result<Vec<Rc<DenseMultilinearExtension<F>>>, HyperPlonkErrors> {
+    ) -> Result<Vec<Arc<DenseMultilinearExtension<F>>>, HyperPlonkErrors> {
         build_mle!(matrix)
     }
 }

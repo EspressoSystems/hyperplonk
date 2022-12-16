@@ -4,19 +4,19 @@ use ark_poly::MultilinearExtension;
 use ark_std::{end_timer, rand::RngCore, start_timer};
 #[cfg(feature = "parallel")]
 use rayon::prelude::{IndexedParallelIterator, IntoParallelRefMutIterator, ParallelIterator};
-use std::rc::Rc;
+use std::sync::Arc;
 
 pub use ark_poly::DenseMultilinearExtension;
 
 /// Sample a random list of multilinear polynomials.
 /// Returns
 /// - the list of polynomials,
-/// - its sum of polynomial evaluations over the boolean hypercube.
+/// - its sum of polynomial evaluations over the boolean hypeArcube.
 pub fn random_mle_list<F: PrimeField, R: RngCore>(
     nv: usize,
     degree: usize,
     rng: &mut R,
-) -> (Vec<Rc<DenseMultilinearExtension<F>>>, F) {
+) -> (Vec<Arc<DenseMultilinearExtension<F>>>, F) {
     let start = start_timer!(|| "sample random mle list");
     let mut multiplicands = Vec::with_capacity(degree);
     for _ in 0..degree {
@@ -37,7 +37,7 @@ pub fn random_mle_list<F: PrimeField, R: RngCore>(
 
     let list = multiplicands
         .into_iter()
-        .map(|x| Rc::new(DenseMultilinearExtension::from_evaluations_vec(nv, x)))
+        .map(|x| Arc::new(DenseMultilinearExtension::from_evaluations_vec(nv, x)))
         .collect();
 
     end_timer!(start);
@@ -49,7 +49,7 @@ pub fn random_zero_mle_list<F: PrimeField, R: RngCore>(
     nv: usize,
     degree: usize,
     rng: &mut R,
-) -> Vec<Rc<DenseMultilinearExtension<F>>> {
+) -> Vec<Arc<DenseMultilinearExtension<F>>> {
     let start = start_timer!(|| "sample random zero mle list");
 
     let mut multiplicands = Vec::with_capacity(degree);
@@ -65,7 +65,7 @@ pub fn random_zero_mle_list<F: PrimeField, R: RngCore>(
 
     let list = multiplicands
         .into_iter()
-        .map(|x| Rc::new(DenseMultilinearExtension::from_evaluations_vec(nv, x)))
+        .map(|x| Arc::new(DenseMultilinearExtension::from_evaluations_vec(nv, x)))
         .collect();
 
     end_timer!(start);
@@ -81,12 +81,12 @@ pub fn identity_permutation<F: PrimeField>(num_vars: usize, num_chunks: usize) -
 pub fn identity_permutation_mles<F: PrimeField>(
     num_vars: usize,
     num_chunks: usize,
-) -> Vec<Rc<DenseMultilinearExtension<F>>> {
+) -> Vec<Arc<DenseMultilinearExtension<F>>> {
     let mut res = vec![];
     for i in 0..num_chunks {
         let shift = (i * (1 << num_vars)) as u64;
         let s_id_vec = (shift..shift + (1u64 << num_vars)).map(F::from).collect();
-        res.push(Rc::new(DenseMultilinearExtension::from_evaluations_vec(
+        res.push(Arc::new(DenseMultilinearExtension::from_evaluations_vec(
             num_vars, s_id_vec,
         )));
     }
@@ -113,12 +113,12 @@ pub fn random_permutation_mles<F: PrimeField, R: RngCore>(
     num_vars: usize,
     num_chunks: usize,
     rng: &mut R,
-) -> Vec<Rc<DenseMultilinearExtension<F>>> {
+) -> Vec<Arc<DenseMultilinearExtension<F>>> {
     let s_perm_vec = random_permutation(num_vars, num_chunks, rng);
     let mut res = vec![];
     let n = 1 << num_vars;
     for i in 0..num_chunks {
-        res.push(Rc::new(DenseMultilinearExtension::from_evaluations_vec(
+        res.push(Arc::new(DenseMultilinearExtension::from_evaluations_vec(
             num_vars,
             s_perm_vec[i * n..i * n + n].to_vec(),
         )));
@@ -203,8 +203,8 @@ fn fix_variables_no_par<F: Field>(
 /// merge a set of polynomials. Returns an error if the
 /// polynomials do not share a same number of nvs.
 pub fn merge_polynomials<F: PrimeField>(
-    polynomials: &[Rc<DenseMultilinearExtension<F>>],
-) -> Result<Rc<DenseMultilinearExtension<F>>, ArithErrors> {
+    polynomials: &[Arc<DenseMultilinearExtension<F>>],
+) -> Result<Arc<DenseMultilinearExtension<F>>, ArithErrors> {
     let nv = polynomials[0].num_vars();
     for poly in polynomials.iter() {
         if nv != poly.num_vars() {
@@ -220,7 +220,7 @@ pub fn merge_polynomials<F: PrimeField>(
         scalars.extend_from_slice(poly.to_evaluations().as_slice());
     }
     scalars.extend_from_slice(vec![F::zero(); (1 << merged_nv) - scalars.len()].as_ref());
-    Ok(Rc::new(DenseMultilinearExtension::from_evaluations_vec(
+    Ok(Arc::new(DenseMultilinearExtension::from_evaluations_vec(
         merged_nv, scalars,
     )))
 }

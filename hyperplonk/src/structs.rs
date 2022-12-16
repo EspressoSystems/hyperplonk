@@ -5,7 +5,7 @@ use ark_ec::PairingEngine;
 use ark_ff::PrimeField;
 use ark_poly::DenseMultilinearExtension;
 use ark_std::log2;
-use std::rc::Rc;
+use std::sync::Arc;
 use subroutines::{
     pcs::PolynomialCommitmentScheme,
     poly_iop::prelude::{PermutationCheck, ZeroCheck},
@@ -126,9 +126,9 @@ pub struct HyperPlonkProvingKey<E: PairingEngine, PCS: PolynomialCommitmentSchem
     /// Hyperplonk instance parameters
     pub params: HyperPlonkParams,
     /// The preprocessed permutation polynomials
-    pub permutation_oracles: Vec<Rc<DenseMultilinearExtension<E::Fr>>>,
+    pub permutation_oracles: Vec<Arc<DenseMultilinearExtension<E::Fr>>>,
     /// The preprocessed selector polynomials
-    pub selector_oracles: Vec<Rc<DenseMultilinearExtension<E::Fr>>>,
+    pub selector_oracles: Vec<Arc<DenseMultilinearExtension<E::Fr>>>,
     /// Commitments to the preprocessed selector polynomials
     pub selector_commitments: Vec<PCS::Commitment>,
     /// Commitments to the preprocessed permutation polynomials

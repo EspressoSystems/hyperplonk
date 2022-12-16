@@ -5,7 +5,7 @@ use arithmetic::identity_permutation_mles;
 use ark_ff::PrimeField;
 use ark_poly::DenseMultilinearExtension;
 use ark_std::{end_timer, start_timer};
-use std::rc::Rc;
+use std::sync::Arc;
 
 /// Returns the evaluations of two list of MLEs:
 /// - numerators = (a1, ..., ak)
@@ -24,13 +24,13 @@ use std::rc::Rc;
 pub(super) fn computer_nums_and_denoms<F: PrimeField>(
     beta: &F,
     gamma: &F,
-    fxs: &[Rc<DenseMultilinearExtension<F>>],
-    gxs: &[Rc<DenseMultilinearExtension<F>>],
-    perms: &[Rc<DenseMultilinearExtension<F>>],
+    fxs: &[Arc<DenseMultilinearExtension<F>>],
+    gxs: &[Arc<DenseMultilinearExtension<F>>],
+    perms: &[Arc<DenseMultilinearExtension<F>>],
 ) -> Result<
     (
-        Vec<Rc<DenseMultilinearExtension<F>>>,
-        Vec<Rc<DenseMultilinearExtension<F>>>,
+        Vec<Arc<DenseMultilinearExtension<F>>>,
+        Vec<Arc<DenseMultilinearExtension<F>>>,
     ),
     PolyIOPErrors,
 > {
@@ -54,11 +54,11 @@ pub(super) fn computer_nums_and_denoms<F: PrimeField>(
             numerator_evals.push(numerator);
             denominator_evals.push(denominator);
         }
-        numerators.push(Rc::new(DenseMultilinearExtension::from_evaluations_vec(
+        numerators.push(Arc::new(DenseMultilinearExtension::from_evaluations_vec(
             num_vars,
             numerator_evals,
         )));
-        denominators.push(Rc::new(DenseMultilinearExtension::from_evaluations_vec(
+        denominators.push(Arc::new(DenseMultilinearExtension::from_evaluations_vec(
             num_vars,
             denominator_evals,
         )));

@@ -2,7 +2,7 @@ use arithmetic::{identity_permutation_mles, VPAuxInfo, VirtualPolynomial};
 use ark_bls12_381::{Bls12_381, Fr};
 use ark_poly::{DenseMultilinearExtension, MultilinearExtension};
 use ark_std::test_rng;
-use std::{marker::PhantomData, rc::Rc, time::Instant};
+use std::{marker::PhantomData, sync::Arc, time::Instant};
 use subroutines::{
     pcs::{prelude::MultilinearKzgPCS, PolynomialCommitmentScheme},
     poly_iop::prelude::{
@@ -144,7 +144,7 @@ fn bench_permutation_check() -> Result<(), PolyIOPErrors> {
             10
         };
 
-        let ws = vec![Rc::new(DenseMultilinearExtension::rand(nv, &mut rng))];
+        let ws = vec![Arc::new(DenseMultilinearExtension::rand(nv, &mut rng))];
 
         // identity map
         let perms = identity_permutation_mles(nv, 1);
@@ -218,8 +218,8 @@ fn bench_prod_check() -> Result<(), PolyIOPErrors> {
         let f: DenseMultilinearExtension<Fr> = DenseMultilinearExtension::rand(nv, &mut rng);
         let mut g = f.clone();
         g.evaluations.reverse();
-        let fs = vec![Rc::new(f)];
-        let gs = vec![Rc::new(g)];
+        let fs = vec![Arc::new(f)];
+        let gs = vec![Arc::new(g)];
 
         let proof = {
             let start = Instant::now();

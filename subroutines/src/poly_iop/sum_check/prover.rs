@@ -10,7 +10,7 @@ use ark_ff::PrimeField;
 use ark_poly::DenseMultilinearExtension;
 use ark_std::{end_timer, start_timer, vec::Vec};
 use rayon::prelude::IntoParallelIterator;
-use std::rc::Rc;
+use std::sync::Arc;
 
 #[cfg(feature = "parallel")]
 use rayon::iter::{IntoParallelRefMutIterator, ParallelIterator};
@@ -138,7 +138,7 @@ impl<F: PrimeField> SumCheckProver<F> for IOPProverState<F> {
                 }
             } else {
                 for (t, e) in products_sum.iter_mut().enumerate() {
-                    let t = F::from(t as u64);
+                    let t = F::from(t as u128);
                     let products = (0..1 << (self.poly.aux_info.num_variables - self.round))
                         .into_par_iter()
                         .map(|b| {
@@ -149,6 +149,9 @@ impl<F: PrimeField> SumCheckProver<F> for IOPProverState<F> {
                                 let mut product = *coefficient;
                                 for &f in products.iter().take(num_mles) {
                                     let table = &flattened_ml_extensions[f]; // f's range is checked in init
+                                                                             // TODO: Could be done faster by cashing the results from the
+                                                                             // previous t and adding the diff
+                                                                             // Also possible to use Karatsuba multiplication
                                     product *=
                                         table[b << 1] + (table[(b << 1) + 1] - table[b << 1]) * t;
                                 }
@@ -188,7 +191,7 @@ impl<F: PrimeField> SumCheckProver<F> for IOPProverState<F> {
         // update prover's state to the partial evaluated polynomial
         self.poly.flattened_ml_extensions = flattened_ml_extensions
             .iter()
-            .map(|x| Rc::new(x.clone()))
+            .map(|x| Arc::new(x.clone()))
             .collect();
 
         // end_timer!(compute_sum);

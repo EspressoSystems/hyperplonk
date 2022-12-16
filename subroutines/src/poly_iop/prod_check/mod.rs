@@ -14,7 +14,7 @@ use ark_ec::PairingEngine;
 use ark_ff::{One, PrimeField, Zero};
 use ark_poly::DenseMultilinearExtension;
 use ark_std::{end_timer, start_timer};
-use std::rc::Rc;
+use std::sync::Arc;
 use transcript::IOPTranscript;
 
 mod util;
@@ -142,7 +142,7 @@ pub struct ProductCheckProof<
 impl<E, PCS> ProductCheck<E, PCS> for PolyIOP<E::Fr>
 where
     E: PairingEngine,
-    PCS: PolynomialCommitmentScheme<E, Polynomial = Rc<DenseMultilinearExtension<E::Fr>>>,
+    PCS: PolynomialCommitmentScheme<E, Polynomial = Arc<DenseMultilinearExtension<E::Fr>>>,
 {
     type ProductCheckSubClaim = ProductCheckSubClaim<E::Fr, Self>;
     type ProductCheckProof = ProductCheckProof<E, PCS, Self>;
@@ -257,12 +257,12 @@ mod test {
     use ark_ec::PairingEngine;
     use ark_poly::{DenseMultilinearExtension, MultilinearExtension};
     use ark_std::test_rng;
-    use std::{marker::PhantomData, rc::Rc};
+    use std::{marker::PhantomData, sync::Arc};
 
     fn check_frac_poly<E>(
-        frac_poly: &Rc<DenseMultilinearExtension<E::Fr>>,
-        fs: &[Rc<DenseMultilinearExtension<E::Fr>>],
-        gs: &[Rc<DenseMultilinearExtension<E::Fr>>],
+        frac_poly: &Arc<DenseMultilinearExtension<E::Fr>>,
+        fs: &[Arc<DenseMultilinearExtension<E::Fr>>],
+        gs: &[Arc<DenseMultilinearExtension<E::Fr>>],
     ) where
         E: PairingEngine,
     {
@@ -285,14 +285,14 @@ mod test {
     // fs and gs are guaranteed to have the same product
     // fs and hs doesn't have the same product
     fn test_product_check_helper<E, PCS>(
-        fs: &[Rc<DenseMultilinearExtension<E::Fr>>],
-        gs: &[Rc<DenseMultilinearExtension<E::Fr>>],
-        hs: &[Rc<DenseMultilinearExtension<E::Fr>>],
+        fs: &[Arc<DenseMultilinearExtension<E::Fr>>],
+        gs: &[Arc<DenseMultilinearExtension<E::Fr>>],
+        hs: &[Arc<DenseMultilinearExtension<E::Fr>>],
         pcs_param: &PCS::ProverParam,
     ) -> Result<(), PolyIOPErrors>
     where
         E: PairingEngine,
-        PCS: PolynomialCommitmentScheme<E, Polynomial = Rc<DenseMultilinearExtension<E::Fr>>>,
+        PCS: PolynomialCommitmentScheme<E, Polynomial = Arc<DenseMultilinearExtension<E::Fr>>>,
     {
         let mut transcript = <PolyIOP<E::Fr> as ProductCheck<E, PCS>>::init_transcript();
         transcript.append_message(b"testing", b"initializing transcript for testing")?;
@@ -352,11 +352,11 @@ mod test {
         let f2: DenseMultilinearExtension<Fr> = DenseMultilinearExtension::rand(nv, &mut rng);
         let mut g2 = f2.clone();
         g2.evaluations.reverse();
-        let fs = vec![Rc::new(f1), Rc::new(f2)];
-        let gs = vec![Rc::new(g2), Rc::new(g1)];
+        let fs = vec![Arc::new(f1), Arc::new(f2)];
+        let gs = vec![Arc::new(g2), Arc::new(g1)];
         let mut hs = vec![];
         for _ in 0..fs.len() {
-            hs.push(Rc::new(DenseMultilinearExtension::rand(
+            hs.push(Arc::new(DenseMultilinearExtension::rand(
                 fs[0].num_vars,
                 &mut rng,
             )));
