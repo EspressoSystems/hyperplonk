@@ -174,7 +174,7 @@ mod test {
         let _proof =
             <PolyIOP<BwFr> as HyperPlonkSNARK<BW6_761, MultilinearKzgPCS<BW6_761>>>::prove(
                 &pk,
-                &circuit.witnesses[0].0[..],
+                &circuit.witnesses[0].0[..4],
                 &circuit.witnesses[..],
             )?;
 
