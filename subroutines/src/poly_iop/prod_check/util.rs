@@ -2,7 +2,7 @@
 
 use crate::poly_iop::{errors::PolyIOPErrors, structs::IOPProof, zero_check::ZeroCheck, PolyIOP};
 use arithmetic::{get_index, VirtualPolynomial};
-use ark_ff::PrimeField;
+use ark_ff::{batch_inversion, PrimeField};
 use ark_poly::DenseMultilinearExtension;
 use ark_std::{end_timer, start_timer};
 use std::sync::Arc;
@@ -31,13 +31,15 @@ pub(super) fn compute_frac_poly<F: PrimeField>(
             *g_eval *= gi;
         }
     }
+    batch_inversion(&mut g_evals[..]);
+
     for (f_eval, g_eval) in f_evals.iter_mut().zip(g_evals.iter()) {
         if *g_eval == F::zero() {
             return Err(PolyIOPErrors::InvalidParameters(
                 "gxs has zero entries in the boolean hypercube".to_string(),
             ));
         }
-        *f_eval /= g_eval;
+        *f_eval *= g_eval;
     }
 
     end_timer!(start);
