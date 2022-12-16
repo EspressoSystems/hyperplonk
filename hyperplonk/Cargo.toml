@@ -24,6 +24,7 @@ rayon = { version = "1.5.2", default-features = false, optional = true }
 
 [dev-dependencies]
 ark-bls12-381 = { version = "0.3.0", default-features = false, features = [ "curve" ] }
+ark-bw6-761 = { version = "0.3.0", default-features = false }
 # Benchmarks
 [[bench]]
 name = "hyperplonk-benches"
