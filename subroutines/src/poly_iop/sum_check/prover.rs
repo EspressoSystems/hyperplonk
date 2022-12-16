@@ -9,7 +9,7 @@ use arithmetic::{fix_variables, VirtualPolynomial};
 use ark_ff::PrimeField;
 use ark_poly::DenseMultilinearExtension;
 use ark_std::{end_timer, start_timer, vec::Vec};
-use rayon::prelude::IntoParallelIterator;
+use rayon::prelude::{IntoParallelIterator, IntoParallelRefIterator};
 use std::sync::Arc;
 
 #[cfg(feature = "parallel")]
@@ -71,7 +71,7 @@ impl<F: PrimeField> SumCheckProver<F> for IOPProverState<F> {
         let mut flattened_ml_extensions: Vec<DenseMultilinearExtension<F>> = self
             .poly
             .flattened_ml_extensions
-            .iter()
+            .par_iter()
             .map(|x| x.as_ref().clone())
             .collect();
 
@@ -132,9 +132,7 @@ impl<F: PrimeField> SumCheckProver<F> for IOPProverState<F> {
                             }
                         })
                         .collect::<Vec<F>>();
-                    for val in evals.iter() {
-                        *e += val
-                    }
+                    *e += evals.par_iter().sum::<F>();
                 }
             } else {
                 for (t, e) in products_sum.iter_mut().enumerate() {
@@ -161,10 +159,7 @@ impl<F: PrimeField> SumCheckProver<F> for IOPProverState<F> {
                             tmp
                         })
                         .collect::<Vec<F>>();
-
-                    for i in products.iter() {
-                        *e += i
-                    }
+                    *e += products.par_iter().sum::<F>();
                 }
             }
         }
@@ -190,7 +185,7 @@ impl<F: PrimeField> SumCheckProver<F> for IOPProverState<F> {
 
         // update prover's state to the partial evaluated polynomial
         self.poly.flattened_ml_extensions = flattened_ml_extensions
-            .iter()
+            .par_iter()
             .map(|x| Arc::new(x.clone()))
             .collect();
 

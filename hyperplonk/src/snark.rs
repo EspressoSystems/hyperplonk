@@ -76,7 +76,7 @@ where
             .collect();
 
         let selector_commitments = selector_oracles
-            .iter()
+            .par_iter()
             .map(|poly| PCS::commit(&pcs_prover_param, poly))
             .collect::<Result<Vec<_>, _>>()?;
 
