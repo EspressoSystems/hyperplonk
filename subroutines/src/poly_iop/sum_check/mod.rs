@@ -9,7 +9,7 @@ use arithmetic::{VPAuxInfo, VirtualPolynomial};
 use ark_ff::PrimeField;
 use ark_poly::DenseMultilinearExtension;
 use ark_std::{end_timer, start_timer};
-use std::{fmt::Debug, rc::Rc};
+use std::{fmt::Debug, sync::Arc};
 use transcript::IOPTranscript;
 
 mod prover;
@@ -127,7 +127,7 @@ impl<F: PrimeField> SumCheck<F> for PolyIOP<F> {
     type SumCheckProof = IOPProof<F>;
     type VirtualPolynomial = VirtualPolynomial<F>;
     type VPAuxInfo = VPAuxInfo<F>;
-    type MultilinearExtension = Rc<DenseMultilinearExtension<F>>;
+    type MultilinearExtension = Arc<DenseMultilinearExtension<F>>;
     type SumCheckSubClaim = SumCheckSubClaim<F>;
     type Transcript = IOPTranscript<F>;
 
@@ -210,7 +210,7 @@ mod test {
     use ark_ff::UniformRand;
     use ark_poly::{DenseMultilinearExtension, MultilinearExtension};
     use ark_std::test_rng;
-    use std::rc::Rc;
+    use std::sync::Arc;
 
     fn test_sumcheck(
         nv: usize,
@@ -326,7 +326,7 @@ mod test {
     fn test_shared_reference() -> Result<(), PolyIOPErrors> {
         let mut rng = test_rng();
         let ml_extensions: Vec<_> = (0..5)
-            .map(|_| Rc::new(DenseMultilinearExtension::<Fr>::rand(8, &mut rng)))
+            .map(|_| Arc::new(DenseMultilinearExtension::<Fr>::rand(8, &mut rng)))
             .collect();
         let mut poly = VirtualPolynomial::new(8);
         poly.add_mle_list(

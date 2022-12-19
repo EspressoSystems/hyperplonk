@@ -8,7 +8,7 @@ use crate::{
 use ark_ec::PairingEngine;
 use ark_poly::DenseMultilinearExtension;
 use ark_std::{end_timer, start_timer};
-use std::rc::Rc;
+use std::sync::Arc;
 use transcript::IOPTranscript;
 
 /// A permutation subclaim consists of
@@ -95,7 +95,7 @@ where
 impl<E, PCS> PermutationCheck<E, PCS> for PolyIOP<E::Fr>
 where
     E: PairingEngine,
-    PCS: PolynomialCommitmentScheme<E, Polynomial = Rc<DenseMultilinearExtension<E::Fr>>>,
+    PCS: PolynomialCommitmentScheme<E, Polynomial = Arc<DenseMultilinearExtension<E::Fr>>>,
 {
     type PermutationCheckSubClaim = PermutationCheckSubClaim<E, PCS, Self>;
     type PermutationProof = Self::ProductCheckProof;
@@ -192,19 +192,19 @@ mod test {
     use ark_ec::PairingEngine;
     use ark_poly::{DenseMultilinearExtension, MultilinearExtension};
     use ark_std::test_rng;
-    use std::{marker::PhantomData, rc::Rc};
+    use std::{marker::PhantomData, sync::Arc};
 
     type KZG = MultilinearKzgPCS<Bls12_381>;
 
     fn test_permutation_check_helper<E, PCS>(
         pcs_param: &PCS::ProverParam,
-        fxs: &[Rc<DenseMultilinearExtension<E::Fr>>],
-        gxs: &[Rc<DenseMultilinearExtension<E::Fr>>],
-        perms: &[Rc<DenseMultilinearExtension<E::Fr>>],
+        fxs: &[Arc<DenseMultilinearExtension<E::Fr>>],
+        gxs: &[Arc<DenseMultilinearExtension<E::Fr>>],
+        perms: &[Arc<DenseMultilinearExtension<E::Fr>>],
     ) -> Result<(), PolyIOPErrors>
     where
         E: PairingEngine,
-        PCS: PolynomialCommitmentScheme<E, Polynomial = Rc<DenseMultilinearExtension<E::Fr>>>,
+        PCS: PolynomialCommitmentScheme<E, Polynomial = Arc<DenseMultilinearExtension<E::Fr>>>,
     {
         let nv = fxs[0].num_vars;
         // what's AuxInfo used for?
@@ -257,8 +257,8 @@ mod test {
             // good path: (w1, w2) is a permutation of (w1, w2) itself under the identify
             // map
             let ws = vec![
-                Rc::new(DenseMultilinearExtension::rand(nv, &mut rng)),
-                Rc::new(DenseMultilinearExtension::rand(nv, &mut rng)),
+                Arc::new(DenseMultilinearExtension::rand(nv, &mut rng)),
+                Arc::new(DenseMultilinearExtension::rand(nv, &mut rng)),
             ];
             // perms is the identity map
             test_permutation_check_helper::<Bls12_381, KZG>(&pcs_param, &ws, &ws, &id_perms)?;
@@ -267,8 +267,8 @@ mod test {
         {
             // good path: f = (w1, w2) is a permutation of g = (w2, w1) itself under a map
             let mut fs = vec![
-                Rc::new(DenseMultilinearExtension::rand(nv, &mut rng)),
-                Rc::new(DenseMultilinearExtension::rand(nv, &mut rng)),
+                Arc::new(DenseMultilinearExtension::rand(nv, &mut rng)),
+                Arc::new(DenseMultilinearExtension::rand(nv, &mut rng)),
             ];
             let gs = fs.clone();
             fs.reverse();
@@ -281,8 +281,8 @@ mod test {
         {
             // bad path 1: w is a not permutation of w itself under a random map
             let ws = vec![
-                Rc::new(DenseMultilinearExtension::rand(nv, &mut rng)),
-                Rc::new(DenseMultilinearExtension::rand(nv, &mut rng)),
+                Arc::new(DenseMultilinearExtension::rand(nv, &mut rng)),
+                Arc::new(DenseMultilinearExtension::rand(nv, &mut rng)),
             ];
             // perms is a random map
             let perms = random_permutation_mles(nv, 2, &mut rng);
@@ -296,12 +296,12 @@ mod test {
         {
             // bad path 2: f is a not permutation of g under a identity map
             let fs = vec![
-                Rc::new(DenseMultilinearExtension::rand(nv, &mut rng)),
-                Rc::new(DenseMultilinearExtension::rand(nv, &mut rng)),
+                Arc::new(DenseMultilinearExtension::rand(nv, &mut rng)),
+                Arc::new(DenseMultilinearExtension::rand(nv, &mut rng)),
             ];
             let gs = vec![
-                Rc::new(DenseMultilinearExtension::rand(nv, &mut rng)),
-                Rc::new(DenseMultilinearExtension::rand(nv, &mut rng)),
+                Arc::new(DenseMultilinearExtension::rand(nv, &mut rng)),
+                Arc::new(DenseMultilinearExtension::rand(nv, &mut rng)),
             ];
             // s_perm is the identity map
 

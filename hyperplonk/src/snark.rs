@@ -9,7 +9,10 @@ use arithmetic::{evaluate_opt, gen_eval_point, VPAuxInfo};
 use ark_ec::PairingEngine;
 use ark_poly::DenseMultilinearExtension;
 use ark_std::{end_timer, log2, start_timer, One, Zero};
-use std::{marker::PhantomData, rc::Rc};
+use rayon::iter::IntoParallelRefIterator;
+#[cfg(feature = "parallel")]
+use rayon::iter::ParallelIterator;
+use std::{marker::PhantomData, sync::Arc};
 use subroutines::{
     pcs::prelude::{Commitment, PolynomialCommitmentScheme},
     poly_iop::{
@@ -28,7 +31,7 @@ where
     // we cannot bound PCS::Polynomial with a property trait bound.
     PCS: PolynomialCommitmentScheme<
         E,
-        Polynomial = Rc<DenseMultilinearExtension<E::Fr>>,
+        Polynomial = Arc<DenseMultilinearExtension<E::Fr>>,
         Point = Vec<E::Fr>,
         Evaluation = E::Fr,
         Commitment = Commitment<E>,
@@ -56,7 +59,7 @@ where
         let mut perm_comms = vec![];
         let chunk_size = 1 << num_vars;
         for i in 0..index.num_witness_columns() {
-            let perm_oracle = Rc::new(DenseMultilinearExtension::from_evaluations_slice(
+            let perm_oracle = Arc::new(DenseMultilinearExtension::from_evaluations_slice(
                 num_vars,
                 &index.permutation[i * chunk_size..(i + 1) * chunk_size],
             ));
@@ -66,14 +69,14 @@ where
         }
 
         // build selector oracles and commit to it
-        let selector_oracles: Vec<Rc<DenseMultilinearExtension<E::Fr>>> = index
+        let selector_oracles: Vec<Arc<DenseMultilinearExtension<E::Fr>>> = index
             .selectors
             .iter()
-            .map(|s| Rc::new(DenseMultilinearExtension::from(s)))
+            .map(|s| Arc::new(DenseMultilinearExtension::from(s)))
             .collect();
 
         let selector_commitments = selector_oracles
-            .iter()
+            .par_iter()
             .map(|poly| PCS::commit(&pcs_prover_param, poly))
             .collect::<Result<Vec<_>, _>>()?;
 
@@ -168,13 +171,13 @@ where
         // =======================================================================
         let step = start_timer!(|| "commit witnesses");
 
-        let witness_polys: Vec<Rc<DenseMultilinearExtension<E::Fr>>> = witnesses
+        let witness_polys: Vec<Arc<DenseMultilinearExtension<E::Fr>>> = witnesses
             .iter()
-            .map(|w| Rc::new(DenseMultilinearExtension::from(w)))
+            .map(|w| Arc::new(DenseMultilinearExtension::from(w)))
             .collect();
 
         let witness_commits = witness_polys
-            .iter()
+            .par_iter()
             .map(|x| PCS::commit(&pk.pcs_param, x).unwrap())
             .collect::<Vec<_>>();
         for w_com in witness_commits.iter() {
@@ -663,15 +666,15 @@ mod tests {
         let w1 = WitnessColumn(vec![
             E::Fr::zero(),
             E::Fr::one(),
-            E::Fr::from(2u64),
-            E::Fr::from(3u64),
+            E::Fr::from(2u128),
+            E::Fr::from(3u128),
         ]);
         // w2 := [0^5, 1^5, 2^5, 3^5]
         let w2 = WitnessColumn(vec![
             E::Fr::zero(),
             E::Fr::one(),
-            E::Fr::from(32u64),
-            E::Fr::from(243u64),
+            E::Fr::from(32u128),
+            E::Fr::from(243u128),
         ]);
         // public input = w1
         let pi = w1.clone();

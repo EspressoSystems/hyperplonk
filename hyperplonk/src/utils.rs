@@ -6,7 +6,7 @@ use arithmetic::{evaluate_opt, VirtualPolynomial};
 use ark_ec::PairingEngine;
 use ark_ff::PrimeField;
 use ark_poly::DenseMultilinearExtension;
-use std::{borrow::Borrow, rc::Rc};
+use std::{borrow::Borrow, sync::Arc};
 use subroutines::pcs::{prelude::Commitment, PolynomialCommitmentScheme};
 use transcript::IOPTranscript;
 
@@ -32,7 +32,7 @@ where
     E: PairingEngine,
     PCS: PolynomialCommitmentScheme<
         E,
-        Polynomial = Rc<DenseMultilinearExtension<E::Fr>>,
+        Polynomial = Arc<DenseMultilinearExtension<E::Fr>>,
         Point = Vec<E::Fr>,
         Evaluation = E::Fr,
         Commitment = Commitment<E>,
@@ -104,7 +104,7 @@ macro_rules! build_mle {
             for row in $rows.iter() {
                 cur_coeffs.push(row.0[i])
             }
-            res.push(Rc::new(DenseMultilinearExtension::from_evaluations_vec(
+            res.push(Arc::new(DenseMultilinearExtension::from_evaluations_vec(
                 num_vars, cur_coeffs,
             )))
         }
@@ -178,8 +178,8 @@ pub(crate) fn prover_sanity_check<F: PrimeField>(
 pub(crate) fn build_f<F: PrimeField>(
     gates: &CustomizedGates,
     num_vars: usize,
-    selector_mles: &[Rc<DenseMultilinearExtension<F>>],
-    witness_mles: &[Rc<DenseMultilinearExtension<F>>],
+    selector_mles: &[Arc<DenseMultilinearExtension<F>>],
+    witness_mles: &[Arc<DenseMultilinearExtension<F>>],
 ) -> Result<VirtualPolynomial<F>, HyperPlonkErrors> {
     // TODO: check that selector and witness lengths match what is in
     // the gate definition
@@ -306,7 +306,7 @@ mod test {
         // 1, 0 |-> 0
         // 1, 1 |-> 5
         let ql_eval = vec![F::zero(), F::from(2u64), F::zero(), F::from(5u64)];
-        let ql = Rc::new(DenseMultilinearExtension::from_evaluations_vec(2, ql_eval));
+        let ql = Arc::new(DenseMultilinearExtension::from_evaluations_vec(2, ql_eval));
 
         // W1 = x1x2 + x1 whose evaluations are
         // 0, 0 |-> 0
@@ -314,7 +314,7 @@ mod test {
         // 1, 0 |-> 1
         // 1, 1 |-> 2
         let w_eval = vec![F::zero(), F::zero(), F::from(1u64), F::from(2u64)];
-        let w1 = Rc::new(DenseMultilinearExtension::from_evaluations_vec(2, w_eval));
+        let w1 = Arc::new(DenseMultilinearExtension::from_evaluations_vec(2, w_eval));
 
         // W2 = x1 + x2 whose evaluations are
         // 0, 0 |-> 0
@@ -322,7 +322,7 @@ mod test {
         // 1, 0 |-> 1
         // 1, 1 |-> 2
         let w_eval = vec![F::zero(), F::one(), F::from(1u64), F::from(2u64)];
-        let w2 = Rc::new(DenseMultilinearExtension::from_evaluations_vec(2, w_eval));
+        let w2 = Arc::new(DenseMultilinearExtension::from_evaluations_vec(2, w_eval));
 
         // Example:
         //     q_L(X) * W_1(X)^5 - W_2(X)

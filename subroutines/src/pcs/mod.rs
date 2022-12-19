@@ -17,19 +17,13 @@ use transcript::IOPTranscript;
 /// Note that for our usage of PCS, we do not require the hiding property.
 pub trait PolynomialCommitmentScheme<E: PairingEngine> {
     /// Prover parameters
-    type ProverParam: Clone;
+    type ProverParam: Clone + Sync;
     /// Verifier parameters
     type VerifierParam: Clone + CanonicalSerialize + CanonicalDeserialize;
     /// Structured reference string
     type SRS: Clone + Debug;
     /// Polynomial and its associated types
-    type Polynomial: Clone
-        + Debug
-        + Hash
-        + PartialEq
-        + Eq
-        + CanonicalSerialize
-        + CanonicalDeserialize;
+    type Polynomial: Clone + Debug + Hash + PartialEq + Eq;
     /// Polynomial input domain
     type Point: Clone + Ord + Debug + Sync + Hash + PartialEq + Eq;
     /// Polynomial Evaluation

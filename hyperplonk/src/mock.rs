@@ -238,8 +238,8 @@ mod test {
             MultilinearKzgPCS::<Bls12_381>::gen_srs_for_testing(&mut rng, SUPPORTED_SIZE)?;
         let nv = MAX_NUM_VARS;
 
-        let vanilla_gate = CustomizedGates::vanilla_plonk_gate();
-        test_mock_circuit_zkp_helper(nv, &vanilla_gate, &pcs_srs)?;
+        let turboplonk_gate = CustomizedGates::jellyfish_turbo_plonk_gate();
+        test_mock_circuit_zkp_helper(nv, &turboplonk_gate, &pcs_srs)?;
 
         Ok(())
     }

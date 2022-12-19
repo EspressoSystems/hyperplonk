@@ -17,7 +17,8 @@ use arithmetic::{build_eq_x_r_vec, DenseMultilinearExtension, VPAuxInfo, Virtual
 use ark_ec::{msm::VariableBaseMSM, PairingEngine, ProjectiveCurve};
 use ark_ff::PrimeField;
 use ark_std::{end_timer, log2, start_timer, One, Zero};
-use std::{marker::PhantomData, rc::Rc};
+use rayon::prelude::{IntoParallelRefIterator, ParallelIterator};
+use std::{marker::PhantomData, sync::Arc};
 use transcript::IOPTranscript;
 
 #[derive(Clone, Debug, Default, PartialEq, Eq)]
@@ -53,7 +54,7 @@ where
     E: PairingEngine,
     PCS: PolynomialCommitmentScheme<
         E,
-        Polynomial = Rc<DenseMultilinearExtension<E::Fr>>,
+        Polynomial = Arc<DenseMultilinearExtension<E::Fr>>,
         Point = Vec<E::Fr>,
         Evaluation = E::Fr,
     >,
@@ -79,7 +80,7 @@ where
         for (j, &f_i_eval) in f_i.iter().enumerate() {
             tilde_g_eval[j] = f_i_eval * eq_t_i_list[index];
         }
-        tilde_gs.push(Rc::new(DenseMultilinearExtension::from_evaluations_vec(
+        tilde_gs.push(Arc::new(DenseMultilinearExtension::from_evaluations_vec(
             num_var,
             tilde_g_eval,
         )));
@@ -87,13 +88,15 @@ where
     end_timer!(timer);
 
     let timer = start_timer!(|| format!("compute tilde eq for {} points", points.len()));
-    let mut tilde_eqs = vec![];
-    for point in points.iter() {
-        let eq_b_zi = build_eq_x_r_vec(point)?;
-        tilde_eqs.push(Rc::new(DenseMultilinearExtension::from_evaluations_vec(
-            num_var, eq_b_zi,
-        )));
-    }
+    let tilde_eqs: Vec<Arc<DenseMultilinearExtension<<E as PairingEngine>::Fr>>> = points
+        .par_iter()
+        .map(|point| {
+            let eq_b_zi = build_eq_x_r_vec(point).unwrap();
+            Arc::new(DenseMultilinearExtension::from_evaluations_vec(
+                num_var, eq_b_zi,
+            ))
+        })
+        .collect();
     end_timer!(timer);
 
     // built the virtual polynomial for SumCheck
@@ -131,7 +134,7 @@ where
             g_prime_evals[j] += tilde_g_eval * eq_i_a2;
         }
     }
-    let g_prime = Rc::new(DenseMultilinearExtension::from_evaluations_vec(
+    let g_prime = Arc::new(DenseMultilinearExtension::from_evaluations_vec(
         num_var,
         g_prime_evals,
     ));
@@ -169,7 +172,7 @@ where
     E: PairingEngine,
     PCS: PolynomialCommitmentScheme<
         E,
-        Polynomial = Rc<DenseMultilinearExtension<E::Fr>>,
+        Polynomial = Arc<DenseMultilinearExtension<E::Fr>>,
         Point = Vec<E::Fr>,
         Evaluation = E::Fr,
         Commitment = Commitment<E>,
@@ -265,7 +268,7 @@ mod tests {
 
     fn test_multi_open_helper<R: RngCore + CryptoRng>(
         ml_params: &MultilinearUniversalParams<E>,
-        polys: &[Rc<DenseMultilinearExtension<Fr>>],
+        polys: &[Arc<DenseMultilinearExtension<Fr>>],
         rng: &mut R,
     ) -> Result<(), PCSError> {
         let merged_nv = get_batched_nv(polys[0].num_vars(), polys.len());
@@ -323,7 +326,7 @@ mod tests {
         for num_poly in 5..6 {
             for nv in 15..16 {
                 let polys1: Vec<_> = (0..num_poly)
-                    .map(|_| Rc::new(DenseMultilinearExtension::rand(nv, &mut rng)))
+                    .map(|_| Arc::new(DenseMultilinearExtension::rand(nv, &mut rng)))
                     .collect();
                 test_multi_open_helper(&ml_params, &polys1, &mut rng)?;
             }

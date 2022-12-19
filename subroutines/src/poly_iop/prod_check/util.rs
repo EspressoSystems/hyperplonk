@@ -2,10 +2,10 @@
 
 use crate::poly_iop::{errors::PolyIOPErrors, structs::IOPProof, zero_check::ZeroCheck, PolyIOP};
 use arithmetic::{get_index, VirtualPolynomial};
-use ark_ff::PrimeField;
+use ark_ff::{batch_inversion, PrimeField};
 use ark_poly::DenseMultilinearExtension;
 use ark_std::{end_timer, start_timer};
-use std::rc::Rc;
+use std::sync::Arc;
 use transcript::IOPTranscript;
 
 /// Compute multilinear fractional polynomial s.t. frac(x) = f1(x) * ... * fk(x)
@@ -14,9 +14,9 @@ use transcript::IOPTranscript;
 /// The caller needs to sanity-check that the number of polynomials and
 /// variables match in fxs and gxs; and gi(x) has no zero entries.
 pub(super) fn compute_frac_poly<F: PrimeField>(
-    fxs: &[Rc<DenseMultilinearExtension<F>>],
-    gxs: &[Rc<DenseMultilinearExtension<F>>],
-) -> Result<Rc<DenseMultilinearExtension<F>>, PolyIOPErrors> {
+    fxs: &[Arc<DenseMultilinearExtension<F>>],
+    gxs: &[Arc<DenseMultilinearExtension<F>>],
+) -> Result<Arc<DenseMultilinearExtension<F>>, PolyIOPErrors> {
     let start = start_timer!(|| "compute frac(x)");
 
     let mut f_evals = vec![F::one(); 1 << fxs[0].num_vars];
@@ -31,17 +31,19 @@ pub(super) fn compute_frac_poly<F: PrimeField>(
             *g_eval *= gi;
         }
     }
+    batch_inversion(&mut g_evals[..]);
+
     for (f_eval, g_eval) in f_evals.iter_mut().zip(g_evals.iter()) {
         if *g_eval == F::zero() {
             return Err(PolyIOPErrors::InvalidParameters(
                 "gxs has zero entries in the boolean hypercube".to_string(),
             ));
         }
-        *f_eval /= g_eval;
+        *f_eval *= g_eval;
     }
 
     end_timer!(start);
-    Ok(Rc::new(DenseMultilinearExtension::from_evaluations_vec(
+    Ok(Arc::new(DenseMultilinearExtension::from_evaluations_vec(
         fxs[0].num_vars,
         f_evals,
     )))
@@ -55,8 +57,8 @@ pub(super) fn compute_frac_poly<F: PrimeField>(
 /// The caller needs to check num_vars matches in f and g
 /// Cost: linear in N.
 pub(super) fn compute_product_poly<F: PrimeField>(
-    frac_poly: &Rc<DenseMultilinearExtension<F>>,
-) -> Result<Rc<DenseMultilinearExtension<F>>, PolyIOPErrors> {
+    frac_poly: &Arc<DenseMultilinearExtension<F>>,
+) -> Result<Arc<DenseMultilinearExtension<F>>, PolyIOPErrors> {
     let start = start_timer!(|| "compute evaluations of prod polynomial");
     let num_vars = frac_poly.num_vars;
     let frac_evals = &frac_poly.evaluations;
@@ -96,7 +98,7 @@ pub(super) fn compute_product_poly<F: PrimeField>(
     prod_x_evals.push(F::zero());
     end_timer!(start);
 
-    Ok(Rc::new(DenseMultilinearExtension::from_evaluations_vec(
+    Ok(Arc::new(DenseMultilinearExtension::from_evaluations_vec(
         num_vars,
         prod_x_evals,
     )))
@@ -111,10 +113,10 @@ pub(super) fn compute_product_poly<F: PrimeField>(
 ///
 /// Cost: O(N)
 pub(super) fn prove_zero_check<F: PrimeField>(
-    fxs: &[Rc<DenseMultilinearExtension<F>>],
-    gxs: &[Rc<DenseMultilinearExtension<F>>],
-    frac_poly: &Rc<DenseMultilinearExtension<F>>,
-    prod_x: &Rc<DenseMultilinearExtension<F>>,
+    fxs: &[Arc<DenseMultilinearExtension<F>>],
+    gxs: &[Arc<DenseMultilinearExtension<F>>],
+    frac_poly: &Arc<DenseMultilinearExtension<F>>,
+    prod_x: &Arc<DenseMultilinearExtension<F>>,
     alpha: &F,
     transcript: &mut IOPTranscript<F>,
 ) -> Result<(IOPProof<F>, VirtualPolynomial<F>), PolyIOPErrors> {
@@ -135,10 +137,10 @@ pub(super) fn prove_zero_check<F: PrimeField>(
             p2_evals[x] = prod_x.evaluations[x1];
         }
     }
-    let p1 = Rc::new(DenseMultilinearExtension::from_evaluations_vec(
+    let p1 = Arc::new(DenseMultilinearExtension::from_evaluations_vec(
         num_vars, p1_evals,
     ));
-    let p2 = Rc::new(DenseMultilinearExtension::from_evaluations_vec(
+    let p2 = Arc::new(DenseMultilinearExtension::from_evaluations_vec(
         num_vars, p2_evals,
     ));
 

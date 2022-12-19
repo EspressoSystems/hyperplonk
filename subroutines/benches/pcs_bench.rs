@@ -1,7 +1,7 @@
 use ark_bls12_381::{Bls12_381, Fr};
 use ark_ff::UniformRand;
 use ark_poly::{DenseMultilinearExtension, MultilinearExtension};
-use ark_std::{rc::Rc, test_rng};
+use ark_std::{sync::Arc, test_rng};
 use std::time::Instant;
 use subroutines::pcs::{
     prelude::{MultilinearKzgPCS, PCSError, PolynomialCommitmentScheme},
@@ -27,7 +27,7 @@ fn bench_pcs() -> Result<(), PCSError> {
             2
         };
 
-        let poly = Rc::new(DenseMultilinearExtension::rand(nv, &mut rng));
+        let poly = Arc::new(DenseMultilinearExtension::rand(nv, &mut rng));
         let (ck, vk) = uni_params.trim(nv)?;
 
         let point: Vec<_> = (0..nv).map(|_| Fr::rand(&mut rng)).collect();
