@@ -11,7 +11,7 @@ pub use ark_poly::DenseMultilinearExtension;
 /// Sample a random list of multilinear polynomials.
 /// Returns
 /// - the list of polynomials,
-/// - its sum of polynomial evaluations over the boolean hypeArcube.
+/// - its sum of polynomial evaluations over the boolean hypercube.
 pub fn random_mle_list<F: PrimeField, R: RngCore>(
     nv: usize,
     degree: usize,
