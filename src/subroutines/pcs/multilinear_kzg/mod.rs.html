@@ -432,9 +432,9 @@
     end_timer, format,
     marker::PhantomData,
     rand::{CryptoRng, RngCore},
-    rc::Rc,
     start_timer,
     string::ToString,
+    sync::Arc,
     vec,
     vec::Vec,
     One, Zero,
@@ -464,7 +464,7 @@
     <span class="kw">type </span>VerifierParam = MultilinearVerifierParam&lt;E&gt;;
     <span class="kw">type </span>SRS = MultilinearUniversalParams&lt;E&gt;;
     <span class="comment">// Polynomial and its associated types
-    </span><span class="kw">type </span>Polynomial = Rc&lt;DenseMultilinearExtension&lt;E::Fr&gt;&gt;;
+    </span><span class="kw">type </span>Polynomial = Arc&lt;DenseMultilinearExtension&lt;E::Fr&gt;&gt;;
     <span class="kw">type </span>Point = Vec&lt;E::Fr&gt;;
     <span class="kw">type </span>Evaluation = E::Fr;
     <span class="comment">// Commitments and proofs
@@ -761,7 +761,7 @@
 
     <span class="kw">fn </span>test_single_helper&lt;R: RngCore + CryptoRng&gt;(
         params: <span class="kw-2">&amp;</span>MultilinearUniversalParams&lt;E&gt;,
-        poly: <span class="kw-2">&amp;</span>Rc&lt;DenseMultilinearExtension&lt;Fr&gt;&gt;,
+        poly: <span class="kw-2">&amp;</span>Arc&lt;DenseMultilinearExtension&lt;Fr&gt;&gt;,
         rng: <span class="kw-2">&amp;mut </span>R,
     ) -&gt; <span class="prelude-ty">Result</span>&lt;(), PCSError&gt; {
         <span class="kw">let </span>nv = poly.num_vars();
@@ -790,11 +790,11 @@
         <span class="kw">let </span>params = MultilinearKzgPCS::&lt;E&gt;::gen_srs_for_testing(<span class="kw-2">&amp;mut </span>rng, <span class="number">10</span>)<span class="question-mark">?</span>;
 
         <span class="comment">// normal polynomials
-        </span><span class="kw">let </span>poly1 = Rc::new(DenseMultilinearExtension::rand(<span class="number">8</span>, <span class="kw-2">&amp;mut </span>rng));
+        </span><span class="kw">let </span>poly1 = Arc::new(DenseMultilinearExtension::rand(<span class="number">8</span>, <span class="kw-2">&amp;mut </span>rng));
         test_single_helper(<span class="kw-2">&amp;</span>params, <span class="kw-2">&amp;</span>poly1, <span class="kw-2">&amp;mut </span>rng)<span class="question-mark">?</span>;
 
         <span class="comment">// single-variate polynomials
-        </span><span class="kw">let </span>poly2 = Rc::new(DenseMultilinearExtension::rand(<span class="number">1</span>, <span class="kw-2">&amp;mut </span>rng));
+        </span><span class="kw">let </span>poly2 = Arc::new(DenseMultilinearExtension::rand(<span class="number">1</span>, <span class="kw-2">&amp;mut </span>rng));
         test_single_helper(<span class="kw-2">&amp;</span>params, <span class="kw-2">&amp;</span>poly2, <span class="kw-2">&amp;mut </span>rng)<span class="question-mark">?</span>;
 
         <span class="prelude-val">Ok</span>(())

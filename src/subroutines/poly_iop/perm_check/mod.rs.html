@@ -339,7 +339,7 @@
 <span class="kw">use </span>ark_ec::PairingEngine;
 <span class="kw">use </span>ark_poly::DenseMultilinearExtension;
 <span class="kw">use </span>ark_std::{end_timer, start_timer};
-<span class="kw">use </span>std::rc::Rc;
+<span class="kw">use </span>std::sync::Arc;
 <span class="kw">use </span>transcript::IOPTranscript;
 
 <span class="doccomment">/// A permutation subclaim consists of
@@ -426,7 +426,7 @@
 <span class="kw">impl</span>&lt;E, PCS&gt; PermutationCheck&lt;E, PCS&gt; <span class="kw">for </span>PolyIOP&lt;E::Fr&gt;
 <span class="kw">where
     </span>E: PairingEngine,
-    PCS: PolynomialCommitmentScheme&lt;E, Polynomial = Rc&lt;DenseMultilinearExtension&lt;E::Fr&gt;&gt;&gt;,
+    PCS: PolynomialCommitmentScheme&lt;E, Polynomial = Arc&lt;DenseMultilinearExtension&lt;E::Fr&gt;&gt;&gt;,
 {
     <span class="kw">type </span>PermutationCheckSubClaim = PermutationCheckSubClaim&lt;E, PCS, <span class="self">Self</span>&gt;;
     <span class="kw">type </span>PermutationProof = <span class="self">Self</span>::ProductCheckProof;
@@ -523,19 +523,19 @@
     <span class="kw">use </span>ark_ec::PairingEngine;
     <span class="kw">use </span>ark_poly::{DenseMultilinearExtension, MultilinearExtension};
     <span class="kw">use </span>ark_std::test_rng;
-    <span class="kw">use </span>std::{marker::PhantomData, rc::Rc};
+    <span class="kw">use </span>std::{marker::PhantomData, sync::Arc};
 
     <span class="kw">type </span>KZG = MultilinearKzgPCS&lt;Bls12_381&gt;;
 
     <span class="kw">fn </span>test_permutation_check_helper&lt;E, PCS&gt;(
         pcs_param: <span class="kw-2">&amp;</span>PCS::ProverParam,
-        fxs: <span class="kw-2">&amp;</span>[Rc&lt;DenseMultilinearExtension&lt;E::Fr&gt;&gt;],
-        gxs: <span class="kw-2">&amp;</span>[Rc&lt;DenseMultilinearExtension&lt;E::Fr&gt;&gt;],
-        perms: <span class="kw-2">&amp;</span>[Rc&lt;DenseMultilinearExtension&lt;E::Fr&gt;&gt;],
+        fxs: <span class="kw-2">&amp;</span>[Arc&lt;DenseMultilinearExtension&lt;E::Fr&gt;&gt;],
+        gxs: <span class="kw-2">&amp;</span>[Arc&lt;DenseMultilinearExtension&lt;E::Fr&gt;&gt;],
+        perms: <span class="kw-2">&amp;</span>[Arc&lt;DenseMultilinearExtension&lt;E::Fr&gt;&gt;],
     ) -&gt; <span class="prelude-ty">Result</span>&lt;(), PolyIOPErrors&gt;
     <span class="kw">where
         </span>E: PairingEngine,
-        PCS: PolynomialCommitmentScheme&lt;E, Polynomial = Rc&lt;DenseMultilinearExtension&lt;E::Fr&gt;&gt;&gt;,
+        PCS: PolynomialCommitmentScheme&lt;E, Polynomial = Arc&lt;DenseMultilinearExtension&lt;E::Fr&gt;&gt;&gt;,
     {
         <span class="kw">let </span>nv = fxs[<span class="number">0</span>].num_vars;
         <span class="comment">// what&#39;s AuxInfo used for?
@@ -588,8 +588,8 @@
             <span class="comment">// good path: (w1, w2) is a permutation of (w1, w2) itself under the identify
             // map
             </span><span class="kw">let </span>ws = <span class="macro">vec!</span>[
-                Rc::new(DenseMultilinearExtension::rand(nv, <span class="kw-2">&amp;mut </span>rng)),
-                Rc::new(DenseMultilinearExtension::rand(nv, <span class="kw-2">&amp;mut </span>rng)),
+                Arc::new(DenseMultilinearExtension::rand(nv, <span class="kw-2">&amp;mut </span>rng)),
+                Arc::new(DenseMultilinearExtension::rand(nv, <span class="kw-2">&amp;mut </span>rng)),
             ];
             <span class="comment">// perms is the identity map
             </span>test_permutation_check_helper::&lt;Bls12_381, KZG&gt;(<span class="kw-2">&amp;</span>pcs_param, <span class="kw-2">&amp;</span>ws, <span class="kw-2">&amp;</span>ws, <span class="kw-2">&amp;</span>id_perms)<span class="question-mark">?</span>;
@@ -598,8 +598,8 @@
         {
             <span class="comment">// good path: f = (w1, w2) is a permutation of g = (w2, w1) itself under a map
             </span><span class="kw">let </span><span class="kw-2">mut </span>fs = <span class="macro">vec!</span>[
-                Rc::new(DenseMultilinearExtension::rand(nv, <span class="kw-2">&amp;mut </span>rng)),
-                Rc::new(DenseMultilinearExtension::rand(nv, <span class="kw-2">&amp;mut </span>rng)),
+                Arc::new(DenseMultilinearExtension::rand(nv, <span class="kw-2">&amp;mut </span>rng)),
+                Arc::new(DenseMultilinearExtension::rand(nv, <span class="kw-2">&amp;mut </span>rng)),
             ];
             <span class="kw">let </span>gs = fs.clone();
             fs.reverse();
@@ -612,8 +612,8 @@
         {
             <span class="comment">// bad path 1: w is a not permutation of w itself under a random map
             </span><span class="kw">let </span>ws = <span class="macro">vec!</span>[
-                Rc::new(DenseMultilinearExtension::rand(nv, <span class="kw-2">&amp;mut </span>rng)),
-                Rc::new(DenseMultilinearExtension::rand(nv, <span class="kw-2">&amp;mut </span>rng)),
+                Arc::new(DenseMultilinearExtension::rand(nv, <span class="kw-2">&amp;mut </span>rng)),
+                Arc::new(DenseMultilinearExtension::rand(nv, <span class="kw-2">&amp;mut </span>rng)),
             ];
             <span class="comment">// perms is a random map
             </span><span class="kw">let </span>perms = random_permutation_mles(nv, <span class="number">2</span>, <span class="kw-2">&amp;mut </span>rng);
@@ -627,12 +627,12 @@
         {
             <span class="comment">// bad path 2: f is a not permutation of g under a identity map
             </span><span class="kw">let </span>fs = <span class="macro">vec!</span>[
-                Rc::new(DenseMultilinearExtension::rand(nv, <span class="kw-2">&amp;mut </span>rng)),
-                Rc::new(DenseMultilinearExtension::rand(nv, <span class="kw-2">&amp;mut </span>rng)),
+                Arc::new(DenseMultilinearExtension::rand(nv, <span class="kw-2">&amp;mut </span>rng)),
+                Arc::new(DenseMultilinearExtension::rand(nv, <span class="kw-2">&amp;mut </span>rng)),
             ];
             <span class="kw">let </span>gs = <span class="macro">vec!</span>[
-                Rc::new(DenseMultilinearExtension::rand(nv, <span class="kw-2">&amp;mut </span>rng)),
-                Rc::new(DenseMultilinearExtension::rand(nv, <span class="kw-2">&amp;mut </span>rng)),
+                Arc::new(DenseMultilinearExtension::rand(nv, <span class="kw-2">&amp;mut </span>rng)),
+                Arc::new(DenseMultilinearExtension::rand(nv, <span class="kw-2">&amp;mut </span>rng)),
             ];
             <span class="comment">// s_perm is the identity map
 

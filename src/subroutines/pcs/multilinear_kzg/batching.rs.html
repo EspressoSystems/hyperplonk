@@ -332,6 +332,9 @@
 <span id="332">332</span>
 <span id="333">333</span>
 <span id="334">334</span>
+<span id="335">335</span>
+<span id="336">336</span>
+<span id="337">337</span>
 </pre><pre class="rust"><code><span class="doccomment">//! Sumcheck based batch opening and verify commitment.
 </span><span class="comment">// TODO: refactoring this code to somewhere else
 // currently IOP depends on PCS because perm check requires commitment.
@@ -351,7 +354,8 @@
 <span class="kw">use </span>ark_ec::{msm::VariableBaseMSM, PairingEngine, ProjectiveCurve};
 <span class="kw">use </span>ark_ff::PrimeField;
 <span class="kw">use </span>ark_std::{end_timer, log2, start_timer, One, Zero};
-<span class="kw">use </span>std::{marker::PhantomData, rc::Rc};
+<span class="kw">use </span>rayon::prelude::{IntoParallelRefIterator, ParallelIterator};
+<span class="kw">use </span>std::{marker::PhantomData, sync::Arc};
 <span class="kw">use </span>transcript::IOPTranscript;
 
 <span class="attribute">#[derive(Clone, Debug, Default, PartialEq, Eq)]
@@ -387,7 +391,7 @@
     </span>E: PairingEngine,
     PCS: PolynomialCommitmentScheme&lt;
         E,
-        Polynomial = Rc&lt;DenseMultilinearExtension&lt;E::Fr&gt;&gt;,
+        Polynomial = Arc&lt;DenseMultilinearExtension&lt;E::Fr&gt;&gt;,
         Point = Vec&lt;E::Fr&gt;,
         Evaluation = E::Fr,
     &gt;,
@@ -413,7 +417,7 @@
         <span class="kw">for </span>(j, <span class="kw-2">&amp;</span>f_i_eval) <span class="kw">in </span>f_i.iter().enumerate() {
             tilde_g_eval[j] = f_i_eval * eq_t_i_list[index];
         }
-        tilde_gs.push(Rc::new(DenseMultilinearExtension::from_evaluations_vec(
+        tilde_gs.push(Arc::new(DenseMultilinearExtension::from_evaluations_vec(
             num_var,
             tilde_g_eval,
         )));
@@ -421,13 +425,15 @@
     <span class="macro">end_timer!</span>(timer);
 
     <span class="kw">let </span>timer = <span class="macro">start_timer!</span>(|| <span class="macro">format!</span>(<span class="string">&quot;compute tilde eq for {} points&quot;</span>, points.len()));
-    <span class="kw">let </span><span class="kw-2">mut </span>tilde_eqs = <span class="macro">vec!</span>[];
-    <span class="kw">for </span>point <span class="kw">in </span>points.iter() {
-        <span class="kw">let </span>eq_b_zi = build_eq_x_r_vec(point)<span class="question-mark">?</span>;
-        tilde_eqs.push(Rc::new(DenseMultilinearExtension::from_evaluations_vec(
-            num_var, eq_b_zi,
-        )));
-    }
+    <span class="kw">let </span>tilde_eqs: Vec&lt;Arc&lt;DenseMultilinearExtension&lt;&lt;E <span class="kw">as </span>PairingEngine&gt;::Fr&gt;&gt;&gt; = points
+        .par_iter()
+        .map(|point| {
+            <span class="kw">let </span>eq_b_zi = build_eq_x_r_vec(point).unwrap();
+            Arc::new(DenseMultilinearExtension::from_evaluations_vec(
+                num_var, eq_b_zi,
+            ))
+        })
+        .collect();
     <span class="macro">end_timer!</span>(timer);
 
     <span class="comment">// built the virtual polynomial for SumCheck
@@ -465,7 +471,7 @@
             g_prime_evals[j] += tilde_g_eval * eq_i_a2;
         }
     }
-    <span class="kw">let </span>g_prime = Rc::new(DenseMultilinearExtension::from_evaluations_vec(
+    <span class="kw">let </span>g_prime = Arc::new(DenseMultilinearExtension::from_evaluations_vec(
         num_var,
         g_prime_evals,
     ));
@@ -503,7 +509,7 @@
     </span>E: PairingEngine,
     PCS: PolynomialCommitmentScheme&lt;
         E,
-        Polynomial = Rc&lt;DenseMultilinearExtension&lt;E::Fr&gt;&gt;,
+        Polynomial = Arc&lt;DenseMultilinearExtension&lt;E::Fr&gt;&gt;,
         Point = Vec&lt;E::Fr&gt;,
         Evaluation = E::Fr,
         Commitment = Commitment&lt;E&gt;,
@@ -599,7 +605,7 @@
 
     <span class="kw">fn </span>test_multi_open_helper&lt;R: RngCore + CryptoRng&gt;(
         ml_params: <span class="kw-2">&amp;</span>MultilinearUniversalParams&lt;E&gt;,
-        polys: <span class="kw-2">&amp;</span>[Rc&lt;DenseMultilinearExtension&lt;Fr&gt;&gt;],
+        polys: <span class="kw-2">&amp;</span>[Arc&lt;DenseMultilinearExtension&lt;Fr&gt;&gt;],
         rng: <span class="kw-2">&amp;mut </span>R,
     ) -&gt; <span class="prelude-ty">Result</span>&lt;(), PCSError&gt; {
         <span class="kw">let </span>merged_nv = get_batched_nv(polys[<span class="number">0</span>].num_vars(), polys.len());
@@ -657,7 +663,7 @@
         <span class="kw">for </span>num_poly <span class="kw">in </span><span class="number">5</span>..<span class="number">6 </span>{
             <span class="kw">for </span>nv <span class="kw">in </span><span class="number">15</span>..<span class="number">16 </span>{
                 <span class="kw">let </span>polys1: Vec&lt;<span class="kw">_</span>&gt; = (<span class="number">0</span>..num_poly)
-                    .map(|<span class="kw">_</span>| Rc::new(DenseMultilinearExtension::rand(nv, <span class="kw-2">&amp;mut </span>rng)))
+                    .map(|<span class="kw">_</span>| Arc::new(DenseMultilinearExtension::rand(nv, <span class="kw-2">&amp;mut </span>rng)))
                     .collect();
                 test_multi_open_helper(<span class="kw-2">&amp;</span>ml_params, <span class="kw-2">&amp;</span>polys1, <span class="kw-2">&amp;mut </span>rng)<span class="question-mark">?</span>;
             }

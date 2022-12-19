@@ -396,7 +396,7 @@
 <span class="kw">use </span>ark_ff::PrimeField;
 <span class="kw">use </span>ark_poly::DenseMultilinearExtension;
 <span class="kw">use </span>ark_std::{end_timer, start_timer};
-<span class="kw">use </span>std::{fmt::Debug, rc::Rc};
+<span class="kw">use </span>std::{fmt::Debug, sync::Arc};
 <span class="kw">use </span>transcript::IOPTranscript;
 
 <span class="kw">mod </span>prover;
@@ -514,7 +514,7 @@
     <span class="kw">type </span>SumCheckProof = IOPProof&lt;F&gt;;
     <span class="kw">type </span>VirtualPolynomial = VirtualPolynomial&lt;F&gt;;
     <span class="kw">type </span>VPAuxInfo = VPAuxInfo&lt;F&gt;;
-    <span class="kw">type </span>MultilinearExtension = Rc&lt;DenseMultilinearExtension&lt;F&gt;&gt;;
+    <span class="kw">type </span>MultilinearExtension = Arc&lt;DenseMultilinearExtension&lt;F&gt;&gt;;
     <span class="kw">type </span>SumCheckSubClaim = SumCheckSubClaim&lt;F&gt;;
     <span class="kw">type </span>Transcript = IOPTranscript&lt;F&gt;;
 
@@ -597,7 +597,7 @@
     <span class="kw">use </span>ark_ff::UniformRand;
     <span class="kw">use </span>ark_poly::{DenseMultilinearExtension, MultilinearExtension};
     <span class="kw">use </span>ark_std::test_rng;
-    <span class="kw">use </span>std::rc::Rc;
+    <span class="kw">use </span>std::sync::Arc;
 
     <span class="kw">fn </span>test_sumcheck(
         nv: usize,
@@ -713,7 +713,7 @@
     </span><span class="kw">fn </span>test_shared_reference() -&gt; <span class="prelude-ty">Result</span>&lt;(), PolyIOPErrors&gt; {
         <span class="kw">let </span><span class="kw-2">mut </span>rng = test_rng();
         <span class="kw">let </span>ml_extensions: Vec&lt;<span class="kw">_</span>&gt; = (<span class="number">0</span>..<span class="number">5</span>)
-            .map(|<span class="kw">_</span>| Rc::new(DenseMultilinearExtension::&lt;Fr&gt;::rand(<span class="number">8</span>, <span class="kw-2">&amp;mut </span>rng)))
+            .map(|<span class="kw">_</span>| Arc::new(DenseMultilinearExtension::&lt;Fr&gt;::rand(<span class="number">8</span>, <span class="kw-2">&amp;mut </span>rng)))
             .collect();
         <span class="kw">let </span><span class="kw-2">mut </span>poly = VirtualPolynomial::new(<span class="number">8</span>);
         poly.add_mle_list(

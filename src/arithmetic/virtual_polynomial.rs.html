@@ -544,12 +544,6 @@
 <span id="544">544</span>
 <span id="545">545</span>
 <span id="546">546</span>
-<span id="547">547</span>
-<span id="548">548</span>
-<span id="549">549</span>
-<span id="550">550</span>
-<span id="551">551</span>
-<span id="552">552</span>
 </pre><pre class="rust"><code><span class="doccomment">//! This module defines our main mathematical object `VirtualPolynomial`; and
 //! various functions associated with it.
 
@@ -563,7 +557,7 @@
     start_timer,
 };
 <span class="kw">use </span>rayon::prelude::<span class="kw-2">*</span>;
-<span class="kw">use </span>std::{cmp::max, collections::HashMap, marker::PhantomData, ops::Add, rc::Rc};
+<span class="kw">use </span>std::{cmp::max, collections::HashMap, marker::PhantomData, ops::Add, sync::Arc};
 
 <span class="attribute">#[rustfmt::skip]
 </span><span class="doccomment">/// A virtual polynomial is a sum of products of multilinear polynomials;
@@ -600,7 +594,7 @@
     </span><span class="kw">pub </span>products: Vec&lt;(F, Vec&lt;usize&gt;)&gt;,
     <span class="doccomment">/// Stores multilinear extensions in which product multiplicand can refer
     /// to.
-    </span><span class="kw">pub </span>flattened_ml_extensions: Vec&lt;Rc&lt;DenseMultilinearExtension&lt;F&gt;&gt;&gt;,
+    </span><span class="kw">pub </span>flattened_ml_extensions: Vec&lt;Arc&lt;DenseMultilinearExtension&lt;F&gt;&gt;&gt;,
     <span class="doccomment">/// Pointers to the above poly extensions
     </span>raw_pointers_lookup_table: HashMap&lt;<span class="kw-2">*const </span>DenseMultilinearExtension&lt;F&gt;, usize&gt;,
 }
@@ -623,7 +617,7 @@
         <span class="kw">let </span>start = <span class="macro">start_timer!</span>(|| <span class="string">&quot;virtual poly add&quot;</span>);
         <span class="kw">let </span><span class="kw-2">mut </span>res = <span class="self">self</span>.clone();
         <span class="kw">for </span>products <span class="kw">in </span>other.products.iter() {
-            <span class="kw">let </span>cur: Vec&lt;Rc&lt;DenseMultilinearExtension&lt;F&gt;&gt;&gt; = products
+            <span class="kw">let </span>cur: Vec&lt;Arc&lt;DenseMultilinearExtension&lt;F&gt;&gt;&gt; = products
                 .<span class="number">1
                 </span>.iter()
                 .map(|<span class="kw-2">&amp;</span>x| other.flattened_ml_extensions[x].clone())
@@ -654,8 +648,8 @@
     }
 
     <span class="doccomment">/// Creates an new virtual polynomial from a MLE and its coefficient.
-    </span><span class="kw">pub fn </span>new_from_mle(mle: <span class="kw-2">&amp;</span>Rc&lt;DenseMultilinearExtension&lt;F&gt;&gt;, coefficient: F) -&gt; <span class="self">Self </span>{
-        <span class="kw">let </span>mle_ptr: <span class="kw-2">*const </span>DenseMultilinearExtension&lt;F&gt; = Rc::as_ptr(mle);
+    </span><span class="kw">pub fn </span>new_from_mle(mle: <span class="kw-2">&amp;</span>Arc&lt;DenseMultilinearExtension&lt;F&gt;&gt;, coefficient: F) -&gt; <span class="self">Self </span>{
+        <span class="kw">let </span>mle_ptr: <span class="kw-2">*const </span>DenseMultilinearExtension&lt;F&gt; = Arc::as_ptr(mle);
         <span class="kw">let </span><span class="kw-2">mut </span>hm = HashMap::new();
         hm.insert(mle_ptr, <span class="number">0</span>);
 
@@ -681,10 +675,10 @@
     /// `coefficient`.
     </span><span class="kw">pub fn </span>add_mle_list(
         <span class="kw-2">&amp;mut </span><span class="self">self</span>,
-        mle_list: <span class="kw">impl </span>IntoIterator&lt;Item = Rc&lt;DenseMultilinearExtension&lt;F&gt;&gt;&gt;,
+        mle_list: <span class="kw">impl </span>IntoIterator&lt;Item = Arc&lt;DenseMultilinearExtension&lt;F&gt;&gt;&gt;,
         coefficient: F,
     ) -&gt; <span class="prelude-ty">Result</span>&lt;(), ArithErrors&gt; {
-        <span class="kw">let </span>mle_list: Vec&lt;Rc&lt;DenseMultilinearExtension&lt;F&gt;&gt;&gt; = mle_list.into_iter().collect();
+        <span class="kw">let </span>mle_list: Vec&lt;Arc&lt;DenseMultilinearExtension&lt;F&gt;&gt;&gt; = mle_list.into_iter().collect();
         <span class="kw">let </span><span class="kw-2">mut </span>indexed_product = Vec::with_capacity(mle_list.len());
 
         <span class="kw">if </span>mle_list.is_empty() {
@@ -703,7 +697,7 @@
                 )));
             }
 
-            <span class="kw">let </span>mle_ptr: <span class="kw-2">*const </span>DenseMultilinearExtension&lt;F&gt; = Rc::as_ptr(<span class="kw-2">&amp;</span>mle);
+            <span class="kw">let </span>mle_ptr: <span class="kw-2">*const </span>DenseMultilinearExtension&lt;F&gt; = Arc::as_ptr(<span class="kw-2">&amp;</span>mle);
             <span class="kw">if let </span><span class="prelude-val">Some</span>(index) = <span class="self">self</span>.raw_pointers_lookup_table.get(<span class="kw-2">&amp;</span>mle_ptr) {
                 indexed_product.push(<span class="kw-2">*</span>index)
             } <span class="kw">else </span>{
@@ -723,7 +717,7 @@
     /// Returns an error if the MLE has a different `num_vars` from self.
     </span><span class="kw">pub fn </span>mul_by_mle(
         <span class="kw-2">&amp;mut </span><span class="self">self</span>,
-        mle: Rc&lt;DenseMultilinearExtension&lt;F&gt;&gt;,
+        mle: Arc&lt;DenseMultilinearExtension&lt;F&gt;&gt;,
         coefficient: F,
     ) -&gt; <span class="prelude-ty">Result</span>&lt;(), ArithErrors&gt; {
         <span class="kw">let </span>start = <span class="macro">start_timer!</span>(|| <span class="string">&quot;mul by mle&quot;</span>);
@@ -735,7 +729,7 @@
             )));
         }
 
-        <span class="kw">let </span>mle_ptr: <span class="kw-2">*const </span>DenseMultilinearExtension&lt;F&gt; = Rc::as_ptr(<span class="kw-2">&amp;</span>mle);
+        <span class="kw">let </span>mle_ptr: <span class="kw-2">*const </span>DenseMultilinearExtension&lt;F&gt; = Arc::as_ptr(<span class="kw-2">&amp;</span>mle);
 
         <span class="comment">// check if this mle already exists in the virtual polynomial
         </span><span class="kw">let </span>mle_index = <span class="kw">match </span><span class="self">self</span>.raw_pointers_lookup_table.get(<span class="kw-2">&amp;</span>mle_ptr) {
@@ -902,11 +896,11 @@
 ///      eq(x,y) = \prod_i=1^num_var (x_i * r_i + (1-x_i)*(1-r_i))
 </span><span class="kw">pub fn </span>build_eq_x_r&lt;F: PrimeField&gt;(
     r: <span class="kw-2">&amp;</span>[F],
-) -&gt; <span class="prelude-ty">Result</span>&lt;Rc&lt;DenseMultilinearExtension&lt;F&gt;&gt;, ArithErrors&gt; {
+) -&gt; <span class="prelude-ty">Result</span>&lt;Arc&lt;DenseMultilinearExtension&lt;F&gt;&gt;, ArithErrors&gt; {
     <span class="kw">let </span>evals = build_eq_x_r_vec(r)<span class="question-mark">?</span>;
     <span class="kw">let </span>mle = DenseMultilinearExtension::from_evaluations_vec(r.len(), evals);
 
-    <span class="prelude-val">Ok</span>(Rc::new(mle))
+    <span class="prelude-val">Ok</span>(Arc::new(mle))
 }
 <span class="doccomment">/// This function build the eq(x, r) polynomial for any given r, and output the
 /// evaluation of eq(x, r) in its vector form.
@@ -916,8 +910,6 @@
 /// over r, which is
 ///      eq(x,y) = \prod_i=1^num_var (x_i * r_i + (1-x_i)*(1-r_i))
 </span><span class="kw">pub fn </span>build_eq_x_r_vec&lt;F: PrimeField&gt;(r: <span class="kw-2">&amp;</span>[F]) -&gt; <span class="prelude-ty">Result</span>&lt;Vec&lt;F&gt;, ArithErrors&gt; {
-    <span class="kw">let </span>start = <span class="macro">start_timer!</span>(|| <span class="macro">format!</span>(<span class="string">&quot;build eq_x_r of size {}&quot;</span>, r.len()));
-
     <span class="comment">// we build eq(x,r) from its evaluations
     // we want to evaluate eq(x,r) over x \in {0, 1}^num_vars
     // for example, with num_vars = 4, x is a binary vector of 4, then
@@ -932,7 +924,6 @@
     </span><span class="kw">let </span><span class="kw-2">mut </span>eval = Vec::new();
     build_eq_x_r_helper(r, <span class="kw-2">&amp;mut </span>eval)<span class="question-mark">?</span>;
 
-    <span class="macro">end_timer!</span>(start);
     <span class="prelude-val">Ok</span>(eval)
 }
 
@@ -1063,9 +1054,7 @@
     //      eq(x,y) = \prod_i=1^num_var (x_i * y_i + (1-x_i)*(1-y_i))
     // over r, which is
     //      eq(x,y) = \prod_i=1^num_var (x_i * r_i + (1-x_i)*(1-r_i))
-    </span><span class="kw">fn </span>build_eq_x_r_for_test&lt;F: PrimeField&gt;(r: <span class="kw-2">&amp;</span>[F]) -&gt; Rc&lt;DenseMultilinearExtension&lt;F&gt;&gt; {
-        <span class="kw">let </span>start = <span class="macro">start_timer!</span>(|| <span class="string">&quot;zero check naive build eq_x_r&quot;</span>);
-
+    </span><span class="kw">fn </span>build_eq_x_r_for_test&lt;F: PrimeField&gt;(r: <span class="kw-2">&amp;</span>[F]) -&gt; Arc&lt;DenseMultilinearExtension&lt;F&gt;&gt; {
         <span class="comment">// we build eq(x,r) from its evaluations
         // we want to evaluate eq(x,r) over x \in {0, 1}^num_vars
         // for example, with num_vars = 4, x is a binary vector of 4, then
@@ -1097,8 +1086,7 @@
 
         <span class="kw">let </span>mle = DenseMultilinearExtension::from_evaluations_vec(num_var, eval);
 
-        <span class="kw">let </span>res = Rc::new(mle);
-        <span class="macro">end_timer!</span>(start);
+        <span class="kw">let </span>res = Arc::new(mle);
         res
     }
 }

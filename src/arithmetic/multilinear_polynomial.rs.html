@@ -278,27 +278,13 @@
 <span id="278">278</span>
 <span id="279">279</span>
 <span id="280">280</span>
-<span id="281">281</span>
-<span id="282">282</span>
-<span id="283">283</span>
-<span id="284">284</span>
-<span id="285">285</span>
-<span id="286">286</span>
-<span id="287">287</span>
-<span id="288">288</span>
-<span id="289">289</span>
-<span id="290">290</span>
-<span id="291">291</span>
-<span id="292">292</span>
-<span id="293">293</span>
-<span id="294">294</span>
 </pre><pre class="rust"><code><span class="kw">use crate</span>::{util::get_batched_nv, ArithErrors};
 <span class="kw">use </span>ark_ff::{Field, PrimeField};
 <span class="kw">use </span>ark_poly::MultilinearExtension;
 <span class="kw">use </span>ark_std::{end_timer, rand::RngCore, start_timer};
 <span class="attribute">#[cfg(feature = <span class="string">&quot;parallel&quot;</span>)]
 </span><span class="kw">use </span>rayon::prelude::{IndexedParallelIterator, IntoParallelRefMutIterator, ParallelIterator};
-<span class="kw">use </span>std::rc::Rc;
+<span class="kw">use </span>std::sync::Arc;
 
 <span class="kw">pub use </span>ark_poly::DenseMultilinearExtension;
 
@@ -310,7 +296,7 @@
     nv: usize,
     degree: usize,
     rng: <span class="kw-2">&amp;mut </span>R,
-) -&gt; (Vec&lt;Rc&lt;DenseMultilinearExtension&lt;F&gt;&gt;&gt;, F) {
+) -&gt; (Vec&lt;Arc&lt;DenseMultilinearExtension&lt;F&gt;&gt;&gt;, F) {
     <span class="kw">let </span>start = <span class="macro">start_timer!</span>(|| <span class="string">&quot;sample random mle list&quot;</span>);
     <span class="kw">let </span><span class="kw-2">mut </span>multiplicands = Vec::with_capacity(degree);
     <span class="kw">for _ in </span><span class="number">0</span>..degree {
@@ -331,7 +317,7 @@
 
     <span class="kw">let </span>list = multiplicands
         .into_iter()
-        .map(|x| Rc::new(DenseMultilinearExtension::from_evaluations_vec(nv, x)))
+        .map(|x| Arc::new(DenseMultilinearExtension::from_evaluations_vec(nv, x)))
         .collect();
 
     <span class="macro">end_timer!</span>(start);
@@ -343,7 +329,7 @@
     nv: usize,
     degree: usize,
     rng: <span class="kw-2">&amp;mut </span>R,
-) -&gt; Vec&lt;Rc&lt;DenseMultilinearExtension&lt;F&gt;&gt;&gt; {
+) -&gt; Vec&lt;Arc&lt;DenseMultilinearExtension&lt;F&gt;&gt;&gt; {
     <span class="kw">let </span>start = <span class="macro">start_timer!</span>(|| <span class="string">&quot;sample random zero mle list&quot;</span>);
 
     <span class="kw">let </span><span class="kw-2">mut </span>multiplicands = Vec::with_capacity(degree);
@@ -359,7 +345,7 @@
 
     <span class="kw">let </span>list = multiplicands
         .into_iter()
-        .map(|x| Rc::new(DenseMultilinearExtension::from_evaluations_vec(nv, x)))
+        .map(|x| Arc::new(DenseMultilinearExtension::from_evaluations_vec(nv, x)))
         .collect();
 
     <span class="macro">end_timer!</span>(start);
@@ -375,12 +361,12 @@
 </span><span class="kw">pub fn </span>identity_permutation_mles&lt;F: PrimeField&gt;(
     num_vars: usize,
     num_chunks: usize,
-) -&gt; Vec&lt;Rc&lt;DenseMultilinearExtension&lt;F&gt;&gt;&gt; {
+) -&gt; Vec&lt;Arc&lt;DenseMultilinearExtension&lt;F&gt;&gt;&gt; {
     <span class="kw">let </span><span class="kw-2">mut </span>res = <span class="macro">vec!</span>[];
     <span class="kw">for </span>i <span class="kw">in </span><span class="number">0</span>..num_chunks {
         <span class="kw">let </span>shift = (i * (<span class="number">1 </span>&lt;&lt; num_vars)) <span class="kw">as </span>u64;
         <span class="kw">let </span>s_id_vec = (shift..shift + (<span class="number">1u64 </span>&lt;&lt; num_vars)).map(F::from).collect();
-        res.push(Rc::new(DenseMultilinearExtension::from_evaluations_vec(
+        res.push(Arc::new(DenseMultilinearExtension::from_evaluations_vec(
             num_vars, s_id_vec,
         )));
     }
@@ -407,12 +393,12 @@
     num_vars: usize,
     num_chunks: usize,
     rng: <span class="kw-2">&amp;mut </span>R,
-) -&gt; Vec&lt;Rc&lt;DenseMultilinearExtension&lt;F&gt;&gt;&gt; {
+) -&gt; Vec&lt;Arc&lt;DenseMultilinearExtension&lt;F&gt;&gt;&gt; {
     <span class="kw">let </span>s_perm_vec = random_permutation(num_vars, num_chunks, rng);
     <span class="kw">let </span><span class="kw-2">mut </span>res = <span class="macro">vec!</span>[];
     <span class="kw">let </span>n = <span class="number">1 </span>&lt;&lt; num_vars;
     <span class="kw">for </span>i <span class="kw">in </span><span class="number">0</span>..num_chunks {
-        res.push(Rc::new(DenseMultilinearExtension::from_evaluations_vec(
+        res.push(Arc::new(DenseMultilinearExtension::from_evaluations_vec(
             num_vars,
             s_perm_vec[i * n..i * n + n].to_vec(),
         )));
@@ -454,16 +440,9 @@
     }
 
     <span class="attribute">#[cfg(feature = <span class="string">&quot;parallel&quot;</span>)]
-    </span><span class="kw">if </span>nv &gt;= <span class="number">13 </span>{
-        <span class="comment">// on my computer we parallelization doesn&#39;t help till nv &gt;= 13
-        </span>res.par_iter_mut().enumerate().for_each(|(i, x)| {
-            <span class="kw-2">*</span>x = data[i &lt;&lt; <span class="number">1</span>] + (data[(i &lt;&lt; <span class="number">1</span>) + <span class="number">1</span>] - data[i &lt;&lt; <span class="number">1</span>]) * point;
-        });
-    } <span class="kw">else </span>{
-        <span class="kw">for </span>i <span class="kw">in </span><span class="number">0</span>..(<span class="number">1 </span>&lt;&lt; (nv - <span class="number">1</span>)) {
-            res[i] = data[i &lt;&lt; <span class="number">1</span>] + (data[(i &lt;&lt; <span class="number">1</span>) + <span class="number">1</span>] - data[i &lt;&lt; <span class="number">1</span>]) * point;
-        }
-    }
+    </span>res.par_iter_mut().enumerate().for_each(|(i, x)| {
+        <span class="kw-2">*</span>x = data[i &lt;&lt; <span class="number">1</span>] + (data[(i &lt;&lt; <span class="number">1</span>) + <span class="number">1</span>] - data[i &lt;&lt; <span class="number">1</span>]) * point;
+    });
 
     res
 }
@@ -497,8 +476,8 @@
 <span class="doccomment">/// merge a set of polynomials. Returns an error if the
 /// polynomials do not share a same number of nvs.
 </span><span class="kw">pub fn </span>merge_polynomials&lt;F: PrimeField&gt;(
-    polynomials: <span class="kw-2">&amp;</span>[Rc&lt;DenseMultilinearExtension&lt;F&gt;&gt;],
-) -&gt; <span class="prelude-ty">Result</span>&lt;Rc&lt;DenseMultilinearExtension&lt;F&gt;&gt;, ArithErrors&gt; {
+    polynomials: <span class="kw-2">&amp;</span>[Arc&lt;DenseMultilinearExtension&lt;F&gt;&gt;],
+) -&gt; <span class="prelude-ty">Result</span>&lt;Arc&lt;DenseMultilinearExtension&lt;F&gt;&gt;, ArithErrors&gt; {
     <span class="kw">let </span>nv = polynomials[<span class="number">0</span>].num_vars();
     <span class="kw">for </span>poly <span class="kw">in </span>polynomials.iter() {
         <span class="kw">if </span>nv != poly.num_vars() {
@@ -514,7 +493,7 @@
         scalars.extend_from_slice(poly.to_evaluations().as_slice());
     }
     scalars.extend_from_slice(<span class="macro">vec!</span>[F::zero(); (<span class="number">1 </span>&lt;&lt; merged_nv) - scalars.len()].as_ref());
-    <span class="prelude-val">Ok</span>(Rc::new(DenseMultilinearExtension::from_evaluations_vec(
+    <span class="prelude-val">Ok</span>(Arc::new(DenseMultilinearExtension::from_evaluations_vec(
         merged_nv, scalars,
     )))
 }
@@ -573,16 +552,9 @@
     }
 
     <span class="attribute">#[cfg(feature = <span class="string">&quot;parallel&quot;</span>)]
-    </span><span class="kw">if </span>nv &gt;= <span class="number">13 </span>{
-        <span class="comment">// on my computer we parallelization doesn&#39;t help till nv &gt;= 13
-        </span>res.par_iter_mut().enumerate().for_each(|(i, x)| {
-            <span class="kw-2">*</span>x = data[i] + (data[i + half_len] - data[i]) * point;
-        });
-    } <span class="kw">else </span>{
-        <span class="kw">for </span>b <span class="kw">in </span><span class="number">0</span>..(<span class="number">1 </span>&lt;&lt; (nv - <span class="number">1</span>)) {
-            res[b] = data[b] + (data[b + half_len] - data[b]) * point;
-        }
-    }
+    </span>res.par_iter_mut().enumerate().for_each(|(i, x)| {
+        <span class="kw-2">*</span>x = data[i] + (data[i + half_len] - data[i]) * point;
+    });
 
     res
 }

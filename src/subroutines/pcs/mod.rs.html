@@ -164,12 +164,6 @@
 <span id="164">164</span>
 <span id="165">165</span>
 <span id="166">166</span>
-<span id="167">167</span>
-<span id="168">168</span>
-<span id="169">169</span>
-<span id="170">170</span>
-<span id="171">171</span>
-<span id="172">172</span>
 </pre><pre class="rust"><code><span class="kw">mod </span>errors;
 <span class="kw">mod </span>multilinear_kzg;
 <span class="kw">mod </span>structs;
@@ -189,19 +183,13 @@
 /// Note that for our usage of PCS, we do not require the hiding property.
 </span><span class="kw">pub trait </span>PolynomialCommitmentScheme&lt;E: PairingEngine&gt; {
     <span class="doccomment">/// Prover parameters
-    </span><span class="kw">type </span>ProverParam: Clone;
+    </span><span class="kw">type </span>ProverParam: Clone + Sync;
     <span class="doccomment">/// Verifier parameters
     </span><span class="kw">type </span>VerifierParam: Clone + CanonicalSerialize + CanonicalDeserialize;
     <span class="doccomment">/// Structured reference string
     </span><span class="kw">type </span>SRS: Clone + Debug;
     <span class="doccomment">/// Polynomial and its associated types
-    </span><span class="kw">type </span>Polynomial: Clone
-        + Debug
-        + Hash
-        + PartialEq
-        + Eq
-        + CanonicalSerialize
-        + CanonicalDeserialize;
+    </span><span class="kw">type </span>Polynomial: Clone + Debug + Hash + PartialEq + Eq;
     <span class="doccomment">/// Polynomial input domain
     </span><span class="kw">type </span>Point: Clone + Ord + Debug + Sync + Hash + PartialEq + Eq;
     <span class="doccomment">/// Polynomial Evaluation

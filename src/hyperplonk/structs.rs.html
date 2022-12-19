@@ -159,7 +159,7 @@
 <span class="kw">use </span>ark_ff::PrimeField;
 <span class="kw">use </span>ark_poly::DenseMultilinearExtension;
 <span class="kw">use </span>ark_std::log2;
-<span class="kw">use </span>std::rc::Rc;
+<span class="kw">use </span>std::sync::Arc;
 <span class="kw">use </span>subroutines::{
     pcs::PolynomialCommitmentScheme,
     poly_iop::prelude::{PermutationCheck, ZeroCheck},
@@ -280,9 +280,9 @@
     <span class="doccomment">/// Hyperplonk instance parameters
     </span><span class="kw">pub </span>params: HyperPlonkParams,
     <span class="doccomment">/// The preprocessed permutation polynomials
-    </span><span class="kw">pub </span>permutation_oracles: Vec&lt;Rc&lt;DenseMultilinearExtension&lt;E::Fr&gt;&gt;&gt;,
+    </span><span class="kw">pub </span>permutation_oracles: Vec&lt;Arc&lt;DenseMultilinearExtension&lt;E::Fr&gt;&gt;&gt;,
     <span class="doccomment">/// The preprocessed selector polynomials
-    </span><span class="kw">pub </span>selector_oracles: Vec&lt;Rc&lt;DenseMultilinearExtension&lt;E::Fr&gt;&gt;&gt;,
+    </span><span class="kw">pub </span>selector_oracles: Vec&lt;Arc&lt;DenseMultilinearExtension&lt;E::Fr&gt;&gt;&gt;,
     <span class="doccomment">/// Commitments to the preprocessed selector polynomials
     </span><span class="kw">pub </span>selector_commitments: Vec&lt;PCS::Commitment&gt;,
     <span class="doccomment">/// Commitments to the preprocessed permutation polynomials

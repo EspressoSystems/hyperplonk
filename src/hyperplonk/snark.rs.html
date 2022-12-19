@@ -717,6 +717,9 @@
 <span id="717">717</span>
 <span id="718">718</span>
 <span id="719">719</span>
+<span id="720">720</span>
+<span id="721">721</span>
+<span id="722">722</span>
 </pre><pre class="rust"><code><span class="kw">use crate</span>::{
     errors::HyperPlonkErrors,
     structs::{HyperPlonkIndex, HyperPlonkProof, HyperPlonkProvingKey, HyperPlonkVerifyingKey},
@@ -728,7 +731,10 @@
 <span class="kw">use </span>ark_ec::PairingEngine;
 <span class="kw">use </span>ark_poly::DenseMultilinearExtension;
 <span class="kw">use </span>ark_std::{end_timer, log2, start_timer, One, Zero};
-<span class="kw">use </span>std::{marker::PhantomData, rc::Rc};
+<span class="kw">use </span>rayon::iter::IntoParallelRefIterator;
+<span class="attribute">#[cfg(feature = <span class="string">&quot;parallel&quot;</span>)]
+</span><span class="kw">use </span>rayon::iter::ParallelIterator;
+<span class="kw">use </span>std::{marker::PhantomData, sync::Arc};
 <span class="kw">use </span>subroutines::{
     pcs::prelude::{Commitment, PolynomialCommitmentScheme},
     poly_iop::{
@@ -747,7 +753,7 @@
     // we cannot bound PCS::Polynomial with a property trait bound.
     </span>PCS: PolynomialCommitmentScheme&lt;
         E,
-        Polynomial = Rc&lt;DenseMultilinearExtension&lt;E::Fr&gt;&gt;,
+        Polynomial = Arc&lt;DenseMultilinearExtension&lt;E::Fr&gt;&gt;,
         Point = Vec&lt;E::Fr&gt;,
         Evaluation = E::Fr,
         Commitment = Commitment&lt;E&gt;,
@@ -775,7 +781,7 @@
         <span class="kw">let </span><span class="kw-2">mut </span>perm_comms = <span class="macro">vec!</span>[];
         <span class="kw">let </span>chunk_size = <span class="number">1 </span>&lt;&lt; num_vars;
         <span class="kw">for </span>i <span class="kw">in </span><span class="number">0</span>..index.num_witness_columns() {
-            <span class="kw">let </span>perm_oracle = Rc::new(DenseMultilinearExtension::from_evaluations_slice(
+            <span class="kw">let </span>perm_oracle = Arc::new(DenseMultilinearExtension::from_evaluations_slice(
                 num_vars,
                 <span class="kw-2">&amp;</span>index.permutation[i * chunk_size..(i + <span class="number">1</span>) * chunk_size],
             ));
@@ -785,14 +791,14 @@
         }
 
         <span class="comment">// build selector oracles and commit to it
-        </span><span class="kw">let </span>selector_oracles: Vec&lt;Rc&lt;DenseMultilinearExtension&lt;E::Fr&gt;&gt;&gt; = index
+        </span><span class="kw">let </span>selector_oracles: Vec&lt;Arc&lt;DenseMultilinearExtension&lt;E::Fr&gt;&gt;&gt; = index
             .selectors
             .iter()
-            .map(|s| Rc::new(DenseMultilinearExtension::from(s)))
+            .map(|s| Arc::new(DenseMultilinearExtension::from(s)))
             .collect();
 
         <span class="kw">let </span>selector_commitments = selector_oracles
-            .iter()
+            .par_iter()
             .map(|poly| PCS::commit(<span class="kw-2">&amp;</span>pcs_prover_param, poly))
             .collect::&lt;<span class="prelude-ty">Result</span>&lt;Vec&lt;<span class="kw">_</span>&gt;, <span class="kw">_</span>&gt;&gt;()<span class="question-mark">?</span>;
 
@@ -887,13 +893,13 @@
         // =======================================================================
         </span><span class="kw">let </span>step = <span class="macro">start_timer!</span>(|| <span class="string">&quot;commit witnesses&quot;</span>);
 
-        <span class="kw">let </span>witness_polys: Vec&lt;Rc&lt;DenseMultilinearExtension&lt;E::Fr&gt;&gt;&gt; = witnesses
+        <span class="kw">let </span>witness_polys: Vec&lt;Arc&lt;DenseMultilinearExtension&lt;E::Fr&gt;&gt;&gt; = witnesses
             .iter()
-            .map(|w| Rc::new(DenseMultilinearExtension::from(w)))
+            .map(|w| Arc::new(DenseMultilinearExtension::from(w)))
             .collect();
 
         <span class="kw">let </span>witness_commits = witness_polys
-            .iter()
+            .par_iter()
             .map(|x| PCS::commit(<span class="kw-2">&amp;</span>pk.pcs_param, x).unwrap())
             .collect::&lt;Vec&lt;<span class="kw">_</span>&gt;&gt;();
         <span class="kw">for </span>w_com <span class="kw">in </span>witness_commits.iter() {
@@ -1382,15 +1388,15 @@
         </span><span class="kw">let </span>w1 = WitnessColumn(<span class="macro">vec!</span>[
             E::Fr::zero(),
             E::Fr::one(),
-            E::Fr::from(<span class="number">2u64</span>),
-            E::Fr::from(<span class="number">3u64</span>),
+            E::Fr::from(<span class="number">2u128</span>),
+            E::Fr::from(<span class="number">3u128</span>),
         ]);
         <span class="comment">// w2 := [0^5, 1^5, 2^5, 3^5]
         </span><span class="kw">let </span>w2 = WitnessColumn(<span class="macro">vec!</span>[
             E::Fr::zero(),
             E::Fr::one(),
-            E::Fr::from(<span class="number">32u64</span>),
-            E::Fr::from(<span class="number">243u64</span>),
+            E::Fr::from(<span class="number">32u128</span>),
+            E::Fr::from(<span class="number">243u128</span>),
         ]);
         <span class="comment">// public input = w1
         </span><span class="kw">let </span>pi = w1.clone();

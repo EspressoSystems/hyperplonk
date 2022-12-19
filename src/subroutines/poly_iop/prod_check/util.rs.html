@@ -168,14 +168,16 @@
 <span id="168">168</span>
 <span id="169">169</span>
 <span id="170">170</span>
+<span id="171">171</span>
+<span id="172">172</span>
 </pre><pre class="rust"><code><span class="doccomment">//! This module implements useful functions for the product check protocol.
 
 </span><span class="kw">use </span><span class="kw">crate</span>::poly_iop::{errors::PolyIOPErrors, structs::IOPProof, zero_check::ZeroCheck, PolyIOP};
 <span class="kw">use </span>arithmetic::{get_index, VirtualPolynomial};
-<span class="kw">use </span>ark_ff::PrimeField;
+<span class="kw">use </span>ark_ff::{batch_inversion, PrimeField};
 <span class="kw">use </span>ark_poly::DenseMultilinearExtension;
 <span class="kw">use </span>ark_std::{end_timer, start_timer};
-<span class="kw">use </span>std::rc::Rc;
+<span class="kw">use </span>std::sync::Arc;
 <span class="kw">use </span>transcript::IOPTranscript;
 
 <span class="doccomment">/// Compute multilinear fractional polynomial s.t. frac(x) = f1(x) * ... * fk(x)
@@ -184,9 +186,9 @@
 /// The caller needs to sanity-check that the number of polynomials and
 /// variables match in fxs and gxs; and gi(x) has no zero entries.
 </span><span class="kw">pub</span>(<span class="kw">super</span>) <span class="kw">fn </span>compute_frac_poly&lt;F: PrimeField&gt;(
-    fxs: <span class="kw-2">&amp;</span>[Rc&lt;DenseMultilinearExtension&lt;F&gt;&gt;],
-    gxs: <span class="kw-2">&amp;</span>[Rc&lt;DenseMultilinearExtension&lt;F&gt;&gt;],
-) -&gt; <span class="prelude-ty">Result</span>&lt;Rc&lt;DenseMultilinearExtension&lt;F&gt;&gt;, PolyIOPErrors&gt; {
+    fxs: <span class="kw-2">&amp;</span>[Arc&lt;DenseMultilinearExtension&lt;F&gt;&gt;],
+    gxs: <span class="kw-2">&amp;</span>[Arc&lt;DenseMultilinearExtension&lt;F&gt;&gt;],
+) -&gt; <span class="prelude-ty">Result</span>&lt;Arc&lt;DenseMultilinearExtension&lt;F&gt;&gt;, PolyIOPErrors&gt; {
     <span class="kw">let </span>start = <span class="macro">start_timer!</span>(|| <span class="string">&quot;compute frac(x)&quot;</span>);
 
     <span class="kw">let </span><span class="kw-2">mut </span>f_evals = <span class="macro">vec!</span>[F::one(); <span class="number">1 </span>&lt;&lt; fxs[<span class="number">0</span>].num_vars];
@@ -201,17 +203,19 @@
             <span class="kw-2">*</span>g_eval <span class="kw-2">*</span>= gi;
         }
     }
+    batch_inversion(<span class="kw-2">&amp;mut </span>g_evals[..]);
+
     <span class="kw">for </span>(f_eval, g_eval) <span class="kw">in </span>f_evals.iter_mut().zip(g_evals.iter()) {
         <span class="kw">if </span><span class="kw-2">*</span>g_eval == F::zero() {
             <span class="kw">return </span><span class="prelude-val">Err</span>(PolyIOPErrors::InvalidParameters(
                 <span class="string">&quot;gxs has zero entries in the boolean hypercube&quot;</span>.to_string(),
             ));
         }
-        <span class="kw-2">*</span>f_eval /= g_eval;
+        <span class="kw-2">*</span>f_eval <span class="kw-2">*</span>= g_eval;
     }
 
     <span class="macro">end_timer!</span>(start);
-    <span class="prelude-val">Ok</span>(Rc::new(DenseMultilinearExtension::from_evaluations_vec(
+    <span class="prelude-val">Ok</span>(Arc::new(DenseMultilinearExtension::from_evaluations_vec(
         fxs[<span class="number">0</span>].num_vars,
         f_evals,
     )))
@@ -225,8 +229,8 @@
 /// The caller needs to check num_vars matches in f and g
 /// Cost: linear in N.
 </span><span class="kw">pub</span>(<span class="kw">super</span>) <span class="kw">fn </span>compute_product_poly&lt;F: PrimeField&gt;(
-    frac_poly: <span class="kw-2">&amp;</span>Rc&lt;DenseMultilinearExtension&lt;F&gt;&gt;,
-) -&gt; <span class="prelude-ty">Result</span>&lt;Rc&lt;DenseMultilinearExtension&lt;F&gt;&gt;, PolyIOPErrors&gt; {
+    frac_poly: <span class="kw-2">&amp;</span>Arc&lt;DenseMultilinearExtension&lt;F&gt;&gt;,
+) -&gt; <span class="prelude-ty">Result</span>&lt;Arc&lt;DenseMultilinearExtension&lt;F&gt;&gt;, PolyIOPErrors&gt; {
     <span class="kw">let </span>start = <span class="macro">start_timer!</span>(|| <span class="string">&quot;compute evaluations of prod polynomial&quot;</span>);
     <span class="kw">let </span>num_vars = frac_poly.num_vars;
     <span class="kw">let </span>frac_evals = <span class="kw-2">&amp;</span>frac_poly.evaluations;
@@ -266,7 +270,7 @@
     </span>prod_x_evals.push(F::zero());
     <span class="macro">end_timer!</span>(start);
 
-    <span class="prelude-val">Ok</span>(Rc::new(DenseMultilinearExtension::from_evaluations_vec(
+    <span class="prelude-val">Ok</span>(Arc::new(DenseMultilinearExtension::from_evaluations_vec(
         num_vars,
         prod_x_evals,
     )))
@@ -281,10 +285,10 @@
 ///
 /// Cost: O(N)
 </span><span class="kw">pub</span>(<span class="kw">super</span>) <span class="kw">fn </span>prove_zero_check&lt;F: PrimeField&gt;(
-    fxs: <span class="kw-2">&amp;</span>[Rc&lt;DenseMultilinearExtension&lt;F&gt;&gt;],
-    gxs: <span class="kw-2">&amp;</span>[Rc&lt;DenseMultilinearExtension&lt;F&gt;&gt;],
-    frac_poly: <span class="kw-2">&amp;</span>Rc&lt;DenseMultilinearExtension&lt;F&gt;&gt;,
-    prod_x: <span class="kw-2">&amp;</span>Rc&lt;DenseMultilinearExtension&lt;F&gt;&gt;,
+    fxs: <span class="kw-2">&amp;</span>[Arc&lt;DenseMultilinearExtension&lt;F&gt;&gt;],
+    gxs: <span class="kw-2">&amp;</span>[Arc&lt;DenseMultilinearExtension&lt;F&gt;&gt;],
+    frac_poly: <span class="kw-2">&amp;</span>Arc&lt;DenseMultilinearExtension&lt;F&gt;&gt;,
+    prod_x: <span class="kw-2">&amp;</span>Arc&lt;DenseMultilinearExtension&lt;F&gt;&gt;,
     alpha: <span class="kw-2">&amp;</span>F,
     transcript: <span class="kw-2">&amp;mut </span>IOPTranscript&lt;F&gt;,
 ) -&gt; <span class="prelude-ty">Result</span>&lt;(IOPProof&lt;F&gt;, VirtualPolynomial&lt;F&gt;), PolyIOPErrors&gt; {
@@ -305,10 +309,10 @@
             p2_evals[x] = prod_x.evaluations[x1];
         }
     }
-    <span class="kw">let </span>p1 = Rc::new(DenseMultilinearExtension::from_evaluations_vec(
+    <span class="kw">let </span>p1 = Arc::new(DenseMultilinearExtension::from_evaluations_vec(
         num_vars, p1_evals,
     ));
-    <span class="kw">let </span>p2 = Rc::new(DenseMultilinearExtension::from_evaluations_vec(
+    <span class="kw">let </span>p2 = Arc::new(DenseMultilinearExtension::from_evaluations_vec(
         num_vars, p2_evals,
     ));
 

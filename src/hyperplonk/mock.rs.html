@@ -497,8 +497,8 @@
             MultilinearKzgPCS::&lt;Bls12_381&gt;::gen_srs_for_testing(<span class="kw-2">&amp;mut </span>rng, SUPPORTED_SIZE)<span class="question-mark">?</span>;
         <span class="kw">let </span>nv = MAX_NUM_VARS;
 
-        <span class="kw">let </span>vanilla_gate = CustomizedGates::vanilla_plonk_gate();
-        test_mock_circuit_zkp_helper(nv, <span class="kw-2">&amp;</span>vanilla_gate, <span class="kw-2">&amp;</span>pcs_srs)<span class="question-mark">?</span>;
+        <span class="kw">let </span>turboplonk_gate = CustomizedGates::jellyfish_turbo_plonk_gate();
+        test_mock_circuit_zkp_helper(nv, <span class="kw-2">&amp;</span>turboplonk_gate, <span class="kw-2">&amp;</span>pcs_srs)<span class="question-mark">?</span>;
 
         <span class="prelude-val">Ok</span>(())
     }

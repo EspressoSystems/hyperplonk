@@ -397,7 +397,7 @@
 <span class="kw">use </span>ark_ff::{One, PrimeField, Zero};
 <span class="kw">use </span>ark_poly::DenseMultilinearExtension;
 <span class="kw">use </span>ark_std::{end_timer, start_timer};
-<span class="kw">use </span>std::rc::Rc;
+<span class="kw">use </span>std::sync::Arc;
 <span class="kw">use </span>transcript::IOPTranscript;
 
 <span class="kw">mod </span>util;
@@ -525,7 +525,7 @@
 <span class="kw">impl</span>&lt;E, PCS&gt; ProductCheck&lt;E, PCS&gt; <span class="kw">for </span>PolyIOP&lt;E::Fr&gt;
 <span class="kw">where
     </span>E: PairingEngine,
-    PCS: PolynomialCommitmentScheme&lt;E, Polynomial = Rc&lt;DenseMultilinearExtension&lt;E::Fr&gt;&gt;&gt;,
+    PCS: PolynomialCommitmentScheme&lt;E, Polynomial = Arc&lt;DenseMultilinearExtension&lt;E::Fr&gt;&gt;&gt;,
 {
     <span class="kw">type </span>ProductCheckSubClaim = ProductCheckSubClaim&lt;E::Fr, <span class="self">Self</span>&gt;;
     <span class="kw">type </span>ProductCheckProof = ProductCheckProof&lt;E, PCS, <span class="self">Self</span>&gt;;
@@ -640,12 +640,12 @@
     <span class="kw">use </span>ark_ec::PairingEngine;
     <span class="kw">use </span>ark_poly::{DenseMultilinearExtension, MultilinearExtension};
     <span class="kw">use </span>ark_std::test_rng;
-    <span class="kw">use </span>std::{marker::PhantomData, rc::Rc};
+    <span class="kw">use </span>std::{marker::PhantomData, sync::Arc};
 
     <span class="kw">fn </span>check_frac_poly&lt;E&gt;(
-        frac_poly: <span class="kw-2">&amp;</span>Rc&lt;DenseMultilinearExtension&lt;E::Fr&gt;&gt;,
-        fs: <span class="kw-2">&amp;</span>[Rc&lt;DenseMultilinearExtension&lt;E::Fr&gt;&gt;],
-        gs: <span class="kw-2">&amp;</span>[Rc&lt;DenseMultilinearExtension&lt;E::Fr&gt;&gt;],
+        frac_poly: <span class="kw-2">&amp;</span>Arc&lt;DenseMultilinearExtension&lt;E::Fr&gt;&gt;,
+        fs: <span class="kw-2">&amp;</span>[Arc&lt;DenseMultilinearExtension&lt;E::Fr&gt;&gt;],
+        gs: <span class="kw-2">&amp;</span>[Arc&lt;DenseMultilinearExtension&lt;E::Fr&gt;&gt;],
     ) <span class="kw">where
         </span>E: PairingEngine,
     {
@@ -668,14 +668,14 @@
     <span class="comment">// fs and gs are guaranteed to have the same product
     // fs and hs doesn&#39;t have the same product
     </span><span class="kw">fn </span>test_product_check_helper&lt;E, PCS&gt;(
-        fs: <span class="kw-2">&amp;</span>[Rc&lt;DenseMultilinearExtension&lt;E::Fr&gt;&gt;],
-        gs: <span class="kw-2">&amp;</span>[Rc&lt;DenseMultilinearExtension&lt;E::Fr&gt;&gt;],
-        hs: <span class="kw-2">&amp;</span>[Rc&lt;DenseMultilinearExtension&lt;E::Fr&gt;&gt;],
+        fs: <span class="kw-2">&amp;</span>[Arc&lt;DenseMultilinearExtension&lt;E::Fr&gt;&gt;],
+        gs: <span class="kw-2">&amp;</span>[Arc&lt;DenseMultilinearExtension&lt;E::Fr&gt;&gt;],
+        hs: <span class="kw-2">&amp;</span>[Arc&lt;DenseMultilinearExtension&lt;E::Fr&gt;&gt;],
         pcs_param: <span class="kw-2">&amp;</span>PCS::ProverParam,
     ) -&gt; <span class="prelude-ty">Result</span>&lt;(), PolyIOPErrors&gt;
     <span class="kw">where
         </span>E: PairingEngine,
-        PCS: PolynomialCommitmentScheme&lt;E, Polynomial = Rc&lt;DenseMultilinearExtension&lt;E::Fr&gt;&gt;&gt;,
+        PCS: PolynomialCommitmentScheme&lt;E, Polynomial = Arc&lt;DenseMultilinearExtension&lt;E::Fr&gt;&gt;&gt;,
     {
         <span class="kw">let </span><span class="kw-2">mut </span>transcript = &lt;PolyIOP&lt;E::Fr&gt; <span class="kw">as </span>ProductCheck&lt;E, PCS&gt;&gt;::init_transcript();
         transcript.append_message(<span class="string">b&quot;testing&quot;</span>, <span class="string">b&quot;initializing transcript for testing&quot;</span>)<span class="question-mark">?</span>;
@@ -735,11 +735,11 @@
         <span class="kw">let </span>f2: DenseMultilinearExtension&lt;Fr&gt; = DenseMultilinearExtension::rand(nv, <span class="kw-2">&amp;mut </span>rng);
         <span class="kw">let </span><span class="kw-2">mut </span>g2 = f2.clone();
         g2.evaluations.reverse();
-        <span class="kw">let </span>fs = <span class="macro">vec!</span>[Rc::new(f1), Rc::new(f2)];
-        <span class="kw">let </span>gs = <span class="macro">vec!</span>[Rc::new(g2), Rc::new(g1)];
+        <span class="kw">let </span>fs = <span class="macro">vec!</span>[Arc::new(f1), Arc::new(f2)];
+        <span class="kw">let </span>gs = <span class="macro">vec!</span>[Arc::new(g2), Arc::new(g1)];
         <span class="kw">let </span><span class="kw-2">mut </span>hs = <span class="macro">vec!</span>[];
         <span class="kw">for _ in </span><span class="number">0</span>..fs.len() {
-            hs.push(Rc::new(DenseMultilinearExtension::rand(
+            hs.push(Arc::new(DenseMultilinearExtension::rand(
                 fs[<span class="number">0</span>].num_vars,
                 <span class="kw-2">&amp;mut </span>rng,
             )));

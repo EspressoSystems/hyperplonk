@@ -390,7 +390,7 @@
 <span class="kw">use </span>ark_ec::PairingEngine;
 <span class="kw">use </span>ark_ff::PrimeField;
 <span class="kw">use </span>ark_poly::DenseMultilinearExtension;
-<span class="kw">use </span>std::{borrow::Borrow, rc::Rc};
+<span class="kw">use </span>std::{borrow::Borrow, sync::Arc};
 <span class="kw">use </span>subroutines::pcs::{prelude::Commitment, PolynomialCommitmentScheme};
 <span class="kw">use </span>transcript::IOPTranscript;
 
@@ -416,7 +416,7 @@
     </span>E: PairingEngine,
     PCS: PolynomialCommitmentScheme&lt;
         E,
-        Polynomial = Rc&lt;DenseMultilinearExtension&lt;E::Fr&gt;&gt;,
+        Polynomial = Arc&lt;DenseMultilinearExtension&lt;E::Fr&gt;&gt;,
         Point = Vec&lt;E::Fr&gt;,
         Evaluation = E::Fr,
         Commitment = Commitment&lt;E&gt;,
@@ -488,7 +488,7 @@
             <span class="kw">for </span>row <span class="kw">in </span><span class="macro-nonterminal">$rows</span>.iter() {
                 cur_coeffs.push(row.<span class="number">0</span>[i])
             }
-            res.push(Rc::new(DenseMultilinearExtension::from_evaluations_vec(
+            res.push(Arc::new(DenseMultilinearExtension::from_evaluations_vec(
                 num_vars, cur_coeffs,
             )))
         }
@@ -562,8 +562,8 @@
 </span><span class="kw">pub</span>(<span class="kw">crate</span>) <span class="kw">fn </span>build_f&lt;F: PrimeField&gt;(
     gates: <span class="kw-2">&amp;</span>CustomizedGates,
     num_vars: usize,
-    selector_mles: <span class="kw-2">&amp;</span>[Rc&lt;DenseMultilinearExtension&lt;F&gt;&gt;],
-    witness_mles: <span class="kw-2">&amp;</span>[Rc&lt;DenseMultilinearExtension&lt;F&gt;&gt;],
+    selector_mles: <span class="kw-2">&amp;</span>[Arc&lt;DenseMultilinearExtension&lt;F&gt;&gt;],
+    witness_mles: <span class="kw-2">&amp;</span>[Arc&lt;DenseMultilinearExtension&lt;F&gt;&gt;],
 ) -&gt; <span class="prelude-ty">Result</span>&lt;VirtualPolynomial&lt;F&gt;, HyperPlonkErrors&gt; {
     <span class="comment">// TODO: check that selector and witness lengths match what is in
     // the gate definition
@@ -690,7 +690,7 @@
         // 1, 0 |-&gt; 0
         // 1, 1 |-&gt; 5
         </span><span class="kw">let </span>ql_eval = <span class="macro">vec!</span>[F::zero(), F::from(<span class="number">2u64</span>), F::zero(), F::from(<span class="number">5u64</span>)];
-        <span class="kw">let </span>ql = Rc::new(DenseMultilinearExtension::from_evaluations_vec(<span class="number">2</span>, ql_eval));
+        <span class="kw">let </span>ql = Arc::new(DenseMultilinearExtension::from_evaluations_vec(<span class="number">2</span>, ql_eval));
 
         <span class="comment">// W1 = x1x2 + x1 whose evaluations are
         // 0, 0 |-&gt; 0
@@ -698,7 +698,7 @@
         // 1, 0 |-&gt; 1
         // 1, 1 |-&gt; 2
         </span><span class="kw">let </span>w_eval = <span class="macro">vec!</span>[F::zero(), F::zero(), F::from(<span class="number">1u64</span>), F::from(<span class="number">2u64</span>)];
-        <span class="kw">let </span>w1 = Rc::new(DenseMultilinearExtension::from_evaluations_vec(<span class="number">2</span>, w_eval));
+        <span class="kw">let </span>w1 = Arc::new(DenseMultilinearExtension::from_evaluations_vec(<span class="number">2</span>, w_eval));
 
         <span class="comment">// W2 = x1 + x2 whose evaluations are
         // 0, 0 |-&gt; 0
@@ -706,7 +706,7 @@
         // 1, 0 |-&gt; 1
         // 1, 1 |-&gt; 2
         </span><span class="kw">let </span>w_eval = <span class="macro">vec!</span>[F::zero(), F::one(), F::from(<span class="number">1u64</span>), F::from(<span class="number">2u64</span>)];
-        <span class="kw">let </span>w2 = Rc::new(DenseMultilinearExtension::from_evaluations_vec(<span class="number">2</span>, w_eval));
+        <span class="kw">let </span>w2 = Arc::new(DenseMultilinearExtension::from_evaluations_vec(<span class="number">2</span>, w_eval));
 
         <span class="comment">// Example:
         //     q_L(X) * W_1(X)^5 - W_2(X)

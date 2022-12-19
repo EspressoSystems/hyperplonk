@@ -74,7 +74,7 @@
 <span class="kw">use </span>ark_ff::PrimeField;
 <span class="kw">use </span>ark_poly::DenseMultilinearExtension;
 <span class="kw">use </span>ark_std::{end_timer, start_timer};
-<span class="kw">use </span>std::rc::Rc;
+<span class="kw">use </span>std::sync::Arc;
 
 <span class="doccomment">/// Returns the evaluations of two list of MLEs:
 /// - numerators = (a1, ..., ak)
@@ -93,13 +93,13 @@
 </span><span class="kw">pub</span>(<span class="kw">super</span>) <span class="kw">fn </span>computer_nums_and_denoms&lt;F: PrimeField&gt;(
     beta: <span class="kw-2">&amp;</span>F,
     gamma: <span class="kw-2">&amp;</span>F,
-    fxs: <span class="kw-2">&amp;</span>[Rc&lt;DenseMultilinearExtension&lt;F&gt;&gt;],
-    gxs: <span class="kw-2">&amp;</span>[Rc&lt;DenseMultilinearExtension&lt;F&gt;&gt;],
-    perms: <span class="kw-2">&amp;</span>[Rc&lt;DenseMultilinearExtension&lt;F&gt;&gt;],
+    fxs: <span class="kw-2">&amp;</span>[Arc&lt;DenseMultilinearExtension&lt;F&gt;&gt;],
+    gxs: <span class="kw-2">&amp;</span>[Arc&lt;DenseMultilinearExtension&lt;F&gt;&gt;],
+    perms: <span class="kw-2">&amp;</span>[Arc&lt;DenseMultilinearExtension&lt;F&gt;&gt;],
 ) -&gt; <span class="prelude-ty">Result</span>&lt;
     (
-        Vec&lt;Rc&lt;DenseMultilinearExtension&lt;F&gt;&gt;&gt;,
-        Vec&lt;Rc&lt;DenseMultilinearExtension&lt;F&gt;&gt;&gt;,
+        Vec&lt;Arc&lt;DenseMultilinearExtension&lt;F&gt;&gt;&gt;,
+        Vec&lt;Arc&lt;DenseMultilinearExtension&lt;F&gt;&gt;&gt;,
     ),
     PolyIOPErrors,
 &gt; {
@@ -123,11 +123,11 @@
             numerator_evals.push(numerator);
             denominator_evals.push(denominator);
         }
-        numerators.push(Rc::new(DenseMultilinearExtension::from_evaluations_vec(
+        numerators.push(Arc::new(DenseMultilinearExtension::from_evaluations_vec(
             num_vars,
             numerator_evals,
         )));
-        denominators.push(Rc::new(DenseMultilinearExtension::from_evaluations_vec(
+        denominators.push(Arc::new(DenseMultilinearExtension::from_evaluations_vec(
             num_vars,
             denominator_evals,
         )));
