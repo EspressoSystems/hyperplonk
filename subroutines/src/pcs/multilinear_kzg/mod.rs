@@ -126,11 +126,16 @@ impl<E: PairingEngine> PolynomialCommitmentScheme<E> for MultilinearKzgPCS<E> {
             .into_iter()
             .map(|x| x.into_repr())
             .collect();
+        let msm_timer = start_timer!(|| format!(
+            "msm of size {}",
+            prover_param.powers_of_g[ignored].evals.len()
+        ));
         let commitment = VariableBaseMSM::multi_scalar_mul(
             &prover_param.powers_of_g[ignored].evals,
             scalars.as_slice(),
         )
         .into_affine();
+        end_timer!(msm_timer);
 
         end_timer!(commit_timer);
         Ok(Commitment(commitment))
@@ -269,7 +274,11 @@ fn open_internal<E: PairingEngine>(
         r[k - 1] = cur_r;
 
         // this is a MSM over G1 and is likely to be the bottleneck
+        let msm_timer = start_timer!(|| format!("msm of size {} at round {}", gi.evals.len(), i));
+
         proofs.push(VariableBaseMSM::multi_scalar_mul(&gi.evals, &scalars).into_affine());
+        end_timer!(msm_timer);
+
         end_timer!(ith_round);
     }
     let eval = evaluate_opt(polynomial, point);
