@@ -4,28 +4,32 @@
 // The sumcheck based batch opening therefore cannot stay in the PCS repo --
 // which creates a cyclic dependency.
 
-use crate::{
-    pcs::{
-        multilinear_kzg::util::eq_eval,
-        prelude::{Commitment, PCSError},
-        PolynomialCommitmentScheme,
-    },
-    poly_iop::{prelude::SumCheck, PolyIOP},
-    IOPProof,
-};
-use arithmetic::{build_eq_x_r_vec, DenseMultilinearExtension, VPAuxInfo, VirtualPolynomial};
+use std::{marker::PhantomData, sync::Arc};
+use std::ops::{Mul};
+
 use ark_ec::{msm::VariableBaseMSM, PairingEngine, ProjectiveCurve};
 use ark_ff::PrimeField;
-use ark_std::{end_timer, log2, start_timer, One, Zero};
+use ark_std::{end_timer, log2, One, start_timer, Zero};
 use rayon::prelude::{IntoParallelRefIterator, ParallelIterator};
-use std::{marker::PhantomData, sync::Arc};
+
+use arithmetic::{build_eq_x_r_vec, DenseMultilinearExtension, VirtualPolynomial, VPAuxInfo};
 use transcript::IOPTranscript;
+
+use crate::{
+    IOPProof,
+    pcs::{
+        multilinear_kzg::util::eq_eval,
+        PolynomialCommitmentScheme,
+        prelude::{Commitment, PCSError},
+    },
+    poly_iop::{PolyIOP, prelude::SumCheck},
+};
 
 #[derive(Clone, Debug, Default, PartialEq, Eq)]
 pub struct BatchProof<E, PCS>
-where
-    E: PairingEngine,
-    PCS: PolynomialCommitmentScheme<E>,
+    where
+        E: PairingEngine,
+        PCS: PolynomialCommitmentScheme<E>,
 {
     /// A sum check proof proving tilde g's sum
     pub(crate) sum_check_proof: IOPProof<E::Fr>,
@@ -50,41 +54,33 @@ pub(crate) fn multi_open_internal<E, PCS>(
     evals: &[PCS::Evaluation],
     transcript: &mut IOPTranscript<E::Fr>,
 ) -> Result<BatchProof<E, PCS>, PCSError>
-where
-    E: PairingEngine,
-    PCS: PolynomialCommitmentScheme<
-        E,
-        Polynomial = Arc<DenseMultilinearExtension<E::Fr>>,
-        Point = Vec<E::Fr>,
-        Evaluation = E::Fr,
-    >,
+    where
+        E: PairingEngine,
+        PCS: PolynomialCommitmentScheme<
+            E,
+            Polynomial=Arc<DenseMultilinearExtension<E::Fr>>,
+            Point=Vec<E::Fr>,
+            Evaluation=E::Fr,
+        >,
 {
-    let open_timer = start_timer!(|| format!("multi open {} points", points.len()));
 
     // TODO: sanity checks
     let num_var = polynomials[0].num_vars;
     let k = polynomials.len();
     let ell = log2(k) as usize;
+    let open_timer = start_timer!(|| format!("open polynomials with {} variables at {} points",num_var,  k));
 
     // challenge point t
     let t = transcript.get_and_append_challenge_vectors("t".as_ref(), ell)?;
 
     // eq(t, i) for i in [0..k]
     let eq_t_i_list = build_eq_x_r_vec(t.as_ref())?;
-
     // \tilde g_i(b) = eq(t, i) * f_i(b)
     let timer = start_timer!(|| format!("compute tilde g for {} points", points.len()));
-    let mut tilde_gs = vec![];
-    for (index, f_i) in polynomials.iter().enumerate() {
-        let mut tilde_g_eval = vec![E::Fr::zero(); 1 << num_var];
-        for (j, &f_i_eval) in f_i.iter().enumerate() {
-            tilde_g_eval[j] = f_i_eval * eq_t_i_list[index];
-        }
-        tilde_gs.push(Arc::new(DenseMultilinearExtension::from_evaluations_vec(
-            num_var,
-            tilde_g_eval,
-        )));
-    }
+    let tilde_gs = polynomials.iter().zip(eq_t_i_list.iter()).map(|(f, eq_t_i)| {
+        let fti = f.evaluations.iter().map(|f_b| f_b.mul(eq_t_i)).collect::<Vec<_>>();
+        Arc::new(DenseMultilinearExtension::from_evaluations_vec(num_var, fti))
+    }).collect::<Vec<_>>();
     end_timer!(timer);
 
     let timer = start_timer!(|| format!("compute tilde eq for {} points", points.len()));
@@ -116,7 +112,7 @@ where
             return Err(PCSError::InvalidProver(
                 "Sumcheck in batch proving Failed".to_string(),
             ));
-        },
+        }
     };
 
     end_timer!(timer);
@@ -168,15 +164,15 @@ pub(crate) fn batch_verify_internal<E, PCS>(
     proof: &BatchProof<E, PCS>,
     transcript: &mut IOPTranscript<E::Fr>,
 ) -> Result<bool, PCSError>
-where
-    E: PairingEngine,
-    PCS: PolynomialCommitmentScheme<
-        E,
-        Polynomial = Arc<DenseMultilinearExtension<E::Fr>>,
-        Point = Vec<E::Fr>,
-        Evaluation = E::Fr,
-        Commitment = Commitment<E>,
-    >,
+    where
+        E: PairingEngine,
+        PCS: PolynomialCommitmentScheme<
+            E,
+            Polynomial=Arc<DenseMultilinearExtension<E::Fr>>,
+            Point=Vec<E::Fr>,
+            Evaluation=E::Fr,
+            Commitment=Commitment<E>,
+        >,
 {
     let open_timer = start_timer!(|| "batch verification");
 
@@ -229,7 +225,7 @@ where
             return Err(PCSError::InvalidProver(
                 "Sumcheck in batch verification failed".to_string(),
             ));
-        },
+        }
     };
     let tilde_g_eval = subclaim.expected_evaluation;
 
@@ -248,21 +244,24 @@ where
 
 #[cfg(test)]
 mod tests {
-    use super::*;
-    use crate::pcs::{
-        prelude::{MultilinearKzgPCS, MultilinearUniversalParams},
-        StructuredReferenceString,
-    };
-    use arithmetic::get_batched_nv;
     use ark_bls12_381::Bls12_381 as E;
     use ark_ec::PairingEngine;
     use ark_poly::{DenseMultilinearExtension, MultilinearExtension};
     use ark_std::{
         rand::{CryptoRng, RngCore},
         test_rng,
-        vec::Vec,
         UniformRand,
+        vec::Vec,
     };
+
+    use arithmetic::get_batched_nv;
+
+    use crate::pcs::{
+        prelude::{MultilinearKzgPCS, MultilinearUniversalParams},
+        StructuredReferenceString,
+    };
+
+    use super::*;
 
     type Fr = <E as PairingEngine>::Fr;
 
@@ -312,7 +311,7 @@ mod tests {
             &commitments,
             &points,
             &batch_proof,
-            &mut transcript
+            &mut transcript,
         )?);
 
         Ok(())
