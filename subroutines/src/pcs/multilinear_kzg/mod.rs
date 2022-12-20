@@ -274,8 +274,7 @@ fn open_internal<E: PairingEngine>(
         r[k - 1] = cur_r;
 
         // this is a MSM over G1 and is likely to be the bottleneck
-        let msm_timer =
-            start_timer!(|| format!("msm of size {} at round {}", gi.evals.len(), ith_round));
+        let msm_timer = start_timer!(|| format!("msm of size {} at round {}", gi.evals.len(), i));
 
         proofs.push(VariableBaseMSM::multi_scalar_mul(&gi.evals, &scalars).into_affine());
         end_timer!(msm_timer);
