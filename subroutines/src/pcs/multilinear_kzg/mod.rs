@@ -7,8 +7,8 @@
 //! Main module for multilinear KZG commitment scheme
 
 use ark_ec::{
-    AffineCurve,
-    msm::{FixedBaseMSM, VariableBaseMSM}, PairingEngine, ProjectiveCurve,
+    msm::{FixedBaseMSM, VariableBaseMSM},
+    AffineCurve, PairingEngine, ProjectiveCurve,
 };
 use ark_ff::PrimeField;
 use ark_poly::{DenseMultilinearExtension, MultilinearExtension};
@@ -17,11 +17,11 @@ use ark_std::{
     borrow::Borrow,
     end_timer, format,
     marker::PhantomData,
-    One,
     rand::{CryptoRng, RngCore},
     start_timer,
     string::ToString,
     sync::Arc,
+    One,
 };
 
 use arithmetic::evaluate_opt;
@@ -30,8 +30,8 @@ use srs::{MultilinearProverParam, MultilinearUniversalParams, MultilinearVerifie
 use transcript::IOPTranscript;
 
 use crate::{
+    pcs::{prelude::Commitment, PCSError, PolynomialCommitmentScheme, StructuredReferenceString},
     BatchProof,
-    pcs::{PCSError, PolynomialCommitmentScheme, prelude::Commitment, StructuredReferenceString},
 };
 
 use self::batching::{batch_verify_internal, multi_open_internal};
@@ -96,8 +96,8 @@ impl<E: PairingEngine> PolynomialCommitmentScheme<E> for MultilinearKzgPCS<E> {
             None => {
                 return Err(PCSError::InvalidParameters(
                     "multilinear should receive a num_var param".to_string(),
-                ));
-            }
+                ))
+            },
         };
         let (ml_ck, ml_vk) = srs.borrow().trim(supported_num_vars)?;
 
@@ -120,16 +120,22 @@ impl<E: PairingEngine> PolynomialCommitmentScheme<E> for MultilinearKzgPCS<E> {
                 poly.num_vars, prover_param.num_vars
             )));
         }
+        let ignored = prover_param.num_vars - poly.num_vars;
         let scalars: Vec<_> = poly
             .to_evaluations()
             .into_iter()
             .map(|x| x.into_repr())
             .collect();
+        let msm_timer = start_timer!(|| format!(
+            "msm of size {}",
+            prover_param.powers_of_g[ignored].evals.len()
+        ));
         let commitment = VariableBaseMSM::multi_scalar_mul(
-            &prover_param.powers_of_g[0].evals,
+            &prover_param.powers_of_g[ignored].evals,
             scalars.as_slice(),
         )
-            .into_affine();
+        .into_affine();
+        end_timer!(msm_timer);
 
         end_timer!(commit_timer);
         Ok(Commitment(commitment))
@@ -239,26 +245,37 @@ fn open_internal<E: PairingEngine>(
 
     for (i, (&point_at_k, gi)) in point
         .iter()
-        .zip(prover_param.powers_of_g[1..nv+1].iter())
+        .zip(prover_param.powers_of_g[1..nv + 1].iter())
         .enumerate()
     {
         let ith_round = start_timer!(|| format!("{}-th round", i));
         //f(X,Y)=q(Y)*(X-z)+r(Y)
         //q(Y)=f(1,Y)-f(0,Y)
         //r(Y)=f(0,Y)+q(Y)*z
-        let cur_q: Vec<E::Fr> = r[i].iter().skip(1).step_by(2).zip(r[i].iter().step_by(2)).map(|(x, y)| {
-            *x - *y
-        }).collect();
-        let cur_r: Vec<E::Fr> = r[i].iter().step_by(2).zip(cur_q.iter()).map(|(x, y)| {
-            *x + *y * point_at_k
-        }).collect();
+        let cur_q: Vec<E::Fr> = r[i]
+            .iter()
+            .skip(1)
+            .step_by(2)
+            .zip(r[i].iter().step_by(2))
+            .map(|(x, y)| *x - *y)
+            .collect();
+        let cur_r: Vec<E::Fr> = r[i]
+            .iter()
+            .step_by(2)
+            .zip(cur_q.iter())
+            .map(|(x, y)| *x + *y * point_at_k)
+            .collect();
 
         let scalars: Vec<_> = cur_q.iter().map(|x| x.into_repr()).collect();
 
-        r[i+1] = cur_r;
+        r[i + 1] = cur_r;
 
         // this is a MSM over G1 and is likely to be the bottleneck
+        let msm_timer = start_timer!(|| format!("msm of size {} at round {}", gi.evals.len(), i));
+
         proofs.push(VariableBaseMSM::multi_scalar_mul(&gi.evals, &scalars).into_affine());
+        end_timer!(msm_timer);
+
         end_timer!(ith_round);
     }
     let eval = evaluate_opt(polynomial, point);
@@ -336,7 +353,7 @@ mod tests {
     use ark_bls12_381::Bls12_381;
     use ark_ec::PairingEngine;
     use ark_poly::{DenseMultilinearExtension, MultilinearExtension};
-    use ark_std::{rand::RngCore, test_rng, UniformRand, vec::Vec};
+    use ark_std::{rand::RngCore, test_rng, vec::Vec, UniformRand};
 
     use super::*;
 

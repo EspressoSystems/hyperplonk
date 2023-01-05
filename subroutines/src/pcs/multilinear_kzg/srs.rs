@@ -111,7 +111,7 @@ impl<E: PairingEngine> StructuredReferenceString<E> for MultilinearUniversalPara
         }
 
         let ck = Self::ProverParam {
-            powers_of_g: self.prover_param.powers_of_g[self.prover_param.num_vars-supported_num_vars..] .to_vec(),
+            powers_of_g: self.prover_param.powers_of_g[self.prover_param.num_vars - supported_num_vars..].to_vec(),
             g: self.prover_param.g,
             h: self.prover_param.h,
             num_vars: supported_num_vars,
@@ -120,7 +120,7 @@ impl<E: PairingEngine> StructuredReferenceString<E> for MultilinearUniversalPara
             num_vars: supported_num_vars,
             g: self.prover_param.g,
             h: self.prover_param.h,
-            h_mask: self.h_mask[self.prover_param.num_vars-supported_num_vars..].to_vec(),
+            h_mask: self.h_mask[self.prover_param.num_vars - supported_num_vars..].to_vec(),
         };
         Ok((ck, vk))
     }
@@ -144,18 +144,18 @@ impl<E: PairingEngine> StructuredReferenceString<E> for MultilinearUniversalPara
 
         let g = E::G1Projective::rand(rng);
         let h = E::G2Projective::rand(rng);
-        let mut powers_of_g = vec![Evaluations { evals: vec![] }; num_vars+1];
+        let mut powers_of_g = vec![Evaluations { evals: vec![] }; num_vars + 1];
 
         let t: Vec<_> = (0..num_vars).map(|_| E::Fr::rand(rng)).collect();
         let scalar_bits = E::Fr::size_in_bits();
         let t_evals = build_eq_x_r_vec(&t)?;
-        let scalars = t_evals.iter().map(|t_eval| t_eval.into_repr());
-        powers_of_g[0] = Evaluations { evals: scalars.map(|s| g.mul(s).into_affine()).collect() };
-        
-        for i in 1..num_vars+1 {
-            let lastvec = &powers_of_g[i-1].evals;
+        let lastvec : Vec<_> = t_evals.iter().map(|t_eval| t_eval.into_repr()).map(|s| g.mul(s)).collect();
+        powers_of_g[0] = Evaluations { evals: E::G1Projective::batch_normalization_into_affine(&lastvec) };
+
+        for i in 1..num_vars + 1 {
+            let lastvec = lastvec.iter().step(2).zip(lastvec.iter().skip(1).step(2)).map(|x, y| x.add(y)).collect();
             powers_of_g[i] = Evaluations {
-                evals: lastvec.iter().step_by(2).zip(lastvec.iter().skip(1).step_by(2)).map(|(a, b)| a.add(*b)).collect()
+                evals: E::G1Projective::batch_normalization_into_affine(&lastvec),
             };
         }
         let pp = Self::ProverParam {
