@@ -6,18 +6,9 @@
 
 //! Main module for multilinear KZG commitment scheme
 
-pub(crate) mod batching;
-pub(crate) mod srs;
-pub(crate) mod util;
-
-use crate::{
-    pcs::{prelude::Commitment, PCSError, PolynomialCommitmentScheme, StructuredReferenceString},
-    BatchProof,
-};
-use arithmetic::evaluate_opt;
 use ark_ec::{
-    msm::{FixedBaseMSM, VariableBaseMSM},
-    AffineCurve, PairingEngine, ProjectiveCurve,
+    AffineCurve,
+    msm::{FixedBaseMSM, VariableBaseMSM}, PairingEngine, ProjectiveCurve,
 };
 use ark_ff::PrimeField;
 use ark_poly::{DenseMultilinearExtension, MultilinearExtension};
@@ -26,19 +17,28 @@ use ark_std::{
     borrow::Borrow,
     end_timer, format,
     marker::PhantomData,
+    One,
     rand::{CryptoRng, RngCore},
     start_timer,
     string::ToString,
     sync::Arc,
-    vec,
-    vec::Vec,
-    One, Zero,
 };
+
+use arithmetic::evaluate_opt;
 // use batching::{batch_verify_internal, multi_open_internal};
 use srs::{MultilinearProverParam, MultilinearUniversalParams, MultilinearVerifierParam};
 use transcript::IOPTranscript;
 
+use crate::{
+    BatchProof,
+    pcs::{PCSError, PolynomialCommitmentScheme, prelude::Commitment, StructuredReferenceString},
+};
+
 use self::batching::{batch_verify_internal, multi_open_internal};
+
+pub(crate) mod batching;
+pub(crate) mod srs;
+pub(crate) mod util;
 
 /// KZG Polynomial Commitment Scheme on multilinear polynomials.
 pub struct MultilinearKzgPCS<E: PairingEngine> {
@@ -96,8 +96,8 @@ impl<E: PairingEngine> PolynomialCommitmentScheme<E> for MultilinearKzgPCS<E> {
             None => {
                 return Err(PCSError::InvalidParameters(
                     "multilinear should receive a num_var param".to_string(),
-                ))
-            },
+                ));
+            }
         };
         let (ml_ck, ml_vk) = srs.borrow().trim(supported_num_vars)?;
 
@@ -120,17 +120,16 @@ impl<E: PairingEngine> PolynomialCommitmentScheme<E> for MultilinearKzgPCS<E> {
                 poly.num_vars, prover_param.num_vars
             )));
         }
-        let ignored = prover_param.num_vars - poly.num_vars;
         let scalars: Vec<_> = poly
             .to_evaluations()
             .into_iter()
             .map(|x| x.into_repr())
             .collect();
         let commitment = VariableBaseMSM::multi_scalar_mul(
-            &prover_param.powers_of_g[ignored].evals,
+            &prover_param.powers_of_g[0].evals,
             scalars.as_slice(),
         )
-        .into_affine();
+            .into_affine();
 
         end_timer!(commit_timer);
         Ok(Commitment(commitment))
@@ -232,41 +231,31 @@ fn open_internal<E: PairingEngine>(
     }
 
     let nv = polynomial.num_vars();
-    let ignored = prover_param.num_vars - nv;
     let mut r: Vec<Vec<E::Fr>> = (0..nv + 1).map(|_| Vec::new()).collect();
-    let mut q: Vec<Vec<E::Fr>> = (0..nv + 1).map(|_| Vec::new()).collect();
 
-    r[nv] = polynomial.to_evaluations();
+    r[0] = polynomial.to_evaluations();
 
     let mut proofs = Vec::new();
 
     for (i, (&point_at_k, gi)) in point
         .iter()
-        .zip(prover_param.powers_of_g[ignored..].iter())
-        .take(nv)
+        .zip(prover_param.powers_of_g[1..nv+1].iter())
         .enumerate()
     {
         let ith_round = start_timer!(|| format!("{}-th round", i));
+        //f(X,Y)=q(Y)*(X-z)+r(Y)
+        //q(Y)=f(1,Y)-f(0,Y)
+        //r(Y)=f(0,Y)+q(Y)*z
+        let cur_q: Vec<E::Fr> = r[i].iter().skip(1).step_by(2).zip(r[i].iter().step_by(2)).map(|(x, y)| {
+            *x - *y
+        }).collect();
+        let cur_r: Vec<E::Fr> = r[i].iter().step_by(2).zip(cur_q.iter()).map(|(x, y)| {
+            *x + *y * point_at_k
+        }).collect();
 
-        let k = nv - i;
-        let cur_dim = 1 << (k - 1);
-        let mut cur_q = vec![E::Fr::zero(); cur_dim];
-        let mut cur_r = vec![E::Fr::zero(); cur_dim];
-        let one_minus_point_at_k = E::Fr::one() - point_at_k;
+        let scalars: Vec<_> = cur_q.iter().map(|x| x.into_repr()).collect();
 
-        let ith_round_eval = start_timer!(|| format!("{}-th round eval", i));
-        for b in 0..(1 << (k - 1)) {
-            // q_b = pre_r [2^b + 1] - pre_r [2^b]
-            cur_q[b] = r[k][(b << 1) + 1] - r[k][b << 1];
-
-            // r_b = pre_r [2^b]*(1-p) + pre_r [2^b + 1] * p
-            cur_r[b] = r[k][b << 1] * one_minus_point_at_k + (r[k][(b << 1) + 1] * point_at_k);
-        }
-        end_timer!(ith_round_eval);
-        let scalars: Vec<_> = (0..(1 << k)).map(|x| cur_q[x >> 1].into_repr()).collect();
-
-        q[k] = cur_q;
-        r[k - 1] = cur_r;
+        r[i+1] = cur_r;
 
         // this is a MSM over G1 and is likely to be the bottleneck
         proofs.push(VariableBaseMSM::multi_scalar_mul(&gi.evals, &scalars).into_affine());
@@ -300,7 +289,6 @@ fn verify_internal<E: PairingEngine>(
         )));
     }
 
-    let ignored = verifier_param.num_vars - num_var;
     let prepare_inputs_timer = start_timer!(|| "prepare pairing inputs");
 
     let scalar_size = E::Fr::size_in_bits();
@@ -315,7 +303,7 @@ fn verify_internal<E: PairingEngine>(
         FixedBaseMSM::multi_scalar_mul(scalar_size, window_size, &h_table, point);
 
     let h_vec: Vec<_> = (0..num_var)
-        .map(|i| verifier_param.h_mask[ignored + i].into_projective() - h_mul[i])
+        .map(|i| verifier_param.h_mask[i].into_projective() - h_mul[i])
         .collect();
     let h_vec: Vec<E::G2Affine> = E::G2Projective::batch_normalization_into_affine(&h_vec);
     end_timer!(prepare_inputs_timer);
@@ -345,11 +333,12 @@ fn verify_internal<E: PairingEngine>(
 
 #[cfg(test)]
 mod tests {
-    use super::*;
     use ark_bls12_381::Bls12_381;
     use ark_ec::PairingEngine;
     use ark_poly::{DenseMultilinearExtension, MultilinearExtension};
-    use ark_std::{rand::RngCore, test_rng, vec::Vec, UniformRand};
+    use ark_std::{rand::RngCore, test_rng, UniformRand, vec::Vec};
+
+    use super::*;
 
     type E = Bls12_381;
     type Fr = <E as PairingEngine>::Fr;
@@ -361,18 +350,18 @@ mod tests {
     ) -> Result<(), PCSError> {
         let nv = poly.num_vars();
         assert_ne!(nv, 0);
-        let (ck, vk) = MultilinearKzgPCS::trim(params, None, Some(nv + 1))?;
+        let (ck, vk) = MultilinearKzgPCS::trim(params, None, Some(nv))?;
         let point: Vec<_> = (0..nv).map(|_| Fr::rand(rng)).collect();
         let com = MultilinearKzgPCS::commit(&ck, poly)?;
         let (proof, value) = MultilinearKzgPCS::open(&ck, poly, &point)?;
 
         assert!(MultilinearKzgPCS::verify(
-            &vk, &com, &point, &value, &proof
+            &vk, &com, &point, &value, &proof,
         )?);
 
         let value = Fr::rand(rng);
         assert!(!MultilinearKzgPCS::verify(
-            &vk, &com, &point, &value, &proof
+            &vk, &com, &point, &value, &proof,
         )?);
 
         Ok(())

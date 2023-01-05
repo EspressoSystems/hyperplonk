@@ -187,7 +187,7 @@ where
         let frac_poly = compute_frac_poly(fxs, gxs)?;
         // compute the product polynomial
         let prod_x = compute_product_poly(&frac_poly)?;
-
+        //TODO:parallelize the commitment phase
         // generate challenge
         let frac_comm = PCS::commit(pcs_param, &frac_poly)?;
         let prod_x_comm = PCS::commit(pcs_param, &prod_x)?;
