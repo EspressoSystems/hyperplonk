@@ -5,23 +5,26 @@
 // along with the Jellyfish library. If not, see <https://mit-license.org/>.
 
 //! Implementing Structured Reference Strings for multilinear polynomial KZG
-use crate::pcs::{
-    multilinear_kzg::util::eq_extension, prelude::PCSError, StructuredReferenceString,
-};
-use ark_ec::{msm::FixedBaseMSM, AffineCurve, PairingEngine, ProjectiveCurve};
-use ark_ff::{Field, PrimeField};
-use ark_poly::DenseMultilinearExtension;
+use std::ops::Add;
+
+use ark_ec::{AffineCurve, msm::FixedBaseMSM, PairingEngine, ProjectiveCurve};
+use ark_ff::{PrimeField};
 use ark_serialize::{CanonicalDeserialize, CanonicalSerialize, Read, SerializationError, Write};
 use ark_std::{
-    collections::LinkedList,
     end_timer, format,
     rand::{CryptoRng, RngCore},
     start_timer,
     string::ToString,
-    vec::Vec,
     UniformRand,
+    vec::Vec,
 };
-use core::iter::FromIterator;
+use rayon::iter::IntoParallelRefIterator;
+
+use arithmetic::{build_eq_x_r_vec};
+
+use crate::pcs::{
+    prelude::PCSError, StructuredReferenceString,
+};
 
 /// Evaluations over {0,1}^n for G1 or G2
 #[derive(CanonicalSerialize, CanonicalDeserialize, Clone, Debug)]
@@ -44,8 +47,9 @@ pub struct MultilinearUniversalParams<E: PairingEngine> {
 pub struct MultilinearProverParam<E: PairingEngine> {
     /// number of variables
     pub num_vars: usize,
-    /// `pp_{num_vars}`, `pp_{num_vars - 1}`, `pp_{num_vars - 2}`, ..., defined
-    /// by XZZPD19
+
+    /// `pp_{0}`, `pp_{1}`, ...,pp_{nu_vars} defined
+    /// by XZZPD19 where pp_0=g and pp_{i}=g^{eq((t_1,..t_i),(X_1,..X_i))}
     pub powers_of_g: Vec<Evaluations<E::G1Affine>>,
     /// generator for G1
     pub g: E::G1Affine,
@@ -72,10 +76,8 @@ impl<E: PairingEngine> StructuredReferenceString<E> for MultilinearUniversalPara
 
     /// Extract the prover parameters from the public parameters.
     fn extract_prover_param(&self, supported_num_vars: usize) -> Self::ProverParam {
-        let to_reduce = self.prover_param.num_vars - supported_num_vars;
-
         Self::ProverParam {
-            powers_of_g: self.prover_param.powers_of_g[to_reduce..].to_vec(),
+            powers_of_g: self.prover_param.powers_of_g[..supported_num_vars + 1].to_vec(),
             g: self.prover_param.g,
             h: self.prover_param.h,
             num_vars: supported_num_vars,
@@ -108,9 +110,8 @@ impl<E: PairingEngine> StructuredReferenceString<E> for MultilinearUniversalPara
             )));
         }
 
-        let to_reduce = self.prover_param.num_vars - supported_num_vars;
         let ck = Self::ProverParam {
-            powers_of_g: self.prover_param.powers_of_g[to_reduce..].to_vec(),
+            powers_of_g: self.prover_param.powers_of_g[self.prover_param.num_vars-supported_num_vars..] .to_vec(),
             g: self.prover_param.g,
             h: self.prover_param.h,
             num_vars: supported_num_vars,
@@ -119,7 +120,7 @@ impl<E: PairingEngine> StructuredReferenceString<E> for MultilinearUniversalPara
             num_vars: supported_num_vars,
             g: self.prover_param.g,
             h: self.prover_param.h,
-            h_mask: self.h_mask[to_reduce..].to_vec(),
+            h_mask: self.h_mask[self.prover_param.num_vars-supported_num_vars..].to_vec(),
         };
         Ok((ck, vk))
     }
@@ -143,59 +144,25 @@ impl<E: PairingEngine> StructuredReferenceString<E> for MultilinearUniversalPara
 
         let g = E::G1Projective::rand(rng);
         let h = E::G2Projective::rand(rng);
-
-        let mut powers_of_g = Vec::new();
+        let mut powers_of_g = vec![Evaluations { evals: vec![] }; num_vars+1];
 
         let t: Vec<_> = (0..num_vars).map(|_| E::Fr::rand(rng)).collect();
         let scalar_bits = E::Fr::size_in_bits();
-
-        let mut eq: LinkedList<DenseMultilinearExtension<E::Fr>> =
-            LinkedList::from_iter(eq_extension(&t).into_iter());
-        let mut eq_arr = LinkedList::new();
-        let mut base = eq.pop_back().unwrap().evaluations;
-
-        for i in (0..num_vars).rev() {
-            eq_arr.push_front(remove_dummy_variable(&base, i)?);
-            if i != 0 {
-                let mul = eq.pop_back().unwrap().evaluations;
-                base = base
-                    .into_iter()
-                    .zip(mul.into_iter())
-                    .map(|(a, b)| a * b)
-                    .collect();
-            }
-        }
-
-        let mut pp_powers = Vec::new();
-        let mut total_scalars = 0;
-        for i in 0..num_vars {
-            let eq = eq_arr.pop_front().unwrap();
-            let pp_k_powers = (0..(1 << (num_vars - i))).map(|x| eq[x]);
-            pp_powers.extend(pp_k_powers);
-            total_scalars += 1 << (num_vars - i);
-        }
-        let window_size = FixedBaseMSM::get_mul_window_size(total_scalars);
-        let g_table = FixedBaseMSM::get_window_table(scalar_bits, window_size, g);
-
-        let pp_g = E::G1Projective::batch_normalization_into_affine(
-            &FixedBaseMSM::multi_scalar_mul(scalar_bits, window_size, &g_table, &pp_powers),
-        );
-
-        let mut start = 0;
-        for i in 0..num_vars {
-            let size = 1 << (num_vars - i);
-            let pp_k_g = Evaluations {
-                evals: pp_g[start..(start + size)].to_vec(),
+        let t_evals = build_eq_x_r_vec(&t)?;
+        let scalars = t_evals.iter().map(|t_eval| t_eval.into_repr());
+        powers_of_g[0] = Evaluations { evals: scalars.map(|s| g.mul(s).into_affine()).collect() };
+        
+        for i in 1..num_vars+1 {
+            let lastvec = &powers_of_g[i-1].evals;
+            powers_of_g[i] = Evaluations {
+                evals: lastvec.iter().step_by(2).zip(lastvec.iter().skip(1).step_by(2)).map(|(a, b)| a.add(*b)).collect()
             };
-            powers_of_g.push(pp_k_g);
-            start += size;
         }
-
         let pp = Self::ProverParam {
             num_vars,
+            powers_of_g,
             g: g.into_affine(),
             h: h.into_affine(),
-            powers_of_g,
         };
 
         end_timer!(pp_generation_timer);
@@ -220,32 +187,22 @@ impl<E: PairingEngine> StructuredReferenceString<E> for MultilinearUniversalPara
     }
 }
 
-/// fix first `pad` variables of `poly` represented in evaluation form to zero
-fn remove_dummy_variable<F: Field>(poly: &[F], pad: usize) -> Result<Vec<F>, PCSError> {
-    if pad == 0 {
-        return Ok(poly.to_vec());
-    }
-    if !poly.len().is_power_of_two() {
-        return Err(PCSError::InvalidParameters(
-            "Size of polynomial should be power of two.".to_string(),
-        ));
-    }
-    let nv = ark_std::log2(poly.len()) as usize - pad;
-    Ok((0..(1 << nv)).map(|x| poly[x << pad]).collect())
-}
 
 #[cfg(test)]
 mod tests {
-    use super::*;
     use ark_bls12_381::Bls12_381;
     use ark_std::test_rng;
+
+    use super::*;
+
     type E = Bls12_381;
 
     #[test]
     fn test_srs_gen() -> Result<(), PCSError> {
         let mut rng = test_rng();
-        for nv in 4..10 {
-            let _ = MultilinearUniversalParams::<E>::gen_srs_for_testing(&mut rng, nv)?;
+        for nv in 4..11 {
+            let params = MultilinearUniversalParams::<E>::gen_srs_for_testing(&mut rng, nv)?;
+            assert_eq!(params.prover_param.g, params.prover_param.powers_of_g[nv].evals[0]);
         }
 
         Ok(())
