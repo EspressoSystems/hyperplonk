@@ -1,3 +1,5 @@
+extern crate core;
+
 pub mod pcs;
 pub mod poly_iop;
 

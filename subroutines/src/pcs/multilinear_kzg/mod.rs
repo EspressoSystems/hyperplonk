@@ -6,18 +6,9 @@
 
 //! Main module for multilinear KZG commitment scheme
 
-pub(crate) mod batching;
-pub(crate) mod srs;
-pub(crate) mod util;
-
-use crate::{
-    pcs::{prelude::Commitment, PCSError, PolynomialCommitmentScheme, StructuredReferenceString},
-    BatchProof,
-};
-use arithmetic::evaluate_opt;
 use ark_ec::{
-    msm::{FixedBaseMSM, VariableBaseMSM},
-    AffineCurve, PairingEngine, ProjectiveCurve,
+    AffineCurve,
+    msm::{FixedBaseMSM, VariableBaseMSM}, PairingEngine, ProjectiveCurve,
 };
 use ark_ff::PrimeField;
 use ark_poly::{DenseMultilinearExtension, MultilinearExtension};
@@ -26,19 +17,30 @@ use ark_std::{
     borrow::Borrow,
     end_timer, format,
     marker::PhantomData,
+    One,
     rand::{CryptoRng, RngCore},
     start_timer,
     string::ToString,
     sync::Arc,
     vec,
-    vec::Vec,
-    One, Zero,
+    vec::Vec, Zero,
 };
+
+use arithmetic::evaluate_opt;
 // use batching::{batch_verify_internal, multi_open_internal};
 use srs::{MultilinearProverParam, MultilinearUniversalParams, MultilinearVerifierParam};
 use transcript::IOPTranscript;
 
+use crate::{
+    BatchProof,
+    pcs::{PCSError, PolynomialCommitmentScheme, prelude::Commitment, StructuredReferenceString},
+};
+
 use self::batching::{batch_verify_internal, multi_open_internal};
+
+pub(crate) mod batching;
+pub(crate) mod srs;
+pub(crate) mod util;
 
 /// KZG Polynomial Commitment Scheme on multilinear polynomials.
 pub struct MultilinearKzgPCS<E: PairingEngine> {
@@ -96,8 +98,8 @@ impl<E: PairingEngine> PolynomialCommitmentScheme<E> for MultilinearKzgPCS<E> {
             None => {
                 return Err(PCSError::InvalidParameters(
                     "multilinear should receive a num_var param".to_string(),
-                ))
-            },
+                ));
+            }
         };
         let (ml_ck, ml_vk) = srs.borrow().trim(supported_num_vars)?;
 
@@ -134,7 +136,7 @@ impl<E: PairingEngine> PolynomialCommitmentScheme<E> for MultilinearKzgPCS<E> {
             &prover_param.powers_of_g[ignored].evals,
             scalars.as_slice(),
         )
-        .into_affine();
+            .into_affine();
         end_timer!(msm_timer);
 
         end_timer!(commit_timer);
@@ -236,14 +238,14 @@ fn open_internal<E: PairingEngine>(
     }
 
     let nv = polynomial.num_vars();
-
+    let skipped = prover_param.num_vars - nv + 1;
     let mut f = polynomial.to_evaluations();
 
     let mut proofs = Vec::new();
 
     for (i, (&point_at_k, gi)) in point
         .iter()
-        .zip(prover_param.powers_of_g[1..nv + 1].iter())
+        .zip(prover_param.powers_of_g[skipped..].iter())
         .enumerate()
     {
         let ith_round = start_timer!(|| format!("{}-th round", i));
@@ -263,13 +265,14 @@ fn open_internal<E: PairingEngine>(
         }
         f = r;
         end_timer!(ith_round_eval);
-        let scalars: Vec<_> = q.iter().map(|x| x.into_repr()).collect();
+        let scalars: Arc<Vec<_>> = Arc::new(q.iter().map(|x| x.into_repr()).collect());
 
         // this is a MSM over G1 and is likely to be the bottleneck
         let msm_timer = start_timer!(|| format!("msm of size {} at round {}", gi.evals.len(), i));
 
-        proofs.push(VariableBaseMSM::multi_scalar_mul(&gi.evals, &scalars).into_affine());
+        let pi=VariableBaseMSM::multi_scalar_mul(&gi.evals, scalars.as_slice()).into_affine();
         end_timer!(msm_timer);
+        proofs.push(pi);
 
         end_timer!(ith_round);
     }
@@ -313,10 +316,11 @@ fn verify_internal<E: PairingEngine>(
     );
     let h_mul: Vec<E::G2Projective> =
         FixedBaseMSM::multi_scalar_mul(scalar_size, window_size, &h_table, point);
+    let skipped = verifier_param.num_vars - num_var;
 
-    let h_vec: Vec<_> = (0..num_var)
-        .map(|i| verifier_param.h_mask[i].into_projective() - h_mul[i])
-        .collect();
+    let h_vec: Vec<_> = verifier_param.h_mask.iter().skip(skipped).map(|h| h.into_projective()).zip(h_mul).map(|(h, h_mul)| {
+        h - h_mul
+    }).collect();
     let h_vec: Vec<E::G2Affine> = E::G2Projective::batch_normalization_into_affine(&h_vec);
     end_timer!(prepare_inputs_timer);
 
@@ -345,11 +349,12 @@ fn verify_internal<E: PairingEngine>(
 
 #[cfg(test)]
 mod tests {
-    use super::*;
     use ark_bls12_381::Bls12_381;
     use ark_ec::PairingEngine;
     use ark_poly::{DenseMultilinearExtension, MultilinearExtension};
-    use ark_std::{rand::RngCore, test_rng, vec::Vec, UniformRand};
+    use ark_std::{rand::RngCore, test_rng, UniformRand, vec::Vec};
+
+    use super::*;
 
     type E = Bls12_381;
     type Fr = <E as PairingEngine>::Fr;
@@ -367,12 +372,11 @@ mod tests {
         let (proof, value) = MultilinearKzgPCS::open(&ck, poly, &point)?;
 
         assert!(MultilinearKzgPCS::verify(
-            &vk, &com, &point, &value, &proof
+            &vk, &com, &point, &value, &proof,
         )?);
 
-        let value = Fr::rand(rng);
         assert!(!MultilinearKzgPCS::verify(
-            &vk, &com, &point, &value, &proof
+            &vk, &com, &point, &(value + Fr::one()), &proof,
         )?);
 
         Ok(())
