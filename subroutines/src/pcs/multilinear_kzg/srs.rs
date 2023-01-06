@@ -265,17 +265,12 @@ mod tests {
         let params = MultilinearUniversalParams::<E>::gen_srs_for_testing(&mut rng, 15)?;
 
         for nv in 4..10 {
-
-            let (ck,vk) =  params.trim(nv)?;
-            assert_eq!(
-                ck.g,
-                ck.powers_of_g[nv].evals[0],
-            );
-            assert_eq!(   vk.g, ck.g);
+            let (ck, vk) = params.trim(nv)?;
+            assert_eq!(ck.g, ck.powers_of_g[nv].evals[0],);
+            assert_eq!(vk.g, ck.g);
             assert_eq!(ck.num_vars, nv);
-            assert_eq!(ck.powers_of_g.len(), nv +1);
-            assert_eq!(ck.powers_of_g[0].evals.len(), 1<<nv);
-
+            assert_eq!(ck.powers_of_g.len(), nv + 1);
+            assert_eq!(ck.powers_of_g[0].evals.len(), 1 << nv);
         }
 
         Ok(())
