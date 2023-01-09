@@ -1289,7 +1289,7 @@
 
         <span class="comment">// check public evaluation
         </span><span class="kw">let </span>pi_step = <span class="macro">start_timer!</span>(|| <span class="string">&quot;check public evaluation&quot;</span>);
-        <span class="kw">let </span>pi_poly = DenseMultilinearExtension::from_evaluations_slice(ell <span class="kw">as </span>usize, pub_input);
+        <span class="kw">let </span>pi_poly = DenseMultilinearExtension::from_evaluations_slice(ell, pub_input);
         <span class="kw">let </span>expect_pi_eval = evaluate_opt(<span class="kw-2">&amp;</span>pi_poly, <span class="kw-2">&amp;</span>r_pi[..]);
         <span class="kw">if </span>expect_pi_eval != <span class="kw-2">*</span>pi_eval {
             <span class="kw">return </span><span class="prelude-val">Err</span>(HyperPlonkErrors::InvalidProver(<span class="macro">format!</span>(
