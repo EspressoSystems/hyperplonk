@@ -209,11 +209,10 @@ impl<E: PairingEngine> PolynomialCommitmentScheme<E> for MultilinearKzgPCS<E> {
 /// same. This function does not need to take the evaluation value as an
 /// input.
 ///
-/// This function takes 2^{num_var +1} number of scalar multiplications over
+/// This function takes 2^{num_var} number of scalar multiplications over
 /// G1:
 /// - it proceeds with `num_var` number of rounds,
-/// - at round i, we compute an MSM for `2^{num_var - i + 1}` number of G2
-///   elements.
+/// - at round i, we compute an MSM for `2^{num_var - i}` number of G1 elements.
 fn open_internal<E: PairingEngine>(
     prover_param: &MultilinearProverParam<E>,
     polynomial: &DenseMultilinearExtension<E::Fr>,
@@ -237,41 +236,35 @@ fn open_internal<E: PairingEngine>(
     }
 
     let nv = polynomial.num_vars();
-    let ignored = prover_param.num_vars - nv;
-    let mut r: Vec<Vec<E::Fr>> = (0..nv + 1).map(|_| Vec::new()).collect();
-    let mut q: Vec<Vec<E::Fr>> = (0..nv + 1).map(|_| Vec::new()).collect();
-
-    r[nv] = polynomial.to_evaluations();
+    // the first `ignored` SRS vectors are unused for opening.
+    let ignored = prover_param.num_vars - nv + 1;
+    let mut f = polynomial.to_evaluations();
 
     let mut proofs = Vec::new();
 
     for (i, (&point_at_k, gi)) in point
         .iter()
-        .zip(prover_param.powers_of_g[ignored..].iter())
-        .take(nv)
+        .zip(prover_param.powers_of_g[ignored..ignored + nv].iter())
         .enumerate()
     {
         let ith_round = start_timer!(|| format!("{}-th round", i));
 
-        let k = nv - i;
-        let cur_dim = 1 << (k - 1);
-        let mut cur_q = vec![E::Fr::zero(); cur_dim];
-        let mut cur_r = vec![E::Fr::zero(); cur_dim];
-        let one_minus_point_at_k = E::Fr::one() - point_at_k;
+        let k = nv - 1 - i;
+        let cur_dim = 1 << k;
+        let mut q = vec![E::Fr::zero(); cur_dim];
+        let mut r = vec![E::Fr::zero(); cur_dim];
 
         let ith_round_eval = start_timer!(|| format!("{}-th round eval", i));
-        for b in 0..(1 << (k - 1)) {
-            // q_b = pre_r [2^b + 1] - pre_r [2^b]
-            cur_q[b] = r[k][(b << 1) + 1] - r[k][b << 1];
+        for b in 0..(1 << k) {
+            // q[b] = f[1, b] - f[0, b]
+            q[b] = f[(b << 1) + 1] - f[b << 1];
 
-            // r_b = pre_r [2^b]*(1-p) + pre_r [2^b + 1] * p
-            cur_r[b] = r[k][b << 1] * one_minus_point_at_k + (r[k][(b << 1) + 1] * point_at_k);
+            // r[b] = f[0, b] + q[b] * p
+            r[b] = f[b << 1] + (q[b] * point_at_k);
         }
+        f = r;
         end_timer!(ith_round_eval);
-        let scalars: Vec<_> = (0..(1 << k)).map(|x| cur_q[x >> 1].into_repr()).collect();
-
-        q[k] = cur_q;
-        r[k - 1] = cur_r;
+        let scalars: Vec<_> = q.iter().map(|x| x.into_repr()).collect();
 
         // this is a MSM over G1 and is likely to be the bottleneck
         let msm_timer = start_timer!(|| format!("msm of size {} at round {}", gi.evals.len(), i));
@@ -309,7 +302,6 @@ fn verify_internal<E: PairingEngine>(
         )));
     }
 
-    let ignored = verifier_param.num_vars - num_var;
     let prepare_inputs_timer = start_timer!(|| "prepare pairing inputs");
 
     let scalar_size = E::Fr::size_in_bits();
@@ -323,6 +315,7 @@ fn verify_internal<E: PairingEngine>(
     let h_mul: Vec<E::G2Projective> =
         FixedBaseMSM::multi_scalar_mul(scalar_size, window_size, &h_table, point);
 
+    let ignored = verifier_param.num_vars - num_var;
     let h_vec: Vec<_> = (0..num_var)
         .map(|i| verifier_param.h_mask[ignored + i].into_projective() - h_mul[i])
         .collect();
@@ -370,7 +363,7 @@ mod tests {
     ) -> Result<(), PCSError> {
         let nv = poly.num_vars();
         assert_ne!(nv, 0);
-        let (ck, vk) = MultilinearKzgPCS::trim(params, None, Some(nv + 1))?;
+        let (ck, vk) = MultilinearKzgPCS::trim(params, None, Some(nv))?;
         let point: Vec<_> = (0..nv).map(|_| Fr::rand(rng)).collect();
         let com = MultilinearKzgPCS::commit(&ck, poly)?;
         let (proof, value) = MultilinearKzgPCS::open(&ck, poly, &point)?;
