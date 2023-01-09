@@ -25,7 +25,7 @@ use ark_std::{
     vec::Vec,
     One, Zero,
 };
-
+use rayon::prelude::*;
 use arithmetic::evaluate_opt;
 // use batching::{batch_verify_internal, multi_open_internal};
 use srs::{MultilinearProverParam, MultilinearUniversalParams, MultilinearVerifierParam};
@@ -35,6 +35,7 @@ use crate::{
     pcs::{prelude::Commitment, PCSError, PolynomialCommitmentScheme, StructuredReferenceString},
     BatchProof,
 };
+use crate::pcs::multilinear_kzg::srs::Evaluations;
 
 use self::batching::{batch_verify_internal, multi_open_internal};
 
@@ -99,7 +100,7 @@ impl<E: PairingEngine> PolynomialCommitmentScheme<E> for MultilinearKzgPCS<E> {
                 return Err(PCSError::InvalidParameters(
                     "multilinear should receive a num_var param".to_string(),
                 ));
-            },
+            }
         };
         let (ml_ck, ml_vk) = srs.borrow().trim(supported_num_vars)?;
 
@@ -136,7 +137,7 @@ impl<E: PairingEngine> PolynomialCommitmentScheme<E> for MultilinearKzgPCS<E> {
             &prover_param.powers_of_g[ignored].evals,
             scalars.as_slice(),
         )
-        .into_affine();
+            .into_affine();
         end_timer!(msm_timer);
 
         end_timer!(commit_timer);
@@ -241,11 +242,9 @@ fn open_internal<E: PairingEngine>(
     let skipped = prover_param.num_vars - nv + 1;
     let mut f = polynomial.to_evaluations();
 
-    let mut proofs = Vec::new();
-
-    for (i, (&point_at_k, gi)) in point
+    let mut qs:Vec<Arc<Vec<_>>> =Vec::with_capacity(point.len());
+    for (i, &point_at_k) in point
         .iter()
-        .zip(prover_param.powers_of_g[skipped..].iter())
         .enumerate()
     {
         let ith_round = start_timer!(|| format!("{}-th round", i));
@@ -265,17 +264,20 @@ fn open_internal<E: PairingEngine>(
         }
         f = r;
         end_timer!(ith_round_eval);
-        let scalars: Arc<Vec<_>> = Arc::new(q.iter().map(|x| x.into_repr()).collect());
+        let scalars: Vec<_> = q.into_iter().map(|x| x.into_repr()).collect();
+        qs.push(Arc::new(scalars));
 
-        // this is a MSM over G1 and is likely to be the bottleneck
-        let msm_timer = start_timer!(|| format!("msm of size {} at round {}", gi.evals.len(), i));
-
-        let pi = VariableBaseMSM::multi_scalar_mul(&gi.evals, scalars.as_slice()).into_affine();
-        end_timer!(msm_timer);
-        proofs.push(pi);
 
         end_timer!(ith_round);
     }
+    // this is a MSM over G1 and is likely to be the bottleneck
+    let msm_timer = start_timer!(|| format!("msms for poly with {} vars", nv));
+    let proofs = qs.par_iter().enumerate().map(|(i, scalars)| {
+        let gs :Evaluations<_> = prover_param.powers_of_g[skipped + i].clone();
+        VariableBaseMSM::multi_scalar_mul(&gs.evals, scalars.as_slice()).into_affine()
+    }).collect();
+    end_timer!(msm_timer);
+
     let eval = evaluate_opt(polynomial, point);
     end_timer!(open_timer);
     Ok((MultilinearKzgProof { proofs }, eval))

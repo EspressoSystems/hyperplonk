@@ -149,7 +149,7 @@ mod test {
         poly_iop::PolyIOP,
     };
 
-    const SUPPORTED_SIZE: usize = 20;
+    const SUPPORTED_SIZE: usize = 16;
     const MIN_NUM_VARS: usize = 8;
     const MAX_NUM_VARS: usize = 15;
     const CUSTOM_DEGREE: [usize; 6] = [1, 2, 4, 8, 16, 32];
