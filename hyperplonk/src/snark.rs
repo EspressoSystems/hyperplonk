@@ -567,7 +567,7 @@ where
 
         // check public evaluation
         let pi_step = start_timer!(|| "check public evaluation");
-        let pi_poly = DenseMultilinearExtension::from_evaluations_slice(ell as usize, pub_input);
+        let pi_poly = DenseMultilinearExtension::from_evaluations_slice(ell, pub_input);
         let expect_pi_eval = evaluate_opt(&pi_poly, &r_pi[..]);
         if expect_pi_eval != *pi_eval {
             return Err(HyperPlonkErrors::InvalidProver(format!(

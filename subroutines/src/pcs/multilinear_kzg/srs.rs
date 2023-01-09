@@ -44,8 +44,9 @@ pub struct MultilinearUniversalParams<E: PairingEngine> {
 pub struct MultilinearProverParam<E: PairingEngine> {
     /// number of variables
     pub num_vars: usize,
-    /// `pp_{num_vars}`, `pp_{num_vars - 1}`, `pp_{num_vars - 2}`, ..., defined
-    /// by XZZPD19
+    /// `pp_{0}`, `pp_{1}`, ...,pp_{nu_vars} defined
+    /// by XZZPD19 where pp_{nv-0}=g and
+    /// pp_{nv-i}=g^{eq((t_1,..t_i),(X_1,..X_i))}
     pub powers_of_g: Vec<Evaluations<E::G1Affine>>,
     /// generator for G1
     pub g: E::G1Affine,
@@ -190,6 +191,10 @@ impl<E: PairingEngine> StructuredReferenceString<E> for MultilinearUniversalPara
             powers_of_g.push(pp_k_g);
             start += size;
         }
+        let gg = Evaluations {
+            evals: [g.into_affine()].to_vec(),
+        };
+        powers_of_g.push(gg);
 
         let pp = Self::ProverParam {
             num_vars,
@@ -245,7 +250,11 @@ mod tests {
     fn test_srs_gen() -> Result<(), PCSError> {
         let mut rng = test_rng();
         for nv in 4..10 {
-            let _ = MultilinearUniversalParams::<E>::gen_srs_for_testing(&mut rng, nv)?;
+            let params = MultilinearUniversalParams::<E>::gen_srs_for_testing(&mut rng, nv)?;
+            assert_eq!(
+                params.prover_param.g,
+                params.prover_param.powers_of_g[0].evals[0]
+            );
         }
 
         Ok(())
