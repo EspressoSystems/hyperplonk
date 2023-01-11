@@ -1,4 +1,8 @@
-#!/bin/bash
+#!/usr/bin/env bash
+
+#Fail out on error
+set -e
+
 cd ..
 cd hyperplonk
 # Run the benchmark binary
