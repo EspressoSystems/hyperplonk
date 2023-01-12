@@ -1,0 +1,28 @@
+name: Build with Nix Workflow
+
+on:
+  schedule:
+    - cron: '0 0 * * 1'
+  workflow_dispatch:
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    timeout-minutes: 120
+    steps:
+      - uses: styfle/cancel-workflow-action@0.11.0
+        name: Cancel Outdated Builds
+        with:
+          all_but_latest: true
+          access_token: ${{ github.token }}
+
+      - name: Install Nix
+        uses: cachix/install-nix-action@v18
+
+      - name: Checkout Repository
+        uses: actions/checkout@v3
+
+      # sanity check that repository builds with nix
+      - name: Build
+        run: |
+          nix develop -c cargo build --all-targets --release --workspace
