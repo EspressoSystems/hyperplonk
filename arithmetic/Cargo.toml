@@ -16,7 +16,7 @@ rayon = { version = "1.5.2", default-features = false, optional = true }
 
 [dev-dependencies]
 ark-ec = { version = "^0.3.0", default-features = false }
-criterion = "0.3.0"
+criterion = "0.4.0"
 
 [features]
 # default = [ "parallel", "print-trace" ]
