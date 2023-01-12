@@ -1,5 +1,9 @@
 #!/usr/bin/env nix-shell
 #!nix-shell ../nix/nightly.nix -i bash
+
+#Fail out on error
+set -e
+
 set -o xtrace
 IGNORED_FILES="--ignore **/errors.rs\
                --ignore **/src/bin/*\
