@@ -9,7 +9,7 @@ A linear-time FFT-free SNARK proof system (https://eprint.iacr.org/2022/1355.pdf
 
 ### Install RUST
 
-We recommend using nix for install the correct version of rust and
+We recommend using nix for installing the correct version of rust and
 additional libraries:
 
 ```bash
