@@ -67,4 +67,4 @@ To update only a single input specify it as an argument, for example
 ### Benchmarks
 
 To obtain benchmarks, run the script file `scripts/run_benchmarks.sh`. 
-We refer to Table 5 and Table 6 in https://eprint.iacr.org/2022/1355.pdf for a example benchmark.
+We refer to Table 5 and Table 6 in https://eprint.iacr.org/2022/1355.pdf for an example benchmark.
