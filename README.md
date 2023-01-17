@@ -25,17 +25,13 @@ additional libraries:
 
 ### Direnv
 
-To avoid manually activating the nix shell each time the
-[direnv](https://direnv.net/) shell extension can be used to activate the
-environment when entering the local directory with the checkout of this repo.
-Note that direnv needs to be [installed](https://direnv.net/docs/installation.html) first, and be [hooked](https://direnv.net/docs/hook.html) into
-the shell to function.
+We recommend the following tools:
 
-To allow `direnv` for this repo run
+- [nix](https://nixos.org/download.html)
+- [direnv](https://direnv.net/docs/installation.html)
 
-    direnv allow
-
-from within the local checkout of this repo.
+Run `direnv allow` at the repo root. You should see dependencies (including Rust) being installed (the first time might take a while). 
+Upon modification on `flake.nix`, run `direnv reload` to reflect new dependencies or environment setups.
 
 ### Tests
 
@@ -70,4 +66,5 @@ To update only a single input specify it as an argument, for example
 
 ### Benchmarks
 
-To obtain benchmarks, run the script file `scripts/run_benchmarks.sh`
+To obtain benchmarks, run the script file `scripts/run_benchmarks.sh`. 
+We refer to Table 5 and Table 6 in https://eprint.iacr.org/2022/1355.pdf for a example benchmark.
