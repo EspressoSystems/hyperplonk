@@ -1,3 +1,9 @@
+// Copyright (c) 2023 Espresso Systems (espressosys.com)
+// This file is part of the HyperPlonk library.
+
+// You should have received a copy of the MIT License
+// along with the HyperPlonk library. If not, see <https://mit-license.org/>.
+
 use std::{fs::File, io, time::Instant};
 
 use ark_bls12_381::{Bls12_381, Fr};

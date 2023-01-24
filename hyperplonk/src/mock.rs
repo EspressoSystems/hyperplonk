@@ -1,3 +1,9 @@
+// Copyright (c) 2023 Espresso Systems (espressosys.com)
+// This file is part of the HyperPlonk library.
+
+// You should have received a copy of the MIT License
+// along with the HyperPlonk library. If not, see <https://mit-license.org/>.
+
 use arithmetic::identity_permutation;
 use ark_ff::PrimeField;
 use ark_std::{log2, test_rng};
