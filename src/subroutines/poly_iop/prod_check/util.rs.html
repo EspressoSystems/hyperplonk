@@ -170,7 +170,19 @@
 <span id="170">170</span>
 <span id="171">171</span>
 <span id="172">172</span>
-</pre><pre class="rust"><code><span class="doccomment">//! This module implements useful functions for the product check protocol.
+<span id="173">173</span>
+<span id="174">174</span>
+<span id="175">175</span>
+<span id="176">176</span>
+<span id="177">177</span>
+<span id="178">178</span>
+</pre><pre class="rust"><code><span class="comment">// Copyright (c) 2023 Espresso Systems (espressosys.com)
+// This file is part of the HyperPlonk library.
+
+// You should have received a copy of the MIT License
+// along with the HyperPlonk library. If not, see &lt;https://mit-license.org/&gt;.
+
+</span><span class="doccomment">//! This module implements useful functions for the product check protocol.
 
 </span><span class="kw">use </span><span class="kw">crate</span>::poly_iop::{errors::PolyIOPErrors, structs::IOPProof, zero_check::ZeroCheck, PolyIOP};
 <span class="kw">use </span>arithmetic::{get_index, VirtualPolynomial};

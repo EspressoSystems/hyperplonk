@@ -278,7 +278,19 @@
 <span id="278">278</span>
 <span id="279">279</span>
 <span id="280">280</span>
-</pre><pre class="rust"><code><span class="kw">use crate</span>::{util::get_batched_nv, ArithErrors};
+<span id="281">281</span>
+<span id="282">282</span>
+<span id="283">283</span>
+<span id="284">284</span>
+<span id="285">285</span>
+<span id="286">286</span>
+</pre><pre class="rust"><code><span class="comment">// Copyright (c) 2023 Espresso Systems (espressosys.com)
+// This file is part of the HyperPlonk library.
+
+// You should have received a copy of the MIT License
+// along with the HyperPlonk library. If not, see &lt;https://mit-license.org/&gt;.
+
+</span><span class="kw">use crate</span>::{util::get_batched_nv, ArithErrors};
 <span class="kw">use </span>ark_ff::{Field, PrimeField};
 <span class="kw">use </span>ark_poly::MultilinearExtension;
 <span class="kw">use </span>ark_std::{end_timer, rand::RngCore, start_timer};
