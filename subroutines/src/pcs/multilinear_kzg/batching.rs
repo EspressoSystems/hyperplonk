@@ -1,3 +1,9 @@
+// Copyright (c) 2023 Espresso Systems (espressosys.com)
+// This file is part of the HyperPlonk library.
+
+// You should have received a copy of the MIT License
+// along with the HyperPlonk library. If not, see <https://mit-license.org/>.
+
 //! Sumcheck based batch opening and verify commitment.
 // TODO: refactoring this code to somewhere else
 // currently IOP depends on PCS because perm check requires commitment.

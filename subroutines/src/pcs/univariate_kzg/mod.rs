@@ -1,8 +1,8 @@
-// Copyright (c) 2022 Espresso Systems (espressosys.com)
-// This file is part of the Jellyfish library.
+// Copyright (c) 2023 Espresso Systems (espressosys.com)
+// This file is part of the HyperPlonk library.
 
 // You should have received a copy of the MIT License
-// along with the Jellyfish library. If not, see <https://mit-license.org/>.
+// along with the HyperPlonk library. If not, see <https://mit-license.org/>.
 
 //! Main module for univariate KZG commitment scheme
 
