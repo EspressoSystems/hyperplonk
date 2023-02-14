@@ -202,6 +202,19 @@
 <a href="#202" id="202">202</a>
 <a href="#203" id="203">203</a>
 <a href="#204" id="204">204</a>
+<a href="#205" id="205">205</a>
+<a href="#206" id="206">206</a>
+<a href="#207" id="207">207</a>
+<a href="#208" id="208">208</a>
+<a href="#209" id="209">209</a>
+<a href="#210" id="210">210</a>
+<a href="#211" id="211">211</a>
+<a href="#212" id="212">212</a>
+<a href="#213" id="213">213</a>
+<a href="#214" id="214">214</a>
+<a href="#215" id="215">215</a>
+<a href="#216" id="216">216</a>
+<a href="#217" id="217">217</a>
 </pre><pre class="rust"><code><span class="comment">// Copyright (c) 2023 Espresso Systems (espressosys.com)
 // This file is part of the HyperPlonk library.
 
@@ -216,9 +229,9 @@
     structs::{IOPProverMessage, IOPProverState},
 };
 <span class="kw">use </span>arithmetic::{fix_variables, VirtualPolynomial};
-<span class="kw">use </span>ark_ff::PrimeField;
+<span class="kw">use </span>ark_ff::{batch_inversion, PrimeField};
 <span class="kw">use </span>ark_poly::DenseMultilinearExtension;
-<span class="kw">use </span>ark_std::{end_timer, start_timer, vec::Vec};
+<span class="kw">use </span>ark_std::{cfg_into_iter, end_timer, start_timer, vec::Vec};
 <span class="kw">use </span>rayon::prelude::{IntoParallelIterator, IntoParallelRefIterator};
 <span class="kw">use </span>std::sync::Arc;
 
@@ -244,6 +257,13 @@
             challenges: Vec::with_capacity(polynomial.aux_info.num_variables),
             round: <span class="number">0</span>,
             poly: polynomial.clone(),
+            extrapolation_aux: (<span class="number">1</span>..polynomial.aux_info.max_degree)
+                .map(|degree| {
+                    <span class="kw">let </span>points = (<span class="number">0</span>..<span class="number">1 </span>+ degree <span class="kw">as </span>u64).map(F::from).collect::&lt;Vec&lt;<span class="kw">_</span>&gt;&gt;();
+                    <span class="kw">let </span>weights = barycentric_weights(<span class="kw-2">&amp;</span>points);
+                    (points, weights)
+                })
+                .collect(),
         })
     }
 
@@ -314,83 +334,56 @@
         <span class="kw">let </span>products_list = <span class="self">self</span>.poly.products.clone();
         <span class="kw">let </span><span class="kw-2">mut </span>products_sum = <span class="macro">vec!</span>[F::zero(); <span class="self">self</span>.poly.aux_info.max_degree + <span class="number">1</span>];
 
-        <span class="comment">// let compute_sum = start_timer!(|| &quot;compute sum&quot;);
-
-        // Step 2: generate sum for the partial evaluated polynomial:
+        <span class="comment">// Step 2: generate sum for the partial evaluated polynomial:
         // f(r_1, ... r_m,, x_{m+1}... x_n)
 
-        </span><span class="attr">#[cfg(feature = <span class="string">&quot;parallel&quot;</span>)]
-        </span>{
-            <span class="kw">let </span>flag = (<span class="self">self</span>.poly.aux_info.max_degree == <span class="number">2</span>)
-                &amp;&amp; (products_list.len() == <span class="number">1</span>)
-                &amp;&amp; (products_list[<span class="number">0</span>].<span class="number">0 </span>== F::one());
-            <span class="kw">if </span>flag {
-                <span class="kw">for </span>(t, e) <span class="kw">in </span>products_sum.iter_mut().enumerate() {
-                    <span class="kw">let </span>evals = (<span class="number">0</span>..<span class="number">1 </span>&lt;&lt; (<span class="self">self</span>.poly.aux_info.num_variables - <span class="self">self</span>.round))
-                        .into_par_iter()
-                        .map(|b| {
-                            <span class="comment">// evaluate P_round(t)
-                            </span><span class="kw">let </span>table0 = <span class="kw-2">&amp;</span>flattened_ml_extensions[products_list[<span class="number">0</span>].<span class="number">1</span>[<span class="number">0</span>]];
-                            <span class="kw">let </span>table1 = <span class="kw-2">&amp;</span>flattened_ml_extensions[products_list[<span class="number">0</span>].<span class="number">1</span>[<span class="number">1</span>]];
-                            <span class="kw">if </span>t == <span class="number">0 </span>{
-                                table0[b &lt;&lt; <span class="number">1</span>] * table1[b &lt;&lt; <span class="number">1</span>]
-                            } <span class="kw">else if </span>t == <span class="number">1 </span>{
-                                table0[(b &lt;&lt; <span class="number">1</span>) + <span class="number">1</span>] * table1[(b &lt;&lt; <span class="number">1</span>) + <span class="number">1</span>]
-                            } <span class="kw">else </span>{
-                                (table0[(b &lt;&lt; <span class="number">1</span>) + <span class="number">1</span>] + table0[(b &lt;&lt; <span class="number">1</span>) + <span class="number">1</span>] - table0[b &lt;&lt; <span class="number">1</span>])
-                                    * (table1[(b &lt;&lt; <span class="number">1</span>) + <span class="number">1</span>] + table1[(b &lt;&lt; <span class="number">1</span>) + <span class="number">1</span>] - table1[b &lt;&lt; <span class="number">1</span>])
-                            }
-                        })
-                        .collect::&lt;Vec&lt;F&gt;&gt;();
-                    <span class="kw-2">*</span>e += evals.par_iter().sum::&lt;F&gt;();
-                }
-            } <span class="kw">else </span>{
-                <span class="kw">for </span>(t, e) <span class="kw">in </span>products_sum.iter_mut().enumerate() {
-                    <span class="kw">let </span>t = F::from(t <span class="kw">as </span>u128);
-                    <span class="kw">let </span>products = (<span class="number">0</span>..<span class="number">1 </span>&lt;&lt; (<span class="self">self</span>.poly.aux_info.num_variables - <span class="self">self</span>.round))
-                        .into_par_iter()
-                        .map(|b| {
-                            <span class="comment">// evaluate P_round(t)
-                            </span><span class="kw">let </span><span class="kw-2">mut </span>tmp = F::zero();
-                            products_list.iter().for_each(|(coefficient, products)| {
-                                <span class="kw">let </span>num_mles = products.len();
-                                <span class="kw">let </span><span class="kw-2">mut </span>product = <span class="kw-2">*</span>coefficient;
-                                <span class="kw">for </span><span class="kw-2">&amp;</span>f <span class="kw">in </span>products.iter().take(num_mles) {
-                                    <span class="kw">let </span>table = <span class="kw-2">&amp;</span>flattened_ml_extensions[f]; <span class="comment">// f&#39;s range is checked in init
-                                                                             // TODO: Could be done faster by cashing the results from the
-                                                                             // previous t and adding the diff
-                                                                             // Also possible to use Karatsuba multiplication
-                                    </span>product <span class="kw-2">*</span>=
-                                        table[b &lt;&lt; <span class="number">1</span>] + (table[(b &lt;&lt; <span class="number">1</span>) + <span class="number">1</span>] - table[b &lt;&lt; <span class="number">1</span>]) * t;
-                                }
-                                tmp += product;
+        </span>products_list.iter().for_each(|(coefficient, products)| {
+            <span class="kw">let </span><span class="kw-2">mut </span>sum = <span class="macro">cfg_into_iter!</span>(<span class="number">0</span>..<span class="number">1 </span>&lt;&lt; (<span class="self">self</span>.poly.aux_info.num_variables - <span class="self">self</span>.round))
+                .fold(
+                    || {
+                        (
+                            <span class="macro">vec!</span>[(F::zero(), F::zero()); products.len()],
+                            <span class="macro">vec!</span>[F::zero(); products.len() + <span class="number">1</span>],
+                        )
+                    },
+                    |(<span class="kw-2">mut </span>buf, <span class="kw-2">mut </span>acc), b| {
+                        buf.iter_mut()
+                            .zip(products.iter())
+                            .for_each(|((eval, step), f)| {
+                                <span class="kw">let </span>table = <span class="kw-2">&amp;</span>flattened_ml_extensions[<span class="kw-2">*</span>f];
+                                <span class="kw-2">*</span>eval = table[b &lt;&lt; <span class="number">1</span>];
+                                <span class="kw-2">*</span>step = table[(b &lt;&lt; <span class="number">1</span>) + <span class="number">1</span>] - table[b &lt;&lt; <span class="number">1</span>];
                             });
-
-                            tmp
-                        })
-                        .collect::&lt;Vec&lt;F&gt;&gt;();
-                    <span class="kw-2">*</span>e += products.par_iter().sum::&lt;F&gt;();
-                }
-            }
-        }
-
-        <span class="attr">#[cfg(not(feature = <span class="string">&quot;parallel&quot;</span>))]
-        </span>products_sum.iter_mut().enumerate().for_each(|(t, e)| {
-            <span class="kw">let </span>t = F::from(t <span class="kw">as </span>u64);
-            <span class="kw">let </span>one_minus_t = F::one() - t;
-
-            <span class="kw">for </span>b <span class="kw">in </span><span class="number">0</span>..<span class="number">1 </span>&lt;&lt; (<span class="self">self</span>.poly.aux_info.num_variables - <span class="self">self</span>.round) {
-                <span class="comment">// evaluate P_round(t)
-                </span><span class="kw">for </span>(coefficient, products) <span class="kw">in </span>products_list.iter() {
-                    <span class="kw">let </span>num_mles = products.len();
-                    <span class="kw">let </span><span class="kw-2">mut </span>product = <span class="kw-2">*</span>coefficient;
-                    <span class="kw">for </span><span class="kw-2">&amp;</span>f <span class="kw">in </span>products.iter().take(num_mles) {
-                        <span class="kw">let </span>table = <span class="kw-2">&amp;</span>flattened_ml_extensions[f]; <span class="comment">// f&#39;s range is checked in init
-                        </span>product <span class="kw-2">*</span>= table[b &lt;&lt; <span class="number">1</span>] + (table[(b &lt;&lt; <span class="number">1</span>) + <span class="number">1</span>] - table[b &lt;&lt; <span class="number">1</span>]) * t;
-                    }
-                    <span class="kw-2">*</span>e += product;
-                }
-            }
+                        acc[<span class="number">0</span>] += buf.iter().map(|(eval, <span class="kw">_</span>)| eval).product::&lt;F&gt;();
+                        acc[<span class="number">1</span>..].iter_mut().for_each(|acc| {
+                            buf.iter_mut().for_each(|(eval, step)| <span class="kw-2">*</span>eval += step <span class="kw">as </span><span class="kw-2">&amp;</span><span class="kw">_</span>);
+                            <span class="kw-2">*</span>acc += buf.iter().map(|(eval, <span class="kw">_</span>)| eval).product::&lt;F&gt;();
+                        });
+                        (buf, acc)
+                    },
+                )
+                .map(|(<span class="kw">_</span>, partial)| partial)
+                .reduce(
+                    || <span class="macro">vec!</span>[F::zero(); products.len() + <span class="number">1</span>],
+                    |<span class="kw-2">mut </span>sum, partial| {
+                        sum.iter_mut()
+                            .zip(partial.iter())
+                            .for_each(|(sum, partial)| <span class="kw-2">*</span>sum += partial);
+                        sum
+                    },
+                );
+            sum.iter_mut().for_each(|sum| <span class="kw-2">*</span>sum <span class="kw-2">*</span>= coefficient);
+            <span class="kw">let </span>extraploation = <span class="macro">cfg_into_iter!</span>(<span class="number">0</span>..<span class="self">self</span>.poly.aux_info.max_degree - products.len())
+                .map(|i| {
+                    <span class="kw">let </span>(points, weights) = <span class="kw-2">&amp;</span><span class="self">self</span>.extrapolation_aux[products.len() - <span class="number">1</span>];
+                    <span class="kw">let </span>at = F::from((products.len() + <span class="number">1 </span>+ i) <span class="kw">as </span>u64);
+                    extrapolate(points, weights, <span class="kw-2">&amp;</span>sum, <span class="kw-2">&amp;</span>at)
+                })
+                .collect::&lt;Vec&lt;<span class="kw">_</span>&gt;&gt;();
+            products_sum
+                .iter_mut()
+                .zip(sum.iter().chain(extraploation.iter()))
+                .for_each(|(products_sum, sum)| <span class="kw-2">*</span>products_sum += sum);
         });
 
         <span class="comment">// update prover&#39;s state to the partial evaluated polynomial
@@ -399,12 +392,45 @@
             .map(|x| Arc::new(x.clone()))
             .collect();
 
-        <span class="comment">// end_timer!(compute_sum);
-        // end_timer!(start);
-        </span><span class="prelude-val">Ok</span>(IOPProverMessage {
+        <span class="prelude-val">Ok</span>(IOPProverMessage {
             evaluations: products_sum,
         })
     }
+}
+
+<span class="kw">fn </span>barycentric_weights&lt;F: PrimeField&gt;(points: <span class="kw-2">&amp;</span>[F]) -&gt; Vec&lt;F&gt; {
+    <span class="kw">let </span><span class="kw-2">mut </span>weights = points
+        .iter()
+        .enumerate()
+        .map(|(j, point_j)| {
+            points
+                .iter()
+                .enumerate()
+                .filter_map(|(i, point_i)| (i != j).then(|| <span class="kw-2">*</span>point_j - point_i))
+                .reduce(|acc, value| acc * value)
+                .unwrap_or_else(F::one)
+        })
+        .collect::&lt;Vec&lt;<span class="kw">_</span>&gt;&gt;();
+    batch_inversion(<span class="kw-2">&amp;mut </span>weights);
+    weights
+}
+
+<span class="kw">fn </span>extrapolate&lt;F: PrimeField&gt;(points: <span class="kw-2">&amp;</span>[F], weights: <span class="kw-2">&amp;</span>[F], evals: <span class="kw-2">&amp;</span>[F], at: <span class="kw-2">&amp;</span>F) -&gt; F {
+    <span class="kw">let </span>(coeffs, sum_inv) = {
+        <span class="kw">let </span><span class="kw-2">mut </span>coeffs = points.iter().map(|point| <span class="kw-2">*</span>at - point).collect::&lt;Vec&lt;<span class="kw">_</span>&gt;&gt;();
+        batch_inversion(<span class="kw-2">&amp;mut </span>coeffs);
+        coeffs.iter_mut().zip(weights).for_each(|(coeff, weight)| {
+            <span class="kw-2">*</span>coeff <span class="kw-2">*</span>= weight;
+        });
+        <span class="kw">let </span>sum_inv = coeffs.iter().sum::&lt;F&gt;().inverse().unwrap_or_default();
+        (coeffs, sum_inv)
+    };
+    coeffs
+        .iter()
+        .zip(evals)
+        .map(|(coeff, eval)| <span class="kw-2">*</span>coeff * eval)
+        .sum::&lt;F&gt;()
+        * sum_inv
 }
 </code></pre></div>
 </section></div></main><div id="rustdoc-vars" data-root-path="../../../../" data-static-root-path="../../../../static.files/" data-current-crate="subroutines" data-themes="" data-resource-suffix="" data-rustdoc-version="1.67.1 (d5a82bbd2 2023-02-07)" data-search-js="search-444266647c4dba98.js" data-settings-js="settings-bebeae96e00e4617.js" data-settings-css="settings-af96d9e2fc13e081.css" ></div></body></html>

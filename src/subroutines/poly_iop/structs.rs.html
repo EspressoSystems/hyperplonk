@@ -49,6 +49,9 @@
 <a href="#49" id="49">49</a>
 <a href="#50" id="50">50</a>
 <a href="#51" id="51">51</a>
+<a href="#52" id="52">52</a>
+<a href="#53" id="53">53</a>
+<a href="#54" id="54">54</a>
 </pre><pre class="rust"><code><span class="comment">// Copyright (c) 2023 Espresso Systems (espressosys.com)
 // This file is part of the HyperPlonk library.
 
@@ -86,6 +89,9 @@
     </span><span class="kw">pub</span>(<span class="kw">crate</span>) round: usize,
     <span class="doccomment">/// pointer to the virtual polynomial
     </span><span class="kw">pub</span>(<span class="kw">crate</span>) poly: VirtualPolynomial&lt;F&gt;,
+    <span class="doccomment">/// points with precomputed barycentric weights for extrapolating smaller
+    /// degree uni-polys to `max_degree + 1` evaluations.
+    </span><span class="kw">pub</span>(<span class="kw">crate</span>) extrapolation_aux: Vec&lt;(Vec&lt;F&gt;, Vec&lt;F&gt;)&gt;,
 }
 
 <span class="doccomment">/// Prover State of a PolyIOP
