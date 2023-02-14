@@ -23,8 +23,7 @@ use arithmetic::{build_eq_x_r_vec, DenseMultilinearExtension, VPAuxInfo, Virtual
 use ark_ec::{msm::VariableBaseMSM, PairingEngine, ProjectiveCurve};
 use ark_ff::PrimeField;
 use ark_std::{end_timer, log2, start_timer, One, Zero};
-use rayon::prelude::{IntoParallelRefIterator, ParallelIterator};
-use std::{marker::PhantomData, sync::Arc};
+use std::{collections::BTreeMap, iter, marker::PhantomData, ops::Deref, sync::Arc};
 use transcript::IOPTranscript;
 
 #[derive(Clone, Debug, Default, PartialEq, Eq)]
@@ -80,22 +79,39 @@ where
 
     // \tilde g_i(b) = eq(t, i) * f_i(b)
     let timer = start_timer!(|| format!("compute tilde g for {} points", points.len()));
-    let mut tilde_gs = vec![];
-    for (index, f_i) in polynomials.iter().enumerate() {
-        let mut tilde_g_eval = vec![E::Fr::zero(); 1 << num_var];
-        for (j, &f_i_eval) in f_i.iter().enumerate() {
-            tilde_g_eval[j] = f_i_eval * eq_t_i_list[index];
-        }
-        tilde_gs.push(Arc::new(DenseMultilinearExtension::from_evaluations_vec(
-            num_var,
-            tilde_g_eval,
-        )));
-    }
+    // combine the polynomials that have same opening point first to reduce the
+    // cost of sum check later.
+    let point_indices = points
+        .iter()
+        .fold(BTreeMap::<_, _>::new(), |mut indices, point| {
+            let idx = indices.len();
+            indices.entry(point).or_insert(idx);
+            indices
+        });
+    let deduped_points =
+        BTreeMap::from_iter(point_indices.iter().map(|(point, idx)| (*idx, *point)))
+            .into_values()
+            .collect::<Vec<_>>();
+    let merged_tilde_gs = polynomials
+        .iter()
+        .zip(points.iter())
+        .zip(eq_t_i_list.iter())
+        .fold(
+            iter::repeat_with(DenseMultilinearExtension::zero)
+                .map(Arc::new)
+                .take(point_indices.len())
+                .collect::<Vec<_>>(),
+            |mut merged_tilde_gs, ((poly, point), coeff)| {
+                *Arc::make_mut(&mut merged_tilde_gs[point_indices[point]]) +=
+                    (*coeff, poly.deref());
+                merged_tilde_gs
+            },
+        );
     end_timer!(timer);
 
     let timer = start_timer!(|| format!("compute tilde eq for {} points", points.len()));
-    let tilde_eqs: Vec<Arc<DenseMultilinearExtension<<E as PairingEngine>::Fr>>> = points
-        .par_iter()
+    let tilde_eqs: Vec<_> = deduped_points
+        .iter()
         .map(|point| {
             let eq_b_zi = build_eq_x_r_vec(point).unwrap();
             Arc::new(DenseMultilinearExtension::from_evaluations_vec(
@@ -110,8 +126,8 @@ where
 
     let step = start_timer!(|| "add mle");
     let mut sum_check_vp = VirtualPolynomial::new(num_var);
-    for (tilde_g, tilde_eq) in tilde_gs.iter().zip(tilde_eqs.into_iter()) {
-        sum_check_vp.add_mle_list([tilde_g.clone(), tilde_eq], E::Fr::one())?;
+    for (merged_tilde_g, tilde_eq) in merged_tilde_gs.iter().zip(tilde_eqs.into_iter()) {
+        sum_check_vp.add_mle_list([merged_tilde_g.clone(), tilde_eq], E::Fr::one())?;
     }
     end_timer!(step);
 
@@ -133,17 +149,11 @@ where
     // build g'(X) = \sum_i=1..k \tilde eq_i(a2) * \tilde g_i(X) where (a2) is the
     // sumcheck's point \tilde eq_i(a2) = eq(a2, point_i)
     let step = start_timer!(|| "evaluate at a2");
-    let mut g_prime_evals = vec![E::Fr::zero(); 1 << num_var];
-    for (tilde_g, point) in tilde_gs.iter().zip(points.iter()) {
+    let mut g_prime = Arc::new(DenseMultilinearExtension::zero());
+    for (merged_tilde_g, point) in merged_tilde_gs.iter().zip(deduped_points.iter()) {
         let eq_i_a2 = eq_eval(a2, point)?;
-        for (j, &tilde_g_eval) in tilde_g.iter().enumerate() {
-            g_prime_evals[j] += tilde_g_eval * eq_i_a2;
-        }
+        *Arc::make_mut(&mut g_prime) += (eq_i_a2, merged_tilde_g.deref());
     }
-    let g_prime = Arc::new(DenseMultilinearExtension::from_evaluations_vec(
-        num_var,
-        g_prime_evals,
-    ));
     end_timer!(step);
 
     let step = start_timer!(|| "pcs open");
