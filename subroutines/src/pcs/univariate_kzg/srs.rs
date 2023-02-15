@@ -7,23 +7,18 @@
 //! Implementing Structured Reference Strings for univariate polynomial KZG
 
 use crate::pcs::{PCSError, StructuredReferenceString};
-use ark_ec::{msm::FixedBaseMSM, AffineCurve, PairingEngine, ProjectiveCurve};
+use ark_ec::{pairing::Pairing, scalar_mul::fixed_base::FixedBase, AffineRepr, CurveGroup};
 use ark_ff::PrimeField;
-use ark_serialize::{CanonicalDeserialize, CanonicalSerialize, Read, SerializationError, Write};
-use ark_std::{
-    end_timer,
-    rand::{CryptoRng, RngCore},
-    start_timer, vec,
-    vec::Vec,
-    One, UniformRand,
-};
+use ark_serialize::{CanonicalDeserialize, CanonicalSerialize};
+use ark_std::{end_timer, rand::Rng, start_timer, vec, vec::Vec, One, UniformRand};
 use derivative::Derivative;
+use std::ops::Mul;
 
 /// `UniversalParams` are the universal parameters for the KZG10 scheme.
 // Adapted from
 // https://github.com/arkworks-rs/poly-commit/blob/master/src/kzg10/data_structures.rs#L20
 #[derive(Debug, Clone, Eq, PartialEq, CanonicalSerialize, CanonicalDeserialize, Default)]
-pub struct UnivariateUniversalParams<E: PairingEngine> {
+pub struct UnivariateUniversalParams<E: Pairing> {
     /// Group elements of the form `{ \beta^i G }`, where `i` ranges from 0 to
     /// `degree`.
     pub powers_of_g: Vec<E::G1Affine>,
@@ -33,7 +28,7 @@ pub struct UnivariateUniversalParams<E: PairingEngine> {
     pub beta_h: E::G2Affine,
 }
 
-impl<E: PairingEngine> UnivariateUniversalParams<E> {
+impl<E: Pairing> UnivariateUniversalParams<E> {
     /// Returns the maximum supported degree
     pub fn max_degree(&self) -> usize {
         self.powers_of_g.len()
@@ -42,7 +37,7 @@ impl<E: PairingEngine> UnivariateUniversalParams<E> {
 
 /// `UnivariateProverParam` is used to generate a proof
 #[derive(CanonicalSerialize, CanonicalDeserialize, Clone, Debug, Eq, PartialEq, Default)]
-pub struct UnivariateProverParam<C: AffineCurve> {
+pub struct UnivariateProverParam<C: AffineRepr> {
     /// Parameters
     pub powers_of_g: Vec<C>,
 }
@@ -58,7 +53,7 @@ pub struct UnivariateProverParam<C: AffineCurve> {
     PartialEq(bound = ""),
     Eq(bound = "")
 )]
-pub struct UnivariateVerifierParam<E: PairingEngine> {
+pub struct UnivariateVerifierParam<E: Pairing> {
     /// The generator of G1.
     pub g: E::G1Affine,
     /// The generator of G2.
@@ -67,7 +62,7 @@ pub struct UnivariateVerifierParam<E: PairingEngine> {
     pub beta_h: E::G2Affine,
 }
 
-impl<E: PairingEngine> StructuredReferenceString<E> for UnivariateUniversalParams<E> {
+impl<E: Pairing> StructuredReferenceString<E> for UnivariateUniversalParams<E> {
     type ProverParam = UnivariateProverParam<E::G1Affine>;
     type VerifierParam = UnivariateVerifierParam<E>;
 
@@ -109,16 +104,13 @@ impl<E: PairingEngine> StructuredReferenceString<E> for UnivariateUniversalParam
     /// Build SRS for testing.
     /// WARNING: THIS FUNCTION IS FOR TESTING PURPOSE ONLY.
     /// THE OUTPUT SRS SHOULD NOT BE USED IN PRODUCTION.
-    fn gen_srs_for_testing<R: RngCore + CryptoRng>(
-        rng: &mut R,
-        max_degree: usize,
-    ) -> Result<Self, PCSError> {
+    fn gen_srs_for_testing<R: Rng>(rng: &mut R, max_degree: usize) -> Result<Self, PCSError> {
         let setup_time = start_timer!(|| format!("KZG10::Setup with degree {}", max_degree));
-        let beta = E::Fr::rand(rng);
-        let g = E::G1Projective::rand(rng);
-        let h = E::G2Projective::rand(rng);
+        let beta = E::ScalarField::rand(rng);
+        let g = E::G1::rand(rng);
+        let h = E::G2::rand(rng);
 
-        let mut powers_of_beta = vec![E::Fr::one()];
+        let mut powers_of_beta = vec![E::ScalarField::one()];
 
         let mut cur = beta;
         for _ in 0..max_degree {
@@ -126,21 +118,17 @@ impl<E: PairingEngine> StructuredReferenceString<E> for UnivariateUniversalParam
             cur *= &beta;
         }
 
-        let window_size = FixedBaseMSM::get_mul_window_size(max_degree + 1);
+        let window_size = FixedBase::get_mul_window_size(max_degree + 1);
 
-        let scalar_bits = E::Fr::size_in_bits();
+        let scalar_bits = E::ScalarField::MODULUS_BIT_SIZE as usize;
         let g_time = start_timer!(|| "Generating powers of G");
         // TODO: parallelization
-        let g_table = FixedBaseMSM::get_window_table(scalar_bits, window_size, g);
-        let powers_of_g = FixedBaseMSM::multi_scalar_mul::<E::G1Projective>(
-            scalar_bits,
-            window_size,
-            &g_table,
-            &powers_of_beta,
-        );
+        let g_table = FixedBase::get_window_table(scalar_bits, window_size, g);
+        let powers_of_g =
+            FixedBase::msm::<E::G1>(scalar_bits, window_size, &g_table, &powers_of_beta);
         end_timer!(g_time);
 
-        let powers_of_g = E::G1Projective::batch_normalization_into_affine(&powers_of_g);
+        let powers_of_g = E::G1::normalize_batch(&powers_of_g);
 
         let h = h.into_affine();
         let beta_h = h.mul(beta).into_affine();

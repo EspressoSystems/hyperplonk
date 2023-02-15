@@ -11,17 +11,17 @@ mod univariate_kzg;
 
 pub mod prelude;
 
-use ark_ec::PairingEngine;
+use ark_ec::pairing::Pairing;
 use ark_ff::Field;
 use ark_serialize::{CanonicalDeserialize, CanonicalSerialize};
-use ark_std::rand::{CryptoRng, RngCore};
+use ark_std::rand::Rng;
 use errors::PCSError;
 use std::{borrow::Borrow, fmt::Debug, hash::Hash};
 use transcript::IOPTranscript;
 
 /// This trait defines APIs for polynomial commitment schemes.
 /// Note that for our usage of PCS, we do not require the hiding property.
-pub trait PolynomialCommitmentScheme<E: PairingEngine> {
+pub trait PolynomialCommitmentScheme<E: Pairing> {
     /// Prover parameters
     type ProverParam: Clone + Sync;
     /// Verifier parameters
@@ -49,7 +49,7 @@ pub trait PolynomialCommitmentScheme<E: PairingEngine> {
     ///
     /// WARNING: THIS FUNCTION IS FOR TESTING PURPOSE ONLY.
     /// THE OUTPUT SRS SHOULD NOT BE USED IN PRODUCTION.
-    fn gen_srs_for_testing<R: RngCore + CryptoRng>(
+    fn gen_srs_for_testing<R: Rng>(
         rng: &mut R,
         supported_size: usize,
     ) -> Result<Self::SRS, PCSError>;
@@ -99,7 +99,7 @@ pub trait PolynomialCommitmentScheme<E: PairingEngine> {
         _polynomials: &[Self::Polynomial],
         _points: &[Self::Point],
         _evals: &[Self::Evaluation],
-        _transcript: &mut IOPTranscript<E::Fr>,
+        _transcript: &mut IOPTranscript<E::ScalarField>,
     ) -> Result<Self::BatchProof, PCSError> {
         // the reason we use unimplemented!() is to enable developers to implement the
         // trait without always implementing the batching APIs.
@@ -112,7 +112,7 @@ pub trait PolynomialCommitmentScheme<E: PairingEngine> {
         verifier_param: &Self::VerifierParam,
         commitment: &Self::Commitment,
         point: &Self::Point,
-        value: &E::Fr,
+        value: &E::ScalarField,
         proof: &Self::Proof,
     ) -> Result<bool, PCSError>;
 
@@ -123,7 +123,7 @@ pub trait PolynomialCommitmentScheme<E: PairingEngine> {
         _commitments: &[Self::Commitment],
         _points: &[Self::Point],
         _batch_proof: &Self::BatchProof,
-        _transcript: &mut IOPTranscript<E::Fr>,
+        _transcript: &mut IOPTranscript<E::ScalarField>,
     ) -> Result<bool, PCSError> {
         // the reason we use unimplemented!() is to enable developers to implement the
         // trait without always implementing the batching APIs.
@@ -132,7 +132,7 @@ pub trait PolynomialCommitmentScheme<E: PairingEngine> {
 }
 
 /// API definitions for structured reference string
-pub trait StructuredReferenceString<E: PairingEngine>: Sized {
+pub trait StructuredReferenceString<E: Pairing>: Sized {
     /// Prover parameters
     type ProverParam;
     /// Verifier parameters
@@ -165,8 +165,5 @@ pub trait StructuredReferenceString<E: PairingEngine>: Sized {
     ///
     /// WARNING: THIS FUNCTION IS FOR TESTING PURPOSE ONLY.
     /// THE OUTPUT SRS SHOULD NOT BE USED IN PRODUCTION.
-    fn gen_srs_for_testing<R: RngCore + CryptoRng>(
-        rng: &mut R,
-        supported_size: usize,
-    ) -> Result<Self, PCSError>;
+    fn gen_srs_for_testing<R: Rng>(rng: &mut R, supported_size: usize) -> Result<Self, PCSError>;
 }

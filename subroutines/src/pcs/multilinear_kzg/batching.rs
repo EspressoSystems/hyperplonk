@@ -20,8 +20,8 @@ use crate::{
     IOPProof,
 };
 use arithmetic::{build_eq_x_r_vec, DenseMultilinearExtension, VPAuxInfo, VirtualPolynomial};
-use ark_ec::{msm::VariableBaseMSM, PairingEngine, ProjectiveCurve};
-use ark_ff::PrimeField;
+use ark_ec::{pairing::Pairing, scalar_mul::variable_base::VariableBaseMSM, CurveGroup};
+
 use ark_std::{end_timer, log2, start_timer, One, Zero};
 use std::{collections::BTreeMap, iter, marker::PhantomData, ops::Deref, sync::Arc};
 use transcript::IOPTranscript;
@@ -29,13 +29,13 @@ use transcript::IOPTranscript;
 #[derive(Clone, Debug, Default, PartialEq, Eq)]
 pub struct BatchProof<E, PCS>
 where
-    E: PairingEngine,
+    E: Pairing,
     PCS: PolynomialCommitmentScheme<E>,
 {
     /// A sum check proof proving tilde g's sum
-    pub(crate) sum_check_proof: IOPProof<E::Fr>,
+    pub(crate) sum_check_proof: IOPProof<E::ScalarField>,
     /// f_i(point_i)
-    pub f_i_eval_at_point_i: Vec<E::Fr>,
+    pub f_i_eval_at_point_i: Vec<E::ScalarField>,
     /// proof for g'(a_2)
     pub(crate) g_prime_proof: PCS::Proof,
 }
@@ -53,15 +53,15 @@ pub(crate) fn multi_open_internal<E, PCS>(
     polynomials: &[PCS::Polynomial],
     points: &[PCS::Point],
     evals: &[PCS::Evaluation],
-    transcript: &mut IOPTranscript<E::Fr>,
+    transcript: &mut IOPTranscript<E::ScalarField>,
 ) -> Result<BatchProof<E, PCS>, PCSError>
 where
-    E: PairingEngine,
+    E: Pairing,
     PCS: PolynomialCommitmentScheme<
         E,
-        Polynomial = Arc<DenseMultilinearExtension<E::Fr>>,
-        Point = Vec<E::Fr>,
-        Evaluation = E::Fr,
+        Polynomial = Arc<DenseMultilinearExtension<E::ScalarField>>,
+        Point = Vec<E::ScalarField>,
+        Evaluation = E::ScalarField,
     >,
 {
     let open_timer = start_timer!(|| format!("multi open {} points", points.len()));
@@ -127,11 +127,14 @@ where
     let step = start_timer!(|| "add mle");
     let mut sum_check_vp = VirtualPolynomial::new(num_var);
     for (merged_tilde_g, tilde_eq) in merged_tilde_gs.iter().zip(tilde_eqs.into_iter()) {
-        sum_check_vp.add_mle_list([merged_tilde_g.clone(), tilde_eq], E::Fr::one())?;
+        sum_check_vp.add_mle_list([merged_tilde_g.clone(), tilde_eq], E::ScalarField::one())?;
     }
     end_timer!(step);
 
-    let proof = match <PolyIOP<E::Fr> as SumCheck<E::Fr>>::prove(&sum_check_vp, transcript) {
+    let proof = match <PolyIOP<E::ScalarField> as SumCheck<E::ScalarField>>::prove(
+        &sum_check_vp,
+        transcript,
+    ) {
         Ok(p) => p,
         Err(_e) => {
             // cannot wrap IOPError with PCSError due to cyclic dependency
@@ -182,15 +185,15 @@ pub(crate) fn batch_verify_internal<E, PCS>(
     f_i_commitments: &[Commitment<E>],
     points: &[PCS::Point],
     proof: &BatchProof<E, PCS>,
-    transcript: &mut IOPTranscript<E::Fr>,
+    transcript: &mut IOPTranscript<E::ScalarField>,
 ) -> Result<bool, PCSError>
 where
-    E: PairingEngine,
+    E: Pairing,
     PCS: PolynomialCommitmentScheme<
         E,
-        Polynomial = Arc<DenseMultilinearExtension<E::Fr>>,
-        Point = Vec<E::Fr>,
-        Evaluation = E::Fr,
+        Polynomial = Arc<DenseMultilinearExtension<E::ScalarField>>,
+        Point = Vec<E::ScalarField>,
+        Evaluation = E::ScalarField,
         Commitment = Commitment<E>,
     >,
 {
@@ -217,14 +220,14 @@ where
 
     for (i, point) in points.iter().enumerate() {
         let eq_i_a2 = eq_eval(a2, point)?;
-        scalars.push((eq_i_a2 * eq_t_list[i]).into_repr());
+        scalars.push(eq_i_a2 * eq_t_list[i]);
         bases.push(f_i_commitments[i].0);
     }
-    let g_prime_commit = VariableBaseMSM::multi_scalar_mul(&bases, &scalars);
+    let g_prime_commit = E::G1::msm_unchecked(&bases, &scalars);
     end_timer!(step);
 
     // ensure \sum_i eq(t, <i>) * f_i_evals matches the sum via SumCheck
-    let mut sum = E::Fr::zero();
+    let mut sum = E::ScalarField::zero();
     for (i, &e) in eq_t_list.iter().enumerate().take(k) {
         sum += e * proof.f_i_eval_at_point_i[i];
     }
@@ -233,7 +236,7 @@ where
         num_variables: num_var,
         phantom: PhantomData,
     };
-    let subclaim = match <PolyIOP<E::Fr> as SumCheck<E::Fr>>::verify(
+    let subclaim = match <PolyIOP<E::ScalarField> as SumCheck<E::ScalarField>>::verify(
         sum,
         &proof.sum_check_proof,
         &aux_info,
@@ -271,18 +274,13 @@ mod tests {
     };
     use arithmetic::get_batched_nv;
     use ark_bls12_381::Bls12_381 as E;
-    use ark_ec::PairingEngine;
+    use ark_ec::pairing::Pairing;
     use ark_poly::{DenseMultilinearExtension, MultilinearExtension};
-    use ark_std::{
-        rand::{CryptoRng, RngCore},
-        test_rng,
-        vec::Vec,
-        UniformRand,
-    };
+    use ark_std::{rand::Rng, test_rng, vec::Vec, UniformRand};
 
-    type Fr = <E as PairingEngine>::Fr;
+    type Fr = <E as Pairing>::ScalarField;
 
-    fn test_multi_open_helper<R: RngCore + CryptoRng>(
+    fn test_multi_open_helper<R: Rng>(
         ml_params: &MultilinearUniversalParams<E>,
         polys: &[Arc<DenseMultilinearExtension<Fr>>],
         rng: &mut R,

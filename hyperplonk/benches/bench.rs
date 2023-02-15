@@ -58,7 +58,7 @@ fn main() -> Result<(), HyperPlonkErrors> {
 
 fn read_srs() -> Result<MultilinearUniversalParams<Bls12_381>, io::Error> {
     let mut f = File::open("srs.params")?;
-    Ok(MultilinearUniversalParams::<Bls12_381>::deserialize_unchecked(&mut f).unwrap())
+    Ok(MultilinearUniversalParams::<Bls12_381>::deserialize_compressed_unchecked(&mut f).unwrap())
 }
 
 fn write_srs(pcs_srs: &MultilinearUniversalParams<Bls12_381>) {
@@ -74,7 +74,7 @@ fn bench_vanilla_plonk(
     let mut file = File::create(filename).unwrap();
     for nv in MIN_NUM_VARS..=MAX_NUM_VARS {
         let vanilla_gate = CustomizedGates::vanilla_plonk_gate();
-        bench_mock_circuit_zkp_helper(&mut file, nv, &vanilla_gate, &pcs_srs)?;
+        bench_mock_circuit_zkp_helper(&mut file, nv, &vanilla_gate, pcs_srs)?;
     }
 
     Ok(())
@@ -88,7 +88,7 @@ fn bench_jellyfish_plonk(
     let mut file = File::create(filename).unwrap();
     for nv in MIN_NUM_VARS..=MAX_NUM_VARS {
         let jf_gate = CustomizedGates::jellyfish_turbo_plonk_gate();
-        bench_mock_circuit_zkp_helper(&mut file, nv, &jf_gate, &pcs_srs)?;
+        bench_mock_circuit_zkp_helper(&mut file, nv, &jf_gate, pcs_srs)?;
     }
 
     Ok(())
@@ -103,7 +103,7 @@ fn bench_high_degree_plonk(
     let mut file = File::create(filename).unwrap();
     println!("custom gate of degree {}", degree);
     let vanilla_gate = CustomizedGates::mock_gate(2, degree);
-    bench_mock_circuit_zkp_helper(&mut file, HIGH_DEGREE_TEST_NV, &vanilla_gate, &pcs_srs)?;
+    bench_mock_circuit_zkp_helper(&mut file, HIGH_DEGREE_TEST_NV, &vanilla_gate, pcs_srs)?;
 
     Ok(())
 }
@@ -133,7 +133,7 @@ fn bench_mock_circuit_zkp_helper(
         let (_pk, _vk) = <PolyIOP<Fr> as HyperPlonkSNARK<
             Bls12_381,
             MultilinearKzgPCS<Bls12_381>,
-        >>::preprocess(&index, &pcs_srs)?;
+        >>::preprocess(&index, pcs_srs)?;
     }
     println!(
         "key extraction for {} variables: {} us",
@@ -142,7 +142,7 @@ fn bench_mock_circuit_zkp_helper(
     );
     let (pk, vk) =
         <PolyIOP<Fr> as HyperPlonkSNARK<Bls12_381, MultilinearKzgPCS<Bls12_381>>>::preprocess(
-            &index, &pcs_srs,
+            &index, pcs_srs,
         )?;
     //==========================================================
     // generate a proof

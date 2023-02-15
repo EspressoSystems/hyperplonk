@@ -9,7 +9,7 @@ use crate::{
     witness::WitnessColumn,
 };
 use arithmetic::{evaluate_opt, VirtualPolynomial};
-use ark_ec::PairingEngine;
+use ark_ec::pairing::Pairing;
 use ark_ff::PrimeField;
 use ark_poly::DenseMultilinearExtension;
 use std::{borrow::Borrow, sync::Arc};
@@ -19,7 +19,7 @@ use transcript::IOPTranscript;
 /// An accumulator structure that holds a polynomial and
 /// its opening points
 #[derive(Debug)]
-pub(super) struct PcsAccumulator<E: PairingEngine, PCS: PolynomialCommitmentScheme<E>> {
+pub(super) struct PcsAccumulator<E: Pairing, PCS: PolynomialCommitmentScheme<E>> {
     // sequence:
     // - prod(x) at 5 points
     // - w_merged at perm check point
@@ -35,12 +35,12 @@ pub(super) struct PcsAccumulator<E: PairingEngine, PCS: PolynomialCommitmentSche
 
 impl<E, PCS> PcsAccumulator<E, PCS>
 where
-    E: PairingEngine,
+    E: Pairing,
     PCS: PolynomialCommitmentScheme<
         E,
-        Polynomial = Arc<DenseMultilinearExtension<E::Fr>>,
-        Point = Vec<E::Fr>,
-        Evaluation = E::Fr,
+        Polynomial = Arc<DenseMultilinearExtension<E::ScalarField>>,
+        Point = Vec<E::ScalarField>,
+        Evaluation = E::ScalarField,
         Commitment = Commitment<E>,
     >,
 {
@@ -78,7 +78,7 @@ where
     pub(super) fn multi_open(
         &self,
         prover_param: impl Borrow<PCS::ProverParam>,
-        transcript: &mut IOPTranscript<E::Fr>,
+        transcript: &mut IOPTranscript<E::ScalarField>,
     ) -> Result<PCS::BatchProof, HyperPlonkErrors> {
         Ok(PCS::multi_open(
             prover_param.borrow(),

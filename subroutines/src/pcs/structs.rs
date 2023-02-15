@@ -4,8 +4,8 @@
 // You should have received a copy of the MIT License
 // along with the HyperPlonk library. If not, see <https://mit-license.org/>.
 
-use ark_ec::PairingEngine;
-use ark_serialize::{CanonicalDeserialize, CanonicalSerialize, Read, SerializationError, Write};
+use ark_ec::pairing::Pairing;
+use ark_serialize::{CanonicalDeserialize, CanonicalSerialize};
 use derivative::Derivative;
 
 #[derive(Derivative, CanonicalSerialize, CanonicalDeserialize)]
@@ -19,7 +19,7 @@ use derivative::Derivative;
     Eq(bound = "")
 )]
 /// A commitment is an Affine point.
-pub struct Commitment<E: PairingEngine>(
+pub struct Commitment<E: Pairing>(
     /// the actual commitment is an affine point.
     pub E::G1Affine,
 );

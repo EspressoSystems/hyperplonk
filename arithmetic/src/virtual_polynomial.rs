@@ -10,7 +10,7 @@
 use crate::{errors::ArithErrors, multilinear_polynomial::random_zero_mle_list, random_mle_list};
 use ark_ff::PrimeField;
 use ark_poly::{DenseMultilinearExtension, MultilinearExtension};
-use ark_serialize::{CanonicalSerialize, SerializationError, Write};
+use ark_serialize::CanonicalSerialize;
 use ark_std::{
     end_timer,
     rand::{Rng, RngCore},
@@ -546,7 +546,6 @@ mod test {
 
         let mle = DenseMultilinearExtension::from_evaluations_vec(num_var, eval);
 
-        let res = Arc::new(mle);
-        res
+        Arc::new(mle)
     }
 }

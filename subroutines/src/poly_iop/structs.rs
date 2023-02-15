@@ -8,7 +8,7 @@
 
 use arithmetic::VirtualPolynomial;
 use ark_ff::PrimeField;
-use ark_serialize::{CanonicalSerialize, SerializationError, Write};
+use ark_serialize::CanonicalSerialize;
 
 /// An IOP proof is a collections of
 /// - messages from prover to verifier at each round through the interactive

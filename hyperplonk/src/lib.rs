@@ -6,7 +6,7 @@
 
 //! Main module for the HyperPlonk SNARK.
 
-use ark_ec::PairingEngine;
+use ark_ec::pairing::Pairing;
 use errors::HyperPlonkErrors;
 use subroutines::{pcs::prelude::PolynomialCommitmentScheme, poly_iop::prelude::PermutationCheck};
 use witness::WitnessColumn;
@@ -25,7 +25,7 @@ mod witness;
 /// A HyperPlonk is derived from ZeroChecks and PermutationChecks.
 pub trait HyperPlonkSNARK<E, PCS>: PermutationCheck<E, PCS>
 where
-    E: PairingEngine,
+    E: Pairing,
     PCS: PolynomialCommitmentScheme<E>,
 {
     type Index;
@@ -58,8 +58,8 @@ where
     /// - The HyperPlonk SNARK proof.
     fn prove(
         pk: &Self::ProvingKey,
-        pub_input: &[E::Fr],
-        witnesses: &[WitnessColumn<E::Fr>],
+        pub_input: &[E::ScalarField],
+        witnesses: &[WitnessColumn<E::ScalarField>],
     ) -> Result<Self::Proof, HyperPlonkErrors>;
 
     /// Verify the HyperPlonk proof.
@@ -72,7 +72,7 @@ where
     /// - Return a boolean on whether the verification is successful
     fn verify(
         vk: &Self::VerifyingKey,
-        pub_input: &[E::Fr],
+        pub_input: &[E::ScalarField],
         proof: &Self::Proof,
     ) -> Result<bool, HyperPlonkErrors>;
 }
