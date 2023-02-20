@@ -103,10 +103,10 @@ impl<E: Pairing> PolynomialCommitmentScheme<E> for UnivariateKzgPCS<E> {
             )));
         }
 
-        let (num_leading_zeros, plain_coeffs) = skip_leading_zeros_and_convert_to_bigints(poly);
+        let (num_leading_zeros, plain_coeffs) = skip_leading_zeros(poly);
 
         let msm_time = start_timer!(|| "MSM to compute commitment to plaintext poly");
-        let commitment = E::G1::msm_bigint(
+        let commitment = E::G1::msm_unchecked(
             &prover_param.powers_of_g[num_leading_zeros..],
             &plain_coeffs,
         )
@@ -132,10 +132,9 @@ impl<E: Pairing> PolynomialCommitmentScheme<E> for UnivariateKzgPCS<E> {
         let witness_polynomial = polynomial / &divisor;
         end_timer!(witness_time);
 
-        let (num_leading_zeros, witness_coeffs) =
-            skip_leading_zeros_and_convert_to_bigints(&witness_polynomial);
+        let (num_leading_zeros, witness_coeffs) = skip_leading_zeros(&witness_polynomial);
 
-        let proof = E::G1::msm_bigint(
+        let proof = E::G1::msm_unchecked(
             &prover_param.borrow().powers_of_g[num_leading_zeros..],
             &witness_coeffs,
         )
@@ -177,22 +176,12 @@ impl<E: Pairing> PolynomialCommitmentScheme<E> for UnivariateKzgPCS<E> {
     }
 }
 
-fn skip_leading_zeros_and_convert_to_bigints<F: PrimeField, P: DenseUVPolynomial<F>>(
-    p: &P,
-) -> (usize, Vec<F::BigInt>) {
+fn skip_leading_zeros<F: PrimeField, P: DenseUVPolynomial<F>>(p: &P) -> (usize, &[F]) {
     let mut num_leading_zeros = 0;
     while num_leading_zeros < p.coeffs().len() && p.coeffs()[num_leading_zeros].is_zero() {
         num_leading_zeros += 1;
     }
-    let coeffs = convert_to_bigints(&p.coeffs()[num_leading_zeros..]);
-    (num_leading_zeros, coeffs)
-}
-
-fn convert_to_bigints<F: PrimeField>(p: &[F]) -> Vec<F::BigInt> {
-    let to_bigint_time = start_timer!(|| "Converting polynomial coeffs to bigints");
-    let coeffs = p.iter().map(|s| s.into_bigint()).collect::<Vec<_>>();
-    end_timer!(to_bigint_time);
-    coeffs
+    (num_leading_zeros, &p.coeffs()[num_leading_zeros..])
 }
 
 #[cfg(test)]
