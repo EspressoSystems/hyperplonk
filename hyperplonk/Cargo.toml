@@ -6,11 +6,11 @@ edition = "2021"
 
 [dependencies]
 arithmetic = { path = "../arithmetic" }
-ark-ec = { version = "^0.3.0", default-features = false }
-ark-ff = { version = "^0.3.0", default-features = false }
-ark-poly = { version = "^0.3.0", default-features = false }
-ark-serialize = { version = "^0.3.0", default-features = false, features = [ "derive" ] }
-ark-std = { version = "^0.3.0", default-features = false }
+ark-ec = { version = "^0.4.0", default-features = false }
+ark-ff = { version = "^0.4.0", default-features = false }
+ark-poly = { version = "^0.4.0", default-features = false }
+ark-serialize = { version = "^0.4.0", default-features = false, features = [ "derive" ] }
+ark-std = { version = "^0.4.0", default-features = false }
 displaydoc = { version = "0.2.3", default-features = false }
 rayon = { version = "1.5.2", default-features = false, optional = true }
 subroutines = { path = "../subroutines" }
@@ -18,7 +18,7 @@ transcript = { path = "../transcript" }
 util = { path = "../util" }
 
 [dev-dependencies]
-ark-bls12-381 = { version = "0.3.0", default-features = false, features = [ "curve" ] }
+ark-bls12-381 = { version = "0.4.0", default-features = false, features = [ "curve" ] }
 # Benchmarks
 [[bench]]
 name = "hyperplonk-benches"

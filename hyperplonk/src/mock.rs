@@ -193,7 +193,7 @@ mod test {
         // generate pk and vks
         let (pk, vk) =
             <PolyIOP<Fr> as HyperPlonkSNARK<Bls12_381, MultilinearKzgPCS<Bls12_381>>>::preprocess(
-                &index, &pcs_srs,
+                &index, pcs_srs,
             )?;
         // generate a proof and verify
         let proof =
