@@ -29,8 +29,8 @@
 // You should have received a copy of the MIT License
 // along with the HyperPlonk library. If not, see &lt;https://mit-license.org/&gt;.
 
-</span><span class="kw">use </span>ark_ec::PairingEngine;
-<span class="kw">use </span>ark_serialize::{CanonicalDeserialize, CanonicalSerialize, Read, SerializationError, Write};
+</span><span class="kw">use </span>ark_ec::pairing::Pairing;
+<span class="kw">use </span>ark_serialize::{CanonicalDeserialize, CanonicalSerialize};
 <span class="kw">use </span>derivative::Derivative;
 
 <span class="attr">#[derive(Derivative, CanonicalSerialize, CanonicalDeserialize)]
@@ -44,7 +44,7 @@
     Eq(bound = <span class="string">&quot;&quot;</span>)
 )]
 </span><span class="doccomment">/// A commitment is an Affine point.
-</span><span class="kw">pub struct </span>Commitment&lt;E: PairingEngine&gt;(
+</span><span class="kw">pub struct </span>Commitment&lt;E: Pairing&gt;(
     <span class="doccomment">/// the actual commitment is an affine point.
     </span><span class="kw">pub </span>E::G1Affine,
 );

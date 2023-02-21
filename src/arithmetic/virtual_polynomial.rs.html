@@ -549,7 +549,6 @@
 <a href="#549" id="549">549</a>
 <a href="#550" id="550">550</a>
 <a href="#551" id="551">551</a>
-<a href="#552" id="552">552</a>
 </pre><pre class="rust"><code><span class="comment">// Copyright (c) 2023 Espresso Systems (espressosys.com)
 // This file is part of the HyperPlonk library.
 
@@ -562,7 +561,7 @@
 </span><span class="kw">use crate</span>::{errors::ArithErrors, multilinear_polynomial::random_zero_mle_list, random_mle_list};
 <span class="kw">use </span>ark_ff::PrimeField;
 <span class="kw">use </span>ark_poly::{DenseMultilinearExtension, MultilinearExtension};
-<span class="kw">use </span>ark_serialize::{CanonicalSerialize, SerializationError, Write};
+<span class="kw">use </span>ark_serialize::CanonicalSerialize;
 <span class="kw">use </span>ark_std::{
     end_timer,
     rand::{Rng, RngCore},
@@ -1098,8 +1097,7 @@
 
         <span class="kw">let </span>mle = DenseMultilinearExtension::from_evaluations_vec(num_var, eval);
 
-        <span class="kw">let </span>res = Arc::new(mle);
-        res
+        Arc::new(mle)
     }
 }
 </code></pre></div>

@@ -458,7 +458,7 @@
         <span class="comment">// generate pk and vks
         </span><span class="kw">let </span>(pk, vk) =
             &lt;PolyIOP&lt;Fr&gt; <span class="kw">as </span>HyperPlonkSNARK&lt;Bls12_381, MultilinearKzgPCS&lt;Bls12_381&gt;&gt;&gt;::preprocess(
-                <span class="kw-2">&amp;</span>index, <span class="kw-2">&amp;</span>pcs_srs,
+                <span class="kw-2">&amp;</span>index, pcs_srs,
             )<span class="question-mark">?</span>;
         <span class="comment">// generate a proof and verify
         </span><span class="kw">let </span>proof =

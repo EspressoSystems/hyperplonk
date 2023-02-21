@@ -167,9 +167,6 @@
 <a href="#167" id="167">167</a>
 <a href="#168" id="168">168</a>
 <a href="#169" id="169">169</a>
-<a href="#170" id="170">170</a>
-<a href="#171" id="171">171</a>
-<a href="#172" id="172">172</a>
 </pre><pre class="rust"><code><span class="comment">// Copyright (c) 2023 Espresso Systems (espressosys.com)
 // This file is part of the HyperPlonk library.
 
@@ -183,17 +180,17 @@
 
 <span class="kw">pub mod </span>prelude;
 
-<span class="kw">use </span>ark_ec::PairingEngine;
+<span class="kw">use </span>ark_ec::pairing::Pairing;
 <span class="kw">use </span>ark_ff::Field;
 <span class="kw">use </span>ark_serialize::{CanonicalDeserialize, CanonicalSerialize};
-<span class="kw">use </span>ark_std::rand::{CryptoRng, RngCore};
+<span class="kw">use </span>ark_std::rand::Rng;
 <span class="kw">use </span>errors::PCSError;
 <span class="kw">use </span>std::{borrow::Borrow, fmt::Debug, hash::Hash};
 <span class="kw">use </span>transcript::IOPTranscript;
 
 <span class="doccomment">/// This trait defines APIs for polynomial commitment schemes.
 /// Note that for our usage of PCS, we do not require the hiding property.
-</span><span class="kw">pub trait </span>PolynomialCommitmentScheme&lt;E: PairingEngine&gt; {
+</span><span class="kw">pub trait </span>PolynomialCommitmentScheme&lt;E: Pairing&gt; {
     <span class="doccomment">/// Prover parameters
     </span><span class="kw">type </span>ProverParam: Clone + Sync;
     <span class="doccomment">/// Verifier parameters
@@ -221,7 +218,7 @@
     ///
     /// WARNING: THIS FUNCTION IS FOR TESTING PURPOSE ONLY.
     /// THE OUTPUT SRS SHOULD NOT BE USED IN PRODUCTION.
-    </span><span class="kw">fn </span>gen_srs_for_testing&lt;R: RngCore + CryptoRng&gt;(
+    </span><span class="kw">fn </span>gen_srs_for_testing&lt;R: Rng&gt;(
         rng: <span class="kw-2">&amp;mut </span>R,
         supported_size: usize,
     ) -&gt; <span class="prelude-ty">Result</span>&lt;<span class="self">Self</span>::SRS, PCSError&gt;;
@@ -271,7 +268,7 @@
         _polynomials: <span class="kw-2">&amp;</span>[<span class="self">Self</span>::Polynomial],
         _points: <span class="kw-2">&amp;</span>[<span class="self">Self</span>::Point],
         _evals: <span class="kw-2">&amp;</span>[<span class="self">Self</span>::Evaluation],
-        _transcript: <span class="kw-2">&amp;mut </span>IOPTranscript&lt;E::Fr&gt;,
+        _transcript: <span class="kw-2">&amp;mut </span>IOPTranscript&lt;E::ScalarField&gt;,
     ) -&gt; <span class="prelude-ty">Result</span>&lt;<span class="self">Self</span>::BatchProof, PCSError&gt; {
         <span class="comment">// the reason we use unimplemented!() is to enable developers to implement the
         // trait without always implementing the batching APIs.
@@ -284,7 +281,7 @@
         verifier_param: <span class="kw-2">&amp;</span><span class="self">Self</span>::VerifierParam,
         commitment: <span class="kw-2">&amp;</span><span class="self">Self</span>::Commitment,
         point: <span class="kw-2">&amp;</span><span class="self">Self</span>::Point,
-        value: <span class="kw-2">&amp;</span>E::Fr,
+        value: <span class="kw-2">&amp;</span>E::ScalarField,
         proof: <span class="kw-2">&amp;</span><span class="self">Self</span>::Proof,
     ) -&gt; <span class="prelude-ty">Result</span>&lt;bool, PCSError&gt;;
 
@@ -295,7 +292,7 @@
         _commitments: <span class="kw-2">&amp;</span>[<span class="self">Self</span>::Commitment],
         _points: <span class="kw-2">&amp;</span>[<span class="self">Self</span>::Point],
         _batch_proof: <span class="kw-2">&amp;</span><span class="self">Self</span>::BatchProof,
-        _transcript: <span class="kw-2">&amp;mut </span>IOPTranscript&lt;E::Fr&gt;,
+        _transcript: <span class="kw-2">&amp;mut </span>IOPTranscript&lt;E::ScalarField&gt;,
     ) -&gt; <span class="prelude-ty">Result</span>&lt;bool, PCSError&gt; {
         <span class="comment">// the reason we use unimplemented!() is to enable developers to implement the
         // trait without always implementing the batching APIs.
@@ -304,7 +301,7 @@
 }
 
 <span class="doccomment">/// API definitions for structured reference string
-</span><span class="kw">pub trait </span>StructuredReferenceString&lt;E: PairingEngine&gt;: Sized {
+</span><span class="kw">pub trait </span>StructuredReferenceString&lt;E: Pairing&gt;: Sized {
     <span class="doccomment">/// Prover parameters
     </span><span class="kw">type </span>ProverParam;
     <span class="doccomment">/// Verifier parameters
@@ -337,10 +334,7 @@
     ///
     /// WARNING: THIS FUNCTION IS FOR TESTING PURPOSE ONLY.
     /// THE OUTPUT SRS SHOULD NOT BE USED IN PRODUCTION.
-    </span><span class="kw">fn </span>gen_srs_for_testing&lt;R: RngCore + CryptoRng&gt;(
-        rng: <span class="kw-2">&amp;mut </span>R,
-        supported_size: usize,
-    ) -&gt; <span class="prelude-ty">Result</span>&lt;<span class="self">Self</span>, PCSError&gt;;
+    </span><span class="kw">fn </span>gen_srs_for_testing&lt;R: Rng&gt;(rng: <span class="kw-2">&amp;mut </span>R, supported_size: usize) -&gt; <span class="prelude-ty">Result</span>&lt;<span class="self">Self</span>, PCSError&gt;;
 }
 </code></pre></div>
 </section></div></main><div id="rustdoc-vars" data-root-path="../../../" data-static-root-path="../../../static.files/" data-current-crate="subroutines" data-themes="" data-resource-suffix="" data-rustdoc-version="1.67.1 (d5a82bbd2 2023-02-07)" data-search-js="search-444266647c4dba98.js" data-settings-js="settings-bebeae96e00e4617.js" data-settings-css="settings-af96d9e2fc13e081.css" ></div></body></html>

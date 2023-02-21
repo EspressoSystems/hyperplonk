@@ -251,16 +251,6 @@
 <a href="#251" id="251">251</a>
 <a href="#252" id="252">252</a>
 <a href="#253" id="253">253</a>
-<a href="#254" id="254">254</a>
-<a href="#255" id="255">255</a>
-<a href="#256" id="256">256</a>
-<a href="#257" id="257">257</a>
-<a href="#258" id="258">258</a>
-<a href="#259" id="259">259</a>
-<a href="#260" id="260">260</a>
-<a href="#261" id="261">261</a>
-<a href="#262" id="262">262</a>
-<a href="#263" id="263">263</a>
 </pre><pre class="rust"><code><span class="comment">// Copyright (c) 2023 Espresso Systems (espressosys.com)
 // This file is part of the HyperPlonk library.
 
@@ -273,31 +263,26 @@
     prelude::PCSError,
     StructuredReferenceString,
 };
-<span class="kw">use </span>ark_ec::{msm::FixedBaseMSM, AffineCurve, PairingEngine, ProjectiveCurve};
+<span class="kw">use </span>ark_ec::{pairing::Pairing, scalar_mul::fixed_base::FixedBase, AffineRepr, CurveGroup};
 <span class="kw">use </span>ark_ff::{Field, PrimeField, Zero};
 <span class="kw">use </span>ark_poly::DenseMultilinearExtension;
-<span class="kw">use </span>ark_serialize::{CanonicalDeserialize, CanonicalSerialize, Read, SerializationError, Write};
+<span class="kw">use </span>ark_serialize::{CanonicalDeserialize, CanonicalSerialize};
 <span class="kw">use </span>ark_std::{
-    collections::LinkedList,
-    end_timer, format,
-    rand::{CryptoRng, RngCore},
-    start_timer,
-    string::ToString,
-    vec::Vec,
+    collections::LinkedList, end_timer, format, rand::Rng, start_timer, string::ToString, vec::Vec,
     UniformRand,
 };
 <span class="kw">use </span>core::iter::FromIterator;
 
 <span class="doccomment">/// Evaluations over {0,1}^n for G1 or G2
 </span><span class="attr">#[derive(CanonicalSerialize, CanonicalDeserialize, Clone, Debug)]
-</span><span class="kw">pub struct </span>Evaluations&lt;C: AffineCurve&gt; {
+</span><span class="kw">pub struct </span>Evaluations&lt;C: AffineRepr&gt; {
     <span class="doccomment">/// The evaluations.
     </span><span class="kw">pub </span>evals: Vec&lt;C&gt;,
 }
 
 <span class="doccomment">/// Universal Parameter
 </span><span class="attr">#[derive(CanonicalSerialize, CanonicalDeserialize, Clone, Debug)]
-</span><span class="kw">pub struct </span>MultilinearUniversalParams&lt;E: PairingEngine&gt; {
+</span><span class="kw">pub struct </span>MultilinearUniversalParams&lt;E: Pairing&gt; {
     <span class="doccomment">/// prover parameters
     </span><span class="kw">pub </span>prover_param: MultilinearProverParam&lt;E&gt;,
     <span class="doccomment">/// h^randomness: h^t1, h^t2, ..., **h^{t_nv}**
@@ -306,7 +291,7 @@
 
 <span class="doccomment">/// Prover Parameters
 </span><span class="attr">#[derive(CanonicalSerialize, CanonicalDeserialize, Clone, Debug)]
-</span><span class="kw">pub struct </span>MultilinearProverParam&lt;E: PairingEngine&gt; {
+</span><span class="kw">pub struct </span>MultilinearProverParam&lt;E: Pairing&gt; {
     <span class="doccomment">/// number of variables
     </span><span class="kw">pub </span>num_vars: usize,
     <span class="doccomment">/// `pp_{0}`, `pp_{1}`, ...,pp_{nu_vars} defined
@@ -321,7 +306,7 @@
 
 <span class="doccomment">/// Verifier Parameters
 </span><span class="attr">#[derive(CanonicalSerialize, CanonicalDeserialize, Clone, Debug)]
-</span><span class="kw">pub struct </span>MultilinearVerifierParam&lt;E: PairingEngine&gt; {
+</span><span class="kw">pub struct </span>MultilinearVerifierParam&lt;E: Pairing&gt; {
     <span class="doccomment">/// number of variables
     </span><span class="kw">pub </span>num_vars: usize,
     <span class="doccomment">/// generator of G1
@@ -332,7 +317,7 @@
     </span><span class="kw">pub </span>h_mask: Vec&lt;E::G2Affine&gt;,
 }
 
-<span class="kw">impl</span>&lt;E: PairingEngine&gt; StructuredReferenceString&lt;E&gt; <span class="kw">for </span>MultilinearUniversalParams&lt;E&gt; {
+<span class="kw">impl</span>&lt;E: Pairing&gt; StructuredReferenceString&lt;E&gt; <span class="kw">for </span>MultilinearUniversalParams&lt;E&gt; {
     <span class="kw">type </span>ProverParam = MultilinearProverParam&lt;E&gt;;
     <span class="kw">type </span>VerifierParam = MultilinearVerifierParam&lt;E&gt;;
 
@@ -393,10 +378,7 @@
     <span class="doccomment">/// Build SRS for testing.
     /// WARNING: THIS FUNCTION IS FOR TESTING PURPOSE ONLY.
     /// THE OUTPUT SRS SHOULD NOT BE USED IN PRODUCTION.
-    </span><span class="kw">fn </span>gen_srs_for_testing&lt;R: RngCore + CryptoRng&gt;(
-        rng: <span class="kw-2">&amp;mut </span>R,
-        num_vars: usize,
-    ) -&gt; <span class="prelude-ty">Result</span>&lt;<span class="self">Self</span>, PCSError&gt; {
+    </span><span class="kw">fn </span>gen_srs_for_testing&lt;R: Rng&gt;(rng: <span class="kw-2">&amp;mut </span>R, num_vars: usize) -&gt; <span class="prelude-ty">Result</span>&lt;<span class="self">Self</span>, PCSError&gt; {
         <span class="kw">if </span>num_vars == <span class="number">0 </span>{
             <span class="kw">return </span><span class="prelude-val">Err</span>(PCSError::InvalidParameters(
                 <span class="string">&quot;constant polynomial not supported&quot;</span>.to_string(),
@@ -407,15 +389,15 @@
 
         <span class="kw">let </span>pp_generation_timer = <span class="macro">start_timer!</span>(|| <span class="string">&quot;Prover Param generation&quot;</span>);
 
-        <span class="kw">let </span>g = E::G1Projective::rand(rng);
-        <span class="kw">let </span>h = E::G2Projective::rand(rng);
+        <span class="kw">let </span>g = E::G1::rand(rng);
+        <span class="kw">let </span>h = E::G2::rand(rng);
 
         <span class="kw">let </span><span class="kw-2">mut </span>powers_of_g = Vec::new();
 
-        <span class="kw">let </span>t: Vec&lt;<span class="kw">_</span>&gt; = (<span class="number">0</span>..num_vars).map(|<span class="kw">_</span>| E::Fr::rand(rng)).collect();
-        <span class="kw">let </span>scalar_bits = E::Fr::size_in_bits();
+        <span class="kw">let </span>t: Vec&lt;<span class="kw">_</span>&gt; = (<span class="number">0</span>..num_vars).map(|<span class="kw">_</span>| E::ScalarField::rand(rng)).collect();
+        <span class="kw">let </span>scalar_bits = E::ScalarField::MODULUS_BIT_SIZE <span class="kw">as </span>usize;
 
-        <span class="kw">let </span><span class="kw-2">mut </span>eq: LinkedList&lt;DenseMultilinearExtension&lt;E::Fr&gt;&gt; =
+        <span class="kw">let </span><span class="kw-2">mut </span>eq: LinkedList&lt;DenseMultilinearExtension&lt;E::ScalarField&gt;&gt; =
             LinkedList::from_iter(eq_extension(<span class="kw-2">&amp;</span>t).into_iter());
         <span class="kw">let </span><span class="kw-2">mut </span>eq_arr = LinkedList::new();
         <span class="kw">let </span><span class="kw-2">mut </span>base = eq.pop_back().unwrap().evaluations;
@@ -440,12 +422,15 @@
             pp_powers.extend(pp_k_powers);
             total_scalars += <span class="number">1 </span>&lt;&lt; (num_vars - i);
         }
-        <span class="kw">let </span>window_size = FixedBaseMSM::get_mul_window_size(total_scalars);
-        <span class="kw">let </span>g_table = FixedBaseMSM::get_window_table(scalar_bits, window_size, g);
+        <span class="kw">let </span>window_size = FixedBase::get_mul_window_size(total_scalars);
+        <span class="kw">let </span>g_table = FixedBase::get_window_table(scalar_bits, window_size, g);
 
-        <span class="kw">let </span>pp_g = E::G1Projective::batch_normalization_into_affine(
-            <span class="kw-2">&amp;</span>FixedBaseMSM::multi_scalar_mul(scalar_bits, window_size, <span class="kw-2">&amp;</span>g_table, <span class="kw-2">&amp;</span>pp_powers),
-        );
+        <span class="kw">let </span>pp_g = E::G1::normalize_batch(<span class="kw-2">&amp;</span>FixedBase::msm(
+            scalar_bits,
+            window_size,
+            <span class="kw-2">&amp;</span>g_table,
+            <span class="kw-2">&amp;</span>pp_powers,
+        ));
 
         <span class="kw">let </span><span class="kw-2">mut </span>start = <span class="number">0</span>;
         <span class="kw">for </span>i <span class="kw">in </span><span class="number">0</span>..num_vars {
@@ -454,8 +439,8 @@
                 evals: pp_g[start..(start + size)].to_vec(),
             };
             <span class="comment">// check correctness of pp_k_g
-            </span><span class="kw">let </span>t_eval_0 = eq_eval(<span class="kw-2">&amp;</span><span class="macro">vec!</span>[E::Fr::zero(); num_vars - i], <span class="kw-2">&amp;</span>t[i..num_vars])<span class="question-mark">?</span>;
-            <span class="macro">assert_eq!</span>(g.mul(t_eval_0.into_repr()).into_affine(), pp_k_g.evals[<span class="number">0</span>]);
+            </span><span class="kw">let </span>t_eval_0 = eq_eval(<span class="kw-2">&amp;</span><span class="macro">vec!</span>[E::ScalarField::zero(); num_vars - i], <span class="kw-2">&amp;</span>t[i..num_vars])<span class="question-mark">?</span>;
+            <span class="macro">assert_eq!</span>((g * t_eval_0).into(), pp_k_g.evals[<span class="number">0</span>]);
             powers_of_g.push(pp_k_g);
             start += size;
         }
@@ -475,14 +460,9 @@
 
         <span class="kw">let </span>vp_generation_timer = <span class="macro">start_timer!</span>(|| <span class="string">&quot;VP generation&quot;</span>);
         <span class="kw">let </span>h_mask = {
-            <span class="kw">let </span>window_size = FixedBaseMSM::get_mul_window_size(num_vars);
-            <span class="kw">let </span>h_table = FixedBaseMSM::get_window_table(scalar_bits, window_size, h);
-            E::G2Projective::batch_normalization_into_affine(<span class="kw-2">&amp;</span>FixedBaseMSM::multi_scalar_mul(
-                scalar_bits,
-                window_size,
-                <span class="kw-2">&amp;</span>h_table,
-                <span class="kw-2">&amp;</span>t,
-            ))
+            <span class="kw">let </span>window_size = FixedBase::get_mul_window_size(num_vars);
+            <span class="kw">let </span>h_table = FixedBase::get_window_table(scalar_bits, window_size, h);
+            E::G2::normalize_batch(<span class="kw-2">&amp;</span>FixedBase::msm(scalar_bits, window_size, <span class="kw-2">&amp;</span>h_table, <span class="kw-2">&amp;</span>t))
         };
         <span class="macro">end_timer!</span>(vp_generation_timer);
         <span class="macro">end_timer!</span>(total_timer);

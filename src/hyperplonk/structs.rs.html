@@ -167,7 +167,7 @@
 </span><span class="doccomment">//! Main module for the HyperPlonk PolyIOP.
 
 </span><span class="kw">use crate</span>::{custom_gate::CustomizedGates, prelude::HyperPlonkErrors, selectors::SelectorColumn};
-<span class="kw">use </span>ark_ec::PairingEngine;
+<span class="kw">use </span>ark_ec::pairing::Pairing;
 <span class="kw">use </span>ark_ff::PrimeField;
 <span class="kw">use </span>ark_poly::DenseMultilinearExtension;
 <span class="kw">use </span>ark_std::log2;
@@ -185,7 +185,7 @@
 </span><span class="attr">#[derive(Clone, Debug, PartialEq)]
 </span><span class="kw">pub struct </span>HyperPlonkProof&lt;E, PC, PCS&gt;
 <span class="kw">where
-    </span>E: PairingEngine,
+    </span>E: Pairing,
     PC: PermutationCheck&lt;E, PCS&gt;,
     PCS: PolynomialCommitmentScheme&lt;E&gt;,
 {
@@ -196,7 +196,7 @@
     // IOP proofs
     // =======================================================================
     // the custom gate zerocheck proof
-    </span><span class="kw">pub </span>zero_check_proof: &lt;PC <span class="kw">as </span>ZeroCheck&lt;E::Fr&gt;&gt;::ZeroCheckProof,
+    </span><span class="kw">pub </span>zero_check_proof: &lt;PC <span class="kw">as </span>ZeroCheck&lt;E::ScalarField&gt;&gt;::ZeroCheckProof,
     <span class="comment">// the permutation check proof for copy constraints
     </span><span class="kw">pub </span>perm_check_proof: PC::PermutationProof,
 }
@@ -288,13 +288,13 @@
 ///   - the commitment to the selectors and permutations
 ///   - the parameters for polynomial commitment
 </span><span class="attr">#[derive(Clone, Debug, Default, PartialEq)]
-</span><span class="kw">pub struct </span>HyperPlonkProvingKey&lt;E: PairingEngine, PCS: PolynomialCommitmentScheme&lt;E&gt;&gt; {
+</span><span class="kw">pub struct </span>HyperPlonkProvingKey&lt;E: Pairing, PCS: PolynomialCommitmentScheme&lt;E&gt;&gt; {
     <span class="doccomment">/// Hyperplonk instance parameters
     </span><span class="kw">pub </span>params: HyperPlonkParams,
     <span class="doccomment">/// The preprocessed permutation polynomials
-    </span><span class="kw">pub </span>permutation_oracles: Vec&lt;Arc&lt;DenseMultilinearExtension&lt;E::Fr&gt;&gt;&gt;,
+    </span><span class="kw">pub </span>permutation_oracles: Vec&lt;Arc&lt;DenseMultilinearExtension&lt;E::ScalarField&gt;&gt;&gt;,
     <span class="doccomment">/// The preprocessed selector polynomials
-    </span><span class="kw">pub </span>selector_oracles: Vec&lt;Arc&lt;DenseMultilinearExtension&lt;E::Fr&gt;&gt;&gt;,
+    </span><span class="kw">pub </span>selector_oracles: Vec&lt;Arc&lt;DenseMultilinearExtension&lt;E::ScalarField&gt;&gt;&gt;,
     <span class="doccomment">/// Commitments to the preprocessed selector polynomials
     </span><span class="kw">pub </span>selector_commitments: Vec&lt;PCS::Commitment&gt;,
     <span class="doccomment">/// Commitments to the preprocessed permutation polynomials
@@ -308,7 +308,7 @@
 ///   - the commitments to the preprocessed polynomials output by the indexer
 ///   - the parameters for polynomial commitment
 </span><span class="attr">#[derive(Clone, Debug, Default, PartialEq)]
-</span><span class="kw">pub struct </span>HyperPlonkVerifyingKey&lt;E: PairingEngine, PCS: PolynomialCommitmentScheme&lt;E&gt;&gt; {
+</span><span class="kw">pub struct </span>HyperPlonkVerifyingKey&lt;E: Pairing, PCS: PolynomialCommitmentScheme&lt;E&gt;&gt; {
     <span class="doccomment">/// Hyperplonk instance parameters
     </span><span class="kw">pub </span>params: HyperPlonkParams,
     <span class="doccomment">/// The parameters for PCS commitment

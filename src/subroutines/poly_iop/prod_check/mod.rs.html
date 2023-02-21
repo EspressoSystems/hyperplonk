@@ -387,6 +387,23 @@
 <a href="#387" id="387">387</a>
 <a href="#388" id="388">388</a>
 <a href="#389" id="389">389</a>
+<a href="#390" id="390">390</a>
+<a href="#391" id="391">391</a>
+<a href="#392" id="392">392</a>
+<a href="#393" id="393">393</a>
+<a href="#394" id="394">394</a>
+<a href="#395" id="395">395</a>
+<a href="#396" id="396">396</a>
+<a href="#397" id="397">397</a>
+<a href="#398" id="398">398</a>
+<a href="#399" id="399">399</a>
+<a href="#400" id="400">400</a>
+<a href="#401" id="401">401</a>
+<a href="#402" id="402">402</a>
+<a href="#403" id="403">403</a>
+<a href="#404" id="404">404</a>
+<a href="#405" id="405">405</a>
+<a href="#406" id="406">406</a>
 </pre><pre class="rust"><code><span class="comment">// Copyright (c) 2023 Espresso Systems (espressosys.com)
 // This file is part of the HyperPlonk library.
 
@@ -405,7 +422,7 @@
     },
 };
 <span class="kw">use </span>arithmetic::VPAuxInfo;
-<span class="kw">use </span>ark_ec::PairingEngine;
+<span class="kw">use </span>ark_ec::pairing::Pairing;
 <span class="kw">use </span>ark_ff::{One, PrimeField, Zero};
 <span class="kw">use </span>ark_poly::DenseMultilinearExtension;
 <span class="kw">use </span>ark_std::{end_timer, start_timer};
@@ -441,9 +458,9 @@
 /// 2. `generate_challenge` from current transcript (generate alpha)
 /// 3. `verify` to verify the zerocheck proof and generate the subclaim for
 /// polynomial evaluations
-</span><span class="kw">pub trait </span>ProductCheck&lt;E, PCS&gt;: ZeroCheck&lt;E::Fr&gt;
+</span><span class="kw">pub trait </span>ProductCheck&lt;E, PCS&gt;: ZeroCheck&lt;E::ScalarField&gt;
 <span class="kw">where
-    </span>E: PairingEngine,
+    </span>E: Pairing,
     PCS: PolynomialCommitmentScheme&lt;E&gt;,
 {
     <span class="kw">type </span>ProductCheckSubClaim;
@@ -479,7 +496,7 @@
         pcs_param: <span class="kw-2">&amp;</span>PCS::ProverParam,
         fxs: <span class="kw-2">&amp;</span>[<span class="self">Self</span>::MultilinearExtension],
         gxs: <span class="kw-2">&amp;</span>[<span class="self">Self</span>::MultilinearExtension],
-        transcript: <span class="kw-2">&amp;mut </span>IOPTranscript&lt;E::Fr&gt;,
+        transcript: <span class="kw-2">&amp;mut </span>IOPTranscript&lt;E::ScalarField&gt;,
     ) -&gt; <span class="prelude-ty">Result</span>&lt;
         (
             <span class="self">Self</span>::ProductCheckProof,
@@ -495,7 +512,7 @@
     ///     = \prod_{x \in {0,1}^n} g1(x) * ... * gk(x)`
     </span><span class="kw">fn </span>verify(
         proof: <span class="kw-2">&amp;</span><span class="self">Self</span>::ProductCheckProof,
-        aux_info: <span class="kw-2">&amp;</span>VPAuxInfo&lt;E::Fr&gt;,
+        aux_info: <span class="kw-2">&amp;</span>VPAuxInfo&lt;E::ScalarField&gt;,
         transcript: <span class="kw-2">&amp;mut </span><span class="self">Self</span>::Transcript,
     ) -&gt; <span class="prelude-ty">Result</span>&lt;<span class="self">Self</span>::ProductCheckSubClaim, PolyIOPErrors&gt;;
 }
@@ -525,32 +542,32 @@
 /// - a polynomial commitment for the fractional polynomial
 </span><span class="attr">#[derive(Clone, Debug, Default, PartialEq)]
 </span><span class="kw">pub struct </span>ProductCheckProof&lt;
-    E: PairingEngine,
+    E: Pairing,
     PCS: PolynomialCommitmentScheme&lt;E&gt;,
-    ZC: ZeroCheck&lt;E::Fr&gt;,
+    ZC: ZeroCheck&lt;E::ScalarField&gt;,
 &gt; {
     <span class="kw">pub </span>zero_check_proof: ZC::ZeroCheckProof,
     <span class="kw">pub </span>prod_x_comm: PCS::Commitment,
     <span class="kw">pub </span>frac_comm: PCS::Commitment,
 }
 
-<span class="kw">impl</span>&lt;E, PCS&gt; ProductCheck&lt;E, PCS&gt; <span class="kw">for </span>PolyIOP&lt;E::Fr&gt;
+<span class="kw">impl</span>&lt;E, PCS&gt; ProductCheck&lt;E, PCS&gt; <span class="kw">for </span>PolyIOP&lt;E::ScalarField&gt;
 <span class="kw">where
-    </span>E: PairingEngine,
-    PCS: PolynomialCommitmentScheme&lt;E, Polynomial = Arc&lt;DenseMultilinearExtension&lt;E::Fr&gt;&gt;&gt;,
+    </span>E: Pairing,
+    PCS: PolynomialCommitmentScheme&lt;E, Polynomial = Arc&lt;DenseMultilinearExtension&lt;E::ScalarField&gt;&gt;&gt;,
 {
-    <span class="kw">type </span>ProductCheckSubClaim = ProductCheckSubClaim&lt;E::Fr, <span class="self">Self</span>&gt;;
+    <span class="kw">type </span>ProductCheckSubClaim = ProductCheckSubClaim&lt;E::ScalarField, <span class="self">Self</span>&gt;;
     <span class="kw">type </span>ProductCheckProof = ProductCheckProof&lt;E, PCS, <span class="self">Self</span>&gt;;
 
     <span class="kw">fn </span>init_transcript() -&gt; <span class="self">Self</span>::Transcript {
-        IOPTranscript::&lt;E::Fr&gt;::new(<span class="string">b&quot;Initializing ProductCheck transcript&quot;</span>)
+        IOPTranscript::&lt;E::ScalarField&gt;::new(<span class="string">b&quot;Initializing ProductCheck transcript&quot;</span>)
     }
 
     <span class="kw">fn </span>prove(
         pcs_param: <span class="kw-2">&amp;</span>PCS::ProverParam,
         fxs: <span class="kw-2">&amp;</span>[<span class="self">Self</span>::MultilinearExtension],
         gxs: <span class="kw-2">&amp;</span>[<span class="self">Self</span>::MultilinearExtension],
-        transcript: <span class="kw-2">&amp;mut </span>IOPTranscript&lt;E::Fr&gt;,
+        transcript: <span class="kw-2">&amp;mut </span>IOPTranscript&lt;E::ScalarField&gt;,
     ) -&gt; <span class="prelude-ty">Result</span>&lt;
         (
             <span class="self">Self</span>::ProductCheckProof,
@@ -609,7 +626,7 @@
 
     <span class="kw">fn </span>verify(
         proof: <span class="kw-2">&amp;</span><span class="self">Self</span>::ProductCheckProof,
-        aux_info: <span class="kw-2">&amp;</span>VPAuxInfo&lt;E::Fr&gt;,
+        aux_info: <span class="kw-2">&amp;</span>VPAuxInfo&lt;E::ScalarField&gt;,
         transcript: <span class="kw-2">&amp;mut </span><span class="self">Self</span>::Transcript,
     ) -&gt; <span class="prelude-ty">Result</span>&lt;<span class="self">Self</span>::ProductCheckSubClaim, PolyIOPErrors&gt; {
         <span class="kw">let </span>start = <span class="macro">start_timer!</span>(|| <span class="string">&quot;prod_check verify&quot;</span>);
@@ -621,14 +638,17 @@
 
         <span class="comment">// invoke the zero check on the iop_proof
         // the virtual poly info for Q(x)
-        </span><span class="kw">let </span>zero_check_sub_claim =
-            &lt;<span class="self">Self </span><span class="kw">as </span>ZeroCheck&lt;E::Fr&gt;&gt;::verify(<span class="kw-2">&amp;</span>proof.zero_check_proof, aux_info, transcript)<span class="question-mark">?</span>;
+        </span><span class="kw">let </span>zero_check_sub_claim = &lt;<span class="self">Self </span><span class="kw">as </span>ZeroCheck&lt;E::ScalarField&gt;&gt;::verify(
+            <span class="kw-2">&amp;</span>proof.zero_check_proof,
+            aux_info,
+            transcript,
+        )<span class="question-mark">?</span>;
 
         <span class="comment">// the final query is on prod_x
-        </span><span class="kw">let </span><span class="kw-2">mut </span>final_query = <span class="macro">vec!</span>[E::Fr::one(); aux_info.num_variables];
+        </span><span class="kw">let </span><span class="kw-2">mut </span>final_query = <span class="macro">vec!</span>[E::ScalarField::one(); aux_info.num_variables];
         <span class="comment">// the point has to be reversed because Arkworks uses big-endian.
-        </span>final_query[<span class="number">0</span>] = E::Fr::zero();
-        <span class="kw">let </span>final_eval = E::Fr::one();
+        </span>final_query[<span class="number">0</span>] = E::ScalarField::zero();
+        <span class="kw">let </span>final_eval = E::ScalarField::one();
 
         <span class="macro">end_timer!</span>(start);
 
@@ -649,53 +669,60 @@
     };
     <span class="kw">use </span>arithmetic::VPAuxInfo;
     <span class="kw">use </span>ark_bls12_381::{Bls12_381, Fr};
-    <span class="kw">use </span>ark_ec::PairingEngine;
+    <span class="kw">use </span>ark_ec::pairing::Pairing;
     <span class="kw">use </span>ark_poly::{DenseMultilinearExtension, MultilinearExtension};
     <span class="kw">use </span>ark_std::test_rng;
     <span class="kw">use </span>std::{marker::PhantomData, sync::Arc};
 
     <span class="kw">fn </span>check_frac_poly&lt;E&gt;(
-        frac_poly: <span class="kw-2">&amp;</span>Arc&lt;DenseMultilinearExtension&lt;E::Fr&gt;&gt;,
-        fs: <span class="kw-2">&amp;</span>[Arc&lt;DenseMultilinearExtension&lt;E::Fr&gt;&gt;],
-        gs: <span class="kw-2">&amp;</span>[Arc&lt;DenseMultilinearExtension&lt;E::Fr&gt;&gt;],
+        frac_poly: <span class="kw-2">&amp;</span>Arc&lt;DenseMultilinearExtension&lt;E::ScalarField&gt;&gt;,
+        fs: <span class="kw-2">&amp;</span>[Arc&lt;DenseMultilinearExtension&lt;E::ScalarField&gt;&gt;],
+        gs: <span class="kw-2">&amp;</span>[Arc&lt;DenseMultilinearExtension&lt;E::ScalarField&gt;&gt;],
     ) <span class="kw">where
-        </span>E: PairingEngine,
+        </span>E: Pairing,
     {
         <span class="kw">let </span><span class="kw-2">mut </span>flag = <span class="bool-val">true</span>;
         <span class="kw">let </span>num_vars = frac_poly.num_vars;
         <span class="kw">for </span>i <span class="kw">in </span><span class="number">0</span>..<span class="number">1 </span>&lt;&lt; num_vars {
             <span class="kw">let </span>nom = fs
                 .iter()
-                .fold(E::Fr::from(<span class="number">1u8</span>), |acc, f| acc * f.evaluations[i]);
+                .fold(E::ScalarField::from(<span class="number">1u8</span>), |acc, f| acc * f.evaluations[i]);
             <span class="kw">let </span>denom = gs
                 .iter()
-                .fold(E::Fr::from(<span class="number">1u8</span>), |acc, g| acc * g.evaluations[i]);
+                .fold(E::ScalarField::from(<span class="number">1u8</span>), |acc, g| acc * g.evaluations[i]);
             <span class="kw">if </span>denom * frac_poly.evaluations[i] != nom {
                 flag = <span class="bool-val">false</span>;
                 <span class="kw">break</span>;
             }
         }
-        <span class="macro">assert_eq!</span>(flag, <span class="bool-val">true</span>);
+        <span class="macro">assert!</span>(flag);
     }
     <span class="comment">// fs and gs are guaranteed to have the same product
     // fs and hs doesn&#39;t have the same product
     </span><span class="kw">fn </span>test_product_check_helper&lt;E, PCS&gt;(
-        fs: <span class="kw-2">&amp;</span>[Arc&lt;DenseMultilinearExtension&lt;E::Fr&gt;&gt;],
-        gs: <span class="kw-2">&amp;</span>[Arc&lt;DenseMultilinearExtension&lt;E::Fr&gt;&gt;],
-        hs: <span class="kw-2">&amp;</span>[Arc&lt;DenseMultilinearExtension&lt;E::Fr&gt;&gt;],
+        fs: <span class="kw-2">&amp;</span>[Arc&lt;DenseMultilinearExtension&lt;E::ScalarField&gt;&gt;],
+        gs: <span class="kw-2">&amp;</span>[Arc&lt;DenseMultilinearExtension&lt;E::ScalarField&gt;&gt;],
+        hs: <span class="kw-2">&amp;</span>[Arc&lt;DenseMultilinearExtension&lt;E::ScalarField&gt;&gt;],
         pcs_param: <span class="kw-2">&amp;</span>PCS::ProverParam,
     ) -&gt; <span class="prelude-ty">Result</span>&lt;(), PolyIOPErrors&gt;
     <span class="kw">where
-        </span>E: PairingEngine,
-        PCS: PolynomialCommitmentScheme&lt;E, Polynomial = Arc&lt;DenseMultilinearExtension&lt;E::Fr&gt;&gt;&gt;,
+        </span>E: Pairing,
+        PCS: PolynomialCommitmentScheme&lt;
+            E,
+            Polynomial = Arc&lt;DenseMultilinearExtension&lt;E::ScalarField&gt;&gt;,
+        &gt;,
     {
-        <span class="kw">let </span><span class="kw-2">mut </span>transcript = &lt;PolyIOP&lt;E::Fr&gt; <span class="kw">as </span>ProductCheck&lt;E, PCS&gt;&gt;::init_transcript();
+        <span class="kw">let </span><span class="kw-2">mut </span>transcript = &lt;PolyIOP&lt;E::ScalarField&gt; <span class="kw">as </span>ProductCheck&lt;E, PCS&gt;&gt;::init_transcript();
         transcript.append_message(<span class="string">b&quot;testing&quot;</span>, <span class="string">b&quot;initializing transcript for testing&quot;</span>)<span class="question-mark">?</span>;
 
-        <span class="kw">let </span>(proof, prod_x, frac_poly) =
-            &lt;PolyIOP&lt;E::Fr&gt; <span class="kw">as </span>ProductCheck&lt;E, PCS&gt;&gt;::prove(pcs_param, fs, gs, <span class="kw-2">&amp;mut </span>transcript)<span class="question-mark">?</span>;
+        <span class="kw">let </span>(proof, prod_x, frac_poly) = &lt;PolyIOP&lt;E::ScalarField&gt; <span class="kw">as </span>ProductCheck&lt;E, PCS&gt;&gt;::prove(
+            pcs_param,
+            fs,
+            gs,
+            <span class="kw-2">&amp;mut </span>transcript,
+        )<span class="question-mark">?</span>;
 
-        <span class="kw">let </span><span class="kw-2">mut </span>transcript = &lt;PolyIOP&lt;E::Fr&gt; <span class="kw">as </span>ProductCheck&lt;E, PCS&gt;&gt;::init_transcript();
+        <span class="kw">let </span><span class="kw-2">mut </span>transcript = &lt;PolyIOP&lt;E::ScalarField&gt; <span class="kw">as </span>ProductCheck&lt;E, PCS&gt;&gt;::init_transcript();
         transcript.append_message(<span class="string">b&quot;testing&quot;</span>, <span class="string">b&quot;initializing transcript for testing&quot;</span>)<span class="question-mark">?</span>;
 
         <span class="comment">// what&#39;s aux_info for?
@@ -704,8 +731,11 @@
             num_variables: fs[<span class="number">0</span>].num_vars,
             phantom: PhantomData::default(),
         };
-        <span class="kw">let </span>prod_subclaim =
-            &lt;PolyIOP&lt;E::Fr&gt; <span class="kw">as </span>ProductCheck&lt;E, PCS&gt;&gt;::verify(<span class="kw-2">&amp;</span>proof, <span class="kw-2">&amp;</span>aux_info, <span class="kw-2">&amp;mut </span>transcript)<span class="question-mark">?</span>;
+        <span class="kw">let </span>prod_subclaim = &lt;PolyIOP&lt;E::ScalarField&gt; <span class="kw">as </span>ProductCheck&lt;E, PCS&gt;&gt;::verify(
+            <span class="kw-2">&amp;</span>proof,
+            <span class="kw-2">&amp;</span>aux_info,
+            <span class="kw-2">&amp;mut </span>transcript,
+        )<span class="question-mark">?</span>;
         <span class="macro">assert_eq!</span>(
             prod_x.evaluate(<span class="kw-2">&amp;</span>prod_subclaim.final_query.<span class="number">0</span>).unwrap(),
             prod_subclaim.final_query.<span class="number">1</span>,
@@ -714,15 +744,19 @@
         check_frac_poly::&lt;E&gt;(<span class="kw-2">&amp;</span>frac_poly, fs, gs);
 
         <span class="comment">// bad path
-        </span><span class="kw">let </span><span class="kw-2">mut </span>transcript = &lt;PolyIOP&lt;E::Fr&gt; <span class="kw">as </span>ProductCheck&lt;E, PCS&gt;&gt;::init_transcript();
+        </span><span class="kw">let </span><span class="kw-2">mut </span>transcript = &lt;PolyIOP&lt;E::ScalarField&gt; <span class="kw">as </span>ProductCheck&lt;E, PCS&gt;&gt;::init_transcript();
         transcript.append_message(<span class="string">b&quot;testing&quot;</span>, <span class="string">b&quot;initializing transcript for testing&quot;</span>)<span class="question-mark">?</span>;
 
-        <span class="kw">let </span>(bad_proof, prod_x_bad, frac_poly) =
-            &lt;PolyIOP&lt;E::Fr&gt; <span class="kw">as </span>ProductCheck&lt;E, PCS&gt;&gt;::prove(pcs_param, fs, hs, <span class="kw-2">&amp;mut </span>transcript)<span class="question-mark">?</span>;
+        <span class="kw">let </span>(bad_proof, prod_x_bad, frac_poly) = &lt;PolyIOP&lt;E::ScalarField&gt; <span class="kw">as </span>ProductCheck&lt;
+            E,
+            PCS,
+        &gt;&gt;::prove(
+            pcs_param, fs, hs, <span class="kw-2">&amp;mut </span>transcript
+        )<span class="question-mark">?</span>;
 
-        <span class="kw">let </span><span class="kw-2">mut </span>transcript = &lt;PolyIOP&lt;E::Fr&gt; <span class="kw">as </span>ProductCheck&lt;E, PCS&gt;&gt;::init_transcript();
+        <span class="kw">let </span><span class="kw-2">mut </span>transcript = &lt;PolyIOP&lt;E::ScalarField&gt; <span class="kw">as </span>ProductCheck&lt;E, PCS&gt;&gt;::init_transcript();
         transcript.append_message(<span class="string">b&quot;testing&quot;</span>, <span class="string">b&quot;initializing transcript for testing&quot;</span>)<span class="question-mark">?</span>;
-        <span class="kw">let </span>bad_subclaim = &lt;PolyIOP&lt;E::Fr&gt; <span class="kw">as </span>ProductCheck&lt;E, PCS&gt;&gt;::verify(
+        <span class="kw">let </span>bad_subclaim = &lt;PolyIOP&lt;E::ScalarField&gt; <span class="kw">as </span>ProductCheck&lt;E, PCS&gt;&gt;::verify(
             <span class="kw-2">&amp;</span>bad_proof,
             <span class="kw-2">&amp;</span>aux_info,
             <span class="kw-2">&amp;mut </span>transcript,

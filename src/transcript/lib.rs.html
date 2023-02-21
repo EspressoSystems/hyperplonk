@@ -257,7 +257,7 @@
 </span><span class="macro">macro_rules! </span>to_bytes {
     (<span class="macro-nonterminal">$x</span>:expr) =&gt; {{
         <span class="kw">let </span><span class="kw-2">mut </span>buf = <span class="macro">ark_std::vec!</span>[];
-        ark_serialize::CanonicalSerialize::serialize(<span class="macro-nonterminal">$x</span>, <span class="kw-2">&amp;mut </span>buf).map(|<span class="kw">_</span>| buf)
+        ark_serialize::CanonicalSerialize::serialize_compressed(<span class="macro-nonterminal">$x</span>, <span class="kw-2">&amp;mut </span>buf).map(|<span class="kw">_</span>| buf)
     }};
 }
 </code></pre></div>

@@ -84,7 +84,7 @@
 
 </span><span class="doccomment">//! Main module for the HyperPlonk SNARK.
 
-</span><span class="kw">use </span>ark_ec::PairingEngine;
+</span><span class="kw">use </span>ark_ec::pairing::Pairing;
 <span class="kw">use </span>errors::HyperPlonkErrors;
 <span class="kw">use </span>subroutines::{pcs::prelude::PolynomialCommitmentScheme, poly_iop::prelude::PermutationCheck};
 <span class="kw">use </span>witness::WitnessColumn;
@@ -103,7 +103,7 @@
 /// A HyperPlonk is derived from ZeroChecks and PermutationChecks.
 </span><span class="kw">pub trait </span>HyperPlonkSNARK&lt;E, PCS&gt;: PermutationCheck&lt;E, PCS&gt;
 <span class="kw">where
-    </span>E: PairingEngine,
+    </span>E: Pairing,
     PCS: PolynomialCommitmentScheme&lt;E&gt;,
 {
     <span class="kw">type </span>Index;
@@ -136,8 +136,8 @@
     /// - The HyperPlonk SNARK proof.
     </span><span class="kw">fn </span>prove(
         pk: <span class="kw-2">&amp;</span><span class="self">Self</span>::ProvingKey,
-        pub_input: <span class="kw-2">&amp;</span>[E::Fr],
-        witnesses: <span class="kw-2">&amp;</span>[WitnessColumn&lt;E::Fr&gt;],
+        pub_input: <span class="kw-2">&amp;</span>[E::ScalarField],
+        witnesses: <span class="kw-2">&amp;</span>[WitnessColumn&lt;E::ScalarField&gt;],
     ) -&gt; <span class="prelude-ty">Result</span>&lt;<span class="self">Self</span>::Proof, HyperPlonkErrors&gt;;
 
     <span class="doccomment">/// Verify the HyperPlonk proof.
@@ -150,7 +150,7 @@
     /// - Return a boolean on whether the verification is successful
     </span><span class="kw">fn </span>verify(
         vk: <span class="kw-2">&amp;</span><span class="self">Self</span>::VerifyingKey,
-        pub_input: <span class="kw-2">&amp;</span>[E::Fr],
+        pub_input: <span class="kw-2">&amp;</span>[E::ScalarField],
         proof: <span class="kw-2">&amp;</span><span class="self">Self</span>::Proof,
     ) -&gt; <span class="prelude-ty">Result</span>&lt;bool, HyperPlonkErrors&gt;;
 }

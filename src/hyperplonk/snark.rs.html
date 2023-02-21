@@ -726,6 +726,28 @@
 <a href="#726" id="726">726</a>
 <a href="#727" id="727">727</a>
 <a href="#728" id="728">728</a>
+<a href="#729" id="729">729</a>
+<a href="#730" id="730">730</a>
+<a href="#731" id="731">731</a>
+<a href="#732" id="732">732</a>
+<a href="#733" id="733">733</a>
+<a href="#734" id="734">734</a>
+<a href="#735" id="735">735</a>
+<a href="#736" id="736">736</a>
+<a href="#737" id="737">737</a>
+<a href="#738" id="738">738</a>
+<a href="#739" id="739">739</a>
+<a href="#740" id="740">740</a>
+<a href="#741" id="741">741</a>
+<a href="#742" id="742">742</a>
+<a href="#743" id="743">743</a>
+<a href="#744" id="744">744</a>
+<a href="#745" id="745">745</a>
+<a href="#746" id="746">746</a>
+<a href="#747" id="747">747</a>
+<a href="#748" id="748">748</a>
+<a href="#749" id="749">749</a>
+<a href="#750" id="750">750</a>
 </pre><pre class="rust"><code><span class="comment">// Copyright (c) 2023 Espresso Systems (espressosys.com)
 // This file is part of the HyperPlonk library.
 
@@ -740,7 +762,7 @@
     HyperPlonkSNARK,
 };
 <span class="kw">use </span>arithmetic::{evaluate_opt, gen_eval_point, VPAuxInfo};
-<span class="kw">use </span>ark_ec::PairingEngine;
+<span class="kw">use </span>ark_ec::pairing::Pairing;
 <span class="kw">use </span>ark_poly::DenseMultilinearExtension;
 <span class="kw">use </span>ark_std::{end_timer, log2, start_timer, One, Zero};
 <span class="kw">use </span>rayon::iter::IntoParallelRefIterator;
@@ -757,22 +779,22 @@
 };
 <span class="kw">use </span>transcript::IOPTranscript;
 
-<span class="kw">impl</span>&lt;E, PCS&gt; HyperPlonkSNARK&lt;E, PCS&gt; <span class="kw">for </span>PolyIOP&lt;E::Fr&gt;
+<span class="kw">impl</span>&lt;E, PCS&gt; HyperPlonkSNARK&lt;E, PCS&gt; <span class="kw">for </span>PolyIOP&lt;E::ScalarField&gt;
 <span class="kw">where
-    </span>E: PairingEngine,
+    </span>E: Pairing,
     <span class="comment">// Ideally we want to access polynomial as PCS::Polynomial, instead of instantiating it here.
     // But since PCS::Polynomial can be both univariate or multivariate in our implementation
     // we cannot bound PCS::Polynomial with a property trait bound.
     </span>PCS: PolynomialCommitmentScheme&lt;
         E,
-        Polynomial = Arc&lt;DenseMultilinearExtension&lt;E::Fr&gt;&gt;,
-        Point = Vec&lt;E::Fr&gt;,
-        Evaluation = E::Fr,
+        Polynomial = Arc&lt;DenseMultilinearExtension&lt;E::ScalarField&gt;&gt;,
+        Point = Vec&lt;E::ScalarField&gt;,
+        Evaluation = E::ScalarField,
         Commitment = Commitment&lt;E&gt;,
         BatchProof = BatchProof&lt;E, PCS&gt;,
     &gt;,
 {
-    <span class="kw">type </span>Index = HyperPlonkIndex&lt;E::Fr&gt;;
+    <span class="kw">type </span>Index = HyperPlonkIndex&lt;E::ScalarField&gt;;
     <span class="kw">type </span>ProvingKey = HyperPlonkProvingKey&lt;E, PCS&gt;;
     <span class="kw">type </span>VerifyingKey = HyperPlonkVerifyingKey&lt;E, PCS&gt;;
     <span class="kw">type </span>Proof = HyperPlonkProof&lt;E, <span class="self">Self</span>, PCS&gt;;
@@ -803,7 +825,7 @@
         }
 
         <span class="comment">// build selector oracles and commit to it
-        </span><span class="kw">let </span>selector_oracles: Vec&lt;Arc&lt;DenseMultilinearExtension&lt;E::Fr&gt;&gt;&gt; = index
+        </span><span class="kw">let </span>selector_oracles: Vec&lt;Arc&lt;DenseMultilinearExtension&lt;E::ScalarField&gt;&gt;&gt; = index
             .selectors
             .iter()
             .map(|s| Arc::new(DenseMultilinearExtension::from(s)))
@@ -881,11 +903,11 @@
     /// - 5. deferred batch opening
     </span><span class="kw">fn </span>prove(
         pk: <span class="kw-2">&amp;</span><span class="self">Self</span>::ProvingKey,
-        pub_input: <span class="kw-2">&amp;</span>[E::Fr],
-        witnesses: <span class="kw-2">&amp;</span>[WitnessColumn&lt;E::Fr&gt;],
+        pub_input: <span class="kw-2">&amp;</span>[E::ScalarField],
+        witnesses: <span class="kw-2">&amp;</span>[WitnessColumn&lt;E::ScalarField&gt;],
     ) -&gt; <span class="prelude-ty">Result</span>&lt;<span class="self">Self</span>::Proof, HyperPlonkErrors&gt; {
         <span class="kw">let </span>start = <span class="macro">start_timer!</span>(|| <span class="string">&quot;hyperplonk proving&quot;</span>);
-        <span class="kw">let </span><span class="kw-2">mut </span>transcript = IOPTranscript::&lt;E::Fr&gt;::new(<span class="string">b&quot;hyperplonk&quot;</span>);
+        <span class="kw">let </span><span class="kw-2">mut </span>transcript = IOPTranscript::&lt;E::ScalarField&gt;::new(<span class="string">b&quot;hyperplonk&quot;</span>);
 
         prover_sanity_check(<span class="kw-2">&amp;</span>pk.params, pub_input, witnesses)<span class="question-mark">?</span>;
 
@@ -905,7 +927,7 @@
         // =======================================================================
         </span><span class="kw">let </span>step = <span class="macro">start_timer!</span>(|| <span class="string">&quot;commit witnesses&quot;</span>);
 
-        <span class="kw">let </span>witness_polys: Vec&lt;Arc&lt;DenseMultilinearExtension&lt;E::Fr&gt;&gt;&gt; = witnesses
+        <span class="kw">let </span>witness_polys: Vec&lt;Arc&lt;DenseMultilinearExtension&lt;E::ScalarField&gt;&gt;&gt; = witnesses
             .iter()
             .map(|w| Arc::new(DenseMultilinearExtension::from(w)))
             .collect();
@@ -940,7 +962,7 @@
             <span class="kw-2">&amp;</span>witness_polys,
         )<span class="question-mark">?</span>;
 
-        <span class="kw">let </span>zero_check_proof = &lt;<span class="self">Self </span><span class="kw">as </span>ZeroCheck&lt;E::Fr&gt;&gt;::prove(<span class="kw-2">&amp;</span>fx, <span class="kw-2">&amp;mut </span>transcript)<span class="question-mark">?</span>;
+        <span class="kw">let </span>zero_check_proof = &lt;<span class="self">Self </span><span class="kw">as </span>ZeroCheck&lt;E::ScalarField&gt;&gt;::prove(<span class="kw-2">&amp;</span>fx, <span class="kw-2">&amp;mut </span>transcript)<span class="question-mark">?</span>;
         <span class="macro">end_timer!</span>(step);
         <span class="comment">// =======================================================================
         // 3. Run permutation check on `\{w_i(x)\}` and `permutation_oracle`, and
@@ -987,12 +1009,20 @@
         </span><span class="kw">let </span>step = <span class="macro">start_timer!</span>(|| <span class="string">&quot;opening and evaluations&quot;</span>);
 
         <span class="comment">// (perm_check_point[2..n], 0)
-        </span><span class="kw">let </span>perm_check_point_0 = [<span class="kw-2">&amp;</span>[E::Fr::zero()], <span class="kw-2">&amp;</span>perm_check_point[<span class="number">0</span>..num_vars - <span class="number">1</span>]].concat();
+        </span><span class="kw">let </span>perm_check_point_0 = [
+            <span class="kw-2">&amp;</span>[E::ScalarField::zero()],
+            <span class="kw-2">&amp;</span>perm_check_point[<span class="number">0</span>..num_vars - <span class="number">1</span>],
+        ]
+        .concat();
         <span class="comment">// (perm_check_point[2..n], 1)
-        </span><span class="kw">let </span>perm_check_point_1 = [<span class="kw-2">&amp;</span>[E::Fr::one()], <span class="kw-2">&amp;</span>perm_check_point[<span class="number">0</span>..num_vars - <span class="number">1</span>]].concat();
+        </span><span class="kw">let </span>perm_check_point_1 =
+            [<span class="kw-2">&amp;</span>[E::ScalarField::one()], <span class="kw-2">&amp;</span>perm_check_point[<span class="number">0</span>..num_vars - <span class="number">1</span>]].concat();
         <span class="comment">// (1, ..., 1, 0)
-        </span><span class="kw">let </span>prod_final_query_point =
-            [<span class="macro">vec!</span>[E::Fr::zero()], <span class="macro">vec!</span>[E::Fr::one(); num_vars - <span class="number">1</span>]].concat();
+        </span><span class="kw">let </span>prod_final_query_point = [
+            <span class="macro">vec!</span>[E::ScalarField::zero()],
+            <span class="macro">vec!</span>[E::ScalarField::one(); num_vars - <span class="number">1</span>],
+        ]
+        .concat();
 
         <span class="comment">// prod(x)&#39;s points
         </span>pcs_acc.insert_poly_and_points(<span class="kw-2">&amp;</span>prod_x, <span class="kw-2">&amp;</span>perm_check_proof.prod_x_comm, perm_check_point);
@@ -1047,7 +1077,7 @@
         //   - pi_poly(r_pi) where r_pi is sampled from transcript
         </span><span class="kw">let </span>r_pi = transcript.get_and_append_challenge_vectors(<span class="string">b&quot;r_pi&quot;</span>, ell)<span class="question-mark">?</span>;
         <span class="comment">// padded with zeros
-        </span><span class="kw">let </span>r_pi_padded = [r_pi, <span class="macro">vec!</span>[E::Fr::zero(); num_vars - ell]].concat();
+        </span><span class="kw">let </span>r_pi_padded = [r_pi, <span class="macro">vec!</span>[E::ScalarField::zero(); num_vars - ell]].concat();
         <span class="comment">// Evaluate witness_poly[0] at r_pi||0s which is equal to public_input evaluated
         // at r_pi. Assumes that public_input is a power of 2
         </span>pcs_acc.insert_poly_and_points(<span class="kw-2">&amp;</span>witness_polys[<span class="number">0</span>], <span class="kw-2">&amp;</span>witness_commits[<span class="number">0</span>], <span class="kw-2">&amp;</span>r_pi_padded);
@@ -1107,12 +1137,12 @@
     /// - public input consistency checks
     </span><span class="kw">fn </span>verify(
         vk: <span class="kw-2">&amp;</span><span class="self">Self</span>::VerifyingKey,
-        pub_input: <span class="kw-2">&amp;</span>[E::Fr],
+        pub_input: <span class="kw-2">&amp;</span>[E::ScalarField],
         proof: <span class="kw-2">&amp;</span><span class="self">Self</span>::Proof,
     ) -&gt; <span class="prelude-ty">Result</span>&lt;bool, HyperPlonkErrors&gt; {
         <span class="kw">let </span>start = <span class="macro">start_timer!</span>(|| <span class="string">&quot;hyperplonk verification&quot;</span>);
 
-        <span class="kw">let </span><span class="kw-2">mut </span>transcript = IOPTranscript::&lt;E::Fr&gt;::new(<span class="string">b&quot;hyperplonk&quot;</span>);
+        <span class="kw">let </span><span class="kw-2">mut </span>transcript = IOPTranscript::&lt;E::ScalarField&gt;::new(<span class="string">b&quot;hyperplonk&quot;</span>);
 
         <span class="kw">let </span>num_selectors = vk.params.num_selector_columns();
         <span class="kw">let </span>num_witnesses = vk.params.num_witness_columns();
@@ -1157,7 +1187,7 @@
         // =======================================================================
         </span><span class="kw">let </span>step = <span class="macro">start_timer!</span>(|| <span class="string">&quot;verify zero check&quot;</span>);
         <span class="comment">// Zero check and perm check have different AuxInfo
-        </span><span class="kw">let </span>zero_check_aux_info = VPAuxInfo::&lt;E::Fr&gt; {
+        </span><span class="kw">let </span>zero_check_aux_info = VPAuxInfo::&lt;E::ScalarField&gt; {
             max_degree: vk.params.gate_func.degree(),
             num_variables: num_vars,
             phantom: PhantomData::default(),
@@ -1167,7 +1197,7 @@
             transcript.append_serializable_element(<span class="string">b&quot;w&quot;</span>, w_com)<span class="question-mark">?</span>;
         }
 
-        <span class="kw">let </span>zero_check_sub_claim = &lt;<span class="self">Self </span><span class="kw">as </span>ZeroCheck&lt;E::Fr&gt;&gt;::verify(
+        <span class="kw">let </span>zero_check_sub_claim = &lt;<span class="self">Self </span><span class="kw">as </span>ZeroCheck&lt;E::ScalarField&gt;&gt;::verify(
             <span class="kw-2">&amp;</span>proof.zero_check_proof,
             <span class="kw-2">&amp;</span>zero_check_aux_info,
             <span class="kw-2">&amp;mut </span>transcript,
@@ -1190,7 +1220,7 @@
         </span><span class="kw">let </span>step = <span class="macro">start_timer!</span>(|| <span class="string">&quot;verify permutation check&quot;</span>);
 
         <span class="comment">// Zero check and perm check have different AuxInfo
-        </span><span class="kw">let </span>perm_check_aux_info = VPAuxInfo::&lt;E::Fr&gt; {
+        </span><span class="kw">let </span>perm_check_aux_info = VPAuxInfo::&lt;E::ScalarField&gt; {
             <span class="comment">// Prod(x) has a max degree of witnesses.len() + 1
             </span>max_degree: proof.witness_commits.len() + <span class="number">1</span>,
             num_variables: num_vars,
@@ -1250,10 +1280,18 @@
         </span><span class="kw">let </span><span class="kw-2">mut </span>comms = <span class="macro">vec!</span>[];
         <span class="kw">let </span><span class="kw-2">mut </span>points = <span class="macro">vec!</span>[];
 
-        <span class="kw">let </span>perm_check_point_0 = [<span class="kw-2">&amp;</span>[E::Fr::zero()], <span class="kw-2">&amp;</span>perm_check_point[<span class="number">0</span>..num_vars - <span class="number">1</span>]].concat();
-        <span class="kw">let </span>perm_check_point_1 = [<span class="kw-2">&amp;</span>[E::Fr::one()], <span class="kw-2">&amp;</span>perm_check_point[<span class="number">0</span>..num_vars - <span class="number">1</span>]].concat();
-        <span class="kw">let </span>prod_final_query_point =
-            [<span class="macro">vec!</span>[E::Fr::zero()], <span class="macro">vec!</span>[E::Fr::one(); num_vars - <span class="number">1</span>]].concat();
+        <span class="kw">let </span>perm_check_point_0 = [
+            <span class="kw-2">&amp;</span>[E::ScalarField::zero()],
+            <span class="kw-2">&amp;</span>perm_check_point[<span class="number">0</span>..num_vars - <span class="number">1</span>],
+        ]
+        .concat();
+        <span class="kw">let </span>perm_check_point_1 =
+            [<span class="kw-2">&amp;</span>[E::ScalarField::one()], <span class="kw-2">&amp;</span>perm_check_point[<span class="number">0</span>..num_vars - <span class="number">1</span>]].concat();
+        <span class="kw">let </span>prod_final_query_point = [
+            <span class="macro">vec!</span>[E::ScalarField::zero()],
+            <span class="macro">vec!</span>[E::ScalarField::one(); num_vars - <span class="number">1</span>],
+        ]
+        .concat();
 
         <span class="comment">// prod(x)&#39;s points
         </span>comms.push(proof.perm_check_proof.prod_x_comm);
@@ -1309,7 +1347,7 @@
                 pi_eval, expect_pi_eval,
             )));
         }
-        <span class="kw">let </span>r_pi_padded = [r_pi, <span class="macro">vec!</span>[E::Fr::zero(); num_vars - ell]].concat();
+        <span class="kw">let </span>r_pi_padded = [r_pi, <span class="macro">vec!</span>[E::ScalarField::zero(); num_vars - ell]].concat();
 
         comms.push(proof.witness_commits[<span class="number">0</span>]);
         points.push(r_pi_padded);
@@ -1366,7 +1404,7 @@
         test_hyperplonk_helper::&lt;Bls12_381&gt;(gates)
     }
 
-    <span class="kw">fn </span>test_hyperplonk_helper&lt;E: PairingEngine&gt;(
+    <span class="kw">fn </span>test_hyperplonk_helper&lt;E: Pairing&gt;(
         gate_func: CustomizedGates,
     ) -&gt; <span class="prelude-ty">Result</span>&lt;(), HyperPlonkErrors&gt; {
         <span class="kw">let </span><span class="kw-2">mut </span>rng = test_rng();
@@ -1384,7 +1422,12 @@
             gate_func,
         };
         <span class="kw">let </span>permutation = identity_permutation(nv, num_witnesses);
-        <span class="kw">let </span>q1 = SelectorColumn(<span class="macro">vec!</span>[E::Fr::one(), E::Fr::one(), E::Fr::one(), E::Fr::one()]);
+        <span class="kw">let </span>q1 = SelectorColumn(<span class="macro">vec!</span>[
+            E::ScalarField::one(),
+            E::ScalarField::one(),
+            E::ScalarField::one(),
+            E::ScalarField::one(),
+        ]);
         <span class="kw">let </span>index = HyperPlonkIndex {
             params,
             permutation,
@@ -1392,58 +1435,59 @@
         };
 
         <span class="comment">// generate pk and vks
-        </span><span class="kw">let </span>(pk, vk) = &lt;PolyIOP&lt;E::Fr&gt; <span class="kw">as </span>HyperPlonkSNARK&lt;E, MultilinearKzgPCS&lt;E&gt;&gt;&gt;::preprocess(
-            <span class="kw-2">&amp;</span>index, <span class="kw-2">&amp;</span>pcs_srs,
-        )<span class="question-mark">?</span>;
+        </span><span class="kw">let </span>(pk, vk) =
+            &lt;PolyIOP&lt;E::ScalarField&gt; <span class="kw">as </span>HyperPlonkSNARK&lt;E, MultilinearKzgPCS&lt;E&gt;&gt;&gt;::preprocess(
+                <span class="kw-2">&amp;</span>index, <span class="kw-2">&amp;</span>pcs_srs,
+            )<span class="question-mark">?</span>;
 
         <span class="comment">// w1 := [0, 1, 2, 3]
         </span><span class="kw">let </span>w1 = WitnessColumn(<span class="macro">vec!</span>[
-            E::Fr::zero(),
-            E::Fr::one(),
-            E::Fr::from(<span class="number">2u128</span>),
-            E::Fr::from(<span class="number">3u128</span>),
+            E::ScalarField::zero(),
+            E::ScalarField::one(),
+            E::ScalarField::from(<span class="number">2u128</span>),
+            E::ScalarField::from(<span class="number">3u128</span>),
         ]);
         <span class="comment">// w2 := [0^5, 1^5, 2^5, 3^5]
         </span><span class="kw">let </span>w2 = WitnessColumn(<span class="macro">vec!</span>[
-            E::Fr::zero(),
-            E::Fr::one(),
-            E::Fr::from(<span class="number">32u128</span>),
-            E::Fr::from(<span class="number">243u128</span>),
+            E::ScalarField::zero(),
+            E::ScalarField::one(),
+            E::ScalarField::from(<span class="number">32u128</span>),
+            E::ScalarField::from(<span class="number">243u128</span>),
         ]);
         <span class="comment">// public input = w1
         </span><span class="kw">let </span>pi = w1.clone();
 
         <span class="comment">// generate a proof and verify
-        </span><span class="kw">let </span>proof = &lt;PolyIOP&lt;E::Fr&gt; <span class="kw">as </span>HyperPlonkSNARK&lt;E, MultilinearKzgPCS&lt;E&gt;&gt;&gt;::prove(
+        </span><span class="kw">let </span>proof = &lt;PolyIOP&lt;E::ScalarField&gt; <span class="kw">as </span>HyperPlonkSNARK&lt;E, MultilinearKzgPCS&lt;E&gt;&gt;&gt;::prove(
             <span class="kw-2">&amp;</span>pk,
             <span class="kw-2">&amp;</span>pi.<span class="number">0</span>,
             <span class="kw-2">&amp;</span>[w1.clone(), w2.clone()],
         )<span class="question-mark">?</span>;
 
-        <span class="kw">let </span>_verify = &lt;PolyIOP&lt;E::Fr&gt; <span class="kw">as </span>HyperPlonkSNARK&lt;E, MultilinearKzgPCS&lt;E&gt;&gt;&gt;::verify(
-            <span class="kw-2">&amp;</span>vk, <span class="kw-2">&amp;</span>pi.<span class="number">0</span>, <span class="kw-2">&amp;</span>proof,
-        )<span class="question-mark">?</span>;
+        <span class="kw">let </span>_verify =
+            &lt;PolyIOP&lt;E::ScalarField&gt; <span class="kw">as </span>HyperPlonkSNARK&lt;E, MultilinearKzgPCS&lt;E&gt;&gt;&gt;::verify(
+                <span class="kw-2">&amp;</span>vk, <span class="kw-2">&amp;</span>pi.<span class="number">0</span>, <span class="kw-2">&amp;</span>proof,
+            )<span class="question-mark">?</span>;
 
         <span class="comment">// bad path 1: wrong permutation
-        </span><span class="kw">let </span>rand_perm: Vec&lt;E::Fr&gt; = random_permutation(nv, num_witnesses, <span class="kw-2">&amp;mut </span>rng);
-        <span class="kw">let </span><span class="kw-2">mut </span>bad_index = index.clone();
+        </span><span class="kw">let </span>rand_perm: Vec&lt;E::ScalarField&gt; = random_permutation(nv, num_witnesses, <span class="kw-2">&amp;mut </span>rng);
+        <span class="kw">let </span><span class="kw-2">mut </span>bad_index = index;
         bad_index.permutation = rand_perm;
         <span class="comment">// generate pk and vks
-        </span><span class="kw">let </span>(<span class="kw">_</span>, bad_vk) = &lt;PolyIOP&lt;E::Fr&gt; <span class="kw">as </span>HyperPlonkSNARK&lt;E, MultilinearKzgPCS&lt;E&gt;&gt;&gt;::preprocess(
-            <span class="kw-2">&amp;</span>bad_index, <span class="kw-2">&amp;</span>pcs_srs,
-        )<span class="question-mark">?</span>;
-        <span class="macro">assert_eq!</span>(
-            &lt;PolyIOP&lt;E::Fr&gt; <span class="kw">as </span>HyperPlonkSNARK&lt;E, MultilinearKzgPCS&lt;E&gt;&gt;&gt;::verify(
-                <span class="kw-2">&amp;</span>bad_vk, <span class="kw-2">&amp;</span>pi.<span class="number">0</span>, <span class="kw-2">&amp;</span>proof,
-            )<span class="question-mark">?</span>,
-            <span class="bool-val">false
-        </span>);
+        </span><span class="kw">let </span>(<span class="kw">_</span>, bad_vk) =
+            &lt;PolyIOP&lt;E::ScalarField&gt; <span class="kw">as </span>HyperPlonkSNARK&lt;E, MultilinearKzgPCS&lt;E&gt;&gt;&gt;::preprocess(
+                <span class="kw-2">&amp;</span>bad_index, <span class="kw-2">&amp;</span>pcs_srs,
+            )<span class="question-mark">?</span>;
+        <span class="macro">assert!</span>(!&lt;PolyIOP&lt;E::ScalarField&gt; <span class="kw">as </span>HyperPlonkSNARK&lt;
+            E,
+            MultilinearKzgPCS&lt;E&gt;,
+        &gt;&gt;::verify(<span class="kw-2">&amp;</span>bad_vk, <span class="kw-2">&amp;</span>pi.<span class="number">0</span>, <span class="kw-2">&amp;</span>proof,)<span class="question-mark">?</span>);
 
         <span class="comment">// bad path 2: wrong witness
-        </span><span class="kw">let </span><span class="kw-2">mut </span>w1_bad = w1.clone();
-        w1_bad.<span class="number">0</span>[<span class="number">0</span>] = E::Fr::one();
+        </span><span class="kw">let </span><span class="kw-2">mut </span>w1_bad = w1;
+        w1_bad.<span class="number">0</span>[<span class="number">0</span>] = E::ScalarField::one();
         <span class="macro">assert!</span>(
-            &lt;PolyIOP&lt;E::Fr&gt; <span class="kw">as </span>HyperPlonkSNARK&lt;E, MultilinearKzgPCS&lt;E&gt;&gt;&gt;::prove(
+            &lt;PolyIOP&lt;E::ScalarField&gt; <span class="kw">as </span>HyperPlonkSNARK&lt;E, MultilinearKzgPCS&lt;E&gt;&gt;&gt;::prove(
                 <span class="kw-2">&amp;</span>pk,
                 <span class="kw-2">&amp;</span>pi.<span class="number">0</span>,
                 <span class="kw-2">&amp;</span>[w1_bad, w2],

@@ -349,8 +349,6 @@
 <a href="#349" id="349">349</a>
 <a href="#350" id="350">350</a>
 <a href="#351" id="351">351</a>
-<a href="#352" id="352">352</a>
-<a href="#353" id="353">353</a>
 </pre><pre class="rust"><code><span class="comment">// Copyright (c) 2023 Espresso Systems (espressosys.com)
 // This file is part of the HyperPlonk library.
 
@@ -373,8 +371,8 @@
     IOPProof,
 };
 <span class="kw">use </span>arithmetic::{build_eq_x_r_vec, DenseMultilinearExtension, VPAuxInfo, VirtualPolynomial};
-<span class="kw">use </span>ark_ec::{msm::VariableBaseMSM, PairingEngine, ProjectiveCurve};
-<span class="kw">use </span>ark_ff::PrimeField;
+<span class="kw">use </span>ark_ec::{pairing::Pairing, scalar_mul::variable_base::VariableBaseMSM, CurveGroup};
+
 <span class="kw">use </span>ark_std::{end_timer, log2, start_timer, One, Zero};
 <span class="kw">use </span>std::{collections::BTreeMap, iter, marker::PhantomData, ops::Deref, sync::Arc};
 <span class="kw">use </span>transcript::IOPTranscript;
@@ -382,13 +380,13 @@
 <span class="attr">#[derive(Clone, Debug, Default, PartialEq, Eq)]
 </span><span class="kw">pub struct </span>BatchProof&lt;E, PCS&gt;
 <span class="kw">where
-    </span>E: PairingEngine,
+    </span>E: Pairing,
     PCS: PolynomialCommitmentScheme&lt;E&gt;,
 {
     <span class="doccomment">/// A sum check proof proving tilde g&#39;s sum
-    </span><span class="kw">pub</span>(<span class="kw">crate</span>) sum_check_proof: IOPProof&lt;E::Fr&gt;,
+    </span><span class="kw">pub</span>(<span class="kw">crate</span>) sum_check_proof: IOPProof&lt;E::ScalarField&gt;,
     <span class="doccomment">/// f_i(point_i)
-    </span><span class="kw">pub </span>f_i_eval_at_point_i: Vec&lt;E::Fr&gt;,
+    </span><span class="kw">pub </span>f_i_eval_at_point_i: Vec&lt;E::ScalarField&gt;,
     <span class="doccomment">/// proof for g&#39;(a_2)
     </span><span class="kw">pub</span>(<span class="kw">crate</span>) g_prime_proof: PCS::Proof,
 }
@@ -406,15 +404,15 @@
     polynomials: <span class="kw-2">&amp;</span>[PCS::Polynomial],
     points: <span class="kw-2">&amp;</span>[PCS::Point],
     evals: <span class="kw-2">&amp;</span>[PCS::Evaluation],
-    transcript: <span class="kw-2">&amp;mut </span>IOPTranscript&lt;E::Fr&gt;,
+    transcript: <span class="kw-2">&amp;mut </span>IOPTranscript&lt;E::ScalarField&gt;,
 ) -&gt; <span class="prelude-ty">Result</span>&lt;BatchProof&lt;E, PCS&gt;, PCSError&gt;
 <span class="kw">where
-    </span>E: PairingEngine,
+    </span>E: Pairing,
     PCS: PolynomialCommitmentScheme&lt;
         E,
-        Polynomial = Arc&lt;DenseMultilinearExtension&lt;E::Fr&gt;&gt;,
-        Point = Vec&lt;E::Fr&gt;,
-        Evaluation = E::Fr,
+        Polynomial = Arc&lt;DenseMultilinearExtension&lt;E::ScalarField&gt;&gt;,
+        Point = Vec&lt;E::ScalarField&gt;,
+        Evaluation = E::ScalarField,
     &gt;,
 {
     <span class="kw">let </span>open_timer = <span class="macro">start_timer!</span>(|| <span class="macro">format!</span>(<span class="string">&quot;multi open {} points&quot;</span>, points.len()));
@@ -480,11 +478,14 @@
     <span class="kw">let </span>step = <span class="macro">start_timer!</span>(|| <span class="string">&quot;add mle&quot;</span>);
     <span class="kw">let </span><span class="kw-2">mut </span>sum_check_vp = VirtualPolynomial::new(num_var);
     <span class="kw">for </span>(merged_tilde_g, tilde_eq) <span class="kw">in </span>merged_tilde_gs.iter().zip(tilde_eqs.into_iter()) {
-        sum_check_vp.add_mle_list([merged_tilde_g.clone(), tilde_eq], E::Fr::one())<span class="question-mark">?</span>;
+        sum_check_vp.add_mle_list([merged_tilde_g.clone(), tilde_eq], E::ScalarField::one())<span class="question-mark">?</span>;
     }
     <span class="macro">end_timer!</span>(step);
 
-    <span class="kw">let </span>proof = <span class="kw">match </span>&lt;PolyIOP&lt;E::Fr&gt; <span class="kw">as </span>SumCheck&lt;E::Fr&gt;&gt;::prove(<span class="kw-2">&amp;</span>sum_check_vp, transcript) {
+    <span class="kw">let </span>proof = <span class="kw">match </span>&lt;PolyIOP&lt;E::ScalarField&gt; <span class="kw">as </span>SumCheck&lt;E::ScalarField&gt;&gt;::prove(
+        <span class="kw-2">&amp;</span>sum_check_vp,
+        transcript,
+    ) {
         <span class="prelude-val">Ok</span>(p) =&gt; p,
         <span class="prelude-val">Err</span>(_e) =&gt; {
             <span class="comment">// cannot wrap IOPError with PCSError due to cyclic dependency
@@ -535,15 +536,15 @@
     f_i_commitments: <span class="kw-2">&amp;</span>[Commitment&lt;E&gt;],
     points: <span class="kw-2">&amp;</span>[PCS::Point],
     proof: <span class="kw-2">&amp;</span>BatchProof&lt;E, PCS&gt;,
-    transcript: <span class="kw-2">&amp;mut </span>IOPTranscript&lt;E::Fr&gt;,
+    transcript: <span class="kw-2">&amp;mut </span>IOPTranscript&lt;E::ScalarField&gt;,
 ) -&gt; <span class="prelude-ty">Result</span>&lt;bool, PCSError&gt;
 <span class="kw">where
-    </span>E: PairingEngine,
+    </span>E: Pairing,
     PCS: PolynomialCommitmentScheme&lt;
         E,
-        Polynomial = Arc&lt;DenseMultilinearExtension&lt;E::Fr&gt;&gt;,
-        Point = Vec&lt;E::Fr&gt;,
-        Evaluation = E::Fr,
+        Polynomial = Arc&lt;DenseMultilinearExtension&lt;E::ScalarField&gt;&gt;,
+        Point = Vec&lt;E::ScalarField&gt;,
+        Evaluation = E::ScalarField,
         Commitment = Commitment&lt;E&gt;,
     &gt;,
 {
@@ -570,14 +571,14 @@
 
     <span class="kw">for </span>(i, point) <span class="kw">in </span>points.iter().enumerate() {
         <span class="kw">let </span>eq_i_a2 = eq_eval(a2, point)<span class="question-mark">?</span>;
-        scalars.push((eq_i_a2 * eq_t_list[i]).into_repr());
+        scalars.push(eq_i_a2 * eq_t_list[i]);
         bases.push(f_i_commitments[i].<span class="number">0</span>);
     }
-    <span class="kw">let </span>g_prime_commit = VariableBaseMSM::multi_scalar_mul(<span class="kw-2">&amp;</span>bases, <span class="kw-2">&amp;</span>scalars);
+    <span class="kw">let </span>g_prime_commit = E::G1::msm_unchecked(<span class="kw-2">&amp;</span>bases, <span class="kw-2">&amp;</span>scalars);
     <span class="macro">end_timer!</span>(step);
 
     <span class="comment">// ensure \sum_i eq(t, &lt;i&gt;) * f_i_evals matches the sum via SumCheck
-    </span><span class="kw">let </span><span class="kw-2">mut </span>sum = E::Fr::zero();
+    </span><span class="kw">let </span><span class="kw-2">mut </span>sum = E::ScalarField::zero();
     <span class="kw">for </span>(i, <span class="kw-2">&amp;</span>e) <span class="kw">in </span>eq_t_list.iter().enumerate().take(k) {
         sum += e * proof.f_i_eval_at_point_i[i];
     }
@@ -586,7 +587,7 @@
         num_variables: num_var,
         phantom: PhantomData,
     };
-    <span class="kw">let </span>subclaim = <span class="kw">match </span>&lt;PolyIOP&lt;E::Fr&gt; <span class="kw">as </span>SumCheck&lt;E::Fr&gt;&gt;::verify(
+    <span class="kw">let </span>subclaim = <span class="kw">match </span>&lt;PolyIOP&lt;E::ScalarField&gt; <span class="kw">as </span>SumCheck&lt;E::ScalarField&gt;&gt;::verify(
         sum,
         <span class="kw-2">&amp;</span>proof.sum_check_proof,
         <span class="kw-2">&amp;</span>aux_info,
@@ -624,18 +625,13 @@
     };
     <span class="kw">use </span>arithmetic::get_batched_nv;
     <span class="kw">use </span>ark_bls12_381::Bls12_381 <span class="kw">as </span>E;
-    <span class="kw">use </span>ark_ec::PairingEngine;
+    <span class="kw">use </span>ark_ec::pairing::Pairing;
     <span class="kw">use </span>ark_poly::{DenseMultilinearExtension, MultilinearExtension};
-    <span class="kw">use </span>ark_std::{
-        rand::{CryptoRng, RngCore},
-        test_rng,
-        vec::Vec,
-        UniformRand,
-    };
+    <span class="kw">use </span>ark_std::{rand::Rng, test_rng, vec::Vec, UniformRand};
 
-    <span class="kw">type </span>Fr = &lt;E <span class="kw">as </span>PairingEngine&gt;::Fr;
+    <span class="kw">type </span>Fr = &lt;E <span class="kw">as </span>Pairing&gt;::ScalarField;
 
-    <span class="kw">fn </span>test_multi_open_helper&lt;R: RngCore + CryptoRng&gt;(
+    <span class="kw">fn </span>test_multi_open_helper&lt;R: Rng&gt;(
         ml_params: <span class="kw-2">&amp;</span>MultilinearUniversalParams&lt;E&gt;,
         polys: <span class="kw-2">&amp;</span>[Arc&lt;DenseMultilinearExtension&lt;Fr&gt;&gt;],
         rng: <span class="kw-2">&amp;mut </span>R,

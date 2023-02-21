@@ -335,6 +335,12 @@
 <a href="#335" id="335">335</a>
 <a href="#336" id="336">336</a>
 <a href="#337" id="337">337</a>
+<a href="#338" id="338">338</a>
+<a href="#339" id="339">339</a>
+<a href="#340" id="340">340</a>
+<a href="#341" id="341">341</a>
+<a href="#342" id="342">342</a>
+<a href="#343" id="343">343</a>
 </pre><pre class="rust"><code><span class="comment">// Copyright (c) 2023 Espresso Systems (espressosys.com)
 // This file is part of the HyperPlonk library.
 
@@ -348,7 +354,7 @@
     pcs::PolynomialCommitmentScheme,
     poly_iop::{errors::PolyIOPErrors, prelude::ProductCheck, PolyIOP},
 };
-<span class="kw">use </span>ark_ec::PairingEngine;
+<span class="kw">use </span>ark_ec::pairing::Pairing;
 <span class="kw">use </span>ark_poly::DenseMultilinearExtension;
 <span class="kw">use </span>ark_std::{end_timer, start_timer};
 <span class="kw">use </span>std::sync::Arc;
@@ -360,14 +366,14 @@
 </span><span class="attr">#[derive(Clone, Debug, Default, PartialEq)]
 </span><span class="kw">pub struct </span>PermutationCheckSubClaim&lt;E, PCS, PC&gt;
 <span class="kw">where
-    </span>E: PairingEngine,
+    </span>E: Pairing,
     PC: ProductCheck&lt;E, PCS&gt;,
     PCS: PolynomialCommitmentScheme&lt;E&gt;,
 {
     <span class="doccomment">/// the SubClaim from the ProductCheck
     </span><span class="kw">pub </span>product_check_sub_claim: PC::ProductCheckSubClaim,
     <span class="doccomment">/// Challenges beta and gamma
-    </span><span class="kw">pub </span>challenges: (E::Fr, E::Fr),
+    </span><span class="kw">pub </span>challenges: (E::ScalarField, E::ScalarField),
 }
 
 <span class="kw">pub mod </span>util;
@@ -385,7 +391,7 @@
 /// - permutation oracles = (p1, ..., pk)
 </span><span class="kw">pub trait </span>PermutationCheck&lt;E, PCS&gt;: ProductCheck&lt;E, PCS&gt;
 <span class="kw">where
-    </span>E: PairingEngine,
+    </span>E: Pairing,
     PCS: PolynomialCommitmentScheme&lt;E&gt;,
 {
     <span class="kw">type </span>PermutationCheckSubClaim;
@@ -416,7 +422,7 @@
         fxs: <span class="kw-2">&amp;</span>[<span class="self">Self</span>::MultilinearExtension],
         gxs: <span class="kw-2">&amp;</span>[<span class="self">Self</span>::MultilinearExtension],
         perms: <span class="kw-2">&amp;</span>[<span class="self">Self</span>::MultilinearExtension],
-        transcript: <span class="kw-2">&amp;mut </span>IOPTranscript&lt;E::Fr&gt;,
+        transcript: <span class="kw-2">&amp;mut </span>IOPTranscript&lt;E::ScalarField&gt;,
     ) -&gt; <span class="prelude-ty">Result</span>&lt;
         (
             <span class="self">Self</span>::PermutationProof,
@@ -435,16 +441,16 @@
     ) -&gt; <span class="prelude-ty">Result</span>&lt;<span class="self">Self</span>::PermutationCheckSubClaim, PolyIOPErrors&gt;;
 }
 
-<span class="kw">impl</span>&lt;E, PCS&gt; PermutationCheck&lt;E, PCS&gt; <span class="kw">for </span>PolyIOP&lt;E::Fr&gt;
+<span class="kw">impl</span>&lt;E, PCS&gt; PermutationCheck&lt;E, PCS&gt; <span class="kw">for </span>PolyIOP&lt;E::ScalarField&gt;
 <span class="kw">where
-    </span>E: PairingEngine,
-    PCS: PolynomialCommitmentScheme&lt;E, Polynomial = Arc&lt;DenseMultilinearExtension&lt;E::Fr&gt;&gt;&gt;,
+    </span>E: Pairing,
+    PCS: PolynomialCommitmentScheme&lt;E, Polynomial = Arc&lt;DenseMultilinearExtension&lt;E::ScalarField&gt;&gt;&gt;,
 {
     <span class="kw">type </span>PermutationCheckSubClaim = PermutationCheckSubClaim&lt;E, PCS, <span class="self">Self</span>&gt;;
     <span class="kw">type </span>PermutationProof = <span class="self">Self</span>::ProductCheckProof;
 
     <span class="kw">fn </span>init_transcript() -&gt; <span class="self">Self</span>::Transcript {
-        IOPTranscript::&lt;E::Fr&gt;::new(<span class="string">b&quot;Initializing PermutationCheck transcript&quot;</span>)
+        IOPTranscript::&lt;E::ScalarField&gt;::new(<span class="string">b&quot;Initializing PermutationCheck transcript&quot;</span>)
     }
 
     <span class="kw">fn </span>prove(
@@ -452,7 +458,7 @@
         fxs: <span class="kw-2">&amp;</span>[<span class="self">Self</span>::MultilinearExtension],
         gxs: <span class="kw-2">&amp;</span>[<span class="self">Self</span>::MultilinearExtension],
         perms: <span class="kw-2">&amp;</span>[<span class="self">Self</span>::MultilinearExtension],
-        transcript: <span class="kw-2">&amp;mut </span>IOPTranscript&lt;E::Fr&gt;,
+        transcript: <span class="kw-2">&amp;mut </span>IOPTranscript&lt;E::ScalarField&gt;,
     ) -&gt; <span class="prelude-ty">Result</span>&lt;
         (
             <span class="self">Self</span>::PermutationProof,
@@ -532,22 +538,25 @@
     };
     <span class="kw">use </span>arithmetic::{evaluate_opt, identity_permutation_mles, random_permutation_mles, VPAuxInfo};
     <span class="kw">use </span>ark_bls12_381::Bls12_381;
-    <span class="kw">use </span>ark_ec::PairingEngine;
+    <span class="kw">use </span>ark_ec::pairing::Pairing;
     <span class="kw">use </span>ark_poly::{DenseMultilinearExtension, MultilinearExtension};
     <span class="kw">use </span>ark_std::test_rng;
     <span class="kw">use </span>std::{marker::PhantomData, sync::Arc};
 
-    <span class="kw">type </span>KZG = MultilinearKzgPCS&lt;Bls12_381&gt;;
+    <span class="kw">type </span>Kzg = MultilinearKzgPCS&lt;Bls12_381&gt;;
 
     <span class="kw">fn </span>test_permutation_check_helper&lt;E, PCS&gt;(
         pcs_param: <span class="kw-2">&amp;</span>PCS::ProverParam,
-        fxs: <span class="kw-2">&amp;</span>[Arc&lt;DenseMultilinearExtension&lt;E::Fr&gt;&gt;],
-        gxs: <span class="kw-2">&amp;</span>[Arc&lt;DenseMultilinearExtension&lt;E::Fr&gt;&gt;],
-        perms: <span class="kw-2">&amp;</span>[Arc&lt;DenseMultilinearExtension&lt;E::Fr&gt;&gt;],
+        fxs: <span class="kw-2">&amp;</span>[Arc&lt;DenseMultilinearExtension&lt;E::ScalarField&gt;&gt;],
+        gxs: <span class="kw-2">&amp;</span>[Arc&lt;DenseMultilinearExtension&lt;E::ScalarField&gt;&gt;],
+        perms: <span class="kw-2">&amp;</span>[Arc&lt;DenseMultilinearExtension&lt;E::ScalarField&gt;&gt;],
     ) -&gt; <span class="prelude-ty">Result</span>&lt;(), PolyIOPErrors&gt;
     <span class="kw">where
-        </span>E: PairingEngine,
-        PCS: PolynomialCommitmentScheme&lt;E, Polynomial = Arc&lt;DenseMultilinearExtension&lt;E::Fr&gt;&gt;&gt;,
+        </span>E: Pairing,
+        PCS: PolynomialCommitmentScheme&lt;
+            E,
+            Polynomial = Arc&lt;DenseMultilinearExtension&lt;E::ScalarField&gt;&gt;,
+        &gt;,
     {
         <span class="kw">let </span>nv = fxs[<span class="number">0</span>].num_vars;
         <span class="comment">// what&#39;s AuxInfo used for?
@@ -558,20 +567,23 @@
         };
 
         <span class="comment">// prover
-        </span><span class="kw">let </span><span class="kw-2">mut </span>transcript = &lt;PolyIOP&lt;E::Fr&gt; <span class="kw">as </span>PermutationCheck&lt;E, PCS&gt;&gt;::init_transcript();
+        </span><span class="kw">let </span><span class="kw-2">mut </span>transcript =
+            &lt;PolyIOP&lt;E::ScalarField&gt; <span class="kw">as </span>PermutationCheck&lt;E, PCS&gt;&gt;::init_transcript();
         transcript.append_message(<span class="string">b&quot;testing&quot;</span>, <span class="string">b&quot;initializing transcript for testing&quot;</span>)<span class="question-mark">?</span>;
-        <span class="kw">let </span>(proof, prod_x, _frac_poly) = &lt;PolyIOP&lt;E::Fr&gt; <span class="kw">as </span>PermutationCheck&lt;E, PCS&gt;&gt;::prove(
-            pcs_param,
-            fxs,
-            gxs,
-            perms,
-            <span class="kw-2">&amp;mut </span>transcript,
-        )<span class="question-mark">?</span>;
+        <span class="kw">let </span>(proof, prod_x, _frac_poly) =
+            &lt;PolyIOP&lt;E::ScalarField&gt; <span class="kw">as </span>PermutationCheck&lt;E, PCS&gt;&gt;::prove(
+                pcs_param,
+                fxs,
+                gxs,
+                perms,
+                <span class="kw-2">&amp;mut </span>transcript,
+            )<span class="question-mark">?</span>;
 
         <span class="comment">// verifier
-        </span><span class="kw">let </span><span class="kw-2">mut </span>transcript = &lt;PolyIOP&lt;E::Fr&gt; <span class="kw">as </span>PermutationCheck&lt;E, PCS&gt;&gt;::init_transcript();
+        </span><span class="kw">let </span><span class="kw-2">mut </span>transcript =
+            &lt;PolyIOP&lt;E::ScalarField&gt; <span class="kw">as </span>PermutationCheck&lt;E, PCS&gt;&gt;::init_transcript();
         transcript.append_message(<span class="string">b&quot;testing&quot;</span>, <span class="string">b&quot;initializing transcript for testing&quot;</span>)<span class="question-mark">?</span>;
-        <span class="kw">let </span>perm_check_sub_claim = &lt;PolyIOP&lt;E::Fr&gt; <span class="kw">as </span>PermutationCheck&lt;E, PCS&gt;&gt;::verify(
+        <span class="kw">let </span>perm_check_sub_claim = &lt;PolyIOP&lt;E::ScalarField&gt; <span class="kw">as </span>PermutationCheck&lt;E, PCS&gt;&gt;::verify(
             <span class="kw-2">&amp;</span>proof,
             <span class="kw-2">&amp;</span>poly_info,
             <span class="kw-2">&amp;mut </span>transcript,
@@ -604,7 +616,7 @@
                 Arc::new(DenseMultilinearExtension::rand(nv, <span class="kw-2">&amp;mut </span>rng)),
             ];
             <span class="comment">// perms is the identity map
-            </span>test_permutation_check_helper::&lt;Bls12_381, KZG&gt;(<span class="kw-2">&amp;</span>pcs_param, <span class="kw-2">&amp;</span>ws, <span class="kw-2">&amp;</span>ws, <span class="kw-2">&amp;</span>id_perms)<span class="question-mark">?</span>;
+            </span>test_permutation_check_helper::&lt;Bls12_381, Kzg&gt;(<span class="kw-2">&amp;</span>pcs_param, <span class="kw-2">&amp;</span>ws, <span class="kw-2">&amp;</span>ws, <span class="kw-2">&amp;</span>id_perms)<span class="question-mark">?</span>;
         }
 
         {
@@ -618,7 +630,7 @@
             <span class="comment">// perms is the reverse identity map
             </span><span class="kw">let </span><span class="kw-2">mut </span>perms = id_perms.clone();
             perms.reverse();
-            test_permutation_check_helper::&lt;Bls12_381, KZG&gt;(<span class="kw-2">&amp;</span>pcs_param, <span class="kw-2">&amp;</span>fs, <span class="kw-2">&amp;</span>gs, <span class="kw-2">&amp;</span>perms)<span class="question-mark">?</span>;
+            test_permutation_check_helper::&lt;Bls12_381, Kzg&gt;(<span class="kw-2">&amp;</span>pcs_param, <span class="kw-2">&amp;</span>fs, <span class="kw-2">&amp;</span>gs, <span class="kw-2">&amp;</span>perms)<span class="question-mark">?</span>;
         }
 
         {
@@ -631,7 +643,7 @@
             </span><span class="kw">let </span>perms = random_permutation_mles(nv, <span class="number">2</span>, <span class="kw-2">&amp;mut </span>rng);
 
             <span class="macro">assert!</span>(
-                test_permutation_check_helper::&lt;Bls12_381, KZG&gt;(<span class="kw-2">&amp;</span>pcs_param, <span class="kw-2">&amp;</span>ws, <span class="kw-2">&amp;</span>ws, <span class="kw-2">&amp;</span>perms)
+                test_permutation_check_helper::&lt;Bls12_381, Kzg&gt;(<span class="kw-2">&amp;</span>pcs_param, <span class="kw-2">&amp;</span>ws, <span class="kw-2">&amp;</span>ws, <span class="kw-2">&amp;</span>perms)
                     .is_err()
             );
         }
@@ -648,7 +660,7 @@
             ];
             <span class="comment">// s_perm is the identity map
 
-            </span><span class="macro">assert!</span>(test_permutation_check_helper::&lt;Bls12_381, KZG&gt;(
+            </span><span class="macro">assert!</span>(test_permutation_check_helper::&lt;Bls12_381, Kzg&gt;(
                 <span class="kw-2">&amp;</span>pcs_param, <span class="kw-2">&amp;</span>fs, <span class="kw-2">&amp;</span>gs, <span class="kw-2">&amp;</span>id_perms
             )
             .is_err());

@@ -388,23 +388,6 @@
 <a href="#388" id="388">388</a>
 <a href="#389" id="389">389</a>
 <a href="#390" id="390">390</a>
-<a href="#391" id="391">391</a>
-<a href="#392" id="392">392</a>
-<a href="#393" id="393">393</a>
-<a href="#394" id="394">394</a>
-<a href="#395" id="395">395</a>
-<a href="#396" id="396">396</a>
-<a href="#397" id="397">397</a>
-<a href="#398" id="398">398</a>
-<a href="#399" id="399">399</a>
-<a href="#400" id="400">400</a>
-<a href="#401" id="401">401</a>
-<a href="#402" id="402">402</a>
-<a href="#403" id="403">403</a>
-<a href="#404" id="404">404</a>
-<a href="#405" id="405">405</a>
-<a href="#406" id="406">406</a>
-<a href="#407" id="407">407</a>
 </pre><pre class="rust"><code><span class="comment">// Copyright (c) 2023 Espresso Systems (espressosys.com)
 // This file is part of the HyperPlonk library.
 
@@ -423,24 +406,18 @@
 };
 <span class="kw">use </span>arithmetic::evaluate_opt;
 <span class="kw">use </span>ark_ec::{
-    msm::{FixedBaseMSM, VariableBaseMSM},
-    AffineCurve, PairingEngine, ProjectiveCurve,
+    pairing::Pairing,
+    scalar_mul::{fixed_base::FixedBase, variable_base::VariableBaseMSM},
+    AffineRepr, CurveGroup,
 };
 <span class="kw">use </span>ark_ff::PrimeField;
 <span class="kw">use </span>ark_poly::{DenseMultilinearExtension, MultilinearExtension};
-<span class="kw">use </span>ark_serialize::{CanonicalDeserialize, CanonicalSerialize, Read, SerializationError, Write};
+<span class="kw">use </span>ark_serialize::{CanonicalDeserialize, CanonicalSerialize};
 <span class="kw">use </span>ark_std::{
-    borrow::Borrow,
-    end_timer, format,
-    marker::PhantomData,
-    rand::{CryptoRng, RngCore},
-    start_timer,
-    string::ToString,
-    sync::Arc,
-    vec,
-    vec::Vec,
-    One, Zero,
+    borrow::Borrow, end_timer, format, marker::PhantomData, rand::Rng, start_timer,
+    string::ToString, sync::Arc, vec, vec::Vec, One, Zero,
 };
+<span class="kw">use </span>std::ops::Mul;
 <span class="comment">// use batching::{batch_verify_internal, multi_open_internal};
 </span><span class="kw">use </span>srs::{MultilinearProverParam, MultilinearUniversalParams, MultilinearVerifierParam};
 <span class="kw">use </span>transcript::IOPTranscript;
@@ -448,27 +425,27 @@
 <span class="kw">use </span><span class="self">self</span>::batching::{batch_verify_internal, multi_open_internal};
 
 <span class="doccomment">/// KZG Polynomial Commitment Scheme on multilinear polynomials.
-</span><span class="kw">pub struct </span>MultilinearKzgPCS&lt;E: PairingEngine&gt; {
+</span><span class="kw">pub struct </span>MultilinearKzgPCS&lt;E: Pairing&gt; {
     <span class="attr">#[doc(hidden)]
     </span>phantom: PhantomData&lt;E&gt;,
 }
 
 <span class="attr">#[derive(CanonicalSerialize, CanonicalDeserialize, Clone, Debug, PartialEq, Eq)]
 </span><span class="doccomment">/// proof of opening
-</span><span class="kw">pub struct </span>MultilinearKzgProof&lt;E: PairingEngine&gt; {
+</span><span class="kw">pub struct </span>MultilinearKzgProof&lt;E: Pairing&gt; {
     <span class="doccomment">/// Evaluation of quotients
     </span><span class="kw">pub </span>proofs: Vec&lt;E::G1Affine&gt;,
 }
 
-<span class="kw">impl</span>&lt;E: PairingEngine&gt; PolynomialCommitmentScheme&lt;E&gt; <span class="kw">for </span>MultilinearKzgPCS&lt;E&gt; {
+<span class="kw">impl</span>&lt;E: Pairing&gt; PolynomialCommitmentScheme&lt;E&gt; <span class="kw">for </span>MultilinearKzgPCS&lt;E&gt; {
     <span class="comment">// Parameters
     </span><span class="kw">type </span>ProverParam = MultilinearProverParam&lt;E&gt;;
     <span class="kw">type </span>VerifierParam = MultilinearVerifierParam&lt;E&gt;;
     <span class="kw">type </span>SRS = MultilinearUniversalParams&lt;E&gt;;
     <span class="comment">// Polynomial and its associated types
-    </span><span class="kw">type </span>Polynomial = Arc&lt;DenseMultilinearExtension&lt;E::Fr&gt;&gt;;
-    <span class="kw">type </span>Point = Vec&lt;E::Fr&gt;;
-    <span class="kw">type </span>Evaluation = E::Fr;
+    </span><span class="kw">type </span>Polynomial = Arc&lt;DenseMultilinearExtension&lt;E::ScalarField&gt;&gt;;
+    <span class="kw">type </span>Point = Vec&lt;E::ScalarField&gt;;
+    <span class="kw">type </span>Evaluation = E::ScalarField;
     <span class="comment">// Commitments and proofs
     </span><span class="kw">type </span>Commitment = Commitment&lt;E&gt;;
     <span class="kw">type </span>Proof = MultilinearKzgProof&lt;E&gt;;
@@ -481,10 +458,7 @@
     ///
     /// WARNING: THIS FUNCTION IS FOR TESTING PURPOSE ONLY.
     /// THE OUTPUT SRS SHOULD NOT BE USED IN PRODUCTION.
-    </span><span class="kw">fn </span>gen_srs_for_testing&lt;R: RngCore + CryptoRng&gt;(
-        rng: <span class="kw-2">&amp;mut </span>R,
-        log_size: usize,
-    ) -&gt; <span class="prelude-ty">Result</span>&lt;<span class="self">Self</span>::SRS, PCSError&gt; {
+    </span><span class="kw">fn </span>gen_srs_for_testing&lt;R: Rng&gt;(rng: <span class="kw-2">&amp;mut </span>R, log_size: usize) -&gt; <span class="prelude-ty">Result</span>&lt;<span class="self">Self</span>::SRS, PCSError&gt; {
         MultilinearUniversalParams::&lt;E&gt;::gen_srs_for_testing(rng, log_size)
     }
 
@@ -528,20 +502,14 @@
             )));
         }
         <span class="kw">let </span>ignored = prover_param.num_vars - poly.num_vars;
-        <span class="kw">let </span>scalars: Vec&lt;<span class="kw">_</span>&gt; = poly
-            .to_evaluations()
-            .into_iter()
-            .map(|x| x.into_repr())
-            .collect();
+        <span class="kw">let </span>scalars: Vec&lt;<span class="kw">_</span>&gt; = poly.to_evaluations();
         <span class="kw">let </span>msm_timer = <span class="macro">start_timer!</span>(|| <span class="macro">format!</span>(
             <span class="string">&quot;msm of size {}&quot;</span>,
             prover_param.powers_of_g[ignored].evals.len()
         ));
-        <span class="kw">let </span>commitment = VariableBaseMSM::multi_scalar_mul(
-            <span class="kw-2">&amp;</span>prover_param.powers_of_g[ignored].evals,
-            scalars.as_slice(),
-        )
-        .into_affine();
+        <span class="kw">let </span>commitment =
+            E::G1::msm_unchecked(<span class="kw-2">&amp;</span>prover_param.powers_of_g[ignored].evals, scalars.as_slice())
+                .into_affine();
         <span class="macro">end_timer!</span>(msm_timer);
 
         <span class="macro">end_timer!</span>(commit_timer);
@@ -572,7 +540,7 @@
         polynomials: <span class="kw-2">&amp;</span>[<span class="self">Self</span>::Polynomial],
         points: <span class="kw-2">&amp;</span>[<span class="self">Self</span>::Point],
         evals: <span class="kw-2">&amp;</span>[<span class="self">Self</span>::Evaluation],
-        transcript: <span class="kw-2">&amp;mut </span>IOPTranscript&lt;E::Fr&gt;,
+        transcript: <span class="kw-2">&amp;mut </span>IOPTranscript&lt;E::ScalarField&gt;,
     ) -&gt; <span class="prelude-ty">Result</span>&lt;BatchProof&lt;E, <span class="self">Self</span>&gt;, PCSError&gt; {
         multi_open_internal(
             prover_param.borrow(),
@@ -593,7 +561,7 @@
         verifier_param: <span class="kw-2">&amp;</span><span class="self">Self</span>::VerifierParam,
         commitment: <span class="kw-2">&amp;</span><span class="self">Self</span>::Commitment,
         point: <span class="kw-2">&amp;</span><span class="self">Self</span>::Point,
-        value: <span class="kw-2">&amp;</span>E::Fr,
+        value: <span class="kw-2">&amp;</span>E::ScalarField,
         proof: <span class="kw-2">&amp;</span><span class="self">Self</span>::Proof,
     ) -&gt; <span class="prelude-ty">Result</span>&lt;bool, PCSError&gt; {
         verify_internal(verifier_param, commitment, point, value, proof)
@@ -606,7 +574,7 @@
         commitments: <span class="kw-2">&amp;</span>[<span class="self">Self</span>::Commitment],
         points: <span class="kw-2">&amp;</span>[<span class="self">Self</span>::Point],
         batch_proof: <span class="kw-2">&amp;</span><span class="self">Self</span>::BatchProof,
-        transcript: <span class="kw-2">&amp;mut </span>IOPTranscript&lt;E::Fr&gt;,
+        transcript: <span class="kw-2">&amp;mut </span>IOPTranscript&lt;E::ScalarField&gt;,
     ) -&gt; <span class="prelude-ty">Result</span>&lt;bool, PCSError&gt; {
         batch_verify_internal(verifier_param, commitments, points, batch_proof, transcript)
     }
@@ -620,11 +588,11 @@
 /// G1:
 /// - it proceeds with `num_var` number of rounds,
 /// - at round i, we compute an MSM for `2^{num_var - i}` number of G1 elements.
-</span><span class="kw">fn </span>open_internal&lt;E: PairingEngine&gt;(
+</span><span class="kw">fn </span>open_internal&lt;E: Pairing&gt;(
     prover_param: <span class="kw-2">&amp;</span>MultilinearProverParam&lt;E&gt;,
-    polynomial: <span class="kw-2">&amp;</span>DenseMultilinearExtension&lt;E::Fr&gt;,
-    point: <span class="kw-2">&amp;</span>[E::Fr],
-) -&gt; <span class="prelude-ty">Result</span>&lt;(MultilinearKzgProof&lt;E&gt;, E::Fr), PCSError&gt; {
+    polynomial: <span class="kw-2">&amp;</span>DenseMultilinearExtension&lt;E::ScalarField&gt;,
+    point: <span class="kw-2">&amp;</span>[E::ScalarField],
+) -&gt; <span class="prelude-ty">Result</span>&lt;(MultilinearKzgProof&lt;E&gt;, E::ScalarField), PCSError&gt; {
     <span class="kw">let </span>open_timer = <span class="macro">start_timer!</span>(|| <span class="macro">format!</span>(<span class="string">&quot;open mle with {} variable&quot;</span>, polynomial.num_vars));
 
     <span class="kw">if </span>polynomial.num_vars() &gt; prover_param.num_vars {
@@ -658,8 +626,8 @@
 
         <span class="kw">let </span>k = nv - <span class="number">1 </span>- i;
         <span class="kw">let </span>cur_dim = <span class="number">1 </span>&lt;&lt; k;
-        <span class="kw">let </span><span class="kw-2">mut </span>q = <span class="macro">vec!</span>[E::Fr::zero(); cur_dim];
-        <span class="kw">let </span><span class="kw-2">mut </span>r = <span class="macro">vec!</span>[E::Fr::zero(); cur_dim];
+        <span class="kw">let </span><span class="kw-2">mut </span>q = <span class="macro">vec!</span>[E::ScalarField::zero(); cur_dim];
+        <span class="kw">let </span><span class="kw-2">mut </span>r = <span class="macro">vec!</span>[E::ScalarField::zero(); cur_dim];
 
         <span class="kw">let </span>ith_round_eval = <span class="macro">start_timer!</span>(|| <span class="macro">format!</span>(<span class="string">&quot;{}-th round eval&quot;</span>, i));
         <span class="kw">for </span>b <span class="kw">in </span><span class="number">0</span>..(<span class="number">1 </span>&lt;&lt; k) {
@@ -671,12 +639,11 @@
         }
         f = r;
         <span class="macro">end_timer!</span>(ith_round_eval);
-        <span class="kw">let </span>scalars: Vec&lt;<span class="kw">_</span>&gt; = q.iter().map(|x| x.into_repr()).collect();
 
         <span class="comment">// this is a MSM over G1 and is likely to be the bottleneck
         </span><span class="kw">let </span>msm_timer = <span class="macro">start_timer!</span>(|| <span class="macro">format!</span>(<span class="string">&quot;msm of size {} at round {}&quot;</span>, gi.evals.len(), i));
 
-        proofs.push(VariableBaseMSM::multi_scalar_mul(<span class="kw-2">&amp;</span>gi.evals, <span class="kw-2">&amp;</span>scalars).into_affine());
+        proofs.push(E::G1::msm_unchecked(<span class="kw-2">&amp;</span>gi.evals, <span class="kw-2">&amp;</span>q).into_affine());
         <span class="macro">end_timer!</span>(msm_timer);
 
         <span class="macro">end_timer!</span>(ith_round);
@@ -692,11 +659,11 @@
 /// This function takes
 /// - num_var number of pairing product.
 /// - num_var number of MSM
-</span><span class="kw">fn </span>verify_internal&lt;E: PairingEngine&gt;(
+</span><span class="kw">fn </span>verify_internal&lt;E: Pairing&gt;(
     verifier_param: <span class="kw-2">&amp;</span>MultilinearVerifierParam&lt;E&gt;,
     commitment: <span class="kw-2">&amp;</span>Commitment&lt;E&gt;,
-    point: <span class="kw-2">&amp;</span>[E::Fr],
-    value: <span class="kw-2">&amp;</span>E::Fr,
+    point: <span class="kw-2">&amp;</span>[E::ScalarField],
+    value: <span class="kw-2">&amp;</span>E::ScalarField,
     proof: <span class="kw-2">&amp;</span>MultilinearKzgProof&lt;E&gt;,
 ) -&gt; <span class="prelude-ty">Result</span>&lt;bool, PCSError&gt; {
     <span class="kw">let </span>verify_timer = <span class="macro">start_timer!</span>(|| <span class="string">&quot;verify&quot;</span>);
@@ -711,22 +678,18 @@
 
     <span class="kw">let </span>prepare_inputs_timer = <span class="macro">start_timer!</span>(|| <span class="string">&quot;prepare pairing inputs&quot;</span>);
 
-    <span class="kw">let </span>scalar_size = E::Fr::size_in_bits();
-    <span class="kw">let </span>window_size = FixedBaseMSM::get_mul_window_size(num_var);
+    <span class="kw">let </span>scalar_size = E::ScalarField::MODULUS_BIT_SIZE <span class="kw">as </span>usize;
+    <span class="kw">let </span>window_size = FixedBase::get_mul_window_size(num_var);
 
-    <span class="kw">let </span>h_table = FixedBaseMSM::get_window_table(
-        scalar_size,
-        window_size,
-        verifier_param.h.into_projective(),
-    );
-    <span class="kw">let </span>h_mul: Vec&lt;E::G2Projective&gt; =
-        FixedBaseMSM::multi_scalar_mul(scalar_size, window_size, <span class="kw-2">&amp;</span>h_table, point);
+    <span class="kw">let </span>h_table =
+        FixedBase::get_window_table(scalar_size, window_size, verifier_param.h.into_group());
+    <span class="kw">let </span>h_mul: Vec&lt;E::G2&gt; = FixedBase::msm(scalar_size, window_size, <span class="kw-2">&amp;</span>h_table, point);
 
     <span class="kw">let </span>ignored = verifier_param.num_vars - num_var;
     <span class="kw">let </span>h_vec: Vec&lt;<span class="kw">_</span>&gt; = (<span class="number">0</span>..num_var)
-        .map(|i| verifier_param.h_mask[ignored + i].into_projective() - h_mul[i])
+        .map(|i| verifier_param.h_mask[ignored + i].into_group() - h_mul[i])
         .collect();
-    <span class="kw">let </span>h_vec: Vec&lt;E::G2Affine&gt; = E::G2Projective::batch_normalization_into_affine(<span class="kw-2">&amp;</span>h_vec);
+    <span class="kw">let </span>h_vec: Vec&lt;E::G2Affine&gt; = E::G2::normalize_batch(<span class="kw-2">&amp;</span>h_vec);
     <span class="macro">end_timer!</span>(prepare_inputs_timer);
 
     <span class="kw">let </span>pairing_product_timer = <span class="macro">start_timer!</span>(|| <span class="string">&quot;pairing product&quot;</span>);
@@ -740,12 +703,15 @@
 
     pairings.push((
         E::G1Prepared::from(
-            (verifier_param.g.mul(<span class="kw-2">*</span>value) - commitment.<span class="number">0</span>.into_projective()).into_affine(),
+            (verifier_param.g.mul(<span class="kw-2">*</span>value) - commitment.<span class="number">0</span>.into_group()).into_affine(),
         ),
         E::G2Prepared::from(verifier_param.h),
     ));
 
-    <span class="kw">let </span>res = E::product_of_pairings(pairings.iter()) == E::Fqk::one();
+    <span class="kw">let </span>ps = pairings.iter().map(|(p, <span class="kw">_</span>)| p.clone());
+    <span class="kw">let </span>hs = pairings.iter().map(|(<span class="kw">_</span>, h)| h.clone());
+
+    <span class="kw">let </span>res = E::multi_pairing(ps, hs) == ark_ec::pairing::PairingOutput(E::TargetField::one());
 
     <span class="macro">end_timer!</span>(pairing_product_timer);
     <span class="macro">end_timer!</span>(verify_timer);
@@ -756,14 +722,14 @@
 </span><span class="kw">mod </span>tests {
     <span class="kw">use super</span>::<span class="kw-2">*</span>;
     <span class="kw">use </span>ark_bls12_381::Bls12_381;
-    <span class="kw">use </span>ark_ec::PairingEngine;
+    <span class="kw">use </span>ark_ec::pairing::Pairing;
     <span class="kw">use </span>ark_poly::{DenseMultilinearExtension, MultilinearExtension};
-    <span class="kw">use </span>ark_std::{rand::RngCore, test_rng, vec::Vec, UniformRand};
+    <span class="kw">use </span>ark_std::{test_rng, vec::Vec, UniformRand};
 
     <span class="kw">type </span>E = Bls12_381;
-    <span class="kw">type </span>Fr = &lt;E <span class="kw">as </span>PairingEngine&gt;::Fr;
+    <span class="kw">type </span>Fr = &lt;E <span class="kw">as </span>Pairing&gt;::ScalarField;
 
-    <span class="kw">fn </span>test_single_helper&lt;R: RngCore + CryptoRng&gt;(
+    <span class="kw">fn </span>test_single_helper&lt;R: Rng&gt;(
         params: <span class="kw-2">&amp;</span>MultilinearUniversalParams&lt;E&gt;,
         poly: <span class="kw-2">&amp;</span>Arc&lt;DenseMultilinearExtension&lt;Fr&gt;&gt;,
         rng: <span class="kw-2">&amp;mut </span>R,

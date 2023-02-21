@@ -314,36 +314,6 @@
 <a href="#314" id="314">314</a>
 <a href="#315" id="315">315</a>
 <a href="#316" id="316">316</a>
-<a href="#317" id="317">317</a>
-<a href="#318" id="318">318</a>
-<a href="#319" id="319">319</a>
-<a href="#320" id="320">320</a>
-<a href="#321" id="321">321</a>
-<a href="#322" id="322">322</a>
-<a href="#323" id="323">323</a>
-<a href="#324" id="324">324</a>
-<a href="#325" id="325">325</a>
-<a href="#326" id="326">326</a>
-<a href="#327" id="327">327</a>
-<a href="#328" id="328">328</a>
-<a href="#329" id="329">329</a>
-<a href="#330" id="330">330</a>
-<a href="#331" id="331">331</a>
-<a href="#332" id="332">332</a>
-<a href="#333" id="333">333</a>
-<a href="#334" id="334">334</a>
-<a href="#335" id="335">335</a>
-<a href="#336" id="336">336</a>
-<a href="#337" id="337">337</a>
-<a href="#338" id="338">338</a>
-<a href="#339" id="339">339</a>
-<a href="#340" id="340">340</a>
-<a href="#341" id="341">341</a>
-<a href="#342" id="342">342</a>
-<a href="#343" id="343">343</a>
-<a href="#344" id="344">344</a>
-<a href="#345" id="345">345</a>
-<a href="#346" id="346">346</a>
 </pre><pre class="rust"><code><span class="comment">// Copyright (c) 2023 Espresso Systems (espressosys.com)
 // This file is part of the HyperPlonk library.
 
@@ -427,8 +397,8 @@
 </span><span class="kw">mod </span>test {
     <span class="kw">use super</span>::<span class="kw-2">*</span>;
     <span class="kw">use </span>ark_bls12_381::Fr;
-    <span class="kw">use </span>ark_ff::{field_new, One};
-    <span class="kw">use </span>ark_poly::UVPolynomial;
+    <span class="kw">use </span>ark_ff::{MontFp, One};
+    <span class="kw">use </span>ark_poly::DenseUVPolynomial;
 
     <span class="attr">#[test]
     </span><span class="kw">fn </span>test_build_l_with_suffix() -&gt; <span class="prelude-ty">Result</span>&lt;(), ArithErrors&gt; {
@@ -467,7 +437,7 @@
 
         {
             <span class="kw">let </span>domain = get_uni_domain::&lt;Fr&gt;(<span class="number">3</span>)<span class="question-mark">?</span>;
-            <span class="kw">let </span>l = build_l(<span class="kw-2">&amp;</span>[point1, point2, point3], <span class="kw-2">&amp;</span>domain, <span class="bool-val">true</span>)<span class="question-mark">?</span>;
+            <span class="kw">let </span>l = build_l::&lt;Fr&gt;(<span class="kw-2">&amp;</span>[point1, point2, point3], <span class="kw-2">&amp;</span>domain, <span class="bool-val">true</span>)<span class="question-mark">?</span>;
 
             <span class="comment">// sage: q = 52435875175126190479447740508185965837690552500527637822603658699938581184513
             // sage: P.&lt;x&gt; = PolynomialRing(Zmod(q))
@@ -488,20 +458,16 @@
             // 13108968793781547619861935127046491459422638125131909455650914674984645296128*x +
             // 39326906381344642859585805381139474378267914375395728366952744024953935888385
             </span><span class="kw">let </span>l0 = DensePolynomial::from_coefficients_vec(<span class="macro">vec!</span>[
-                <span class="macro">field_new!</span>(
-                    Fr,
+                <span class="macro">MontFp!</span>(
                     <span class="string">&quot;39326906381344642859585805381139474378267914375395728366952744024953935888385&quot;
                 </span>),
-                <span class="macro">field_new!</span>(
-                    Fr,
+                <span class="macro">MontFp!</span>(
                     <span class="string">&quot;13108968793781547619861935127046491459422638125131909455650914674984645296128&quot;
                 </span>),
-                <span class="macro">field_new!</span>(
-                    Fr,
+                <span class="macro">MontFp!</span>(
                     <span class="string">&quot;39326906381344642859585805381139474378267914375395728366952744024953935888385&quot;
                 </span>),
-                <span class="macro">field_new!</span>(
-                    Fr,
+                <span class="macro">MontFp!</span>(
                     <span class="string">&quot;13108968793781547619861935127046491459422638125131909455650914674984645296128&quot;
                 </span>),
             ]);
@@ -516,22 +482,16 @@
             // 52435875175126190478581454301667552757996485117855702128036095582747240693761*x +
             // 39326906381344642859585805381139474378267914375395728366952744024953935888385
             </span><span class="kw">let </span>l1 = DensePolynomial::from_coefficients_vec(<span class="macro">vec!</span>[
-                <span class="macro">field_new!</span>(
-                    Fr,
+                <span class="macro">MontFp!</span>(
                     <span class="string">&quot;39326906381344642859585805381139474378267914375395728366952744024953935888385&quot;
                 </span>),
-                <span class="macro">field_new!</span>(
-                    Fr,
+                <span class="macro">MontFp!</span>(
                     <span class="string">&quot;52435875175126190478581454301667552757996485117855702128036095582747240693761&quot;
                 </span>),
-                <span class="macro">field_new!</span>(
-                    Fr,
+                <span class="macro">MontFp!</span>(
                     <span class="string">&quot;13108968793781547619861935127046491459422638125131909455650914674984645296128&quot;
                 </span>),
-                <span class="macro">field_new!</span>(
-                    Fr,
-                    <span class="string">&quot;866286206518413079694067382671935694567563117191340490752&quot;
-                </span>),
+                <span class="macro">MontFp!</span>(<span class="string">&quot;866286206518413079694067382671935694567563117191340490752&quot;</span>),
             ]);
 
             <span class="comment">// ========================
@@ -544,22 +504,16 @@
             // 52435875175126190476848881888630726598608350352511830738900969348364559712256*x +
             // 39326906381344642859585805381139474378267914375395728366952744024953935888387
             </span><span class="kw">let </span>l2 = DensePolynomial::from_coefficients_vec(<span class="macro">vec!</span>[
-                <span class="macro">field_new!</span>(
-                    Fr,
+                <span class="macro">MontFp!</span>(
                     <span class="string">&quot;39326906381344642859585805381139474378267914375395728366952744024953935888387&quot;
                 </span>),
-                <span class="macro">field_new!</span>(
-                    Fr,
+                <span class="macro">MontFp!</span>(
                     <span class="string">&quot;52435875175126190476848881888630726598608350352511830738900969348364559712256&quot;
                 </span>),
-                <span class="macro">field_new!</span>(
-                    Fr,
+                <span class="macro">MontFp!</span>(
                     <span class="string">&quot;13108968793781547619861935127046491459422638125131909455650914674984645296129&quot;
                 </span>),
-                <span class="macro">field_new!</span>(
-                    Fr,
-                    <span class="string">&quot;2598858619555239239082202148015807083702689351574021472255&quot;
-                </span>),
+                <span class="macro">MontFp!</span>(<span class="string">&quot;2598858619555239239082202148015807083702689351574021472255&quot;</span>),
             ]);
 
             <span class="comment">// ========================
@@ -573,15 +527,11 @@
             // 3
             </span><span class="kw">let </span>l3 = DensePolynomial::from_coefficients_vec(<span class="macro">vec!</span>[
                 Fr::from(<span class="number">3u64</span>),
-                <span class="macro">field_new!</span>(
-                    Fr,
+                <span class="macro">MontFp!</span>(
                     <span class="string">&quot;52435875175126190475982595682112313518914282969839895044333406231173219221504&quot;
                 </span>),
                 Fr::one(),
-                <span class="macro">field_new!</span>(
-                    Fr,
-                    <span class="string">&quot;3465144826073652318776269530687742778270252468765361963007&quot;
-                </span>),
+                <span class="macro">MontFp!</span>(<span class="string">&quot;3465144826073652318776269530687742778270252468765361963007&quot;</span>),
             ]);
 
             <span class="macro">assert_eq!</span>(l0, l[<span class="number">0</span>], <span class="string">&quot;l0 not equal&quot;</span>);
@@ -644,22 +594,16 @@
             // 52435875175126190476848881888630726598608350352511830738900969348364559712256*x +
             // 39326906381344642859585805381139474378267914375395728366952744024953935888387
             </span><span class="kw">let </span>l0 = DensePolynomial::from_coefficients_vec(<span class="macro">vec!</span>[
-                <span class="macro">field_new!</span>(
-                    Fr,
+                <span class="macro">MontFp!</span>(
                     <span class="string">&quot;39326906381344642859585805381139474378267914375395728366952744024953935888387&quot;
                 </span>),
-                <span class="macro">field_new!</span>(
-                    Fr,
+                <span class="macro">MontFp!</span>(
                     <span class="string">&quot;52435875175126190476848881888630726598608350352511830738900969348364559712256&quot;
                 </span>),
-                <span class="macro">field_new!</span>(
-                    Fr,
+                <span class="macro">MontFp!</span>(
                     <span class="string">&quot;13108968793781547619861935127046491459422638125131909455650914674984645296129&quot;
                 </span>),
-                <span class="macro">field_new!</span>(
-                    Fr,
-                    <span class="string">&quot;2598858619555239239082202148015807083702689351574021472255&quot;
-                </span>),
+                <span class="macro">MontFp!</span>(<span class="string">&quot;2598858619555239239082202148015807083702689351574021472255&quot;</span>),
             ]);
 
             <span class="comment">// ========================
@@ -673,15 +617,11 @@
             // 3
             </span><span class="kw">let </span>l1 = DensePolynomial::from_coefficients_vec(<span class="macro">vec!</span>[
                 Fr::from(<span class="number">3u64</span>),
-                <span class="macro">field_new!</span>(
-                    Fr,
+                <span class="macro">MontFp!</span>(
                     <span class="string">&quot;52435875175126190475982595682112313518914282969839895044333406231173219221504&quot;
                 </span>),
                 Fr::one(),
-                <span class="macro">field_new!</span>(
-                    Fr,
-                    <span class="string">&quot;3465144826073652318776269530687742778270252468765361963007&quot;
-                </span>),
+                <span class="macro">MontFp!</span>(<span class="string">&quot;3465144826073652318776269530687742778270252468765361963007&quot;</span>),
             ]);
 
             <span class="macro">assert_eq!</span>(l0, l[<span class="number">0</span>], <span class="string">&quot;l0 not equal&quot;</span>);

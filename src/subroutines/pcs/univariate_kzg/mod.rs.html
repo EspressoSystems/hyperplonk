@@ -257,16 +257,6 @@
 <a href="#257" id="257">257</a>
 <a href="#258" id="258">258</a>
 <a href="#259" id="259">259</a>
-<a href="#260" id="260">260</a>
-<a href="#261" id="261">261</a>
-<a href="#262" id="262">262</a>
-<a href="#263" id="263">263</a>
-<a href="#264" id="264">264</a>
-<a href="#265" id="265">265</a>
-<a href="#266" id="266">266</a>
-<a href="#267" id="267">267</a>
-<a href="#268" id="268">268</a>
-<a href="#269" id="269">269</a>
 </pre><pre class="rust"><code><span class="comment">// Copyright (c) 2023 Espresso Systems (espressosys.com)
 // This file is part of the HyperPlonk library.
 
@@ -278,49 +268,45 @@
 </span><span class="kw">use </span><span class="kw">crate</span>::pcs::{
     prelude::Commitment, PCSError, PolynomialCommitmentScheme, StructuredReferenceString,
 };
-<span class="kw">use </span>ark_ec::{msm::VariableBaseMSM, AffineCurve, PairingEngine, ProjectiveCurve};
+<span class="kw">use </span>ark_ec::{
+    pairing::Pairing, scalar_mul::variable_base::VariableBaseMSM, AffineRepr, CurveGroup,
+};
 <span class="kw">use </span>ark_ff::PrimeField;
-<span class="kw">use </span>ark_poly::{univariate::DensePolynomial, Polynomial, UVPolynomial};
-<span class="kw">use </span>ark_serialize::{CanonicalDeserialize, CanonicalSerialize, Read, SerializationError, Write};
+<span class="kw">use </span>ark_poly::{univariate::DensePolynomial, DenseUVPolynomial, Polynomial};
+<span class="kw">use </span>ark_serialize::{CanonicalDeserialize, CanonicalSerialize};
 <span class="kw">use </span>ark_std::{
-    borrow::Borrow,
-    end_timer, format,
-    marker::PhantomData,
-    rand::{CryptoRng, RngCore},
-    start_timer,
-    string::ToString,
-    vec,
-    vec::Vec,
-    One,
+    borrow::Borrow, end_timer, format, marker::PhantomData, rand::Rng, start_timer,
+    string::ToString, vec, vec::Vec, One,
 };
 <span class="kw">use </span>srs::{UnivariateProverParam, UnivariateUniversalParams, UnivariateVerifierParam};
+<span class="kw">use </span>std::ops::Mul;
 
 <span class="kw">pub</span>(<span class="kw">crate</span>) <span class="kw">mod </span>srs;
 
 <span class="doccomment">/// KZG Polynomial Commitment Scheme on univariate polynomial.
-</span><span class="kw">pub struct </span>UnivariateKzgPCS&lt;E: PairingEngine&gt; {
+</span><span class="kw">pub struct </span>UnivariateKzgPCS&lt;E: Pairing&gt; {
     <span class="attr">#[doc(hidden)]
     </span>phantom: PhantomData&lt;E&gt;,
 }
 
 <span class="attr">#[derive(CanonicalSerialize, CanonicalDeserialize, Clone, Debug, PartialEq, Eq)]
 </span><span class="doccomment">/// proof of opening
-</span><span class="kw">pub struct </span>UnivariateKzgProof&lt;E: PairingEngine&gt; {
+</span><span class="kw">pub struct </span>UnivariateKzgProof&lt;E: Pairing&gt; {
     <span class="doccomment">/// Evaluation of quotients
     </span><span class="kw">pub </span>proof: E::G1Affine,
 }
 <span class="doccomment">/// batch proof
 </span><span class="kw">pub type </span>UnivariateKzgBatchProof&lt;E&gt; = Vec&lt;UnivariateKzgProof&lt;E&gt;&gt;;
 
-<span class="kw">impl</span>&lt;E: PairingEngine&gt; PolynomialCommitmentScheme&lt;E&gt; <span class="kw">for </span>UnivariateKzgPCS&lt;E&gt; {
+<span class="kw">impl</span>&lt;E: Pairing&gt; PolynomialCommitmentScheme&lt;E&gt; <span class="kw">for </span>UnivariateKzgPCS&lt;E&gt; {
     <span class="comment">// Parameters
     </span><span class="kw">type </span>ProverParam = UnivariateProverParam&lt;E::G1Affine&gt;;
     <span class="kw">type </span>VerifierParam = UnivariateVerifierParam&lt;E&gt;;
     <span class="kw">type </span>SRS = UnivariateUniversalParams&lt;E&gt;;
     <span class="comment">// Polynomial and its associated types
-    </span><span class="kw">type </span>Polynomial = DensePolynomial&lt;E::Fr&gt;;
-    <span class="kw">type </span>Point = E::Fr;
-    <span class="kw">type </span>Evaluation = E::Fr;
+    </span><span class="kw">type </span>Polynomial = DensePolynomial&lt;E::ScalarField&gt;;
+    <span class="kw">type </span>Point = E::ScalarField;
+    <span class="kw">type </span>Evaluation = E::ScalarField;
     <span class="comment">// Polynomial and its associated types
     </span><span class="kw">type </span>Commitment = Commitment&lt;E&gt;;
     <span class="kw">type </span>Proof = UnivariateKzgProof&lt;E&gt;;
@@ -334,7 +320,7 @@
     ///
     /// WARNING: THIS FUNCTION IS FOR TESTING PURPOSE ONLY.
     /// THE OUTPUT SRS SHOULD NOT BE USED IN PRODUCTION.
-    </span><span class="kw">fn </span>gen_srs_for_testing&lt;R: RngCore + CryptoRng&gt;(
+    </span><span class="kw">fn </span>gen_srs_for_testing&lt;R: Rng&gt;(
         rng: <span class="kw-2">&amp;mut </span>R,
         supported_size: usize,
     ) -&gt; <span class="prelude-ty">Result</span>&lt;<span class="self">Self</span>::SRS, PCSError&gt; {
@@ -376,10 +362,10 @@
             )));
         }
 
-        <span class="kw">let </span>(num_leading_zeros, plain_coeffs) = skip_leading_zeros_and_convert_to_bigints(poly);
+        <span class="kw">let </span>(num_leading_zeros, plain_coeffs) = skip_leading_zeros(poly);
 
         <span class="kw">let </span>msm_time = <span class="macro">start_timer!</span>(|| <span class="string">&quot;MSM to compute commitment to plaintext poly&quot;</span>);
-        <span class="kw">let </span>commitment = VariableBaseMSM::multi_scalar_mul(
+        <span class="kw">let </span>commitment = E::G1::msm_unchecked(
             <span class="kw-2">&amp;</span>prover_param.powers_of_g[num_leading_zeros..],
             <span class="kw-2">&amp;</span>plain_coeffs,
         )
@@ -399,16 +385,15 @@
     ) -&gt; <span class="prelude-ty">Result</span>&lt;(<span class="self">Self</span>::Proof, <span class="self">Self</span>::Evaluation), PCSError&gt; {
         <span class="kw">let </span>open_time =
             <span class="macro">start_timer!</span>(|| <span class="macro">format!</span>(<span class="string">&quot;Opening polynomial of degree {}&quot;</span>, polynomial.degree()));
-        <span class="kw">let </span>divisor = <span class="self">Self</span>::Polynomial::from_coefficients_vec(<span class="macro">vec!</span>[-<span class="kw-2">*</span>point, E::Fr::one()]);
+        <span class="kw">let </span>divisor = <span class="self">Self</span>::Polynomial::from_coefficients_vec(<span class="macro">vec!</span>[-<span class="kw-2">*</span>point, E::ScalarField::one()]);
 
         <span class="kw">let </span>witness_time = <span class="macro">start_timer!</span>(|| <span class="string">&quot;Computing witness polynomial&quot;</span>);
         <span class="kw">let </span>witness_polynomial = polynomial / <span class="kw-2">&amp;</span>divisor;
         <span class="macro">end_timer!</span>(witness_time);
 
-        <span class="kw">let </span>(num_leading_zeros, witness_coeffs) =
-            skip_leading_zeros_and_convert_to_bigints(<span class="kw-2">&amp;</span>witness_polynomial);
+        <span class="kw">let </span>(num_leading_zeros, witness_coeffs) = skip_leading_zeros(<span class="kw-2">&amp;</span>witness_polynomial);
 
-        <span class="kw">let </span>proof = VariableBaseMSM::multi_scalar_mul(
+        <span class="kw">let </span>proof = E::G1::msm_unchecked(
             <span class="kw-2">&amp;</span>prover_param.borrow().powers_of_g[num_leading_zeros..],
             <span class="kw-2">&amp;</span>witness_coeffs,
         )
@@ -426,45 +411,36 @@
         verifier_param: <span class="kw-2">&amp;</span><span class="self">Self</span>::VerifierParam,
         commitment: <span class="kw-2">&amp;</span><span class="self">Self</span>::Commitment,
         point: <span class="kw-2">&amp;</span><span class="self">Self</span>::Point,
-        value: <span class="kw-2">&amp;</span>E::Fr,
+        value: <span class="kw-2">&amp;</span>E::ScalarField,
         proof: <span class="kw-2">&amp;</span><span class="self">Self</span>::Proof,
     ) -&gt; <span class="prelude-ty">Result</span>&lt;bool, PCSError&gt; {
         <span class="kw">let </span>check_time = <span class="macro">start_timer!</span>(|| <span class="string">&quot;Checking evaluation&quot;</span>);
         <span class="kw">let </span>pairing_inputs: Vec&lt;(E::G1Prepared, E::G2Prepared)&gt; = <span class="macro">vec!</span>[
             (
-                (verifier_param.g.mul(value.into_repr())
-                    - proof.proof.mul(point.into_repr())
-                    - commitment.<span class="number">0</span>.into_projective())
-                .into_affine()
-                .into(),
+                (verifier_param.g.mul(value) - proof.proof.mul(point) - commitment.<span class="number">0</span>.into_group())
+                    .into_affine()
+                    .into(),
                 verifier_param.h.into(),
             ),
             (proof.proof.into(), verifier_param.beta_h.into()),
         ];
 
-        <span class="kw">let </span>res = E::product_of_pairings(pairing_inputs.iter()).is_one();
+        <span class="kw">let </span>p1 = pairing_inputs.iter().map(|(a, <span class="kw">_</span>)| a.clone());
+        <span class="kw">let </span>p2 = pairing_inputs.iter().map(|(<span class="kw">_</span>, a)| a.clone());
+
+        <span class="kw">let </span>res = E::multi_pairing(p1, p2).<span class="number">0</span>.is_one();
 
         <span class="macro">end_timer!</span>(check_time, || <span class="macro">format!</span>(<span class="string">&quot;Result: {}&quot;</span>, res));
         <span class="prelude-val">Ok</span>(res)
     }
 }
 
-<span class="kw">fn </span>skip_leading_zeros_and_convert_to_bigints&lt;F: PrimeField, P: UVPolynomial&lt;F&gt;&gt;(
-    p: <span class="kw-2">&amp;</span>P,
-) -&gt; (usize, Vec&lt;F::BigInt&gt;) {
+<span class="kw">fn </span>skip_leading_zeros&lt;F: PrimeField, P: DenseUVPolynomial&lt;F&gt;&gt;(p: <span class="kw-2">&amp;</span>P) -&gt; (usize, <span class="kw-2">&amp;</span>[F]) {
     <span class="kw">let </span><span class="kw-2">mut </span>num_leading_zeros = <span class="number">0</span>;
     <span class="kw">while </span>num_leading_zeros &lt; p.coeffs().len() &amp;&amp; p.coeffs()[num_leading_zeros].is_zero() {
         num_leading_zeros += <span class="number">1</span>;
     }
-    <span class="kw">let </span>coeffs = convert_to_bigints(<span class="kw-2">&amp;</span>p.coeffs()[num_leading_zeros..]);
-    (num_leading_zeros, coeffs)
-}
-
-<span class="kw">fn </span>convert_to_bigints&lt;F: PrimeField&gt;(p: <span class="kw-2">&amp;</span>[F]) -&gt; Vec&lt;F::BigInt&gt; {
-    <span class="kw">let </span>to_bigint_time = <span class="macro">start_timer!</span>(|| <span class="string">&quot;Converting polynomial coeffs to bigints&quot;</span>);
-    <span class="kw">let </span>coeffs = p.iter().map(|s| s.into_repr()).collect::&lt;Vec&lt;<span class="kw">_</span>&gt;&gt;();
-    <span class="macro">end_timer!</span>(to_bigint_time);
-    coeffs
+    (num_leading_zeros, <span class="kw-2">&amp;</span>p.coeffs()[num_leading_zeros..])
 }
 
 <span class="attr">#[cfg(test)]
@@ -472,13 +448,13 @@
     <span class="kw">use super</span>::<span class="kw-2">*</span>;
     <span class="kw">use </span><span class="kw">crate</span>::StructuredReferenceString;
     <span class="kw">use </span>ark_bls12_381::Bls12_381;
-    <span class="kw">use </span>ark_ec::PairingEngine;
+    <span class="kw">use </span>ark_ec::pairing::Pairing;
     <span class="kw">use </span>ark_poly::univariate::DensePolynomial;
     <span class="kw">use </span>ark_std::{test_rng, UniformRand};
 
     <span class="kw">fn </span>end_to_end_test_template&lt;E&gt;() -&gt; <span class="prelude-ty">Result</span>&lt;(), PCSError&gt;
     <span class="kw">where
-        </span>E: PairingEngine,
+        </span>E: Pairing,
     {
         <span class="kw">let </span>rng = <span class="kw-2">&amp;mut </span>test_rng();
         <span class="kw">for _ in </span><span class="number">0</span>..<span class="number">100 </span>{
@@ -488,9 +464,11 @@
             }
             <span class="kw">let </span>pp = UnivariateKzgPCS::&lt;E&gt;::gen_srs_for_testing(rng, degree)<span class="question-mark">?</span>;
             <span class="kw">let </span>(ck, vk) = pp.trim(degree)<span class="question-mark">?</span>;
-            <span class="kw">let </span>p = &lt;DensePolynomial&lt;E::Fr&gt; <span class="kw">as </span>UVPolynomial&lt;E::Fr&gt;&gt;::rand(degree, rng);
+            <span class="kw">let </span>p = &lt;DensePolynomial&lt;E::ScalarField&gt; <span class="kw">as </span>DenseUVPolynomial&lt;E::ScalarField&gt;&gt;::rand(
+                degree, rng,
+            );
             <span class="kw">let </span>comm = UnivariateKzgPCS::&lt;E&gt;::commit(<span class="kw-2">&amp;</span>ck, <span class="kw-2">&amp;</span>p)<span class="question-mark">?</span>;
-            <span class="kw">let </span>point = E::Fr::rand(rng);
+            <span class="kw">let </span>point = E::ScalarField::rand(rng);
             <span class="kw">let </span>(proof, value) = UnivariateKzgPCS::&lt;E&gt;::open(<span class="kw-2">&amp;</span>ck, <span class="kw-2">&amp;</span>p, <span class="kw-2">&amp;</span>point)<span class="question-mark">?</span>;
             <span class="macro">assert!</span>(
                 UnivariateKzgPCS::&lt;E&gt;::verify(<span class="kw-2">&amp;</span>vk, <span class="kw-2">&amp;</span>comm, <span class="kw-2">&amp;</span>point, <span class="kw-2">&amp;</span>value, <span class="kw-2">&amp;</span>proof)<span class="question-mark">?</span>,
@@ -504,7 +482,7 @@
 
     <span class="kw">fn </span>linear_polynomial_test_template&lt;E&gt;() -&gt; <span class="prelude-ty">Result</span>&lt;(), PCSError&gt;
     <span class="kw">where
-        </span>E: PairingEngine,
+        </span>E: Pairing,
     {
         <span class="kw">let </span>rng = <span class="kw-2">&amp;mut </span>test_rng();
         <span class="kw">for _ in </span><span class="number">0</span>..<span class="number">100 </span>{
@@ -512,9 +490,11 @@
 
             <span class="kw">let </span>pp = UnivariateKzgPCS::&lt;E&gt;::gen_srs_for_testing(rng, degree)<span class="question-mark">?</span>;
             <span class="kw">let </span>(ck, vk) = pp.trim(degree)<span class="question-mark">?</span>;
-            <span class="kw">let </span>p = &lt;DensePolynomial&lt;E::Fr&gt; <span class="kw">as </span>UVPolynomial&lt;E::Fr&gt;&gt;::rand(degree, rng);
+            <span class="kw">let </span>p = &lt;DensePolynomial&lt;E::ScalarField&gt; <span class="kw">as </span>DenseUVPolynomial&lt;E::ScalarField&gt;&gt;::rand(
+                degree, rng,
+            );
             <span class="kw">let </span>comm = UnivariateKzgPCS::&lt;E&gt;::commit(<span class="kw-2">&amp;</span>ck, <span class="kw-2">&amp;</span>p)<span class="question-mark">?</span>;
-            <span class="kw">let </span>point = E::Fr::rand(rng);
+            <span class="kw">let </span>point = E::ScalarField::rand(rng);
             <span class="kw">let </span>(proof, value) = UnivariateKzgPCS::&lt;E&gt;::open(<span class="kw-2">&amp;</span>ck, <span class="kw-2">&amp;</span>p, <span class="kw-2">&amp;</span>point)<span class="question-mark">?</span>;
             <span class="macro">assert!</span>(
                 UnivariateKzgPCS::&lt;E&gt;::verify(<span class="kw-2">&amp;</span>vk, <span class="kw-2">&amp;</span>comm, <span class="kw-2">&amp;</span>point, <span class="kw-2">&amp;</span>value, <span class="kw-2">&amp;</span>proof)<span class="question-mark">?</span>,

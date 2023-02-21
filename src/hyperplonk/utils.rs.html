@@ -399,7 +399,7 @@
     witness::WitnessColumn,
 };
 <span class="kw">use </span>arithmetic::{evaluate_opt, VirtualPolynomial};
-<span class="kw">use </span>ark_ec::PairingEngine;
+<span class="kw">use </span>ark_ec::pairing::Pairing;
 <span class="kw">use </span>ark_ff::PrimeField;
 <span class="kw">use </span>ark_poly::DenseMultilinearExtension;
 <span class="kw">use </span>std::{borrow::Borrow, sync::Arc};
@@ -409,7 +409,7 @@
 <span class="doccomment">/// An accumulator structure that holds a polynomial and
 /// its opening points
 </span><span class="attr">#[derive(Debug)]
-</span><span class="kw">pub</span>(<span class="kw">super</span>) <span class="kw">struct </span>PcsAccumulator&lt;E: PairingEngine, PCS: PolynomialCommitmentScheme&lt;E&gt;&gt; {
+</span><span class="kw">pub</span>(<span class="kw">super</span>) <span class="kw">struct </span>PcsAccumulator&lt;E: Pairing, PCS: PolynomialCommitmentScheme&lt;E&gt;&gt; {
     <span class="comment">// sequence:
     // - prod(x) at 5 points
     // - w_merged at perm check point
@@ -425,12 +425,12 @@
 
 <span class="kw">impl</span>&lt;E, PCS&gt; PcsAccumulator&lt;E, PCS&gt;
 <span class="kw">where
-    </span>E: PairingEngine,
+    </span>E: Pairing,
     PCS: PolynomialCommitmentScheme&lt;
         E,
-        Polynomial = Arc&lt;DenseMultilinearExtension&lt;E::Fr&gt;&gt;,
-        Point = Vec&lt;E::Fr&gt;,
-        Evaluation = E::Fr,
+        Polynomial = Arc&lt;DenseMultilinearExtension&lt;E::ScalarField&gt;&gt;,
+        Point = Vec&lt;E::ScalarField&gt;,
+        Evaluation = E::ScalarField,
         Commitment = Commitment&lt;E&gt;,
     &gt;,
 {
@@ -468,7 +468,7 @@
     </span><span class="kw">pub</span>(<span class="kw">super</span>) <span class="kw">fn </span>multi_open(
         <span class="kw-2">&amp;</span><span class="self">self</span>,
         prover_param: <span class="kw">impl </span>Borrow&lt;PCS::ProverParam&gt;,
-        transcript: <span class="kw-2">&amp;mut </span>IOPTranscript&lt;E::Fr&gt;,
+        transcript: <span class="kw-2">&amp;mut </span>IOPTranscript&lt;E::ScalarField&gt;,
     ) -&gt; <span class="prelude-ty">Result</span>&lt;PCS::BatchProof, HyperPlonkErrors&gt; {
         <span class="prelude-val">Ok</span>(PCS::multi_open(
             prover_param.borrow(),
