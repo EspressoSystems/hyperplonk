@@ -453,7 +453,7 @@ where
             &mut transcript,
         )?;
 
-        let zero_check_point = zero_check_sub_claim.point.clone();
+        let zero_check_point = zero_check_sub_claim.point;
 
         // check zero check subclaim
         let f_eval = eval_f(&vk.params.gate_func, selector_evals, witness_gate_evals)?;
@@ -485,8 +485,7 @@ where
         let perm_check_point = perm_check_sub_claim
             .product_check_sub_claim
             .zero_check_sub_claim
-            .point
-            .clone();
+            .point;
 
         let alpha = perm_check_sub_claim.product_check_sub_claim.alpha;
         let (beta, gamma) = perm_check_sub_claim.challenges;
