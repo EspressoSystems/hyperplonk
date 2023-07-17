@@ -6,6 +6,6 @@ set -e
 # We want the code to panic if there is an integer overflow
 export RUSTFLAGS="-C overflow-checks=on"
 
-cargo test --release --all -- -Zunstable-options --report-time
+cargo test --release --all
 cargo test --no-run --features=print-trace
 cargo bench --no-run
