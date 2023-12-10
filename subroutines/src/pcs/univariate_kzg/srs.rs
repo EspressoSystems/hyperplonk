@@ -16,7 +16,7 @@ use std::ops::Mul;
 
 /// `UniversalParams` are the universal parameters for the KZG10 scheme.
 // Adapted from
-// https://github.com/arkworks-rs/poly-commit/blob/master/src/kzg10/data_structures.rs#L20
+// https://github.com/arkworks-rs/poly-commit/blob/master/poly-commit/src/kzg10/data_structures.rs#L24
 #[derive(Debug, Clone, Eq, PartialEq, CanonicalSerialize, CanonicalDeserialize, Default)]
 pub struct UnivariateUniversalParams<E: Pairing> {
     /// Group elements of the form `{ \beta^i G }`, where `i` ranges from 0 to
