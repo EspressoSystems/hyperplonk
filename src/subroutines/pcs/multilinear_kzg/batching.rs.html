@@ -1,4 +1,5 @@
-<!DOCTYPE html><html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1.0"><meta name="generator" content="rustdoc"><meta name="description" content="Source of the Rust file `subroutines/src/pcs/multilinear_kzg/batching.rs`."><title>batching.rs - source</title><link rel="preload" as="font" type="font/woff2" crossorigin href="../../../../static.files/SourceSerif4-Regular-46f98efaafac5295.ttf.woff2"><link rel="preload" as="font" type="font/woff2" crossorigin href="../../../../static.files/FiraSans-Regular-018c141bf0843ffd.woff2"><link rel="preload" as="font" type="font/woff2" crossorigin href="../../../../static.files/FiraSans-Medium-8f9a781e4970d388.woff2"><link rel="preload" as="font" type="font/woff2" crossorigin href="../../../../static.files/SourceCodePro-Regular-562dcc5011b6de7d.ttf.woff2"><link rel="preload" as="font" type="font/woff2" crossorigin href="../../../../static.files/SourceSerif4-Bold-a2c9cd1067f8b328.ttf.woff2"><link rel="preload" as="font" type="font/woff2" crossorigin href="../../../../static.files/SourceCodePro-Semibold-d899c5a5c4aeb14a.ttf.woff2"><link rel="stylesheet" href="../../../../static.files/normalize-76eba96aa4d2e634.css"><link rel="stylesheet" href="../../../../static.files/rustdoc-ba5701c5741a7b69.css" id="mainThemeStyle"><div id="rustdoc-vars" data-root-path="../../../../" data-static-root-path="../../../../static.files/" data-current-crate="subroutines" data-themes="" data-resource-suffix="" data-rustdoc-version="1.70.0 (90c541806 2023-05-31)" data-search-js="search-e077946657036a58.js" data-settings-js="settings-298e1ea74db45b39.js" data-settings-css="settings-7bfb4c59cc6bc502.css" data-theme-light-css="light-0f8c037637f9eb3e.css" data-theme-dark-css="dark-1097f8e92a01e3cf.css" data-theme-ayu-css="ayu-614652228113ac93.css" ></div><script src="../../../../static.files/storage-62ce34ea385b278a.js"></script><script defer src="../../../../static.files/source-script-905937fbbdc8e9ea.js"></script><script defer src="../../../../source-files.js"></script><script defer src="../../../../static.files/main-f61008743c98d196.js"></script><noscript><link rel="stylesheet" media="(prefers-color-scheme:light)" href="../../../../static.files/light-0f8c037637f9eb3e.css"><link rel="stylesheet" media="(prefers-color-scheme:dark)" href="../../../../static.files/dark-1097f8e92a01e3cf.css"><link rel="stylesheet" href="../../../../static.files/noscript-13285aec31fa243e.css"></noscript><link rel="alternate icon" type="image/png" href="../../../../static.files/favicon-16x16-8b506e7a72182f1c.png"><link rel="alternate icon" type="image/png" href="../../../../static.files/favicon-32x32-422f7d1d52889060.png"><link rel="icon" type="image/svg+xml" href="../../../../static.files/favicon-2c020d218678b618.svg"></head><body class="rustdoc source"><!--[if lte IE 11]><div class="warning">This old browser is unsupported and will most likely display funky things.</div><![endif]--><nav class="sidebar"></nav><main><nav class="sub"><a class="sub-logo-container" href="../../../../subroutines/index.html"><img class="rust-logo" src="../../../../static.files/rust-logo-151179464ae7ed46.svg" alt="logo"></a><form class="search-form"><span></span><input class="search-input" name="search" aria-label="Run search in the documentation" autocomplete="off" spellcheck="false" placeholder="Click or press ‘S’ to search, ‘?’ for more options…" type="search"><div id="help-button" title="help" tabindex="-1"><a href="../../../../help.html">?</a></div><div id="settings-menu" tabindex="-1"><a href="../../../../settings.html" title="settings"><img width="22" height="22" alt="Change settings" src="../../../../static.files/wheel-7b819b6101059cd0.svg"></a></div></form></nav><section id="main-content" class="content"><div class="example-wrap"><div data-nosnippet><pre class="src-line-numbers"><a href="#1" id="1">1</a>
+<!DOCTYPE html><html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1.0"><meta name="generator" content="rustdoc"><meta name="description" content="Source of the Rust file `subroutines/src/pcs/multilinear_kzg/batching.rs`."><title>batching.rs - source</title><link rel="preload" as="font" type="font/woff2" crossorigin href="../../../../static.files/SourceSerif4-Regular-46f98efaafac5295.ttf.woff2"><link rel="preload" as="font" type="font/woff2" crossorigin href="../../../../static.files/FiraSans-Regular-018c141bf0843ffd.woff2"><link rel="preload" as="font" type="font/woff2" crossorigin href="../../../../static.files/FiraSans-Medium-8f9a781e4970d388.woff2"><link rel="preload" as="font" type="font/woff2" crossorigin href="../../../../static.files/SourceCodePro-Regular-562dcc5011b6de7d.ttf.woff2"><link rel="preload" as="font" type="font/woff2" crossorigin href="../../../../static.files/SourceCodePro-Semibold-d899c5a5c4aeb14a.ttf.woff2"><link rel="stylesheet" href="../../../../static.files/normalize-76eba96aa4d2e634.css"><link rel="stylesheet" href="../../../../static.files/rustdoc-ac92e1bbe349e143.css"><meta name="rustdoc-vars" data-root-path="../../../../" data-static-root-path="../../../../static.files/" data-current-crate="subroutines" data-themes="" data-resource-suffix="" data-rustdoc-version="1.76.0 (07dca489a 2024-02-04)" data-channel="1.76.0" data-search-js="search-2b6ce74ff89ae146.js" data-settings-js="settings-4313503d2e1961c2.js" ><script src="../../../../static.files/storage-f2adc0d6ca4d09fb.js"></script><script defer src="../../../../static.files/src-script-39ed315d46fb705f.js"></script><script defer src="../../../../src-files.js"></script><script defer src="../../../../static.files/main-305769736d49e732.js"></script><noscript><link rel="stylesheet" href="../../../../static.files/noscript-feafe1bb7466e4bd.css"></noscript><link rel="alternate icon" type="image/png" href="../../../../static.files/favicon-16x16-8b506e7a72182f1c.png"><link rel="alternate icon" type="image/png" href="../../../../static.files/favicon-32x32-422f7d1d52889060.png"><link rel="icon" type="image/svg+xml" href="../../../../static.files/favicon-2c020d218678b618.svg"></head><body class="rustdoc src"><!--[if lte IE 11]><div class="warning">This old browser is unsupported and will most likely display funky things.</div><![endif]--><nav class="sidebar"></nav><div class="sidebar-resizer"></div>
+    <main><nav class="sub"><form class="search-form"><span></span><input class="search-input" name="search" aria-label="Run search in the documentation" autocomplete="off" spellcheck="false" placeholder="Click or press ‘S’ to search, ‘?’ for more options…" type="search"><div id="help-button" tabindex="-1"><a href="../../../../help.html" title="help">?</a></div><div id="settings-menu" tabindex="-1"><a href="../../../../settings.html" title="settings"><img width="22" height="22" alt="Change settings" src="../../../../static.files/wheel-7b819b6101059cd0.svg"></a></div></form></nav><section id="main-content" class="content"><div class="example-wrap"><div data-nosnippet><pre class="src-line-numbers"><a href="#1" id="1">1</a>
 <a href="#2" id="2">2</a>
 <a href="#3" id="3">3</a>
 <a href="#4" id="4">4</a>
@@ -383,11 +384,11 @@
     </span>E: Pairing,
     PCS: PolynomialCommitmentScheme&lt;E&gt;,
 {
-    <span class="doccomment">/// A sum check proof proving tilde g&#39;s sum
+    <span class="doccomment">/// A sum check proof proving tilde g's sum
     </span><span class="kw">pub</span>(<span class="kw">crate</span>) sum_check_proof: IOPProof&lt;E::ScalarField&gt;,
     <span class="doccomment">/// f_i(point_i)
     </span><span class="kw">pub </span>f_i_eval_at_point_i: Vec&lt;E::ScalarField&gt;,
-    <span class="doccomment">/// proof for g&#39;(a_2)
+    <span class="doccomment">/// proof for g'(a_2)
     </span><span class="kw">pub</span>(<span class="kw">crate</span>) g_prime_proof: PCS::Proof,
 }
 
@@ -397,8 +398,8 @@
 /// 3. build \tilde g_i(b) = eq(t, i) * f_i(b)
 /// 4. compute \tilde eq_i(b) = eq(b, point_i)
 /// 5. run sumcheck on \sum_i=1..k \tilde eq_i * \tilde g_i
-/// 6. build g&#39;(X) = \sum_i=1..k \tilde eq_i(a2) * \tilde g_i(X) where (a2) is
-/// the sumcheck&#39;s point 7. open g&#39;(X) at point (a2)
+/// 6. build g'(X) = \sum_i=1..k \tilde eq_i(a2) * \tilde g_i(X) where (a2) is
+/// the sumcheck's point 7. open g'(X) at point (a2)
 </span><span class="kw">pub</span>(<span class="kw">crate</span>) <span class="kw">fn </span>multi_open_internal&lt;E, PCS&gt;(
     prover_param: <span class="kw-2">&amp;</span>PCS::ProverParam,
     polynomials: <span class="kw-2">&amp;</span>[PCS::Polynomial],
@@ -415,7 +416,7 @@
         Evaluation = E::ScalarField,
     &gt;,
 {
-    <span class="kw">let </span>open_timer = <span class="macro">start_timer!</span>(|| <span class="macro">format!</span>(<span class="string">&quot;multi open {} points&quot;</span>, points.len()));
+    <span class="kw">let </span>open_timer = <span class="macro">start_timer!</span>(|| <span class="macro">format!</span>(<span class="string">"multi open {} points"</span>, points.len()));
 
     <span class="comment">// TODO: sanity checks
     </span><span class="kw">let </span>num_var = polynomials[<span class="number">0</span>].num_vars;
@@ -423,13 +424,13 @@
     <span class="kw">let </span>ell = log2(k) <span class="kw">as </span>usize;
 
     <span class="comment">// challenge point t
-    </span><span class="kw">let </span>t = transcript.get_and_append_challenge_vectors(<span class="string">&quot;t&quot;</span>.as_ref(), ell)<span class="question-mark">?</span>;
+    </span><span class="kw">let </span>t = transcript.get_and_append_challenge_vectors(<span class="string">"t"</span>.as_ref(), ell)<span class="question-mark">?</span>;
 
     <span class="comment">// eq(t, i) for i in [0..k]
     </span><span class="kw">let </span>eq_t_i_list = build_eq_x_r_vec(t.as_ref())<span class="question-mark">?</span>;
 
     <span class="comment">// \tilde g_i(b) = eq(t, i) * f_i(b)
-    </span><span class="kw">let </span>timer = <span class="macro">start_timer!</span>(|| <span class="macro">format!</span>(<span class="string">&quot;compute tilde g for {} points&quot;</span>, points.len()));
+    </span><span class="kw">let </span>timer = <span class="macro">start_timer!</span>(|| <span class="macro">format!</span>(<span class="string">"compute tilde g for {} points"</span>, points.len()));
     <span class="comment">// combine the polynomials that have same opening point first to reduce the
     // cost of sum check later.
     </span><span class="kw">let </span>point_indices = points
@@ -460,7 +461,7 @@
         );
     <span class="macro">end_timer!</span>(timer);
 
-    <span class="kw">let </span>timer = <span class="macro">start_timer!</span>(|| <span class="macro">format!</span>(<span class="string">&quot;compute tilde eq for {} points&quot;</span>, points.len()));
+    <span class="kw">let </span>timer = <span class="macro">start_timer!</span>(|| <span class="macro">format!</span>(<span class="string">"compute tilde eq for {} points"</span>, points.len()));
     <span class="kw">let </span>tilde_eqs: Vec&lt;<span class="kw">_</span>&gt; = deduped_points
         .iter()
         .map(|point| {
@@ -473,9 +474,9 @@
     <span class="macro">end_timer!</span>(timer);
 
     <span class="comment">// built the virtual polynomial for SumCheck
-    </span><span class="kw">let </span>timer = <span class="macro">start_timer!</span>(|| <span class="macro">format!</span>(<span class="string">&quot;sum check prove of {} variables&quot;</span>, num_var));
+    </span><span class="kw">let </span>timer = <span class="macro">start_timer!</span>(|| <span class="macro">format!</span>(<span class="string">"sum check prove of {} variables"</span>, num_var));
 
-    <span class="kw">let </span>step = <span class="macro">start_timer!</span>(|| <span class="string">&quot;add mle&quot;</span>);
+    <span class="kw">let </span>step = <span class="macro">start_timer!</span>(|| <span class="string">"add mle"</span>);
     <span class="kw">let </span><span class="kw-2">mut </span>sum_check_vp = VirtualPolynomial::new(num_var);
     <span class="kw">for </span>(merged_tilde_g, tilde_eq) <span class="kw">in </span>merged_tilde_gs.iter().zip(tilde_eqs.into_iter()) {
         sum_check_vp.add_mle_list([merged_tilde_g.clone(), tilde_eq], E::ScalarField::one())<span class="question-mark">?</span>;
@@ -490,19 +491,19 @@
         <span class="prelude-val">Err</span>(_e) =&gt; {
             <span class="comment">// cannot wrap IOPError with PCSError due to cyclic dependency
             </span><span class="kw">return </span><span class="prelude-val">Err</span>(PCSError::InvalidProver(
-                <span class="string">&quot;Sumcheck in batch proving Failed&quot;</span>.to_string(),
+                <span class="string">"Sumcheck in batch proving Failed"</span>.to_string(),
             ));
         },
     };
 
     <span class="macro">end_timer!</span>(timer);
 
-    <span class="comment">// a2 := sumcheck&#39;s point
+    <span class="comment">// a2 := sumcheck's point
     </span><span class="kw">let </span>a2 = <span class="kw-2">&amp;</span>proof.point[..num_var];
 
-    <span class="comment">// build g&#39;(X) = \sum_i=1..k \tilde eq_i(a2) * \tilde g_i(X) where (a2) is the
-    // sumcheck&#39;s point \tilde eq_i(a2) = eq(a2, point_i)
-    </span><span class="kw">let </span>step = <span class="macro">start_timer!</span>(|| <span class="string">&quot;evaluate at a2&quot;</span>);
+    <span class="comment">// build g'(X) = \sum_i=1..k \tilde eq_i(a2) * \tilde g_i(X) where (a2) is the
+    // sumcheck's point \tilde eq_i(a2) = eq(a2, point_i)
+    </span><span class="kw">let </span>step = <span class="macro">start_timer!</span>(|| <span class="string">"evaluate at a2"</span>);
     <span class="kw">let </span><span class="kw-2">mut </span>g_prime = Arc::new(DenseMultilinearExtension::zero());
     <span class="kw">for </span>(merged_tilde_g, point) <span class="kw">in </span>merged_tilde_gs.iter().zip(deduped_points.iter()) {
         <span class="kw">let </span>eq_i_a2 = eq_eval(a2, point)<span class="question-mark">?</span>;
@@ -510,12 +511,12 @@
     }
     <span class="macro">end_timer!</span>(step);
 
-    <span class="kw">let </span>step = <span class="macro">start_timer!</span>(|| <span class="string">&quot;pcs open&quot;</span>);
+    <span class="kw">let </span>step = <span class="macro">start_timer!</span>(|| <span class="string">"pcs open"</span>);
     <span class="kw">let </span>(g_prime_proof, _g_prime_eval) = PCS::open(prover_param, <span class="kw-2">&amp;</span>g_prime, a2.to_vec().as_ref())<span class="question-mark">?</span>;
     <span class="comment">// assert_eq!(g_prime_eval, tilde_g_eval);
     </span><span class="macro">end_timer!</span>(step);
 
-    <span class="kw">let </span>step = <span class="macro">start_timer!</span>(|| <span class="string">&quot;evaluate fi(pi)&quot;</span>);
+    <span class="kw">let </span>step = <span class="macro">start_timer!</span>(|| <span class="string">"evaluate fi(pi)"</span>);
     <span class="macro">end_timer!</span>(step);
     <span class="macro">end_timer!</span>(open_timer);
 
@@ -528,7 +529,7 @@
 
 <span class="doccomment">/// Steps:
 /// 1. get challenge point t from transcript
-/// 2. build g&#39; commitment
+/// 2. build g' commitment
 /// 3. ensure \sum_i eq(a2, point_i) * eq(t, &lt;i&gt;) * f_i_evals matches the sum
 /// via SumCheck verification 4. verify commitment
 </span><span class="kw">pub</span>(<span class="kw">crate</span>) <span class="kw">fn </span>batch_verify_internal&lt;E, PCS&gt;(
@@ -548,7 +549,7 @@
         Commitment = Commitment&lt;E&gt;,
     &gt;,
 {
-    <span class="kw">let </span>open_timer = <span class="macro">start_timer!</span>(|| <span class="string">&quot;batch verification&quot;</span>);
+    <span class="kw">let </span>open_timer = <span class="macro">start_timer!</span>(|| <span class="string">"batch verification"</span>);
 
     <span class="comment">// TODO: sanity checks
 
@@ -557,13 +558,13 @@
     <span class="kw">let </span>num_var = proof.sum_check_proof.point.len();
 
     <span class="comment">// challenge point t
-    </span><span class="kw">let </span>t = transcript.get_and_append_challenge_vectors(<span class="string">&quot;t&quot;</span>.as_ref(), ell)<span class="question-mark">?</span>;
+    </span><span class="kw">let </span>t = transcript.get_and_append_challenge_vectors(<span class="string">"t"</span>.as_ref(), ell)<span class="question-mark">?</span>;
 
     <span class="comment">// sum check point (a2)
     </span><span class="kw">let </span>a2 = <span class="kw-2">&amp;</span>proof.sum_check_proof.point[..num_var];
 
-    <span class="comment">// build g&#39; commitment
-    </span><span class="kw">let </span>step = <span class="macro">start_timer!</span>(|| <span class="string">&quot;build homomorphic commitment&quot;</span>);
+    <span class="comment">// build g' commitment
+    </span><span class="kw">let </span>step = <span class="macro">start_timer!</span>(|| <span class="string">"build homomorphic commitment"</span>);
     <span class="kw">let </span>eq_t_list = build_eq_x_r_vec(t.as_ref())<span class="question-mark">?</span>;
 
     <span class="kw">let </span><span class="kw-2">mut </span>scalars = <span class="macro">vec!</span>[];
@@ -597,7 +598,7 @@
         <span class="prelude-val">Err</span>(_e) =&gt; {
             <span class="comment">// cannot wrap IOPError with PCSError due to cyclic dependency
             </span><span class="kw">return </span><span class="prelude-val">Err</span>(PCSError::InvalidProver(
-                <span class="string">&quot;Sumcheck in batch verification failed&quot;</span>.to_string(),
+                <span class="string">"Sumcheck in batch verification failed"</span>.to_string(),
             ));
         },
     };
@@ -658,8 +659,8 @@
             .map(|poly| MultilinearKzgPCS::commit(<span class="kw-2">&amp;</span>ml_ck.clone(), poly).unwrap())
             .collect::&lt;Vec&lt;<span class="kw">_</span>&gt;&gt;();
 
-        <span class="kw">let </span><span class="kw-2">mut </span>transcript = IOPTranscript::new(<span class="string">&quot;test transcript&quot;</span>.as_ref());
-        transcript.append_field_element(<span class="string">&quot;init&quot;</span>.as_ref(), <span class="kw-2">&amp;</span>Fr::zero())<span class="question-mark">?</span>;
+        <span class="kw">let </span><span class="kw-2">mut </span>transcript = IOPTranscript::new(<span class="string">"test transcript"</span>.as_ref());
+        transcript.append_field_element(<span class="string">"init"</span>.as_ref(), <span class="kw-2">&amp;</span>Fr::zero())<span class="question-mark">?</span>;
 
         <span class="kw">let </span>batch_proof = multi_open_internal::&lt;E, MultilinearKzgPCS&lt;E&gt;&gt;(
             <span class="kw-2">&amp;</span>ml_ck,
@@ -670,8 +671,8 @@
         )<span class="question-mark">?</span>;
 
         <span class="comment">// good path
-        </span><span class="kw">let </span><span class="kw-2">mut </span>transcript = IOPTranscript::new(<span class="string">&quot;test transcript&quot;</span>.as_ref());
-        transcript.append_field_element(<span class="string">&quot;init&quot;</span>.as_ref(), <span class="kw-2">&amp;</span>Fr::zero())<span class="question-mark">?</span>;
+        </span><span class="kw">let </span><span class="kw-2">mut </span>transcript = IOPTranscript::new(<span class="string">"test transcript"</span>.as_ref());
+        transcript.append_field_element(<span class="string">"init"</span>.as_ref(), <span class="kw-2">&amp;</span>Fr::zero())<span class="question-mark">?</span>;
         <span class="macro">assert!</span>(batch_verify_internal::&lt;E, MultilinearKzgPCS&lt;E&gt;&gt;(
             <span class="kw-2">&amp;</span>ml_vk,
             <span class="kw-2">&amp;</span>commitments,

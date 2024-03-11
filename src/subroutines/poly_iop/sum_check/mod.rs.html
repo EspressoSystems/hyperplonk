@@ -1,4 +1,5 @@
-<!DOCTYPE html><html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1.0"><meta name="generator" content="rustdoc"><meta name="description" content="Source of the Rust file `subroutines/src/poly_iop/sum_check/mod.rs`."><title>mod.rs - source</title><link rel="preload" as="font" type="font/woff2" crossorigin href="../../../../static.files/SourceSerif4-Regular-46f98efaafac5295.ttf.woff2"><link rel="preload" as="font" type="font/woff2" crossorigin href="../../../../static.files/FiraSans-Regular-018c141bf0843ffd.woff2"><link rel="preload" as="font" type="font/woff2" crossorigin href="../../../../static.files/FiraSans-Medium-8f9a781e4970d388.woff2"><link rel="preload" as="font" type="font/woff2" crossorigin href="../../../../static.files/SourceCodePro-Regular-562dcc5011b6de7d.ttf.woff2"><link rel="preload" as="font" type="font/woff2" crossorigin href="../../../../static.files/SourceSerif4-Bold-a2c9cd1067f8b328.ttf.woff2"><link rel="preload" as="font" type="font/woff2" crossorigin href="../../../../static.files/SourceCodePro-Semibold-d899c5a5c4aeb14a.ttf.woff2"><link rel="stylesheet" href="../../../../static.files/normalize-76eba96aa4d2e634.css"><link rel="stylesheet" href="../../../../static.files/rustdoc-ba5701c5741a7b69.css" id="mainThemeStyle"><div id="rustdoc-vars" data-root-path="../../../../" data-static-root-path="../../../../static.files/" data-current-crate="subroutines" data-themes="" data-resource-suffix="" data-rustdoc-version="1.70.0 (90c541806 2023-05-31)" data-search-js="search-e077946657036a58.js" data-settings-js="settings-298e1ea74db45b39.js" data-settings-css="settings-7bfb4c59cc6bc502.css" data-theme-light-css="light-0f8c037637f9eb3e.css" data-theme-dark-css="dark-1097f8e92a01e3cf.css" data-theme-ayu-css="ayu-614652228113ac93.css" ></div><script src="../../../../static.files/storage-62ce34ea385b278a.js"></script><script defer src="../../../../static.files/source-script-905937fbbdc8e9ea.js"></script><script defer src="../../../../source-files.js"></script><script defer src="../../../../static.files/main-f61008743c98d196.js"></script><noscript><link rel="stylesheet" media="(prefers-color-scheme:light)" href="../../../../static.files/light-0f8c037637f9eb3e.css"><link rel="stylesheet" media="(prefers-color-scheme:dark)" href="../../../../static.files/dark-1097f8e92a01e3cf.css"><link rel="stylesheet" href="../../../../static.files/noscript-13285aec31fa243e.css"></noscript><link rel="alternate icon" type="image/png" href="../../../../static.files/favicon-16x16-8b506e7a72182f1c.png"><link rel="alternate icon" type="image/png" href="../../../../static.files/favicon-32x32-422f7d1d52889060.png"><link rel="icon" type="image/svg+xml" href="../../../../static.files/favicon-2c020d218678b618.svg"></head><body class="rustdoc source"><!--[if lte IE 11]><div class="warning">This old browser is unsupported and will most likely display funky things.</div><![endif]--><nav class="sidebar"></nav><main><nav class="sub"><a class="sub-logo-container" href="../../../../subroutines/index.html"><img class="rust-logo" src="../../../../static.files/rust-logo-151179464ae7ed46.svg" alt="logo"></a><form class="search-form"><span></span><input class="search-input" name="search" aria-label="Run search in the documentation" autocomplete="off" spellcheck="false" placeholder="Click or press ‘S’ to search, ‘?’ for more options…" type="search"><div id="help-button" title="help" tabindex="-1"><a href="../../../../help.html">?</a></div><div id="settings-menu" tabindex="-1"><a href="../../../../settings.html" title="settings"><img width="22" height="22" alt="Change settings" src="../../../../static.files/wheel-7b819b6101059cd0.svg"></a></div></form></nav><section id="main-content" class="content"><div class="example-wrap"><div data-nosnippet><pre class="src-line-numbers"><a href="#1" id="1">1</a>
+<!DOCTYPE html><html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1.0"><meta name="generator" content="rustdoc"><meta name="description" content="Source of the Rust file `subroutines/src/poly_iop/sum_check/mod.rs`."><title>mod.rs - source</title><link rel="preload" as="font" type="font/woff2" crossorigin href="../../../../static.files/SourceSerif4-Regular-46f98efaafac5295.ttf.woff2"><link rel="preload" as="font" type="font/woff2" crossorigin href="../../../../static.files/FiraSans-Regular-018c141bf0843ffd.woff2"><link rel="preload" as="font" type="font/woff2" crossorigin href="../../../../static.files/FiraSans-Medium-8f9a781e4970d388.woff2"><link rel="preload" as="font" type="font/woff2" crossorigin href="../../../../static.files/SourceCodePro-Regular-562dcc5011b6de7d.ttf.woff2"><link rel="preload" as="font" type="font/woff2" crossorigin href="../../../../static.files/SourceCodePro-Semibold-d899c5a5c4aeb14a.ttf.woff2"><link rel="stylesheet" href="../../../../static.files/normalize-76eba96aa4d2e634.css"><link rel="stylesheet" href="../../../../static.files/rustdoc-ac92e1bbe349e143.css"><meta name="rustdoc-vars" data-root-path="../../../../" data-static-root-path="../../../../static.files/" data-current-crate="subroutines" data-themes="" data-resource-suffix="" data-rustdoc-version="1.76.0 (07dca489a 2024-02-04)" data-channel="1.76.0" data-search-js="search-2b6ce74ff89ae146.js" data-settings-js="settings-4313503d2e1961c2.js" ><script src="../../../../static.files/storage-f2adc0d6ca4d09fb.js"></script><script defer src="../../../../static.files/src-script-39ed315d46fb705f.js"></script><script defer src="../../../../src-files.js"></script><script defer src="../../../../static.files/main-305769736d49e732.js"></script><noscript><link rel="stylesheet" href="../../../../static.files/noscript-feafe1bb7466e4bd.css"></noscript><link rel="alternate icon" type="image/png" href="../../../../static.files/favicon-16x16-8b506e7a72182f1c.png"><link rel="alternate icon" type="image/png" href="../../../../static.files/favicon-32x32-422f7d1d52889060.png"><link rel="icon" type="image/svg+xml" href="../../../../static.files/favicon-2c020d218678b618.svg"></head><body class="rustdoc src"><!--[if lte IE 11]><div class="warning">This old browser is unsupported and will most likely display funky things.</div><![endif]--><nav class="sidebar"></nav><div class="sidebar-resizer"></div>
+    <main><nav class="sub"><form class="search-form"><span></span><input class="search-input" name="search" aria-label="Run search in the documentation" autocomplete="off" spellcheck="false" placeholder="Click or press ‘S’ to search, ‘?’ for more options…" type="search"><div id="help-button" tabindex="-1"><a href="../../../../help.html" title="help">?</a></div><div id="settings-menu" tabindex="-1"><a href="../../../../settings.html" title="settings"><img width="22" height="22" alt="Change settings" src="../../../../static.files/wheel-7b819b6101059cd0.svg"></a></div></form></nav><section id="main-content" class="content"><div class="example-wrap"><div data-nosnippet><pre class="src-line-numbers"><a href="#1" id="1">1</a>
 <a href="#2" id="2">2</a>
 <a href="#3" id="3">3</a>
 <a href="#4" id="4">4</a>
@@ -482,13 +483,13 @@
     <span class="kw">type </span>Transcript;
     <span class="kw">type </span>SumCheckSubClaim;
 
-    <span class="doccomment">/// Initialize the verifier&#39;s state.
+    <span class="doccomment">/// Initialize the verifier's state.
     </span><span class="kw">fn </span>verifier_init(index_info: <span class="kw-2">&amp;</span><span class="self">Self</span>::VPAuxInfo) -&gt; <span class="self">Self</span>;
 
     <span class="doccomment">/// Run verifier for the current round, given a prover message.
     ///
     /// Note that `verify_round_and_update_state` only samples and stores
-    /// challenges; and update the verifier&#39;s state accordingly. The actual
+    /// challenges; and update the verifier's state accordingly. The actual
     /// verifications are deferred (in batch) to `check_and_generate_subclaim`
     /// at the last step.
     </span><span class="kw">fn </span>verify_round_and_update_state(
@@ -531,15 +532,15 @@
     <span class="kw">type </span>Transcript = IOPTranscript&lt;F&gt;;
 
     <span class="kw">fn </span>extract_sum(proof: <span class="kw-2">&amp;</span><span class="self">Self</span>::SumCheckProof) -&gt; F {
-        <span class="kw">let </span>start = <span class="macro">start_timer!</span>(|| <span class="string">&quot;extract sum&quot;</span>);
+        <span class="kw">let </span>start = <span class="macro">start_timer!</span>(|| <span class="string">"extract sum"</span>);
         <span class="kw">let </span>res = proof.proofs[<span class="number">0</span>].evaluations[<span class="number">0</span>] + proof.proofs[<span class="number">0</span>].evaluations[<span class="number">1</span>];
         <span class="macro">end_timer!</span>(start);
         res
     }
 
     <span class="kw">fn </span>init_transcript() -&gt; <span class="self">Self</span>::Transcript {
-        <span class="kw">let </span>start = <span class="macro">start_timer!</span>(|| <span class="string">&quot;init transcript&quot;</span>);
-        <span class="kw">let </span>res = IOPTranscript::&lt;F&gt;::new(<span class="string">b&quot;Initializing SumCheck transcript&quot;</span>);
+        <span class="kw">let </span>start = <span class="macro">start_timer!</span>(|| <span class="string">"init transcript"</span>);
+        <span class="kw">let </span>res = IOPTranscript::&lt;F&gt;::new(<span class="string">b"Initializing SumCheck transcript"</span>);
         <span class="macro">end_timer!</span>(start);
         res
     }
@@ -548,9 +549,9 @@
         poly: <span class="kw-2">&amp;</span><span class="self">Self</span>::VirtualPolynomial,
         transcript: <span class="kw-2">&amp;mut </span><span class="self">Self</span>::Transcript,
     ) -&gt; <span class="prelude-ty">Result</span>&lt;<span class="self">Self</span>::SumCheckProof, PolyIOPErrors&gt; {
-        <span class="kw">let </span>start = <span class="macro">start_timer!</span>(|| <span class="string">&quot;sum check prove&quot;</span>);
+        <span class="kw">let </span>start = <span class="macro">start_timer!</span>(|| <span class="string">"sum check prove"</span>);
 
-        transcript.append_serializable_element(<span class="string">b&quot;aux info&quot;</span>, <span class="kw-2">&amp;</span>poly.aux_info)<span class="question-mark">?</span>;
+        transcript.append_serializable_element(<span class="string">b"aux info"</span>, <span class="kw-2">&amp;</span>poly.aux_info)<span class="question-mark">?</span>;
 
         <span class="kw">let </span><span class="kw-2">mut </span>prover_state = IOPProverState::prover_init(poly)<span class="question-mark">?</span>;
         <span class="kw">let </span><span class="kw-2">mut </span>challenge = <span class="prelude-val">None</span>;
@@ -558,9 +559,9 @@
         <span class="kw">for _ in </span><span class="number">0</span>..poly.aux_info.num_variables {
             <span class="kw">let </span>prover_msg =
                 IOPProverState::prove_round_and_update_state(<span class="kw-2">&amp;mut </span>prover_state, <span class="kw-2">&amp;</span>challenge)<span class="question-mark">?</span>;
-            transcript.append_serializable_element(<span class="string">b&quot;prover msg&quot;</span>, <span class="kw-2">&amp;</span>prover_msg)<span class="question-mark">?</span>;
+            transcript.append_serializable_element(<span class="string">b"prover msg"</span>, <span class="kw-2">&amp;</span>prover_msg)<span class="question-mark">?</span>;
             prover_msgs.push(prover_msg);
-            challenge = <span class="prelude-val">Some</span>(transcript.get_and_append_challenge(<span class="string">b&quot;Internal round&quot;</span>)<span class="question-mark">?</span>);
+            challenge = <span class="prelude-val">Some</span>(transcript.get_and_append_challenge(<span class="string">b"Internal round"</span>)<span class="question-mark">?</span>);
         }
         <span class="comment">// pushing the last challenge point to the state
         </span><span class="kw">if let </span><span class="prelude-val">Some</span>(p) = challenge {
@@ -580,13 +581,13 @@
         aux_info: <span class="kw-2">&amp;</span><span class="self">Self</span>::VPAuxInfo,
         transcript: <span class="kw-2">&amp;mut </span><span class="self">Self</span>::Transcript,
     ) -&gt; <span class="prelude-ty">Result</span>&lt;<span class="self">Self</span>::SumCheckSubClaim, PolyIOPErrors&gt; {
-        <span class="kw">let </span>start = <span class="macro">start_timer!</span>(|| <span class="string">&quot;sum check verify&quot;</span>);
+        <span class="kw">let </span>start = <span class="macro">start_timer!</span>(|| <span class="string">"sum check verify"</span>);
 
-        transcript.append_serializable_element(<span class="string">b&quot;aux info&quot;</span>, aux_info)<span class="question-mark">?</span>;
+        transcript.append_serializable_element(<span class="string">b"aux info"</span>, aux_info)<span class="question-mark">?</span>;
         <span class="kw">let </span><span class="kw-2">mut </span>verifier_state = IOPVerifierState::verifier_init(aux_info);
         <span class="kw">for </span>i <span class="kw">in </span><span class="number">0</span>..aux_info.num_variables {
-            <span class="kw">let </span>prover_msg = proof.proofs.get(i).expect(<span class="string">&quot;proof is incomplete&quot;</span>);
-            transcript.append_serializable_element(<span class="string">b&quot;prover msg&quot;</span>, prover_msg)<span class="question-mark">?</span>;
+            <span class="kw">let </span>prover_msg = proof.proofs.get(i).expect(<span class="string">"proof is incomplete"</span>);
+            transcript.append_serializable_element(<span class="string">b"prover msg"</span>, prover_msg)<span class="question-mark">?</span>;
             IOPVerifierState::verify_round_and_update_state(
                 <span class="kw-2">&amp;mut </span>verifier_state,
                 prover_msg,
@@ -632,7 +633,7 @@
         )<span class="question-mark">?</span>;
         <span class="macro">assert!</span>(
             poly.evaluate(<span class="kw-2">&amp;</span>subclaim.point).unwrap() == subclaim.expected_evaluation,
-            <span class="string">&quot;wrong subclaim&quot;
+            <span class="string">"wrong subclaim"
         </span>);
         <span class="prelude-val">Ok</span>(())
     }
@@ -649,9 +650,9 @@
         <span class="kw">let </span><span class="kw-2">mut </span>prover_state = IOPProverState::prover_init(<span class="kw-2">&amp;</span>poly)<span class="question-mark">?</span>;
         <span class="kw">let </span><span class="kw-2">mut </span>verifier_state = IOPVerifierState::verifier_init(<span class="kw-2">&amp;</span>poly_info);
         <span class="kw">let </span><span class="kw-2">mut </span>challenge = <span class="prelude-val">None</span>;
-        <span class="kw">let </span><span class="kw-2">mut </span>transcript = IOPTranscript::new(<span class="string">b&quot;a test transcript&quot;</span>);
+        <span class="kw">let </span><span class="kw-2">mut </span>transcript = IOPTranscript::new(<span class="string">b"a test transcript"</span>);
         transcript
-            .append_message(<span class="string">b&quot;testing&quot;</span>, <span class="string">b&quot;initializing transcript for testing&quot;</span>)
+            .append_message(<span class="string">b"testing"</span>, <span class="string">b"initializing transcript for testing"</span>)
             .unwrap();
         <span class="kw">for _ in </span><span class="number">0</span>..poly.aux_info.num_variables {
             <span class="kw">let </span>prover_message =
@@ -669,10 +670,10 @@
         }
         <span class="kw">let </span>subclaim =
             IOPVerifierState::check_and_generate_subclaim(<span class="kw-2">&amp;</span>verifier_state, <span class="kw-2">&amp;</span>asserted_sum)
-                .expect(<span class="string">&quot;fail to generate subclaim&quot;</span>);
+                .expect(<span class="string">"fail to generate subclaim"</span>);
         <span class="macro">assert!</span>(
             poly.evaluate(<span class="kw-2">&amp;</span>subclaim.point).unwrap() == subclaim.expected_evaluation,
-            <span class="string">&quot;wrong subclaim&quot;
+            <span class="string">"wrong subclaim"
         </span>);
         <span class="prelude-val">Ok</span>(())
     }
@@ -779,7 +780,7 @@
         )<span class="question-mark">?</span>;
         <span class="macro">assert!</span>(
             poly.evaluate(<span class="kw-2">&amp;</span>subclaim.point)<span class="question-mark">? </span>== subclaim.expected_evaluation,
-            <span class="string">&quot;wrong subclaim&quot;
+            <span class="string">"wrong subclaim"
         </span>);
         <span class="prelude-val">Ok</span>(())
     }

@@ -1,4 +1,5 @@
-<!DOCTYPE html><html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1.0"><meta name="generator" content="rustdoc"><meta name="description" content="Source of the Rust file `hyperplonk/src/snark.rs`."><title>snark.rs - source</title><link rel="preload" as="font" type="font/woff2" crossorigin href="../../static.files/SourceSerif4-Regular-46f98efaafac5295.ttf.woff2"><link rel="preload" as="font" type="font/woff2" crossorigin href="../../static.files/FiraSans-Regular-018c141bf0843ffd.woff2"><link rel="preload" as="font" type="font/woff2" crossorigin href="../../static.files/FiraSans-Medium-8f9a781e4970d388.woff2"><link rel="preload" as="font" type="font/woff2" crossorigin href="../../static.files/SourceCodePro-Regular-562dcc5011b6de7d.ttf.woff2"><link rel="preload" as="font" type="font/woff2" crossorigin href="../../static.files/SourceSerif4-Bold-a2c9cd1067f8b328.ttf.woff2"><link rel="preload" as="font" type="font/woff2" crossorigin href="../../static.files/SourceCodePro-Semibold-d899c5a5c4aeb14a.ttf.woff2"><link rel="stylesheet" href="../../static.files/normalize-76eba96aa4d2e634.css"><link rel="stylesheet" href="../../static.files/rustdoc-ba5701c5741a7b69.css" id="mainThemeStyle"><div id="rustdoc-vars" data-root-path="../../" data-static-root-path="../../static.files/" data-current-crate="hyperplonk" data-themes="" data-resource-suffix="" data-rustdoc-version="1.70.0 (90c541806 2023-05-31)" data-search-js="search-e077946657036a58.js" data-settings-js="settings-298e1ea74db45b39.js" data-settings-css="settings-7bfb4c59cc6bc502.css" data-theme-light-css="light-0f8c037637f9eb3e.css" data-theme-dark-css="dark-1097f8e92a01e3cf.css" data-theme-ayu-css="ayu-614652228113ac93.css" ></div><script src="../../static.files/storage-62ce34ea385b278a.js"></script><script defer src="../../static.files/source-script-905937fbbdc8e9ea.js"></script><script defer src="../../source-files.js"></script><script defer src="../../static.files/main-f61008743c98d196.js"></script><noscript><link rel="stylesheet" media="(prefers-color-scheme:light)" href="../../static.files/light-0f8c037637f9eb3e.css"><link rel="stylesheet" media="(prefers-color-scheme:dark)" href="../../static.files/dark-1097f8e92a01e3cf.css"><link rel="stylesheet" href="../../static.files/noscript-13285aec31fa243e.css"></noscript><link rel="alternate icon" type="image/png" href="../../static.files/favicon-16x16-8b506e7a72182f1c.png"><link rel="alternate icon" type="image/png" href="../../static.files/favicon-32x32-422f7d1d52889060.png"><link rel="icon" type="image/svg+xml" href="../../static.files/favicon-2c020d218678b618.svg"></head><body class="rustdoc source"><!--[if lte IE 11]><div class="warning">This old browser is unsupported and will most likely display funky things.</div><![endif]--><nav class="sidebar"></nav><main><nav class="sub"><a class="sub-logo-container" href="../../hyperplonk/index.html"><img class="rust-logo" src="../../static.files/rust-logo-151179464ae7ed46.svg" alt="logo"></a><form class="search-form"><span></span><input class="search-input" name="search" aria-label="Run search in the documentation" autocomplete="off" spellcheck="false" placeholder="Click or press ‘S’ to search, ‘?’ for more options…" type="search"><div id="help-button" title="help" tabindex="-1"><a href="../../help.html">?</a></div><div id="settings-menu" tabindex="-1"><a href="../../settings.html" title="settings"><img width="22" height="22" alt="Change settings" src="../../static.files/wheel-7b819b6101059cd0.svg"></a></div></form></nav><section id="main-content" class="content"><div class="example-wrap"><div data-nosnippet><pre class="src-line-numbers"><a href="#1" id="1">1</a>
+<!DOCTYPE html><html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1.0"><meta name="generator" content="rustdoc"><meta name="description" content="Source of the Rust file `hyperplonk/src/snark.rs`."><title>snark.rs - source</title><link rel="preload" as="font" type="font/woff2" crossorigin href="../../static.files/SourceSerif4-Regular-46f98efaafac5295.ttf.woff2"><link rel="preload" as="font" type="font/woff2" crossorigin href="../../static.files/FiraSans-Regular-018c141bf0843ffd.woff2"><link rel="preload" as="font" type="font/woff2" crossorigin href="../../static.files/FiraSans-Medium-8f9a781e4970d388.woff2"><link rel="preload" as="font" type="font/woff2" crossorigin href="../../static.files/SourceCodePro-Regular-562dcc5011b6de7d.ttf.woff2"><link rel="preload" as="font" type="font/woff2" crossorigin href="../../static.files/SourceCodePro-Semibold-d899c5a5c4aeb14a.ttf.woff2"><link rel="stylesheet" href="../../static.files/normalize-76eba96aa4d2e634.css"><link rel="stylesheet" href="../../static.files/rustdoc-ac92e1bbe349e143.css"><meta name="rustdoc-vars" data-root-path="../../" data-static-root-path="../../static.files/" data-current-crate="hyperplonk" data-themes="" data-resource-suffix="" data-rustdoc-version="1.76.0 (07dca489a 2024-02-04)" data-channel="1.76.0" data-search-js="search-2b6ce74ff89ae146.js" data-settings-js="settings-4313503d2e1961c2.js" ><script src="../../static.files/storage-f2adc0d6ca4d09fb.js"></script><script defer src="../../static.files/src-script-39ed315d46fb705f.js"></script><script defer src="../../src-files.js"></script><script defer src="../../static.files/main-305769736d49e732.js"></script><noscript><link rel="stylesheet" href="../../static.files/noscript-feafe1bb7466e4bd.css"></noscript><link rel="alternate icon" type="image/png" href="../../static.files/favicon-16x16-8b506e7a72182f1c.png"><link rel="alternate icon" type="image/png" href="../../static.files/favicon-32x32-422f7d1d52889060.png"><link rel="icon" type="image/svg+xml" href="../../static.files/favicon-2c020d218678b618.svg"></head><body class="rustdoc src"><!--[if lte IE 11]><div class="warning">This old browser is unsupported and will most likely display funky things.</div><![endif]--><nav class="sidebar"></nav><div class="sidebar-resizer"></div>
+    <main><nav class="sub"><form class="search-form"><span></span><input class="search-input" name="search" aria-label="Run search in the documentation" autocomplete="off" spellcheck="false" placeholder="Click or press ‘S’ to search, ‘?’ for more options…" type="search"><div id="help-button" tabindex="-1"><a href="../../help.html" title="help">?</a></div><div id="settings-menu" tabindex="-1"><a href="../../settings.html" title="settings"><img width="22" height="22" alt="Change settings" src="../../static.files/wheel-7b819b6101059cd0.svg"></a></div></form></nav><section id="main-content" class="content"><div class="example-wrap"><div data-nosnippet><pre class="src-line-numbers"><a href="#1" id="1">1</a>
 <a href="#2" id="2">2</a>
 <a href="#3" id="3">3</a>
 <a href="#4" id="4">4</a>
@@ -765,7 +766,7 @@
 <span class="kw">use </span>ark_poly::DenseMultilinearExtension;
 <span class="kw">use </span>ark_std::{end_timer, log2, start_timer, One, Zero};
 <span class="kw">use </span>rayon::iter::IntoParallelRefIterator;
-<span class="attr">#[cfg(feature = <span class="string">&quot;parallel&quot;</span>)]
+<span class="attr">#[cfg(feature = <span class="string">"parallel"</span>)]
 </span><span class="kw">use </span>rayon::iter::ParallelIterator;
 <span class="kw">use </span>std::{marker::PhantomData, sync::Arc};
 <span class="kw">use </span>subroutines::{
@@ -905,8 +906,8 @@
         pub_input: <span class="kw-2">&amp;</span>[E::ScalarField],
         witnesses: <span class="kw-2">&amp;</span>[WitnessColumn&lt;E::ScalarField&gt;],
     ) -&gt; <span class="prelude-ty">Result</span>&lt;<span class="self">Self</span>::Proof, HyperPlonkErrors&gt; {
-        <span class="kw">let </span>start = <span class="macro">start_timer!</span>(|| <span class="string">&quot;hyperplonk proving&quot;</span>);
-        <span class="kw">let </span><span class="kw-2">mut </span>transcript = IOPTranscript::&lt;E::ScalarField&gt;::new(<span class="string">b&quot;hyperplonk&quot;</span>);
+        <span class="kw">let </span>start = <span class="macro">start_timer!</span>(|| <span class="string">"hyperplonk proving"</span>);
+        <span class="kw">let </span><span class="kw-2">mut </span>transcript = IOPTranscript::&lt;E::ScalarField&gt;::new(<span class="string">b"hyperplonk"</span>);
 
         prover_sanity_check(<span class="kw-2">&amp;</span>pk.params, pub_input, witnesses)<span class="question-mark">?</span>;
 
@@ -924,7 +925,7 @@
         // 1. Commit Witness polynomials `w_i(x)` and append commitment to
         // transcript
         // =======================================================================
-        </span><span class="kw">let </span>step = <span class="macro">start_timer!</span>(|| <span class="string">&quot;commit witnesses&quot;</span>);
+        </span><span class="kw">let </span>step = <span class="macro">start_timer!</span>(|| <span class="string">"commit witnesses"</span>);
 
         <span class="kw">let </span>witness_polys: Vec&lt;Arc&lt;DenseMultilinearExtension&lt;E::ScalarField&gt;&gt;&gt; = witnesses
             .iter()
@@ -936,7 +937,7 @@
             .map(|x| PCS::commit(<span class="kw-2">&amp;</span>pk.pcs_param, x).unwrap())
             .collect::&lt;Vec&lt;<span class="kw">_</span>&gt;&gt;();
         <span class="kw">for </span>w_com <span class="kw">in </span>witness_commits.iter() {
-            transcript.append_serializable_element(<span class="string">b&quot;w&quot;</span>, w_com)<span class="question-mark">?</span>;
+            transcript.append_serializable_element(<span class="string">b"w"</span>, w_com)<span class="question-mark">?</span>;
         }
 
         <span class="macro">end_timer!</span>(step);
@@ -952,7 +953,7 @@
         //
         // in vanilla plonk, and obtain a ZeroCheckSubClaim
         // =======================================================================
-        </span><span class="kw">let </span>step = <span class="macro">start_timer!</span>(|| <span class="string">&quot;ZeroCheck on f&quot;</span>);
+        </span><span class="kw">let </span>step = <span class="macro">start_timer!</span>(|| <span class="string">"ZeroCheck on f"</span>);
 
         <span class="kw">let </span>fx = build_f(
             <span class="kw-2">&amp;</span>pk.params.gate_func,
@@ -967,7 +968,7 @@
         // 3. Run permutation check on `\{w_i(x)\}` and `permutation_oracle`, and
         // obtain a PermCheckSubClaim.
         // =======================================================================
-        </span><span class="kw">let </span>step = <span class="macro">start_timer!</span>(|| <span class="string">&quot;Permutation check on w_i(x)&quot;</span>);
+        </span><span class="kw">let </span>step = <span class="macro">start_timer!</span>(|| <span class="string">"Permutation check on w_i(x)"</span>);
 
         <span class="kw">let </span>(perm_check_proof, prod_x, frac_poly) = &lt;<span class="self">Self </span><span class="kw">as </span>PermutationCheck&lt;E, PCS&gt;&gt;::prove(
             <span class="kw-2">&amp;</span>pk.pcs_param,
@@ -1005,7 +1006,7 @@
         // - 4.4. (deferred) public input consistency checks
         //   - pi_poly(r_pi) where r_pi is sampled from transcript
         // =======================================================================
-        </span><span class="kw">let </span>step = <span class="macro">start_timer!</span>(|| <span class="string">&quot;opening and evaluations&quot;</span>);
+        </span><span class="kw">let </span>step = <span class="macro">start_timer!</span>(|| <span class="string">"opening and evaluations"</span>);
 
         <span class="comment">// (perm_check_point[2..n], 0)
         </span><span class="kw">let </span>perm_check_point_0 = [
@@ -1023,7 +1024,7 @@
         ]
         .concat();
 
-        <span class="comment">// prod(x)&#39;s points
+        <span class="comment">// prod(x)'s points
         </span>pcs_acc.insert_poly_and_points(<span class="kw-2">&amp;</span>prod_x, <span class="kw-2">&amp;</span>perm_check_proof.prod_x_comm, perm_check_point);
         pcs_acc.insert_poly_and_points(<span class="kw-2">&amp;</span>prod_x, <span class="kw-2">&amp;</span>perm_check_proof.prod_x_comm, <span class="kw-2">&amp;</span>perm_check_point_0);
         pcs_acc.insert_poly_and_points(<span class="kw-2">&amp;</span>prod_x, <span class="kw-2">&amp;</span>perm_check_proof.prod_x_comm, <span class="kw-2">&amp;</span>perm_check_point_1);
@@ -1033,7 +1034,7 @@
             <span class="kw-2">&amp;</span>prod_final_query_point,
         );
 
-        <span class="comment">// frac(x)&#39;s points
+        <span class="comment">// frac(x)'s points
         </span>pcs_acc.insert_poly_and_points(<span class="kw-2">&amp;</span>frac_poly, <span class="kw-2">&amp;</span>perm_check_proof.frac_comm, perm_check_point);
         pcs_acc.insert_poly_and_points(
             <span class="kw-2">&amp;</span>frac_poly,
@@ -1046,7 +1047,7 @@
             <span class="kw-2">&amp;</span>perm_check_point_1,
         );
 
-        <span class="comment">// perms(x)&#39;s points
+        <span class="comment">// perms(x)'s points
         </span><span class="kw">for </span>(perm, pcom) <span class="kw">in </span>pk
             .permutation_oracles
             .iter()
@@ -1055,7 +1056,7 @@
             pcs_acc.insert_poly_and_points(perm, pcom, perm_check_point);
         }
 
-        <span class="comment">// witnesses&#39; points
+        <span class="comment">// witnesses' points
         // TODO: refactor so it remains correct even if the order changed
         </span><span class="kw">for </span>(wpoly, wcom) <span class="kw">in </span>witness_polys.iter().zip(witness_commits.iter()) {
             pcs_acc.insert_poly_and_points(wpoly, wcom, perm_check_point);
@@ -1074,7 +1075,7 @@
 
         <span class="comment">// - 4.4. public input consistency checks
         //   - pi_poly(r_pi) where r_pi is sampled from transcript
-        </span><span class="kw">let </span>r_pi = transcript.get_and_append_challenge_vectors(<span class="string">b&quot;r_pi&quot;</span>, ell)<span class="question-mark">?</span>;
+        </span><span class="kw">let </span>r_pi = transcript.get_and_append_challenge_vectors(<span class="string">b"r_pi"</span>, ell)<span class="question-mark">?</span>;
         <span class="comment">// padded with zeros
         </span><span class="kw">let </span>r_pi_padded = [r_pi, <span class="macro">vec!</span>[E::ScalarField::zero(); num_vars - ell]].concat();
         <span class="comment">// Evaluate witness_poly[0] at r_pi||0s which is equal to public_input evaluated
@@ -1085,7 +1086,7 @@
         <span class="comment">// =======================================================================
         // 5. deferred batch opening
         // =======================================================================
-        </span><span class="kw">let </span>step = <span class="macro">start_timer!</span>(|| <span class="string">&quot;deferred batch openings prod(x)&quot;</span>);
+        </span><span class="kw">let </span>step = <span class="macro">start_timer!</span>(|| <span class="string">"deferred batch openings prod(x)"</span>);
         <span class="kw">let </span>batch_openings = pcs_acc.multi_open(<span class="kw-2">&amp;</span>pk.pcs_param, <span class="kw-2">&amp;mut </span>transcript)<span class="question-mark">?</span>;
         <span class="macro">end_timer!</span>(step);
 
@@ -1139,9 +1140,9 @@
         pub_input: <span class="kw-2">&amp;</span>[E::ScalarField],
         proof: <span class="kw-2">&amp;</span><span class="self">Self</span>::Proof,
     ) -&gt; <span class="prelude-ty">Result</span>&lt;bool, HyperPlonkErrors&gt; {
-        <span class="kw">let </span>start = <span class="macro">start_timer!</span>(|| <span class="string">&quot;hyperplonk verification&quot;</span>);
+        <span class="kw">let </span>start = <span class="macro">start_timer!</span>(|| <span class="string">"hyperplonk verification"</span>);
 
-        <span class="kw">let </span><span class="kw-2">mut </span>transcript = IOPTranscript::&lt;E::ScalarField&gt;::new(<span class="string">b&quot;hyperplonk&quot;</span>);
+        <span class="kw">let </span><span class="kw-2">mut </span>transcript = IOPTranscript::&lt;E::ScalarField&gt;::new(<span class="string">b"hyperplonk"</span>);
 
         <span class="kw">let </span>num_selectors = vk.params.num_selector_columns();
         <span class="kw">let </span>num_witnesses = vk.params.num_witness_columns();
@@ -1156,7 +1157,7 @@
         // public input length
         </span><span class="kw">if </span>pub_input.len() != vk.params.num_pub_input {
             <span class="kw">return </span><span class="prelude-val">Err</span>(HyperPlonkErrors::InvalidProver(<span class="macro">format!</span>(
-                <span class="string">&quot;Public input length is not correct: got {}, expect {}&quot;</span>,
+                <span class="string">"Public input length is not correct: got {}, expect {}"</span>,
                 pub_input.len(),
                 <span class="number">1 </span>&lt;&lt; ell
             )));
@@ -1184,7 +1185,7 @@
         //     = q_l w_a(x) + q_r w_b(x) + q_m w_a(x)w_b(x) - q_o w_c(x)
         //
         // =======================================================================
-        </span><span class="kw">let </span>step = <span class="macro">start_timer!</span>(|| <span class="string">&quot;verify zero check&quot;</span>);
+        </span><span class="kw">let </span>step = <span class="macro">start_timer!</span>(|| <span class="string">"verify zero check"</span>);
         <span class="comment">// Zero check and perm check have different AuxInfo
         </span><span class="kw">let </span>zero_check_aux_info = VPAuxInfo::&lt;E::ScalarField&gt; {
             max_degree: vk.params.gate_func.degree(),
@@ -1193,7 +1194,7 @@
         };
         <span class="comment">// push witness to transcript
         </span><span class="kw">for </span>w_com <span class="kw">in </span>proof.witness_commits.iter() {
-            transcript.append_serializable_element(<span class="string">b&quot;w&quot;</span>, w_com)<span class="question-mark">?</span>;
+            transcript.append_serializable_element(<span class="string">b"w"</span>, w_com)<span class="question-mark">?</span>;
         }
 
         <span class="kw">let </span>zero_check_sub_claim = &lt;<span class="self">Self </span><span class="kw">as </span>ZeroCheck&lt;E::ScalarField&gt;&gt;::verify(
@@ -1208,7 +1209,7 @@
         </span><span class="kw">let </span>f_eval = eval_f(<span class="kw-2">&amp;</span>vk.params.gate_func, selector_evals, witness_gate_evals)<span class="question-mark">?</span>;
         <span class="kw">if </span>f_eval != zero_check_sub_claim.expected_evaluation {
             <span class="kw">return </span><span class="prelude-val">Err</span>(HyperPlonkErrors::InvalidProof(
-                <span class="string">&quot;zero check evaluation failed&quot;</span>.to_string(),
+                <span class="string">"zero check evaluation failed"</span>.to_string(),
             ));
         }
 
@@ -1216,7 +1217,7 @@
         <span class="comment">// =======================================================================
         // 2. Verify perm_check_proof on `\{w_i(x)\}` and `permutation_oracle`
         // =======================================================================
-        </span><span class="kw">let </span>step = <span class="macro">start_timer!</span>(|| <span class="string">&quot;verify permutation check&quot;</span>);
+        </span><span class="kw">let </span>step = <span class="macro">start_timer!</span>(|| <span class="string">"verify permutation check"</span>);
 
         <span class="comment">// Zero check and perm check have different AuxInfo
         </span><span class="kw">let </span>perm_check_aux_info = VPAuxInfo::&lt;E::ScalarField&gt; {
@@ -1264,7 +1265,7 @@
                 .expected_evaluation
         {
             <span class="kw">return </span><span class="prelude-val">Err</span>(HyperPlonkErrors::InvalidVerifier(
-                <span class="string">&quot;evaluation failed&quot;</span>.to_string(),
+                <span class="string">"evaluation failed"</span>.to_string(),
             ));
         }
 
@@ -1272,7 +1273,7 @@
         <span class="comment">// =======================================================================
         // 3. Verify the opening against the commitment
         // =======================================================================
-        </span><span class="kw">let </span>step = <span class="macro">start_timer!</span>(|| <span class="string">&quot;assemble commitments&quot;</span>);
+        </span><span class="kw">let </span>step = <span class="macro">start_timer!</span>(|| <span class="string">"assemble commitments"</span>);
 
         <span class="comment">// generate evaluation points and commitments
         </span><span class="kw">let </span><span class="kw-2">mut </span>comms = <span class="macro">vec!</span>[];
@@ -1291,7 +1292,7 @@
         ]
         .concat();
 
-        <span class="comment">// prod(x)&#39;s points
+        <span class="comment">// prod(x)'s points
         </span>comms.push(proof.perm_check_proof.prod_x_comm);
         comms.push(proof.perm_check_proof.prod_x_comm);
         comms.push(proof.perm_check_proof.prod_x_comm);
@@ -1300,7 +1301,7 @@
         points.push(perm_check_point_0.clone());
         points.push(perm_check_point_1.clone());
         points.push(prod_final_query_point);
-        <span class="comment">// frac(x)&#39;s points
+        <span class="comment">// frac(x)'s points
         </span>comms.push(proof.perm_check_proof.frac_comm);
         comms.push(proof.perm_check_proof.frac_comm);
         comms.push(proof.perm_check_proof.frac_comm);
@@ -1308,13 +1309,13 @@
         points.push(perm_check_point_0);
         points.push(perm_check_point_1);
 
-        <span class="comment">// perms&#39; points
+        <span class="comment">// perms' points
         </span><span class="kw">for </span><span class="kw-2">&amp;</span>pcom <span class="kw">in </span>vk.perm_commitments.iter() {
             comms.push(pcom);
             points.push(perm_check_point.clone());
         }
 
-        <span class="comment">// witnesses&#39; points
+        <span class="comment">// witnesses' points
         // TODO: merge points
         </span><span class="kw">for </span><span class="kw-2">&amp;</span>wcom <span class="kw">in </span>proof.witness_commits.iter() {
             comms.push(wcom);
@@ -1333,15 +1334,15 @@
 
         <span class="comment">// - 4.4. public input consistency checks
         //   - pi_poly(r_pi) where r_pi is sampled from transcript
-        </span><span class="kw">let </span>r_pi = transcript.get_and_append_challenge_vectors(<span class="string">b&quot;r_pi&quot;</span>, ell)<span class="question-mark">?</span>;
+        </span><span class="kw">let </span>r_pi = transcript.get_and_append_challenge_vectors(<span class="string">b"r_pi"</span>, ell)<span class="question-mark">?</span>;
 
         <span class="comment">// check public evaluation
-        </span><span class="kw">let </span>pi_step = <span class="macro">start_timer!</span>(|| <span class="string">&quot;check public evaluation&quot;</span>);
+        </span><span class="kw">let </span>pi_step = <span class="macro">start_timer!</span>(|| <span class="string">"check public evaluation"</span>);
         <span class="kw">let </span>pi_poly = DenseMultilinearExtension::from_evaluations_slice(ell, pub_input);
         <span class="kw">let </span>expect_pi_eval = evaluate_opt(<span class="kw-2">&amp;</span>pi_poly, <span class="kw-2">&amp;</span>r_pi[..]);
         <span class="kw">if </span>expect_pi_eval != <span class="kw-2">*</span>pi_eval {
             <span class="kw">return </span><span class="prelude-val">Err</span>(HyperPlonkErrors::InvalidProver(<span class="macro">format!</span>(
-                <span class="string">&quot;Public input eval mismatch: got {}, expect {}&quot;</span>,
+                <span class="string">"Public input eval mismatch: got {}, expect {}"</span>,
                 pi_eval, expect_pi_eval,
             )));
         }
@@ -1353,7 +1354,7 @@
         <span class="macro">end_timer!</span>(pi_step);
 
         <span class="macro">end_timer!</span>(step);
-        <span class="kw">let </span>step = <span class="macro">start_timer!</span>(|| <span class="string">&quot;PCS batch verify&quot;</span>);
+        <span class="kw">let </span>step = <span class="macro">start_timer!</span>(|| <span class="string">"PCS batch verify"</span>);
         <span class="comment">// check proof
         </span><span class="kw">let </span>res = PCS::batch_verify(
             <span class="kw-2">&amp;</span>vk.pcs_param,
