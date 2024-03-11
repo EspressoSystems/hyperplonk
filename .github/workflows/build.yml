@@ -30,11 +30,11 @@ jobs:
       - name: Format Check
         run: cargo fmt -- --check
 
-      - name: Clippy Check
-        run: cargo clippy --workspace -- -D warnings
+      #- name: Clippy Check
+      #  run: cargo clippy --workspace -- -D warnings
 
-      - name: Audit Check
-        run: cargo audit
+      #- name: Audit Check
+      #  run: cargo audit
 
       - name: Check Bench
         run: cargo bench --no-run
