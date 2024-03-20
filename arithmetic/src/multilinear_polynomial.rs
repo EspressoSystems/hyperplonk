@@ -162,7 +162,7 @@ fn fix_one_variable_helper<F: Field>(data: &[F], nv: usize, point: &F) -> Vec<F>
     // evaluate single variable of partial point from left to right
     #[cfg(not(feature = "parallel"))]
     for i in 0..(1 << (nv - 1)) {
-        res[i] = data[i] + (data[(i << 1) + 1] - data[i << 1]) * point;
+        res[i] = data[i << 1] + (data[(i << 1) + 1] - data[i << 1]) * point;
     }
 
     #[cfg(feature = "parallel")]
