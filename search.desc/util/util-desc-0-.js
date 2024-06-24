@@ -1,0 +1,1 @@
+searchState.loadedDescShard("util", 0, "Utilities for parallel code.\nthis function helps with slice iterator creation that …")
