@@ -19,7 +19,7 @@ additional libraries:
 ### Compiling the project for the first time
 
 ```bash
-> nix-shell
+> nixos-shell
 > cargo build
 ```
 
