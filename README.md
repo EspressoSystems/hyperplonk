@@ -27,7 +27,7 @@ additional libraries:
 
 We recommend the following tools:
 
-- [nix](https://nixos.org/download.html)
+- [nixos](https://nixos.org/download.html)
 - [direnv](https://direnv.net/docs/installation.html)
 
 Run `direnv allow` at the repo root. You should see dependencies (including Rust) being installed (the first time might take a while). 
