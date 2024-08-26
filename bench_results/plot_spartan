@@ -19,7 +19,7 @@ set logscale y
 set xrange [9:20]
 # set title font ",10" 
 # set key title "Proving time" 
-set xlabel "log \# constraits"
+set xlabel "log \# constraints"
 set ylabel 'time (sec)'
 # set xtics (4,8,16,32,64)
 plot spartan using 1:2 w lp t "spartan",\
@@ -48,7 +48,7 @@ set grid
 set xrange [9:20]
 set title font ",10" 
 # set key title "Proving time" 
-set xlabel "log \# constraits"
+set xlabel "log \# constraints"
 set ylabel 'ratio '
 # set xtics (4,8,16,32,64)
 plot ratio using 1:6 w lp t "Jellyfish/Hyperplonk",\
