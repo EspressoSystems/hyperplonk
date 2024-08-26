@@ -66,6 +66,7 @@ where
     /// - fs = (f1, ..., fk)
     /// - gs = (g1, ..., gk)
     /// - permutation oracles = (p1, ..., pk)
+    ///
     /// Outputs:
     /// - a permutation check proof proving that gs is a permutation of fs under
     ///   permutation
@@ -220,7 +221,7 @@ mod test {
         let poly_info = VPAuxInfo {
             max_degree: fxs.len() + 1,
             num_variables: nv,
-            phantom: PhantomData::default(),
+            phantom: PhantomData,
         };
 
         // prover

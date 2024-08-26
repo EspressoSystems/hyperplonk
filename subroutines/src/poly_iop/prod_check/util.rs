@@ -115,6 +115,7 @@ pub(super) fn compute_product_poly<F: PrimeField>(
 /// * ... * fk(x)] where p1(x) = (1-x1) * frac(x2, ..., xn, 0) + x1 * prod(x2,
 ///   ..., xn, 0), p2(x) = (1-x1) * frac(x2, ..., xn, 1) + x1 * prod(x2, ...,
 ///   xn, 1)
+///
 /// Returns proof.
 ///
 /// Cost: O(N)
