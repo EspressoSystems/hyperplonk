@@ -747,6 +747,7 @@
 <a href="#747" id="747">747</a>
 <a href="#748" id="748">748</a>
 <a href="#749" id="749">749</a>
+<a href="#750" id="750">750</a>
 </pre></div><pre class="rust"><code><span class="comment">// Copyright (c) 2023 Espresso Systems (espressosys.com)
 // This file is part of the HyperPlonk library.
 
@@ -859,13 +860,14 @@
     /// - `pk`: circuit proving key
     /// - `pub_input`: online public input of length 2^\ell
     /// - `witness`: witness assignment of length 2^n
+    ///
     /// Outputs:
     /// - The HyperPlonk SNARK proof.
     ///
     /// Steps:
     ///
     /// 1. Commit Witness polynomials `w_i(x)` and append commitment to
-    /// transcript
+    ///    transcript
     ///
     /// 2. Run ZeroCheck on
     ///
@@ -879,7 +881,7 @@
     /// in vanilla plonk, and obtain a ZeroCheckSubClaim
     ///
     /// 3. Run permutation check on `\{w_i(x)\}` and `permutation_oracle`, and
-    /// obtain a PermCheckSubClaim.
+    ///    obtain a PermCheckSubClaim.
     ///
     /// 4. Generate evaluations and corresponding proofs
     /// - 4.1. (deferred) batch opening prod(x) at
@@ -1112,6 +1114,7 @@
     /// - `vk`: verification key
     /// - `pub_input`: online public input
     /// - `proof`: HyperPlonk SNARK proof
+    ///
     /// Outputs:
     /// - Return a boolean on whether the verification is successful
     ///
@@ -1175,8 +1178,7 @@
         <span class="kw">let </span>pi_eval = proof.batch_openings.f_i_eval_at_point_i.last().unwrap();
 
         <span class="comment">// =======================================================================
-        // 1. Verify zero_check_proof on
-        //     `f(q_0(x),...q_l(x), w_0(x),...w_d(x))`
+        // 1. Verify zero_check_proof on `f(q_0(x),...q_l(x), w_0(x),...w_d(x))`
         //
         // where `f` is the constraint polynomial i.e.,
         //
@@ -1189,7 +1191,7 @@
         </span><span class="kw">let </span>zero_check_aux_info = VPAuxInfo::&lt;E::ScalarField&gt; {
             max_degree: vk.params.gate_func.degree(),
             num_variables: num_vars,
-            phantom: PhantomData::default(),
+            phantom: PhantomData,
         };
         <span class="comment">// push witness to transcript
         </span><span class="kw">for </span>w_com <span class="kw">in </span>proof.witness_commits.iter() {
@@ -1223,7 +1225,7 @@
             <span class="comment">// Prod(x) has a max degree of witnesses.len() + 1
             </span>max_degree: proof.witness_commits.len() + <span class="number">1</span>,
             num_variables: num_vars,
-            phantom: PhantomData::default(),
+            phantom: PhantomData,
         };
         <span class="kw">let </span>perm_check_sub_claim = &lt;<span class="self">Self </span><span class="kw">as </span>PermutationCheck&lt;E, PCS&gt;&gt;::verify(
             <span class="kw-2">&amp;</span>proof.perm_check_proof,

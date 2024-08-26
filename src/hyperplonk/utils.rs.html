@@ -519,7 +519,7 @@
 
     </span><span class="kw">if </span>pub_input.len() &gt; params.num_constraints {
         <span class="kw">return </span><span class="prelude-val">Err</span>(HyperPlonkErrors::InvalidProver(<span class="macro">format!</span>(
-            <span class="string">"Public input length {} is greater than num constraits {}"</span>,
+            <span class="string">"Public input length {} is greater than num constraints {}"</span>,
             pub_input.len(),
             params.num_pub_input
         )));

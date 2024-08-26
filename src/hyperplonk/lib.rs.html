@@ -76,6 +76,9 @@
 <a href="#76" id="76">76</a>
 <a href="#77" id="77">77</a>
 <a href="#78" id="78">78</a>
+<a href="#79" id="79">79</a>
+<a href="#80" id="80">80</a>
+<a href="#81" id="81">81</a>
 </pre></div><pre class="rust"><code><span class="comment">// Copyright (c) 2023 Espresso Systems (espressosys.com)
 // This file is part of the HyperPlonk library.
 
@@ -116,6 +119,7 @@
     /// Inputs:
     /// - `index`: HyperPlonk index
     /// - `pcs_srs`: Polynomial commitment structured reference string
+    ///
     /// Outputs:
     /// - The HyperPlonk proving key, which includes the preprocessed
     ///   polynomials.
@@ -132,6 +136,7 @@
     /// - `pk`: circuit proving key
     /// - `pub_input`: online public input
     /// - `witness`: witness assignment
+    ///
     /// Outputs:
     /// - The HyperPlonk SNARK proof.
     </span><span class="kw">fn </span>prove(
@@ -146,6 +151,7 @@
     /// - `vk`: verifying key
     /// - `pub_input`: online public input
     /// - `proof`: HyperPlonk SNARK proof challenges
+    ///
     /// Outputs:
     /// - Return a boolean on whether the verification is successful
     </span><span class="kw">fn </span>verify(

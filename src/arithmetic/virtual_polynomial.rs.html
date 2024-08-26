@@ -549,6 +549,7 @@
 <a href="#549" id="549">549</a>
 <a href="#550" id="550">550</a>
 <a href="#551" id="551">551</a>
+<a href="#552" id="552">552</a>
 </pre></div><pre class="rust"><code><span class="comment">// Copyright (c) 2023 Espresso Systems (espressosys.com)
 // This file is part of the HyperPlonk library.
 
@@ -650,7 +651,7 @@
             aux_info: VPAuxInfo {
                 max_degree: <span class="number">0</span>,
                 num_variables,
-                phantom: PhantomData::default(),
+                phantom: PhantomData,
             },
             products: Vec::new(),
             flattened_ml_extensions: Vec::new(),
@@ -669,7 +670,7 @@
                 <span class="comment">// The max degree is the max degree of any individual variable
                 </span>max_degree: <span class="number">1</span>,
                 num_variables: mle.num_vars,
-                phantom: PhantomData::default(),
+                phantom: PhantomData,
             },
             <span class="comment">// here `0` points to the first polynomial of `flattened_ml_extensions`
             </span>products: <span class="macro">vec!</span>[(coefficient, <span class="macro">vec!</span>[<span class="number">0</span>])],
@@ -725,6 +726,7 @@
     <span class="doccomment">/// Multiple the current VirtualPolynomial by an MLE:
     /// - add the MLE to the MLE list;
     /// - multiple each product by MLE and its coefficient.
+    ///
     /// Returns an error if the MLE has a different `num_vars` from self.
     </span><span class="kw">pub fn </span>mul_by_mle(
         <span class="kw-2">&amp;mut </span><span class="self">self</span>,

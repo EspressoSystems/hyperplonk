@@ -398,7 +398,7 @@
 /// 4. compute \tilde eq_i(b) = eq(b, point_i)
 /// 5. run sumcheck on \sum_i=1..k \tilde eq_i * \tilde g_i
 /// 6. build g'(X) = \sum_i=1..k \tilde eq_i(a2) * \tilde g_i(X) where (a2) is
-/// the sumcheck's point 7. open g'(X) at point (a2)
+///    the sumcheck's point 7. open g'(X) at point (a2)
 </span><span class="kw">pub</span>(<span class="kw">crate</span>) <span class="kw">fn </span>multi_open_internal&lt;E, PCS&gt;(
     prover_param: <span class="kw-2">&amp;</span>PCS::ProverParam,
     polynomials: <span class="kw-2">&amp;</span>[PCS::Polynomial],
@@ -530,7 +530,7 @@
 /// 1. get challenge point t from transcript
 /// 2. build g' commitment
 /// 3. ensure \sum_i eq(a2, point_i) * eq(t, &lt;i&gt;) * f_i_evals matches the sum
-/// via SumCheck verification 4. verify commitment
+///    via SumCheck verification 4. verify commitment
 </span><span class="kw">pub</span>(<span class="kw">crate</span>) <span class="kw">fn </span>batch_verify_internal&lt;E, PCS&gt;(
     verifier_param: <span class="kw-2">&amp;</span>PCS::VerifierParam,
     f_i_commitments: <span class="kw-2">&amp;</span>[Commitment&lt;E&gt;],
@@ -655,7 +655,7 @@
 
         <span class="kw">let </span>commitments = polys
             .iter()
-            .map(|poly| MultilinearKzgPCS::commit(<span class="kw-2">&amp;</span>ml_ck.clone(), poly).unwrap())
+            .map(|poly| MultilinearKzgPCS::commit(ml_ck.clone(), poly).unwrap())
             .collect::&lt;Vec&lt;<span class="kw">_</span>&gt;&gt;();
 
         <span class="kw">let </span><span class="kw-2">mut </span>transcript = IOPTranscript::new(<span class="string">"test transcript"</span>.as_ref());

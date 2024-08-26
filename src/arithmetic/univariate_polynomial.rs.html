@@ -306,14 +306,6 @@
 <a href="#306" id="306">306</a>
 <a href="#307" id="307">307</a>
 <a href="#308" id="308">308</a>
-<a href="#309" id="309">309</a>
-<a href="#310" id="310">310</a>
-<a href="#311" id="311">311</a>
-<a href="#312" id="312">312</a>
-<a href="#313" id="313">313</a>
-<a href="#314" id="314">314</a>
-<a href="#315" id="315">315</a>
-<a href="#316" id="316">316</a>
 </pre></div><pre class="rust"><code><span class="comment">// Copyright (c) 2023 Espresso Systems (espressosys.com)
 // This file is part of the HyperPlonk library.
 
@@ -402,10 +394,6 @@
 
     <span class="attr">#[test]
     </span><span class="kw">fn </span>test_build_l_with_suffix() -&gt; <span class="prelude-ty">Result</span>&lt;(), ArithErrors&gt; {
-        test_build_l_with_suffix_helper::&lt;Fr&gt;()
-    }
-
-    <span class="kw">fn </span>test_build_l_with_suffix_helper&lt;F: PrimeField&gt;() -&gt; <span class="prelude-ty">Result</span>&lt;(), ArithErrors&gt; {
         <span class="comment">// point 1 is [1, 2]
         </span><span class="kw">let </span>point1 = <span class="macro">vec!</span>[Fr::from(<span class="number">1u64</span>), Fr::from(<span class="number">2u64</span>)];
 
@@ -544,10 +532,6 @@
 
     <span class="attr">#[test]
     </span><span class="kw">fn </span>test_build_l() -&gt; <span class="prelude-ty">Result</span>&lt;(), ArithErrors&gt; {
-        test_build_l_helper::&lt;Fr&gt;()
-    }
-
-    <span class="kw">fn </span>test_build_l_helper&lt;F: PrimeField&gt;() -&gt; <span class="prelude-ty">Result</span>&lt;(), ArithErrors&gt; {
         <span class="comment">// point 1 is [1, 2]
         </span><span class="kw">let </span>point1 = <span class="macro">vec!</span>[Fr::from(<span class="number">1u64</span>), Fr::from(<span class="number">2u64</span>)];
 
