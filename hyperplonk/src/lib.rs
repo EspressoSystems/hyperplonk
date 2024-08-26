@@ -38,6 +38,7 @@ where
     /// Inputs:
     /// - `index`: HyperPlonk index
     /// - `pcs_srs`: Polynomial commitment structured reference string
+    ///
     /// Outputs:
     /// - The HyperPlonk proving key, which includes the preprocessed
     ///   polynomials.
@@ -54,6 +55,7 @@ where
     /// - `pk`: circuit proving key
     /// - `pub_input`: online public input
     /// - `witness`: witness assignment
+    ///
     /// Outputs:
     /// - The HyperPlonk SNARK proof.
     fn prove(
@@ -68,6 +70,7 @@ where
     /// - `vk`: verifying key
     /// - `pub_input`: online public input
     /// - `proof`: HyperPlonk SNARK proof challenges
+    ///
     /// Outputs:
     /// - Return a boolean on whether the verification is successful
     fn verify(

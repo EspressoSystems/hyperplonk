@@ -129,7 +129,7 @@ pub(crate) fn prover_sanity_check<F: PrimeField>(
 
     if pub_input.len() > params.num_constraints {
         return Err(HyperPlonkErrors::InvalidProver(format!(
-            "Public input length {} is greater than num constraits {}",
+            "Public input length {} is greater than num constraints {}",
             pub_input.len(),
             params.num_pub_input
         )));

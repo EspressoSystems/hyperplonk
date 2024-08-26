@@ -34,24 +34,24 @@ mod util;
 ///
 /// Prover steps:
 /// 1. build MLE `frac(x)` s.t. `frac(x) = f1(x) * ... * fk(x) / (g1(x) * ... *
-/// gk(x))` for all x \in {0,1}^n 2. build `prod(x)` from `frac(x)`, where
-/// `prod(x)` equals to `v(1,x)` in the paper 2. push commitments of `frac(x)`
-/// and `prod(x)` to the transcript,    and `generate_challenge` from current
-/// transcript (generate alpha) 3. generate the zerocheck proof for the virtual
-/// polynomial Q(x):       prod(x) - p1(x) * p2(x)
-///     + alpha * frac(x) * g1(x) * ... * gk(x)
+///    gk(x))` for all x \in {0,1}^n 2. build `prod(x)` from `frac(x)`, where
+///    `prod(x)` equals to `v(1,x)` in the paper
+/// 2. push commitments of `frac(x)` and `prod(x)` to the transcript,    and
+///    `generate_challenge` from current transcript (generate alpha) 3. generate
+///    the zerocheck proof for the virtual polynomial:
+///
+///    Q(x) = prod(x) - p1(x) * p2(x) + alpha * frac(x) * g1(x) * ... * gk(x)
 ///     - alpha * f1(x) * ... * fk(x)
-/// where p1(x) = (1-x1) * frac(x2, ..., xn, 0)
-///             + x1 * prod(x2, ..., xn, 0),
-/// and p2(x) = (1-x1) * frac(x2, ..., xn, 1)
-///           + x1 * prod(x2, ..., xn, 1)
+///
+///    where p1(x) = (1-x1) * frac(x2, ..., xn, 0) + x1 * prod(x2, ..., xn, 0),
+///    and p2(x) = (1-x1) * frac(x2, ..., xn, 1) + x1 * prod(x2, ..., xn, 1)
 ///
 /// Verifier steps:
-/// 1. Extract commitments of `frac(x)` and `prod(x)` from the proof, push
-/// them to the transcript
+/// 1. Extract commitments of `frac(x)` and `prod(x)` from the proof, push them
+///    to the transcript
 /// 2. `generate_challenge` from current transcript (generate alpha)
 /// 3. `verify` to verify the zerocheck proof and generate the subclaim for
-/// polynomial evaluations
+///    polynomial evaluations
 pub trait ProductCheck<E, PCS>: ZeroCheck<E::ScalarField>
 where
     E: Pairing,
@@ -323,7 +323,7 @@ mod test {
         let aux_info = VPAuxInfo {
             max_degree: fs.len() + 1,
             num_variables: fs[0].num_vars,
-            phantom: PhantomData::default(),
+            phantom: PhantomData,
         };
         let prod_subclaim = <PolyIOP<E::ScalarField> as ProductCheck<E, PCS>>::verify(
             &proof,

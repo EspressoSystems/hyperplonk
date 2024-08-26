@@ -110,13 +110,14 @@ where
     /// - `pk`: circuit proving key
     /// - `pub_input`: online public input of length 2^\ell
     /// - `witness`: witness assignment of length 2^n
+    ///
     /// Outputs:
     /// - The HyperPlonk SNARK proof.
     ///
     /// Steps:
     ///
     /// 1. Commit Witness polynomials `w_i(x)` and append commitment to
-    /// transcript
+    ///    transcript
     ///
     /// 2. Run ZeroCheck on
     ///
@@ -130,7 +131,7 @@ where
     /// in vanilla plonk, and obtain a ZeroCheckSubClaim
     ///
     /// 3. Run permutation check on `\{w_i(x)\}` and `permutation_oracle`, and
-    /// obtain a PermCheckSubClaim.
+    ///    obtain a PermCheckSubClaim.
     ///
     /// 4. Generate evaluations and corresponding proofs
     /// - 4.1. (deferred) batch opening prod(x) at
@@ -363,6 +364,7 @@ where
     /// - `vk`: verification key
     /// - `pub_input`: online public input
     /// - `proof`: HyperPlonk SNARK proof
+    ///
     /// Outputs:
     /// - Return a boolean on whether the verification is successful
     ///
@@ -426,8 +428,7 @@ where
         let pi_eval = proof.batch_openings.f_i_eval_at_point_i.last().unwrap();
 
         // =======================================================================
-        // 1. Verify zero_check_proof on
-        //     `f(q_0(x),...q_l(x), w_0(x),...w_d(x))`
+        // 1. Verify zero_check_proof on `f(q_0(x),...q_l(x), w_0(x),...w_d(x))`
         //
         // where `f` is the constraint polynomial i.e.,
         //
@@ -440,7 +441,7 @@ where
         let zero_check_aux_info = VPAuxInfo::<E::ScalarField> {
             max_degree: vk.params.gate_func.degree(),
             num_variables: num_vars,
-            phantom: PhantomData::default(),
+            phantom: PhantomData,
         };
         // push witness to transcript
         for w_com in proof.witness_commits.iter() {
@@ -474,7 +475,7 @@ where
             // Prod(x) has a max degree of witnesses.len() + 1
             max_degree: proof.witness_commits.len() + 1,
             num_variables: num_vars,
-            phantom: PhantomData::default(),
+            phantom: PhantomData,
         };
         let perm_check_sub_claim = <Self as PermutationCheck<E, PCS>>::verify(
             &proof.perm_check_proof,

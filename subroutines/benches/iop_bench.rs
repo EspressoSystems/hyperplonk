@@ -181,7 +181,7 @@ fn bench_permutation_check() -> Result<(), PolyIOPErrors> {
             let poly_info = VPAuxInfo {
                 max_degree: 2,
                 num_variables: nv,
-                phantom: PhantomData::default(),
+                phantom: PhantomData,
             };
 
             let start = Instant::now();
@@ -252,7 +252,7 @@ fn bench_prod_check() -> Result<(), PolyIOPErrors> {
             let poly_info = VPAuxInfo {
                 max_degree: 2,
                 num_variables: nv,
-                phantom: PhantomData::default(),
+                phantom: PhantomData,
             };
 
             let start = Instant::now();

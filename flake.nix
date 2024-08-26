@@ -53,6 +53,12 @@
                 entry = "cargo sort -w";
                 pass_filenames = false;
               };
+              spell-check = {
+                enable = true;
+                description = "Spell check";
+                entry = "typos";
+                pass_filenames = false;
+              };
             };
           };
         };
@@ -60,8 +66,9 @@
           buildInputs = [
             argbash
             openssl
-            pkgconfig
+            pkg-config
             git
+            typos
 
             stableToolchain
             nightlyToolchain

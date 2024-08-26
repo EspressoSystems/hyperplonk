@@ -47,7 +47,7 @@ where
 /// 4. compute \tilde eq_i(b) = eq(b, point_i)
 /// 5. run sumcheck on \sum_i=1..k \tilde eq_i * \tilde g_i
 /// 6. build g'(X) = \sum_i=1..k \tilde eq_i(a2) * \tilde g_i(X) where (a2) is
-/// the sumcheck's point 7. open g'(X) at point (a2)
+///    the sumcheck's point 7. open g'(X) at point (a2)
 pub(crate) fn multi_open_internal<E, PCS>(
     prover_param: &PCS::ProverParam,
     polynomials: &[PCS::Polynomial],
@@ -179,7 +179,7 @@ where
 /// 1. get challenge point t from transcript
 /// 2. build g' commitment
 /// 3. ensure \sum_i eq(a2, point_i) * eq(t, <i>) * f_i_evals matches the sum
-/// via SumCheck verification 4. verify commitment
+///    via SumCheck verification 4. verify commitment
 pub(crate) fn batch_verify_internal<E, PCS>(
     verifier_param: &PCS::VerifierParam,
     f_i_commitments: &[Commitment<E>],
@@ -304,7 +304,7 @@ mod tests {
 
         let commitments = polys
             .iter()
-            .map(|poly| MultilinearKzgPCS::commit(&ml_ck.clone(), poly).unwrap())
+            .map(|poly| MultilinearKzgPCS::commit(ml_ck.clone(), poly).unwrap())
             .collect::<Vec<_>>();
 
         let mut transcript = IOPTranscript::new("test transcript".as_ref());

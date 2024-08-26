@@ -99,7 +99,7 @@ impl<F: PrimeField> VirtualPolynomial<F> {
             aux_info: VPAuxInfo {
                 max_degree: 0,
                 num_variables,
-                phantom: PhantomData::default(),
+                phantom: PhantomData,
             },
             products: Vec::new(),
             flattened_ml_extensions: Vec::new(),
@@ -118,7 +118,7 @@ impl<F: PrimeField> VirtualPolynomial<F> {
                 // The max degree is the max degree of any individual variable
                 max_degree: 1,
                 num_variables: mle.num_vars,
-                phantom: PhantomData::default(),
+                phantom: PhantomData,
             },
             // here `0` points to the first polynomial of `flattened_ml_extensions`
             products: vec![(coefficient, vec![0])],
@@ -174,6 +174,7 @@ impl<F: PrimeField> VirtualPolynomial<F> {
     /// Multiple the current VirtualPolynomial by an MLE:
     /// - add the MLE to the MLE list;
     /// - multiple each product by MLE and its coefficient.
+    ///
     /// Returns an error if the MLE has a different `num_vars` from self.
     pub fn mul_by_mle(
         &mut self,
