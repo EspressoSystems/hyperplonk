@@ -160,19 +160,14 @@ impl<F: PrimeField> SumCheck<F> for PolyIOP<F> {
         transcript.append_serializable_element(b"aux info", &poly.aux_info)?;
 
         let mut prover_state = IOPProverState::prover_init(poly)?;
-        let mut challenge = None;
         let mut prover_msgs = Vec::with_capacity(poly.aux_info.num_variables);
         for _ in 0..poly.aux_info.num_variables {
+            let challenge = Some(transcript.get_and_append_challenge(b"Internal round")?);
             let prover_msg =
                 IOPProverState::prove_round_and_update_state(&mut prover_state, &challenge)?;
             transcript.append_serializable_element(b"prover msg", &prover_msg)?;
             prover_msgs.push(prover_msg);
-            challenge = Some(transcript.get_and_append_challenge(b"Internal round")?);
         }
-        // pushing the last challenge point to the state
-        if let Some(p) = challenge {
-            prover_state.challenges.push(p)
-        };
 
         end_timer!(start);
         Ok(IOPProof {
