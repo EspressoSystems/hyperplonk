@@ -132,7 +132,7 @@ impl<E: Pairing> PolynomialCommitmentScheme<E> for MultilinearKzgPCS<E> {
     ///
     /// This function takes 2^{num_var +1} number of scalar multiplications over
     /// G1:
-    /// - it prodceeds with `num_var` number of rounds,
+    /// - it proceeds with `num_var` number of rounds,
     /// - at round i, we compute an MSM for `2^{num_var - i + 1}` number of G2
     ///   elements.
     fn open(
