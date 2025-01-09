@@ -11,7 +11,7 @@ mod errors;
 mod perm_check;
 pub mod prelude;
 mod prod_check;
-mod structs;
+pub mod structs;
 mod sum_check;
 mod utils;
 mod zero_check;
