@@ -66,13 +66,40 @@ where
 {
     let open_timer = start_timer!(|| format!("multi open {} points", points.len()));
 
-    // TODO: sanity checks
+    // Security checks
+    if polynomials.is_empty() {
+        return Err(PCSError::InvalidParameters(
+            "polynomials array cannot be empty".to_string(),
+        ));
+    }
+    if points.is_empty() {
+        return Err(PCSError::InvalidParameters(
+            "points array cannot be empty".to_string(),
+        ));
+    }
+    if polynomials.len() != points.len() || polynomials.len() != evals.len() {
+        return Err(PCSError::InvalidParameters(
+            "polynomials, points, and evals arrays must have the same length".to_string(),
+        ));
+    }
+
+    // Check that all polynomials have the same number of variables
     let num_var = polynomials[0].num_vars;
-    let k = polynomials.len();
-    let ell = log2(k) as usize;
+    if polynomials.iter().any(|p| p.num_vars != num_var) {
+        return Err(PCSError::InvalidParameters(
+            "all polynomials must have the same number of variables".to_string(),
+        ));
+    }
+
+    // Check that all points have correct dimension
+    if points.iter().any(|p| p.len() != num_var) {
+        return Err(PCSError::InvalidParameters(
+            "all points must have the same dimension as polynomials".to_string(),
+        ));
+    }
 
     // challenge point t
-    let t = transcript.get_and_append_challenge_vectors("t".as_ref(), ell)?;
+    let t = transcript.get_and_append_challenge_vectors("t".as_ref(), log2(polynomials.len()) as usize)?;
 
     // eq(t, i) for i in [0..k]
     let eq_t_i_list = build_eq_x_r_vec(t.as_ref())?;
