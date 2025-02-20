@@ -337,6 +337,12 @@ where
         // =======================================================================
         // 5. deferred batch opening
         // =======================================================================
+        for eval_point in pcs_acc.points.iter() {
+            transcript.append_serializable_element(b"eval_point", eval_point)?;
+        }
+        for eval in pcs_acc.evals.iter() {
+            transcript.append_field_element(b"eval", eval)?;
+        }
         let step = start_timer!(|| "deferred batch openings prod(x)");
         let batch_openings = pcs_acc.multi_open(&pk.pcs_param, &mut transcript)?;
         end_timer!(step);
@@ -605,6 +611,22 @@ where
         end_timer!(pi_step);
 
         end_timer!(step);
+
+        for eval_point in points.iter() {
+            transcript.append_serializable_element(b"eval_point", eval_point)?;
+        }
+        for eval in prod_evals
+            .iter()
+            .chain(frac_evals)
+            .chain(perm_evals)
+            .chain(witness_perm_evals)
+            .chain(witness_gate_evals)
+            .chain(selector_evals)
+            .chain([pi_eval])
+        {
+            transcript.append_field_element(b"eval", eval)?;
+        }
+
         let step = start_timer!(|| "PCS batch verify");
         // check proof
         let res = PCS::batch_verify(
