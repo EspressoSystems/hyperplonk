@@ -1353,8 +1353,8 @@
         points.push(r_pi_padded);
         <span class="macro">assert_eq!</span>(comms.len(), proof.batch_openings.f_i_eval_at_point_i.len());
         <span class="macro">end_timer!</span>(pi_step);
-
         <span class="macro">end_timer!</span>(step);
+
         <span class="kw">let </span>step = <span class="macro">start_timer!</span>(|| <span class="string">"PCS batch verify"</span>);
         <span class="comment">// check proof
         </span><span class="kw">let </span>res = PCS::batch_verify(
