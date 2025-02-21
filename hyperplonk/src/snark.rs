@@ -603,8 +603,8 @@ where
         points.push(r_pi_padded);
         assert_eq!(comms.len(), proof.batch_openings.f_i_eval_at_point_i.len());
         end_timer!(pi_step);
-
         end_timer!(step);
+
         let step = start_timer!(|| "PCS batch verify");
         // check proof
         let res = PCS::batch_verify(
