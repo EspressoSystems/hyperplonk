@@ -65,6 +65,12 @@ where
     >,
 {
     let open_timer = start_timer!(|| format!("multi open {} points", points.len()));
+    for eval_point in points.iter() {
+        transcript.append_serializable_element(b"eval_point", eval_point)?;
+    }
+    for eval in evals.iter() {
+        transcript.append_field_element(b"eval", eval)?;
+    }
 
     // TODO: sanity checks
     let num_var = polynomials[0].num_vars;
@@ -198,6 +204,12 @@ where
     >,
 {
     let open_timer = start_timer!(|| "batch verification");
+    for eval_point in points.iter() {
+        transcript.append_serializable_element(b"eval_point", eval_point)?;
+    }
+    for eval in proof.f_i_eval_at_point_i.iter() {
+        transcript.append_field_element(b"eval", eval)?;
+    }
 
     // TODO: sanity checks
 
