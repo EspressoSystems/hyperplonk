@@ -12,6 +12,7 @@ use crate::{
     poly_iop::{errors::PolyIOPErrors, prelude::ProductCheck, PolyIOP},
 };
 use ark_ec::pairing::Pairing;
+use ark_ff::One;
 use ark_poly::DenseMultilinearExtension;
 use ark_std::{end_timer, start_timer};
 use std::sync::Arc;
@@ -160,6 +161,12 @@ where
             &denominators,
             transcript,
         )?;
+
+        if prod_poly.evaluations[(1 << num_vars) - 2] != E::ScalarField::one() {
+            return Err(PolyIOPErrors::InvalidProof(
+                "Product should be one".to_string(),
+            ));
+        }
 
         end_timer!(start);
         Ok((proof, prod_poly, frac_poly))

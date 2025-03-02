@@ -520,6 +520,13 @@ where
             ));
         }
 
+        // check product check subclaim
+        if prod_evals[3] != perm_check_sub_claim.product_check_sub_claim.final_query.1 {
+            return Err(HyperPlonkErrors::InvalidVerifier(
+                "product of product check is not one".to_string(),
+            ));
+        }
+
         end_timer!(step);
         // =======================================================================
         // 3. Verify the opening against the commitment
@@ -734,15 +741,25 @@ mod tests {
         >>::verify(&bad_vk, &pi.0, &proof,)?);
 
         // bad path 2: wrong witness
-        let mut w1_bad = w1;
+        let mut w1_bad = w1.clone();
         w1_bad.0[0] = E::ScalarField::one();
         assert!(
             <PolyIOP<E::ScalarField> as HyperPlonkSNARK<E, MultilinearKzgPCS<E>>>::prove(
                 &pk,
                 &pi.0,
-                &[w1_bad, w2],
+                &[w1_bad, w2.clone()],
             )
             .is_err()
+        );
+
+        // bad path 3: permutation and witness mismatch
+        let permutation = random_permutation(nv, num_witnesses, &mut rng);
+        assert!(
+            <PolyIOP<E::ScalarField> as HyperPlonkSNARK<E, MultilinearKzgPCS<E>>>::prove(
+                &pk,
+                &permutation,
+                &[w1, w2],
+            ).is_err()
         );
 
         Ok(())
