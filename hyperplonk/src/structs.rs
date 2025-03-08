@@ -60,7 +60,7 @@ pub struct HyperPlonkParams {
 impl HyperPlonkParams {
     /// Number of variables in a multilinear system
     pub fn num_variables(&self) -> usize {
-        log2(self.num_constraints) as usize
+        log2(self.num_constraints.next_power_of_two()) as usize
     }
 
     /// number of selector columns
