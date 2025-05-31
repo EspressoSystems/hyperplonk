@@ -40,7 +40,7 @@ impl<F: PrimeField> WitnessColumn<F> {
             ));
         }
 
-        let mut res = Vec::with_capacity(witness_rows.len());
+        let mut res = Vec::with_capacity(num_columns);
         let num_columns = witness_rows[0].0.len();
 
         for i in 0..num_columns {
