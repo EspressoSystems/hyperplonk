@@ -41,7 +41,7 @@ impl<F: PrimeField> SelectorColumn<F> {
         }
 
         let mut res = Vec::with_capacity(selector_rows.len());
-        let num_colnumns = selector_rows[0].0.len();
+        let num_columns = selector_rows[0].0.len();
 
         for i in 0..num_colnumns {
             let mut cur_column = Vec::new();
