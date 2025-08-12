@@ -20,7 +20,7 @@ jobs:
         uses: cachix/install-nix-action@V27
 
       - name: Checkout Repository
-        uses: actions/checkout@v4
+        uses: actions/checkout@v5
 
       # sanity check that repository builds with nix
       - name: Build
