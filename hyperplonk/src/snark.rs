@@ -42,7 +42,7 @@ where
         Evaluation = E::ScalarField,
         Commitment = Commitment<E>,
         BatchProof = BatchProof<E, PCS>,
-    >,
+    > + Clone + Eq + std::fmt::Debug,
 {
     type Index = HyperPlonkIndex<E::ScalarField>;
     type ProvingKey = HyperPlonkProvingKey<E, PCS>;

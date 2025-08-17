@@ -19,6 +19,7 @@ use arithmetic::VPAuxInfo;
 use ark_ec::pairing::Pairing;
 use ark_ff::{One, PrimeField, Zero};
 use ark_poly::DenseMultilinearExtension;
+use ark_serialize::CanonicalSerialize;
 use ark_std::{end_timer, start_timer};
 use std::sync::Arc;
 use transcript::IOPTranscript;
@@ -58,7 +59,7 @@ where
     PCS: PolynomialCommitmentScheme<E>,
 {
     type ProductCheckSubClaim;
-    type ProductCheckProof;
+    type ProductCheckProof: CanonicalSerialize;
 
     /// Initialize the system with a transcript
     ///
@@ -134,7 +135,7 @@ pub struct ProductCheckSubClaim<F: PrimeField, ZC: ZeroCheck<F>> {
 /// - a zerocheck proof
 /// - a product polynomial commitment
 /// - a polynomial commitment for the fractional polynomial
-#[derive(Clone, Debug, Default, PartialEq)]
+#[derive(Clone, Debug, Default, PartialEq, CanonicalSerialize)]
 pub struct ProductCheckProof<
     E: Pairing,
     PCS: PolynomialCommitmentScheme<E>,
@@ -264,7 +265,7 @@ mod test {
     use arithmetic::VPAuxInfo;
     use ark_bls12_381::{Bls12_381, Fr};
     use ark_ec::pairing::Pairing;
-    use ark_poly::{DenseMultilinearExtension, MultilinearExtension};
+    use ark_poly::{DenseMultilinearExtension, MultilinearExtension, Polynomial};
     use ark_std::test_rng;
     use std::{marker::PhantomData, sync::Arc};
 
@@ -331,7 +332,7 @@ mod test {
             &mut transcript,
         )?;
         assert_eq!(
-            prod_x.evaluate(&prod_subclaim.final_query.0).unwrap(),
+            prod_x.evaluate(&prod_subclaim.final_query.0),
             prod_subclaim.final_query.1,
             "different product"
         );
@@ -356,7 +357,7 @@ mod test {
             &mut transcript,
         )?;
         assert_ne!(
-            prod_x_bad.evaluate(&bad_subclaim.final_query.0).unwrap(),
+            prod_x_bad.evaluate(&bad_subclaim.final_query.0),
             bad_subclaim.final_query.1,
             "can't detect wrong proof"
         );

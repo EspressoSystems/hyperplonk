@@ -10,6 +10,7 @@ use crate::{custom_gate::CustomizedGates, prelude::HyperPlonkErrors, selectors::
 use ark_ec::pairing::Pairing;
 use ark_ff::PrimeField;
 use ark_poly::DenseMultilinearExtension;
+use ark_serialize::CanonicalSerialize;
 use ark_std::log2;
 use std::sync::Arc;
 use subroutines::{
@@ -22,7 +23,7 @@ use subroutines::{
 ///   - a batch opening to all the MLEs at certain index
 ///   - the zero-check proof for checking custom gate-satisfiability
 ///   - the permutation-check proof for checking the copy constraints
-#[derive(Clone, Debug, PartialEq)]
+#[derive(Clone, Debug, PartialEq, CanonicalSerialize)]
 pub struct HyperPlonkProof<E, PC, PCS>
 where
     E: Pairing,

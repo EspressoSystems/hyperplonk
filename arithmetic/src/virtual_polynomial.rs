@@ -9,7 +9,7 @@
 
 use crate::{errors::ArithErrors, multilinear_polynomial::random_zero_mle_list, random_mle_list};
 use ark_ff::PrimeField;
-use ark_poly::{DenseMultilinearExtension, MultilinearExtension};
+use ark_poly::{DenseMultilinearExtension, MultilinearExtension, Polynomial};
 use ark_serialize::CanonicalSerialize;
 use ark_std::{
     end_timer,
@@ -229,14 +229,11 @@ impl<F: PrimeField> VirtualPolynomial<F> {
             )));
         }
 
+        let point_vec = point.to_vec();
         let evals: Vec<F> = self
             .flattened_ml_extensions
             .iter()
-            .map(|x| {
-                x.evaluate(point).unwrap() // safe unwrap here since we have
-                                           // already checked that num_var
-                                           // matches
-            })
+            .map(|x| x.evaluate(&point_vec))
             .collect();
 
         let res = self

@@ -297,7 +297,7 @@ mod test {
     use super::*;
     use ark_bls12_381::Fr;
     use ark_ff::PrimeField;
-    use ark_poly::MultilinearExtension;
+    use ark_poly::{MultilinearExtension, Polynomial};
     #[test]
     fn test_build_gate() -> Result<(), HyperPlonkErrors> {
         test_build_gate_helper::<Fr>()
@@ -355,32 +355,32 @@ mod test {
         // test eval_f
         {
             let point = [F::zero(), F::zero()];
-            let selector_evals = ql.evaluate(&point).unwrap();
-            let witness_evals = [w1.evaluate(&point).unwrap(), w2.evaluate(&point).unwrap()];
+            let selector_evals = ql.evaluate(&point.to_vec());
+            let witness_evals = [w1.evaluate(&point.to_vec()), w2.evaluate(&point.to_vec())];
             let eval_f = eval_f(&gates, &[selector_evals], &witness_evals)?;
             // f(0, 0) = 0
             assert_eq!(eval_f, F::zero());
         }
         {
             let point = [F::zero(), F::one()];
-            let selector_evals = ql.evaluate(&point).unwrap();
-            let witness_evals = [w1.evaluate(&point).unwrap(), w2.evaluate(&point).unwrap()];
+            let selector_evals = ql.evaluate(&point.to_vec());
+            let witness_evals = [w1.evaluate(&point.to_vec()), w2.evaluate(&point.to_vec())];
             let eval_f = eval_f(&gates, &[selector_evals], &witness_evals)?;
             // f(0, 1) = 2 * 0^5 + (-1) * 1 = -1
             assert_eq!(eval_f, -F::one());
         }
         {
             let point = [F::one(), F::zero()];
-            let selector_evals = ql.evaluate(&point).unwrap();
-            let witness_evals = [w1.evaluate(&point).unwrap(), w2.evaluate(&point).unwrap()];
+            let selector_evals = ql.evaluate(&point.to_vec());
+            let witness_evals = [w1.evaluate(&point.to_vec()), w2.evaluate(&point.to_vec())];
             let eval_f = eval_f(&gates, &[selector_evals], &witness_evals)?;
             // f(1, 0) = 0 * 1^5 + (-1) * 1 = -1
             assert_eq!(eval_f, -F::one());
         }
         {
             let point = [F::one(), F::one()];
-            let selector_evals = ql.evaluate(&point).unwrap();
-            let witness_evals = [w1.evaluate(&point).unwrap(), w2.evaluate(&point).unwrap()];
+            let selector_evals = ql.evaluate(&point.to_vec());
+            let witness_evals = [w1.evaluate(&point.to_vec()), w2.evaluate(&point.to_vec())];
             let eval_f = eval_f(&gates, &[selector_evals], &witness_evals)?;
             // f(1, 1) = 5 * 2^5 + (-1) * 2 = 158
             assert_eq!(eval_f, F::from(158u64));

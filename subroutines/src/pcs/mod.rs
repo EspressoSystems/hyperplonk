@@ -27,7 +27,7 @@ pub trait PolynomialCommitmentScheme<E: Pairing> {
     /// Verifier parameters
     type VerifierParam: Clone + CanonicalSerialize + CanonicalDeserialize;
     /// Structured reference string
-    type SRS: Clone + Debug;
+    type SRS: Clone + Debug + CanonicalSerialize + CanonicalDeserialize;
     /// Polynomial and its associated types
     type Polynomial: Clone + Debug + Hash + PartialEq + Eq;
     /// Polynomial input domain
@@ -39,7 +39,7 @@ pub trait PolynomialCommitmentScheme<E: Pairing> {
     /// Proofs
     type Proof: Clone + CanonicalSerialize + CanonicalDeserialize + Debug + PartialEq + Eq;
     /// Batch proofs
-    type BatchProof;
+    type BatchProof: CanonicalSerialize + CanonicalDeserialize + Clone + Debug + Eq;
 
     /// Build SRS for testing.
     ///

@@ -13,6 +13,7 @@ use crate::{
 };
 use ark_ec::pairing::Pairing;
 use ark_poly::DenseMultilinearExtension;
+use ark_serialize::CanonicalSerialize;
 use ark_std::{end_timer, start_timer};
 use std::sync::Arc;
 use transcript::IOPTranscript;
@@ -52,7 +53,7 @@ where
     PCS: PolynomialCommitmentScheme<E>,
 {
     type PermutationCheckSubClaim;
-    type PermutationProof;
+    type PermutationProof: CanonicalSerialize;
 
     /// Initialize the system with a transcript
     ///

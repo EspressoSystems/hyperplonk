@@ -7,7 +7,7 @@
 //! Implementing Structured Reference Strings for univariate polynomial KZG
 
 use crate::pcs::{PCSError, StructuredReferenceString};
-use ark_ec::{pairing::Pairing, scalar_mul::fixed_base::FixedBase, AffineRepr, CurveGroup};
+use ark_ec::{pairing::Pairing, AffineRepr, CurveGroup, ScalarMul};
 use ark_ff::PrimeField;
 use ark_serialize::{CanonicalDeserialize, CanonicalSerialize};
 use ark_std::{end_timer, rand::Rng, start_timer, vec, vec::Vec, One, UniformRand};
@@ -118,17 +118,10 @@ impl<E: Pairing> StructuredReferenceString<E> for UnivariateUniversalParams<E> {
             cur *= &beta;
         }
 
-        let window_size = FixedBase::get_mul_window_size(max_degree + 1);
+        // let window_size = FixedBase::get_mul_window_size(max_degree + 1);
 
-        let scalar_bits = E::ScalarField::MODULUS_BIT_SIZE as usize;
-        let g_time = start_timer!(|| "Generating powers of G");
         // TODO: parallelization
-        let g_table = FixedBase::get_window_table(scalar_bits, window_size, g);
-        let powers_of_g =
-            FixedBase::msm::<E::G1>(scalar_bits, window_size, &g_table, &powers_of_beta);
-        end_timer!(g_time);
-
-        let powers_of_g = E::G1::normalize_batch(&powers_of_g);
+        let powers_of_g = g.batch_mul(&powers_of_beta);
 
         let h = h.into_affine();
         let beta_h = h.mul(beta).into_affine();
