@@ -1,1 +1,1 @@
-window.SIDEBAR_ITEMS = {"macro":["build_mle"],"mod":["prelude"],"trait":["HyperPlonkSNARK"]};
+window.SIDEBAR_ITEMS = {"macro":[["build_mle",1]],"mod":["prelude"],"trait":["HyperPlonkSNARK"]};

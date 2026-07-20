@@ -1,1 +1,1 @@
-window.SIDEBAR_ITEMS = {"enum":["TranscriptError"],"macro":["to_bytes"],"struct":["IOPTranscript"]};
+window.SIDEBAR_ITEMS = {"enum":["TranscriptError"],"macro":[["to_bytes",1]],"struct":["IOPTranscript"]};

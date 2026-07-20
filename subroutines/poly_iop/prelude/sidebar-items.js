@@ -1,1 +1,1 @@
-window.SIDEBAR_ITEMS = {"enum":["PolyIOPErrors"],"macro":["to_bytes"],"struct":["IOPProof"],"trait":["PermutationCheck","ProductCheck","SumCheck","ZeroCheck"]};
+window.SIDEBAR_ITEMS = {"enum":["PolyIOPErrors"],"macro":[["to_bytes",1]],"struct":["IOPProof"],"trait":["PermutationCheck","ProductCheck","SumCheck","ZeroCheck"]};
